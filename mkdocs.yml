@@ -1,0 +1,76 @@
+site_name: Gazebo Sim 튜토리얼 (한국어)
+site_description: Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic을 위한 실행 중심 튜토리얼
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: light blue
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: light blue
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - 홈: index.md
+  - 학습 로드맵: roadmap.md
+  - 시작하기:
+      - 호환성: compatibility.md
+      - Gazebo Harmonic 소개: getting-started/gazebo-harmonic.md
+      - Jazzy 환경 설치: getting-started/installation-jazzy.md
+      - 문제 해결: getting-started/troubleshooting.md
+  - 초급:
+      - 개요: beginner/index.md
+      - Gazebo Sim 개요: beginner/01-gazebo-overview.md
+      - GUI 기초: beginner/02-gui-basics.md
+      - SDF 기초: beginner/03-sdf-basics.md
+      - 첫 World: beginner/04-first-world.md
+      - 첫 Robot: beginner/05-first-robot.md
+      - 바퀴와 Joint: beginner/06-joints.md
+      - DiffDrive: beginner/07-diff-drive.md
+      - 센서: beginner/08-sensors.md
+      - Gazebo Fuel: beginner/09-gazebo-fuel.md
+      - ROS 2와 연결: beginner/10-ros-gz-bridge.md
+      - 프로젝트: beginner/project-tutorial-bot.md
+  - 중급:
+      - 개요: intermediate/index.md
+      - 고급 SDF: intermediate/01-advanced-sdf.md
+      - URDF·Xacro·SDF: intermediate/02-urdf-xacro-sdf.md
+      - ROS 2 Launch: intermediate/03-ros2-launch.md
+      - Robot Spawn: intermediate/04-spawn-model.md
+      - ros_gz_bridge 심화: intermediate/05-bridge-yaml.md
+      - TF·Joint State·RViz: intermediate/06-tf-rviz.md
+      - gz_ros2_control: intermediate/07-gz-ros2-control.md
+      - 센서 심화: intermediate/08-advanced-sensors.md
+      - 다중 로봇: intermediate/09-multi-robot.md
+      - Nav2 연동: intermediate/10-nav2.md
+      - 프로젝트: intermediate/project-autonomous-bot.md
+  - 고급:
+      - 개요: advanced/index.md
+  - 참고:
+      - 명령어: reference/commands.md
+      - 용어: reference/terminology.md

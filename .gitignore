@@ -45,6 +45,7 @@
 .uv-cache/
 .tools/
 .omo/
+.codegraph/
 cache/
 .codex/
 
@@ -73,3 +74,45 @@ dist/
 coverage/
 *.tsbuildinfo
 .eslintcache
+
+# MkDocs
+site/
+
+# ROS 2 / colcon
+install/
+log/
+
+# Local editor and operating-system files
+.venv/
+.vscode/
+.idea/
+.fleet/
+*.code-workspace
+*.swp
+*.swo
+.DS_Store
+
+# Local credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+.envrc
+.direnv/
+.fuel-cache/
+.gz/
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+.npmrc
+
+# Browser and UI-test artifacts
+playwright-report/
+test-results/
+
+# Read-only external reference repositories
+ref/
+
+# Local implementation handoff notes
+Handoff.md

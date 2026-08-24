@@ -1,0 +1,12 @@
+.md-typeset p,
+.md-typeset li,
+.md-typeset td,
+.md-typeset th,
+.md-typeset blockquote {
+  word-break: keep-all;
+}
+
+.md-typeset pre > code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

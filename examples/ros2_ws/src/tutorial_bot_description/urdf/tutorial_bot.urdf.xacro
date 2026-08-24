@@ -1,0 +1,268 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tutorial_bot">
+  <!--
+    The default arguments intentionally preserve the beginner model and Gazebo
+    topic contract.  Intermediate launches override these values per entity.
+    `tf_prefix` is consumed by robot_state_publisher/controller configuration;
+    link names remain canonical so the same URDF works in both modes.
+  -->
+  <xacro:arg name="model_name" default="tutorial_bot"/>
+  <xacro:arg name="ros_namespace" default="/"/>
+  <xacro:arg name="tf_prefix" default=""/>
+  <xacro:arg name="lidar_topic" default="/tutorial_bot/lidar"/>
+  <xacro:arg name="camera_topic" default="/tutorial_bot/camera"/>
+  <xacro:arg name="imu_topic" default="/tutorial_bot/imu"/>
+  <xacro:arg name="control_backend" default="gazebo_diff_drive"/>
+  <xacro:arg name="controller_parameters_file" default="controllers.yaml"/>
+  <xacro:attribute name="name" value="$(arg model_name)"/>
+  <xacro:property name="control_backend" value="$(arg control_backend)"/>
+  <xacro:property name="controller_parameters_file" value="$(arg controller_parameters_file)"/>
+
+  <xacro:if value="${control_backend not in ['gazebo_diff_drive', 'gz_ros2_control']}">
+    <xacro:attribute name="invalid_control_backend" value="${xacro.fatal('Unsupported control_backend:', control_backend, 'Expected gazebo_diff_drive or gz_ros2_control.')}"/>
+  </xacro:if>
+  <xacro:if value="${control_backend == 'gz_ros2_control' and (len(controller_parameters_file) == 0 or controller_parameters_file[-5:] != '.yaml')}">
+    <xacro:attribute name="invalid_controller_parameters_file" value="${xacro.fatal('controller_parameters_file must name a non-empty .yaml file when control_backend is gz_ros2_control.')}"/>
+  </xacro:if>
+
+  <xacro:macro name="box_inertia" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass * (y * y + z * z) / 12.0}"
+               ixy="0.0"
+               ixz="0.0"
+               iyy="${mass * (x * x + z * z) / 12.0}"
+               iyz="0.0"
+               izz="${mass * (x * x + y * y) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="wheel_inertia" params="mass radius width">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass * (3.0 * radius * radius + width * width) / 12.0}"
+               ixy="0.0"
+               ixz="0.0"
+               iyy="${mass * radius * radius / 2.0}"
+               iyz="0.0"
+               izz="${mass * (3.0 * radius * radius + width * width) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="wheel" params="side y_position">
+    <link name="${side}_wheel_link">
+      <xacro:wheel_inertia mass="0.3" radius="0.06" width="0.04"/>
+      <visual>
+        <origin rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder radius="0.06" length="0.04"/>
+        </geometry>
+        <material name="wheel_black">
+          <color rgba="0.08 0.08 0.08 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder radius="0.06" length="0.04"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${side}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${side}_wheel_link"/>
+      <origin xyz="0 ${y_position} -0.06" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="5.0" velocity="20.0"/>
+    </joint>
+  </xacro:macro>
+
+  <link name="base_link">
+    <xacro:box_inertia mass="5.0" x="0.45" y="0.32" z="0.12"/>
+    <visual>
+      <geometry>
+        <box size="0.45 0.32 0.12"/>
+      </geometry>
+      <material name="tutorial_blue">
+        <color rgba="0.10 0.35 0.80 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.45 0.32 0.12"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <xacro:wheel side="left" y_position="0.19"/>
+  <xacro:wheel side="right" y_position="-0.19"/>
+
+  <link name="lidar_link">
+    <xacro:box_inertia mass="0.05" x="0.08" y="0.08" z="0.03"/>
+    <visual>
+      <geometry>
+        <cylinder radius="0.04" length="0.03"/>
+      </geometry>
+      <material name="sensor_dark">
+        <color rgba="0.12 0.12 0.12 1.0"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0.10 0 0.09" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_link">
+    <xacro:box_inertia mass="0.05" x="0.04" y="0.08" z="0.05"/>
+    <visual>
+      <geometry>
+        <box size="0.04 0.08 0.05"/>
+      </geometry>
+      <material name="camera_black">
+        <color rgba="0.04 0.04 0.04 1.0"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.24 0 0.02" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_optical_frame"/>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+  </joint>
+
+  <link name="imu_link">
+    <xacro:box_inertia mass="0.02" x="0.03" y="0.03" z="0.02"/>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:if value="${control_backend == 'gazebo_diff_drive'}">
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.38</wheel_separation>
+      <wheel_radius>0.06</wheel_radius>
+      <odom_publish_frequency>30</odom_publish_frequency>
+    </plugin>
+  </gazebo>
+  </xacro:if>
+
+  <xacro:if value="${control_backend == 'gz_ros2_control'}">
+    <ros2_control name="GazeboSimSystem" type="system">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <joint name="left_wheel_joint">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+      <joint name="right_wheel_joint">
+        <command_interface name="position"/>
+        <command_interface name="velocity"/>
+        <command_interface name="effort"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+    </ros2_control>
+    <gazebo>
+      <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+        <parameters>$(arg controller_parameters_file)</parameters>
+        <ros>
+          <namespace>$(arg ros_namespace)</namespace>
+        </ros>
+      </plugin>
+    </gazebo>
+  </xacro:if>
+
+  <gazebo reference="lidar_link">
+    <sensor name="lidar" type="gpu_lidar">
+      <pose>-0.10 0 0 0 0 0</pose>
+      <topic>$(arg lidar_topic)</topic>
+      <gz_frame_id>$(arg tf_prefix)lidar_link</gz_frame_id>
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <visualize>true</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159265359</min_angle>
+            <max_angle>3.14159265359</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.12</min>
+          <max>10.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="camera_link">
+    <sensor name="camera" type="rgbd_camera">
+      <topic>$(arg camera_topic)</topic>
+      <gz_frame_id>$(arg tf_prefix)camera_optical_frame</gz_frame_id>
+      <always_on>true</always_on>
+      <update_rate>30</update_rate>
+      <visualize>true</visualize>
+      <camera>
+        <horizontal_fov>1.047</horizontal_fov>
+        <image>
+          <width>320</width>
+          <height>240</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.1</near>
+          <far>10.0</far>
+        </clip>
+        <optical_frame_id>$(arg tf_prefix)camera_optical_frame</optical_frame_id>
+      </camera>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="imu_link">
+    <sensor name="imu" type="imu">
+      <topic>$(arg imu_topic)</topic>
+      <gz_frame_id>$(arg tf_prefix)imu_link</gz_frame_id>
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+</robot>
