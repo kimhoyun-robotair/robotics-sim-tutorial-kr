@@ -23,7 +23,7 @@ Camera는 렌더링된 RGB 픽셀을 발행합니다. 그래서 물리 엔진만
 
 로봇의 link, fixed joint, LiDAR, Camera 설정은 하나의 Xacro 원본에 있습니다.
 
-`examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro`
+`examples/ros2_ws/src/tutorial_bot_description/urdf/stages/04-sensors-final.xacro`
 
 센서 System과 렌더 엔진 설정은 world에 있습니다.
 
@@ -69,6 +69,10 @@ Camera는 수평 시야각 약 60°, `320 × 240` RGB 이미지를 10 Hz로 발�
 저장소 루트에서 다음을 실행합니다.
 
 ```bash
+source /opt/ros/jazzy/setup.zsh
+stage="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/04-sensors-final.xacro"
+xacro "$stage" > /tmp/tutorial_bot.urdf
+check_urdf /tmp/tutorial_bot.urdf
 ./scripts/check_sensors.sh
 ```
 

@@ -21,7 +21,7 @@ Gazebo에 필요한 world, physics, sensor와 plugin 설정은 이후 SDF에 추
 
 이번 장의 원본은 다음 파일입니다.
 
-`examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro`
+`examples/ros2_ws/src/tutorial_bot_description/urdf/stages/01-base.xacro`
 
 `base_link`는 0.45 m × 0.32 m × 0.12 m 직육면체 몸체입니다. visual과 collision을 같은 단순 형상으로 시작하고, 관성은 질량 5 kg에 맞는 직육면체 근사값을 사용합니다.
 
@@ -31,7 +31,8 @@ Gazebo에 필요한 world, physics, sensor와 plugin 설정은 이후 SDF에 추
 
 ```bash
 source /opt/ros/jazzy/setup.zsh
-xacro examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro > /tmp/tutorial_bot.urdf
+stage="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/01-base.xacro"
+xacro "$stage" > /tmp/tutorial_bot.urdf
 check_urdf /tmp/tutorial_bot.urdf
 ```
 

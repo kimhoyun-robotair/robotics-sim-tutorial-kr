@@ -3,8 +3,9 @@ project(tutorial_bot_description)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY urdf
-  DESTINATION share/${PROJECT_NAME}
+install(DIRECTORY urdf/
+  DESTINATION share/${PROJECT_NAME}/urdf
+  FILES_MATCHING PATTERN "*.xacro"
 )
 
 ament_package()

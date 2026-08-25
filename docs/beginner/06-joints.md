@@ -21,7 +21,7 @@ Joint는 parent link와 child link의 상대 운동을 정의합니다. `fixed` 
 
 이번 장에서 수정하는 Xacro 원본은 다음입니다.
 
-`examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro`
+`examples/ros2_ws/src/tutorial_bot_description/urdf/stages/02-wheels-and-joints.xacro`
 
 이 파일의 `wheel` 매크로는 왼쪽과 오른쪽에 같은 원통 link를 만들고, y 위치만 다르게 지정합니다. 바퀴의 질량은 0.3 kg, 반지름은 0.06 m, 폭은 0.04 m입니다.
 
@@ -31,7 +31,8 @@ Xacro를 다시 확장한 뒤 두 child link와 두 joint가 생성됐는지 확
 
 ```bash
 source /opt/ros/jazzy/setup.zsh
-xacro examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro > /tmp/tutorial_bot.urdf
+stage="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/02-wheels-and-joints.xacro"
+xacro "$stage" > /tmp/tutorial_bot.urdf
 check_urdf /tmp/tutorial_bot.urdf
 ```
 

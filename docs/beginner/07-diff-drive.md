@@ -21,7 +21,7 @@ Gazebo DiffDrive System은 `cmd_vel` Twist 메시지를 받아 좌우 joint 속�
 
 DiffDrive plugin 설정은 로봇 원본에 포함됩니다.
 
-`examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro`
+`examples/ros2_ws/src/tutorial_bot_description/urdf/stages/03-diff-drive.xacro`
 
 headless smoke test는 Xacro를 임시 SDF로 변환해 `first-world.sdf`에 spawn합니다.
 
@@ -32,6 +32,10 @@ headless smoke test는 Xacro를 임시 SDF로 변환해 `first-world.sdf`에 spa
 저장소 루트에서 다음 명령을 실행합니다.
 
 ```bash
+source /opt/ros/jazzy/setup.zsh
+stage="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/03-diff-drive.xacro"
+xacro "$stage" > /tmp/tutorial_bot.urdf
+check_urdf /tmp/tutorial_bot.urdf
 ./scripts/check_diff_drive.sh
 ```
 
