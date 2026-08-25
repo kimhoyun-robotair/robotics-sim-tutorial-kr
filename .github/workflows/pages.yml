@@ -15,6 +15,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ros-gazebo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      TUTORIAL_CI_CCACHE: /tmp/tutorial-bot-ccache
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache compiler data
+        uses: actions/cache@v4
+        with:
+          path: /tmp/tutorial-bot-ccache
+          key: ros-jazzy-harmonic-ccache-${{ runner.arch }}-${{ hashFiles('examples/ros2_ws/src/tutorial_bot_plugins/**') }}
+          restore-keys: ros-jazzy-harmonic-ccache-${{ runner.arch }}-
+      - name: Build, test, and run the server-only smoke
+        run: ./scripts/ci/run_ros_gazebo_container.sh --source "$GITHUB_WORKSPACE" --evidence "$RUNNER_TEMP/ros-gazebo" --scenario nominal
+      - name: Upload ROS/Gazebo failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros-gazebo-failure
+          path: ${{ runner.temp }}/ros-gazebo
+          if-no-files-found: error
+
   build:
     runs-on: ubuntu-latest
     steps:

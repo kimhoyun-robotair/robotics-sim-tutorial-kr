@@ -16,22 +16,20 @@ TEST(DiagnosticsEnableReset, AppliesControlsAtUpdateBoundaryWithoutDistanceJump)
   DiagnosticsFixture fixture(true);
   ASSERT_TRUE(fixture.ControlEndpointsAvailable())
     << "enable/reset endpoint unavailable";
-  ASSERT_TRUE(fixture.SetPose(1.0, 0.0));
-  ASSERT_TRUE(fixture.Run(20));
+  ASSERT_TRUE(fixture.SetPoseAndWaitForDistance(1.0, 0.0, 1.0));
   ASSERT_NEAR(1.0, fixture.Distances().back(), 1e-6);
 
   // When: diagnostics is disabled, moved, re-enabled, moved, and reset.
   ASSERT_TRUE(fixture.PublishEnabled(false));
   ASSERT_TRUE(fixture.RunUntilStatus("DISABLED"));
   const double disabledBaseline = fixture.Distances().back();
-  ASSERT_TRUE(fixture.SetPose(5.0, 0.0));
-  ASSERT_TRUE(fixture.Run(20));
+  ASSERT_TRUE(fixture.SetPoseAndWaitForDistance(5.0, 0.0, disabledBaseline));
   const double disabledDistance = fixture.Distances().back();
   ASSERT_TRUE(fixture.PublishEnabled(true));
   ASSERT_TRUE(fixture.RunUntilStatus("READY"));
   const double reenabledDistance = fixture.Distances().back();
-  ASSERT_TRUE(fixture.SetPose(6.0, 0.0));
-  ASSERT_TRUE(fixture.Run(20));
+  ASSERT_TRUE(fixture.SetPoseAndWaitForDistance(
+    6.0, 0.0, disabledBaseline + 1.0));
   const double resumedDistance = fixture.Distances().back();
   bool resetAccepted = false;
   ASSERT_TRUE(fixture.Reset(resetAccepted));

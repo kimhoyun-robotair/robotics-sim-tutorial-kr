@@ -102,6 +102,29 @@ public:
       result && reply.data();
   }
 
+  bool SetPoseAndWaitForDistance(
+    const double x, const double y, const double expected)
+  {
+    if (!SetPose(x, y)) {
+      return false;
+    }
+    for (std::uint64_t iteration = 0; iteration < 1000; ++iteration) {
+      if (!Run(1)) {
+        return false;
+      }
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (condition_.wait_for(
+          lock, std::chrono::milliseconds(10), [this, expected]() {
+            return !distances_.empty() &&
+              std::abs(distances_.back() - expected) <= 1e-6;
+          }))
+      {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool ControlEndpointsAvailable()
   {
     if (!Run(20) || !enablePublisher_.HasConnections()) {
