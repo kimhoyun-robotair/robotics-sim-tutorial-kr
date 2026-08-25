@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title description" style="color-scheme:light">
+  <title id="title">Gazebo GUI 관찰 지점</title>
+  <desc id="description">Entity Tree, 3D View, Component Inspector를 표시한 주석 화면</desc>
+  <rect width="960" height="540" rx="24" fill="#eef4f8"/>
+  <rect width="960" height="105" rx="24" fill="#102a43"/>
+  <text x="48" y="58" fill="#fff" font-family="sans-serif" font-size="34" font-weight="700">Gazebo GUI 관찰 지점</text>
+  <text x="48" y="88" fill="#d9e2ec" font-family="sans-serif" font-size="18">Entity Tree, 3D View, Component Inspector를 표시한 주석 화면</text>
+  <g fill="#17324d" font-family="sans-serif" font-size="30" font-weight="700">
+<rect x="45" y="150" width="870" height="340" rx="16" fill="#263238"/>
+<rect x="60" y="190" width="210" height="280" fill="#37474f"/><rect x="285" y="190" width="390" height="280" fill="#cfd8dc"/><rect x="690" y="190" width="210" height="280" fill="#37474f"/>
+<text x="78" y="230" fill="#fff" font-size="22">Entity Tree</text><text x="380" y="230" font-size="22">3D View</text><text x="705" y="230" fill="#fff" font-size="22">Inspector</text>
+<rect x="415" y="325" width="105" height="90" fill="#d84315"/><ellipse cx="565" cy="365" rx="30" ry="65" fill="#1565c0"/>
+<path d="M180 255L350 300M785 255L580 300" stroke="#ffb300" stroke-width="8"/><circle cx="475" cy="170" r="18" fill="#66bb6a"/><text x="505" y="178" font-size="22">Play / Pause / Step</text>
+  </g>
+</svg>

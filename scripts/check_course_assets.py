@@ -71,6 +71,7 @@ def load_visual_assets(path: Path) -> list[VisualAsset]:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
     result.add_argument("--manifest", required=True)
+    result.add_argument("--fragments")
     result.add_argument("--assets-root")
     result.add_argument("--site-dir")
     result.add_argument("--evidence", required=True)
@@ -122,8 +123,7 @@ def site_errors(asset: VisualAsset, site_dir: Path) -> list[str]:
     return errors
 
 
-def audit(manifest: Path, assets_root: Path, site_dir: Path | None) -> tuple[dict[str, object], int]:
-    assets = load_visual_assets(manifest)
+def audit(assets: list[VisualAsset], assets_root: Path, site_dir: Path | None) -> tuple[dict[str, object], int]:
     errors: list[str] = []
     ids = [asset.asset_id for asset in assets]
     paths = [asset.path for asset in assets]
@@ -159,7 +159,9 @@ def audit(manifest: Path, assets_root: Path, site_dir: Path | None) -> tuple[dic
         "errors": errors,
         "quality_gate": "semantic",
     }
-    return report, 0 if not errors else 1
+    if not errors:
+        return report, 0
+    return report, 64 if any("missing file" in error for error in errors) else 1
 
 
 def main() -> int:
@@ -168,9 +170,13 @@ def main() -> int:
     assets_root = resolved(arguments.assets_root) if arguments.assets_root else ROOT / "docs" / "assets"
     site_dir = resolved(arguments.site_dir) if arguments.site_dir else None
     try:
-        report, exit_code = audit(manifest, assets_root, site_dir)
+        assets = load_visual_assets(manifest)
+        if arguments.fragments:
+            for fragment in arguments.fragments.split(","):
+                assets.extend(load_visual_assets(resolved(fragment)))
+        report, exit_code = audit(assets, assets_root, site_dir)
     except ManifestError as error:
-        report, exit_code = {"schema_version": 1, "status": "fail", "errors": [str(error)]}, 1
+        report, exit_code = {"schema_version": 1, "status": "fail", "errors": [str(error)]}, 64
     evidence = Path(arguments.evidence)
     evidence.parent.mkdir(parents=True, exist_ok=True)
     evidence.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")

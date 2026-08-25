@@ -61,6 +61,7 @@ def load_visual_assets(path: Path) -> list[VisualAsset]:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
     result.add_argument("--manifest", required=True)
+    result.add_argument("--fragments")
     result.add_argument("--only")
     result.add_argument("--evidence", required=True)
     return result
@@ -77,9 +78,10 @@ def approved_command(asset: VisualAsset) -> list[str]:
     except ValueError as error:
         raise ManifestError(f"{asset.asset_id}: invalid source_command: {error}") from error
     expected = ["python3", RENDERER, "--output", f"docs/{asset.path}"]
+    rendered = [*expected, "--scene", asset.asset_id]
     forced = [*expected, "--force-failure"]
     cleanup_failure = [*expected, "--cleanup-failure"]
-    if parts not in (expected, forced, cleanup_failure):
+    if parts not in (expected, rendered, forced, cleanup_failure):
         raise ManifestError(f"{asset.asset_id}: source_command is not approved")
     return [sys.executable, str(ROOT / RENDERER), *parts[2:]]
 
@@ -153,8 +155,12 @@ def main() -> int:
     evidence = Path(arguments.evidence)
     try:
         assets = load_visual_assets(manifest_path(arguments.manifest))
-        selected = [asset for asset in assets if arguments.only is None or asset.asset_id == arguments.only]
-        if not selected:
+        if arguments.fragments:
+            for fragment in arguments.fragments.split(","):
+                assets.extend(load_visual_assets(manifest_path(fragment)))
+        selected_ids = set(arguments.only.split(",")) if arguments.only else None
+        selected = [asset for asset in assets if selected_ids is None or asset.asset_id in selected_ids]
+        if not selected or (selected_ids is not None and {asset.asset_id for asset in selected} != selected_ids):
             raise ManifestError(f"unknown --only asset: {arguments.only}")
         for asset in selected:
             approved_command(asset)

@@ -144,19 +144,24 @@ def main() -> int:
     termination_reason = "completed"
     signal_sent: str | None = None
     signal_deadline = started + signal_plan[0] if signal_plan else None
-    while process.poll() is None:
-        now = time.monotonic()
-        if signal_plan and signal_deadline is not None and now >= signal_deadline:
-            signal_sent = signal_plan[1].name
-            signal_group(process.pid, signal_plan[1])
-            termination_reason = "signal"
-            signal_plan = None
-        elif now - started >= args.timeout:
-            signal_sent = signal.SIGTERM.name
-            signal_group(process.pid, signal.SIGTERM)
-            termination_reason = "timeout"
-            break
-        time.sleep(POLL_SECONDS)
+    try:
+        while process.poll() is None:
+            now = time.monotonic()
+            if signal_plan and signal_deadline is not None and now >= signal_deadline:
+                signal_sent = signal_plan[1].name
+                signal_group(process.pid, signal_plan[1])
+                termination_reason = "signal"
+                signal_plan = None
+            elif now - started >= args.timeout:
+                signal_sent = signal.SIGTERM.name
+                signal_group(process.pid, signal.SIGTERM)
+                termination_reason = "timeout"
+                break
+            time.sleep(POLL_SECONDS)
+    except KeyboardInterrupt:
+        signal_sent = signal.SIGINT.name
+        signal_group(process.pid, signal.SIGINT)
+        termination_reason = "signal"
     if termination_reason == "timeout":
         try:
             process.wait(timeout=2)

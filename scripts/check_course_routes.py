@@ -12,7 +12,6 @@ from typing import Final
 import yaml
 from jsonschema import Draft202012Validator
 
-
 ROOT: Final = Path(__file__).resolve().parents[1]
 VIEWPORTS: Final = {"desktop": (1280, 900), "mobile": (375, 812)}
 type JsonValue = None | bool | int | float | str | Sequence[JsonValue] | Mapping[str, JsonValue]
@@ -37,6 +36,8 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--records")
     result.add_argument("--site-dir")
     result.add_argument("--asset-manifest", default="docs/assets/manifest.yaml")
+    result.add_argument("--fragments")
+    result.add_argument("--routes")
     result.add_argument("--course")
     result.add_argument("--courses")
     result.add_argument("--expect-routes", type=int)
@@ -94,7 +95,9 @@ def load_assets(path: Path) -> list[RouteAsset]:
     return assets
 
 
-def selected_assets(assets: list[RouteAsset], courses: set[str]) -> list[RouteAsset]:
+def selected_assets(assets: list[RouteAsset], courses: set[str], routes: set[str]) -> list[RouteAsset]:
+    if routes:
+        return [asset for asset in assets if asset.route.strip("/") in routes]
     if not courses:
         return assets
     return [
@@ -121,7 +124,7 @@ def browser_records(
     screenshot_dir.mkdir(parents=True, exist_ok=True)
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
             try:
                 for asset in assets:
                     console_errors: list[str] = []
@@ -228,12 +231,19 @@ def main() -> int:
     if not arguments.site_dir:
         parser().error("--site-dir is required unless --records is used")
     courses = set(filter(None, (arguments.course or arguments.courses or "").split(",")))
+    routes = {route.strip("/") for route in (arguments.routes or "").split(",") if route}
     viewports = list(filter(None, arguments.viewports.split(",")))
     themes = list(filter(None, arguments.themes.split(",")))
     try:
         if any(name not in VIEWPORTS for name in viewports) or any(name not in {"light", "dark"} for name in themes):
             raise RouteInputError("unsupported viewport or theme")
-        assets = selected_assets(load_assets(resolved(arguments.asset_manifest)), courses)
+        assets = load_assets(resolved(arguments.asset_manifest))
+        fragment_paths = [resolved(path) for path in arguments.fragments.split(",")] if arguments.fragments else sorted(
+            (ROOT / "docs" / "assets" / "manifests").glob("*.yaml")
+        )
+        for fragment_path in fragment_paths:
+            assets.extend(load_assets(fragment_path))
+        assets = selected_assets(assets, courses, routes)
         if arguments.expect_routes is not None and len(assets) != arguments.expect_routes:
             raise RouteInputError(f"expected {arguments.expect_routes} routes, found {len(assets)}")
         records_list, runtime_errors = browser_records(
