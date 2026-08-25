@@ -8,6 +8,9 @@ cycles=100
 sim_seconds=""
 worlds=""
 publish_period=""
+install_base_argument=""
+internal_readiness_timeout=20
+sim_timeout=20
 server_pid=""
 capture_pids=()
 
@@ -39,6 +42,18 @@ while (( $# > 0 )); do
       ;;
     --publish-period)
       publish_period="${2:-}"
+      shift 2
+      ;;
+    --install-base)
+      install_base_argument="${2:-}"
+      shift 2
+      ;;
+    --internal-readiness-timeout)
+      internal_readiness_timeout="${2:-}"
+      shift 2
+      ;;
+    --sim-timeout)
+      sim_timeout="${2:-}"
       shift 2
       ;;
     *)
@@ -84,7 +99,15 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 case "$scenario" in
-  distance|model-lifecycle|missing-model|transport|transport-wrong-types|physics|invalid-period) ;;
+  distance|model-lifecycle|transport|transport-wrong-types|physics|invalid-period) ;;
+  nominal|missing-model|plugin-missing|misleading-output|cleanup-reuse|timeout|sigint-hold)
+    exec "$(dirname "$0")/check_advanced_headless.sh" \
+      --scenario "$scenario" \
+      --install-base "${install_base_argument:-${TUTORIAL_INSTALL_BASE:-}}" \
+      --evidence "$evidence" \
+      --internal-readiness-timeout "$internal_readiness_timeout" \
+      --sim-timeout "$sim_timeout"
+    ;;
   *)
     printf 'unknown scenario: %s\n' "$scenario" >&2
     exit 64

@@ -8,6 +8,7 @@
     </physics>
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
     <plugin filename="libTutorialBotDiagnosticsSystem.so"
             name="gz::sim::systems::TutorialBotDiagnostics">
       <model_name>tutorial_bot</model_name>
