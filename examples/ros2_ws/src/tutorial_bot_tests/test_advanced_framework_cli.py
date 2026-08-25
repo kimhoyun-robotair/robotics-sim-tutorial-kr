@@ -3,15 +3,20 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 WORKSPACE_ROOT = Path(__file__).parents[4]
 
 
-def test_unimplemented_distance_scenario_is_bounded_and_explicit(tmp_path: Path) -> None:
-    # Given: Task 9 distance behavior has not been implemented.
+def test_distance_scenario_rejects_missing_installed_assets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given: the checker is bound to an install root without Task 9 artifacts.
     evidence = tmp_path / "distance"
+    monkeypatch.setenv("TUTORIAL_INSTALL_BASE", str(tmp_path / "missing-install"))
 
-    # When: the common advanced checker is invoked for that future scenario.
+    # When: the distance scenario is invoked through its command-line surface.
     result = subprocess.run(
         [
             "bash",
@@ -27,7 +32,7 @@ def test_unimplemented_distance_scenario_is_bounded_and_explicit(tmp_path: Path)
         timeout=10,
     )
 
-    # Then: it cannot be mistaken for live success.
+    # Then: stale or absent installs cannot be mistaken for live success.
     assert result.returncode == 64
-    assert "scenario unavailable" in result.stderr
+    assert "installed diagnostics assets not found" in result.stderr
     assert "PASS" not in result.stdout
