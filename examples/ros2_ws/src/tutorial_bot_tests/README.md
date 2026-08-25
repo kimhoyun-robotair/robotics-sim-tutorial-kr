@@ -1,3 +1,3 @@
 # tutorial_bot_tests
 
-headless simulation과 integration test를 둘 패키지 자리입니다.
+launch 입력 검증과 고급 diagnostics 계약·검사기 기반 테스트를 제공하는 패키지입니다.
