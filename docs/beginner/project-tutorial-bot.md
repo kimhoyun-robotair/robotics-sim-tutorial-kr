@@ -27,6 +27,11 @@ tutorial_bot
 
 Xacro가 robot description의 유일한 원본입니다. world에는 physics·sensor System을 두고, Gazebo 전용 DiffDrive·sensor 설정은 Xacro의 `<gazebo>` 확장으로 연결합니다.
 
+<figure class="course-figure" markdown="span">
+  ![이동하는 tutorial bot과 ROS 2에서 확인하는 오도메트리 라이다 카메라 IMU 시계 결과](../assets/beginner/final-project-observable.svg)
+  <figcaption>그림 7. 최종 PASS는 배너 한 줄이 아니라 이동량, 360개 scan, 320&nbsp;×&nbsp;240 image, IMU와 simulation clock을 실제 메시지에서 읽은 결과입니다.</figcaption>
+</figure>
+
 ## 실행
 
 먼저 두 ROS 2 package를 빌드합니다.
@@ -37,6 +42,12 @@ colcon build --packages-select tutorial_bot_description tutorial_bot_bringup \
   --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3
 source install/setup.bash
 cd ../..
+```
+
+빌드 뒤 dependency preflight를 먼저 실행하면 설치 누락과 runtime 실패를 구분할 수 있습니다.
+
+```bash
+./scripts/check_ros_gz_bridge.sh --preflight-only
 ```
 
 그 다음 저장소 루트에서 통합 검증을 실행합니다.
@@ -51,7 +62,7 @@ cd ../..
 
 ```text
 ROS cmd_vel to Gazebo verified: odom x=0.40..., linear.x=0.20...
-Gazebo sensors to ROS verified: scan=258, image=320x240, IMU and clock received.
+Gazebo sensors to ROS verified: scan=360, image=320x240, IMU and clock received.
 ```
 
 검증은 다음 순서로 동작합니다.
@@ -70,6 +81,14 @@ Gazebo DiffDrive → odometry
       ├── Camera → ROS 2 /tutorial_bot/camera/image
       └── /clock → ROS 2 /clock
 ```
+
+완료 판정은 다음 값이 **모두** 실제 ROS message에서 파싱될 때만 성립합니다.
+
+- `/odom`: `position.x > 0.05 m`, `linear.x > 0.15 m/s`
+- `/scan`: 360개 range, `-π..π`, `0.12..10.0 m`, 유한 거리와 `inf`를 구분
+- `/tutorial_bot/camera/image`: 320×240 image
+- `/imu`: angular velocity와 linear acceleration field
+- `/clock`: simulation time message가 수신되고 증가
 
 ## 확장 과제
 

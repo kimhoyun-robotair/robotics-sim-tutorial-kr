@@ -23,6 +23,11 @@ https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coke
 
 처음 실행할 때는 네트워크 연결이 필요합니다. 이 저장소에는 내려받은 Fuel 자산을 넣지 않습니다. 모델의 라이선스, 크기, 버전은 Fuel 페이지에서 확인한 뒤 필요한 자산만 사용합니다.
 
+<figure class="course-figure" markdown="span">
+  ![Fuel HTTPS URI와 cache 및 로컬 resource path가 월드 모델로 해석되는 흐름](../assets/beginner/fuel-resource-flow.svg)
+  <figcaption>그림 5. Fuel HTTPS URI는 download cache를 거치고, <code>model://</code> URI는 resource path를 검색합니다. 두 경로의 역할을 섞지 않습니다.</figcaption>
+</figure>
+
 ## 예제 파일
 
 Fuel model을 include하는 world는 다음 파일입니다.
@@ -67,6 +72,12 @@ gz fuel download -u 'https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coke'
 
 이 cache는 로컬 실행용이므로 Git에 추가하지 않습니다. 이 저장소의 검증 스크립트도 임시 cache를 사용하고 종료할 때 제거합니다.
 
+다운로드가 실제로 끝났는지는 성공 문구만 보지 말고 cache 아래의 `model.config`와 `model.sdf`를 확인합니다.
+
+```bash
+find "$GZ_FUEL_CACHE_PATH" -type f \( -name model.config -o -name model.sdf \) -print
+```
+
 ### 3. 로컬 model resource path 이해하기
 
 Fuel에서 model을 직접 내려받아 별도 디렉터리에 보관했다면, `model://` URI를 찾을 수 있도록 부모 디렉터리를 `GZ_SIM_RESOURCE_PATH`에 추가합니다.
@@ -104,7 +115,12 @@ gz sim examples/gazebo/worlds/fuel-world.sdf
 
 ## 결과 확인
 
-`gz model --list`에 `fuel_coke`가 보이면 Fuel URI가 내려받은 model을 해석해 world 인스턴스로 만들었다는 뜻입니다. 이 model은 이 예제의 SDF에 복사된 것이 아니라 Fuel cache에서 찾아집니다.
+`gz model --list`에 `fuel_coke`가 보이고 cache에 `model.config`가 있으면 두 관찰값이 이어집니다. URI가 자산을 cache에 내려받았고, Gazebo가 그 자산을 해석해 world instance를 만들었다는 뜻입니다. 이 model은 이 예제의 SDF에 복사된 것이 아니라 Fuel cache에서 찾아집니다.
+
+```text
+Fuel URI → GZ_FUEL_CACHE_PATH/model.config → SDF 해석 → world의 fuel_coke
+model://Coke → GZ_SIM_RESOURCE_PATH 검색 → 로컬 model.sdf
+```
 
 ## 자주 발생하는 문제
 

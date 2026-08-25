@@ -15,6 +15,7 @@ import yaml
 ROOT: Final = Path(__file__).resolve().parents[1]
 VISUAL_SUFFIXES: Final = frozenset({".png", ".webp", ".svg"})
 PRIVATE_PATH: Final = re.compile(r"(?:/home/|/Users/|[A-Za-z]:\\\\Users\\\\)")
+TASK_FRAGMENT: Final = re.compile(r"task-(?P<number>[1-9][0-9]*)\.yaml")
 JsonValue: TypeAlias = (
     str | int | float | bool | None | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
 )
@@ -85,6 +86,25 @@ def parser() -> argparse.ArgumentParser:
 def resolved(raw: str) -> Path:
     path = Path(raw)
     return path if path.is_absolute() else ROOT / path
+
+
+def cumulative_fragments(fragments: tuple[Path, ...]) -> tuple[Path, ...]:
+    task_numbers = [
+        int(match.group("number"))
+        for path in fragments
+        if (match := TASK_FRAGMENT.fullmatch(path.name)) is not None
+    ]
+    if not task_numbers:
+        return fragments
+    maximum = max(task_numbers)
+    discovered = {
+        path.resolve(): path
+        for directory in {path.parent for path in fragments}
+        for path in directory.glob("task-*.yaml")
+        if (match := TASK_FRAGMENT.fullmatch(path.name)) is not None
+        and int(match.group("number")) <= maximum
+    }
+    return tuple(discovered[key] for key in sorted(discovered, key=lambda item: item.name))
 
 
 def asset_errors(asset: VisualAsset, assets_root: Path) -> list[str]:
@@ -174,11 +194,11 @@ def audit(
 def main() -> int:
     arguments = parser().parse_args()
     manifest = resolved(arguments.manifest)
-    fragments = tuple(
+    fragments = cumulative_fragments(tuple(
         resolved(fragment)
         for raw_fragment in arguments.fragments or ()
         for fragment in raw_fragment.split(",")
-    )
+    ))
     assets_root = resolved(arguments.assets_root) if arguments.assets_root else ROOT / "docs" / "assets"
     site_dir = resolved(arguments.site_dir) if arguments.site_dir else None
     try:

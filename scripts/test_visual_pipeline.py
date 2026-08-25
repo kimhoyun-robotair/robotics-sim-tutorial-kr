@@ -214,17 +214,16 @@ def test_asset_checker_rejects_stale_generated_asset() -> None:
 
 
 def test_asset_checker_merges_task_fragment_with_base_manifest(tmp_path: Path) -> None:
-    # Given: the global visual manifest and both integrated course fragments.
+    # Given: the global visual manifest and the latest cumulative course fragment.
     evidence = tmp_path / "assets.json"
 
-    # When: both are audited against the real documentation asset tree.
+    # When: the latest fragment is audited against the real documentation asset tree.
     result = run_cli(
         "check_course_assets.py",
         "--manifest",
         "docs/assets/manifest.yaml",
         "--fragments",
-        "docs/assets/manifests/task-5.yaml",
-        "docs/assets/manifests/task-6.yaml",
+        "docs/assets/manifests/task-7.yaml",
         "--evidence",
         str(evidence),
     )
@@ -242,4 +241,8 @@ def test_asset_checker_merges_task_fragment_with_base_manifest(tmp_path: Path) -
         "beginner-05-format-flow",
         "beginner-06-joint-axis",
         "beginner-07-diff-drive-trajectories",
+        "beginner-08-sensor-observables",
+        "beginner-09-fuel-resource-flow",
+        "beginner-10-bridge-dataflow",
+        "beginner-project-final-observable",
     ]

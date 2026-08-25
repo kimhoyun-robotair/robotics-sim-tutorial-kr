@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="title desc">
+  <title id="title">tutorial_bot 센서 관찰값</title>
+  <desc id="desc">로봇에서 퍼지는 라이다 광선, RGB-D 카메라 화면, IMU 축과 각 센서의 주기</desc>
+  <rect width="960" height="500" rx="24" fill="#eef4f8"/>
+  <g font-family="sans-serif" fill="#17324d">
+    <text x="480" y="48" text-anchor="middle" font-size="30" font-weight="700">4단계 센서의 눈과 균형 감각</text>
+    <g transform="translate(52 88)">
+      <rect width="400" height="350" rx="20" fill="#fff" stroke="#b0bec5" stroke-width="3"/>
+      <text x="200" y="42" text-anchor="middle" font-size="24" font-weight="700">GPU LiDAR · 10 Hz</text>
+      <g transform="translate(200 205)" stroke="#0288d1" stroke-width="3">
+        <path d="M0 0L155 0"/><path d="M0 0L145 -55"/><path d="M0 0L110 -112"/>
+        <path d="M0 0L55 -145"/><path d="M0 0L-55 -145"/><path d="M0 0L-110 -112"/>
+        <path d="M0 0L-145 -55"/><path d="M0 0L-155 0"/><path d="M0 0L-145 55"/>
+        <path d="M0 0L-110 112"/><path d="M0 0L-55 145"/><path d="M0 0L55 145"/>
+        <path d="M0 0L110 112"/><path d="M0 0L145 55"/>
+      </g>
+      <rect x="165" y="170" width="70" height="70" rx="12" fill="#1565c0"/>
+      <text x="200" y="332" text-anchor="middle" font-size="18">−π … π · 360 samples</text>
+    </g>
+    <g transform="translate(508 88)">
+      <rect width="400" height="162" rx="20" fill="#fff" stroke="#b0bec5" stroke-width="3"/>
+      <text x="200" y="38" text-anchor="middle" font-size="24" font-weight="700">RGB-D Camera · 30 Hz</text>
+      <path d="M92 112L185 62V142Z" fill="#00897b" opacity=".25" stroke="#00796b" stroke-width="3"/>
+      <rect x="55" y="84" width="45" height="45" rx="8" fill="#00796b"/>
+      <rect x="210" y="62" width="135" height="80" rx="8" fill="#d8eef7" stroke="#0288d1" stroke-width="3"/>
+      <text x="277" y="97" text-anchor="middle" font-size="18">320 × 240</text>
+      <text x="277" y="123" text-anchor="middle" font-size="16">HFOV 1.047 rad</text>
+    </g>
+    <g transform="translate(508 276)">
+      <rect width="400" height="162" rx="20" fill="#fff" stroke="#b0bec5" stroke-width="3"/>
+      <text x="200" y="38" text-anchor="middle" font-size="24" font-weight="700">IMU · 100 Hz</text>
+      <circle cx="102" cy="100" r="34" fill="#8e24aa" opacity=".16" stroke="#8e24aa" stroke-width="3"/>
+      <path d="M102 100L102 54M102 100L155 100M102 100L72 132" stroke="#8e24aa" stroke-width="4"/>
+      <text x="250" y="91" text-anchor="middle" font-size="18">각속도 + 선형 가속도</text>
+      <text x="250" y="121" text-anchor="middle" font-size="16">Gaussian σ = 0.001</text>
+    </g>
+  </g>
+</svg>
