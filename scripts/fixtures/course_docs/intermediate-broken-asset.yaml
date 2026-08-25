@@ -1,0 +1,5 @@
+schema_version: 1
+compatibility: {ubuntu: "24.04", ros: jazzy, gazebo: harmonic}
+routes: []
+assets:
+  - assets/intermediate/missing-intermediate-architecture.svg

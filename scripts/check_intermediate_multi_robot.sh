@@ -8,6 +8,8 @@ robot1_name='robot1'
 robot2_name='robot2'
 robot1_namespace='/robot1'
 robot2_namespace='/robot2'
+matrix_install_base=${TUTORIAL_INSTALL_BASE:-}
+dependency_overlay=${TUTORIAL_BOT_DEPENDENCY_OVERLAY:-}
 
 while (($#)); do
   case "$1" in
@@ -127,26 +129,48 @@ source /opt/ros/jazzy/setup.bash
 set -u
 
 : > "$evidence_dir/pids.log"
-build_command=(
-  colcon --log-base "$temp_root/log" build
-  --base-paths "$project_root/examples/ros2_ws/src"
-  --packages-select tutorial_bot_description tutorial_bot_gazebo
-  tutorial_bot_control tutorial_bot_bringup
-  --build-base "$temp_root/build"
-  --install-base "$temp_root/install"
-  --event-handlers console_direct+
-)
-printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
-printf '\n' >> "$evidence_dir/build.command"
-setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
-build_pid=$!
-printf '%s\n' "$build_pid" >> "$evidence_dir/pids.log"
-wait "$build_pid"
-build_pid=''
+if [[ -n $matrix_install_base ]]; then
+  [[ $matrix_install_base == /* && -f $matrix_install_base/setup.bash ]] || {
+    printf 'Invalid TUTORIAL_INSTALL_BASE: %s\n' "$matrix_install_base" >&2
+    exit 2
+  }
+  active_install_base=$matrix_install_base
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.command"
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.log"
+else
+  build_command=(
+    colcon --log-base "$temp_root/log" build
+    --base-paths "$project_root/examples/ros2_ws/src"
+    --packages-select tutorial_bot_description tutorial_bot_gazebo
+    tutorial_bot_control tutorial_bot_bringup
+    --build-base "$temp_root/build"
+    --install-base "$temp_root/install"
+    --event-handlers console_direct+
+  )
+  printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
+  printf '\n' >> "$evidence_dir/build.command"
+  setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
+  build_pid=$!
+  printf '%s\n' "$build_pid" >> "$evidence_dir/pids.log"
+  wait "$build_pid"
+  build_pid=''
+  active_install_base=$temp_root/install
+fi
 set +u
-source "$temp_root/install/setup.bash"
+source "$active_install_base/setup.bash"
 set -u
-find "$temp_root/install" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum \
+if [[ -n $dependency_overlay ]]; then
+  [[ $dependency_overlay == /* && -d $dependency_overlay/opt/ros/jazzy ]] || exit 2
+  overlay_prefix="$dependency_overlay/opt/ros/jazzy"
+  export PATH="$overlay_prefix/bin:$PATH"
+  export AMENT_PREFIX_PATH="$overlay_prefix:$AMENT_PREFIX_PATH"
+  export CMAKE_PREFIX_PATH="$overlay_prefix:$CMAKE_PREFIX_PATH"
+  export LD_LIBRARY_PATH="$overlay_prefix/lib:$LD_LIBRARY_PATH"
+  export PYTHONPATH="$overlay_prefix/lib/python3.12/site-packages:$PYTHONPATH"
+  printf 'overlay_prefix=%s\npackages=%s\n' "$overlay_prefix" \
+    'matrix-shared-ros2controlcli' > "$evidence_dir/overlay.log"
+fi
+find "$active_install_base" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum \
   > "$evidence_dir/install-tree.sha256"
 
 bringup_share=$(ros2 pkg prefix --share tutorial_bot_bringup)
@@ -226,23 +250,34 @@ for dependency in "${required_dependencies[@]}"; do
 done
 
 if ((${#missing_dependencies[@]})); then
-  kill -TERM -- "-$launch_pid" 2>/dev/null || true
+  owned_stop_pgid "$launch_pid"
   wait "$launch_pid" 2>/dev/null || true
+  if ps -eo pgid= | awk -v pgid="$launch_pid" \
+    '$1 == pgid {found=1} END {exit !found}'; then
+    printf 'First launch process group survived overlay restart: %s\n' "$launch_pid" >&2
+    exit 1
+  fi
   launch_pid=''
-  overlay_root="$temp_root/dependency-overlay"
-  mkdir -p "$overlay_root/debs" "$overlay_root/root"
-  overlay_packages=(
-    ros-jazzy-controller-manager ros-jazzy-controller-manager-msgs
-    ros-jazzy-gz-ros2-control ros-jazzy-ros2controlcli
-  )
-  (
-    cd "$overlay_root/debs"
-    apt-get download "${overlay_packages[@]}"
-  ) > "$evidence_dir/overlay-download.log" 2>&1
-  for package in "$overlay_root"/debs/*.deb; do
-    dpkg-deb -x "$package" "$overlay_root/root"
-  done
-  overlay_prefix="$overlay_root/root/opt/ros/jazzy"
+  if [[ -n $dependency_overlay ]]; then
+    [[ $dependency_overlay == /* && -d $dependency_overlay/opt/ros/jazzy ]] || exit 2
+    overlay_prefix="$dependency_overlay/opt/ros/jazzy"
+    overlay_packages=(matrix-shared-ros2controlcli)
+  else
+    overlay_root="$temp_root/dependency-overlay"
+    mkdir -p "$overlay_root/debs" "$overlay_root/root"
+    overlay_packages=(
+      ros-jazzy-controller-manager ros-jazzy-controller-manager-msgs
+      ros-jazzy-gz-ros2-control ros-jazzy-ros2controlcli
+    )
+    (
+      cd "$overlay_root/debs"
+      apt-get download "${overlay_packages[@]}"
+    ) > "$evidence_dir/overlay-download.log" 2>&1
+    for package in "$overlay_root"/debs/*.deb; do
+      dpkg-deb -x "$package" "$overlay_root/root"
+    done
+    overlay_prefix="$overlay_root/root/opt/ros/jazzy"
+  fi
   export PATH="$overlay_prefix/bin:$PATH"
   export AMENT_PREFIX_PATH="$overlay_prefix:$AMENT_PREFIX_PATH"
   export CMAKE_PREFIX_PATH="$overlay_prefix:$CMAKE_PREFIX_PATH"
@@ -280,25 +315,43 @@ done
 gz model --list > "$evidence_dir/entities.log"
 grep -Eq '^[[:space:]]*-[[:space:]]+robot1$' "$evidence_dir/entities.log"
 grep -Eq '^[[:space:]]*-[[:space:]]+robot2$' "$evidence_dir/entities.log"
-ros2 node list --no-daemon --spin-time 5 > "$evidence_dir/nodes.log" 2>&1 || true
-ros2 topic list --no-daemon --spin-time 5 > "$evidence_dir/topics.log" 2>&1 || true
+ros2 node list --no-daemon --spin-time 1 > "$evidence_dir/nodes.log" 2>&1 || true
+ros2 topic list --no-daemon --spin-time 1 > "$evidence_dir/topics.log" 2>&1 || true
+sensor_pids=()
 for robot in robot1 robot2; do
-  timeout 15 ros2 topic echo --no-daemon --once "/$robot/scan" sensor_msgs/msg/LaserScan \
-    > "$evidence_dir/$robot-scan.log"
-  timeout 15 ros2 topic echo --no-daemon --once "/$robot/imu" sensor_msgs/msg/Imu \
-    > "$evidence_dir/$robot-imu.log"
-  timeout 15 ros2 topic echo --no-daemon --once "/$robot/camera/image" sensor_msgs/msg/Image \
-    > "$evidence_dir/$robot-image.log"
-  timeout 15 ros2 topic echo --no-daemon --once "/$robot/joint_states" sensor_msgs/msg/JointState \
-    > "$evidence_dir/$robot-joint-states.log"
+  setsid timeout 15 ros2 topic echo --no-daemon --once "/$robot/scan" \
+    sensor_msgs/msg/LaserScan > "$evidence_dir/$robot-scan.log" &
+  auxiliary_pids+=("$!")
+  sensor_pids+=("${auxiliary_pids[-1]}")
+  setsid timeout 15 ros2 topic echo --no-daemon --once "/$robot/imu" \
+    sensor_msgs/msg/Imu > "$evidence_dir/$robot-imu.log" &
+  auxiliary_pids+=("$!")
+  sensor_pids+=("${auxiliary_pids[-1]}")
+  setsid timeout 15 ros2 topic echo --no-daemon --once "/$robot/camera/image" \
+    sensor_msgs/msg/Image > "$evidence_dir/$robot-image.log" &
+  auxiliary_pids+=("$!")
+  sensor_pids+=("${auxiliary_pids[-1]}")
+  setsid timeout 15 ros2 topic echo --no-daemon --once "/$robot/joint_states" \
+    sensor_msgs/msg/JointState > "$evidence_dir/$robot-joint-states.log" &
+  auxiliary_pids+=("$!")
+  sensor_pids+=("${auxiliary_pids[-1]}")
+done
+for sensor_pid in "${sensor_pids[@]}"; do
+  wait "$sensor_pid" || true
+done
+auxiliary_pids=("$tf_static_pid")
+for robot in robot1 robot2; do
   grep -q "frame_id: $robot/lidar_link" "$evidence_dir/$robot-scan.log"
   grep -q "frame_id: $robot/imu_link" "$evidence_dir/$robot-imu.log"
   grep -q "frame_id: $robot/camera_optical_frame" "$evidence_dir/$robot-image.log"
+  grep -q -- '- left_wheel_joint' "$evidence_dir/$robot-joint-states.log"
+  grep -q -- '- right_wheel_joint' "$evidence_dir/$robot-joint-states.log"
 done
 
 ros2 topic info --no-daemon --spin-time 2 /clock > "$evidence_dir/clock-info.log"
 grep -q 'Publisher count: 1' "$evidence_dir/clock-info.log"
 gz topic -i -t /clock > "$evidence_dir/gz-clock-info.log"
+: > "$evidence_dir/clock-samples.log"
 setsid timeout 20 ros2 topic echo --no-daemon /clock rosgraph_msgs/msg/Clock \
   > "$evidence_dir/clock-samples.log" 2>&1 &
 clock_pid=$!
@@ -322,15 +375,22 @@ tf_pid=$!
 auxiliary_pids+=("$tf_pid")
 ros2 topic info --no-daemon --spin-time 2 -v /tf_static \
   > "$evidence_dir/tf-static-info.log"
-wait "$tf_pid" 2>/dev/null || true
-for _ in {1..100}; do
-  if grep -q 'robot1/imu_link' "$evidence_dir/tf-static.log" && \
+for _ in {1..80}; do
+  if grep -q 'robot1/base_link' "$evidence_dir/tf.log" && \
+    grep -q 'robot1/left_wheel_link' "$evidence_dir/tf.log" && \
+    grep -q 'robot1/right_wheel_link' "$evidence_dir/tf.log" && \
+    grep -q 'robot2/base_link' "$evidence_dir/tf.log" && \
+    grep -q 'robot2/left_wheel_link' "$evidence_dir/tf.log" && \
+    grep -q 'robot2/right_wheel_link' "$evidence_dir/tf.log" && \
+    grep -q 'robot1/imu_link' "$evidence_dir/tf-static.log" && \
     grep -q 'robot2/imu_link' "$evidence_dir/tf-static.log"; then
     break
   fi
   kill -0 "$launch_pid" 2>/dev/null || break
   sleep 0.1
 done
+kill -TERM -- "-$tf_pid" 2>/dev/null || true
+wait "$tf_pid" 2>/dev/null || true
 kill -TERM -- "-$tf_static_pid" 2>/dev/null || true
 wait "$tf_static_pid" 2>/dev/null || true
 auxiliary_pids=()
@@ -361,32 +421,41 @@ capture_pose() {
     "$evidence_dir/$label-$robot.pose" > "$evidence_dir/$label-$robot.xy"
 }
 
+capture_pair() {
+  local label=$1
+  capture_pose robot1 "$label" &
+  local robot1_capture_pid=$!
+  capture_pose robot2 "$label" &
+  local robot2_capture_pid=$!
+  wait "$robot1_capture_pid"
+  wait "$robot2_capture_pid"
+}
+
 for robot in robot1 robot2; do
   ros2 topic pub --once --max-wait-time-secs 5 \
     "/$robot/diff_drive_controller/cmd_vel" geometry_msgs/msg/TwistStamped \
     '{twist: {linear: {x: 0.0}}}' \
     > "$evidence_dir/$robot-initialize-command.log"
 done
-capture_pose robot1 before-first
-capture_pose robot2 before-first
-ros2 topic pub --rate 20 --times 60 --max-wait-time-secs 5 \
+capture_pair before-first
+ros2 topic pub --rate 20 --times 50 --max-wait-time-secs 5 \
   /robot1/diff_drive_controller/cmd_vel geometry_msgs/msg/TwistStamped \
   '{twist: {linear: {x: 0.2}}}' > "$evidence_dir/robot1-command.log"
 ros2 topic pub --once --max-wait-time-secs 5 \
   /robot1/diff_drive_controller/cmd_vel geometry_msgs/msg/TwistStamped \
   '{twist: {linear: {x: 0.0}}}' > "$evidence_dir/robot1-stop-command.log"
-capture_pose robot1 after-first
-capture_pose robot2 after-first
-capture_pose robot1 before-second
-capture_pose robot2 before-second
-ros2 topic pub --rate 20 --times 60 --max-wait-time-secs 5 \
+capture_pair after-first
+cp "$evidence_dir/after-first-robot1.pose" "$evidence_dir/before-second-robot1.pose"
+cp "$evidence_dir/after-first-robot2.pose" "$evidence_dir/before-second-robot2.pose"
+cp "$evidence_dir/after-first-robot1.xy" "$evidence_dir/before-second-robot1.xy"
+cp "$evidence_dir/after-first-robot2.xy" "$evidence_dir/before-second-robot2.xy"
+ros2 topic pub --rate 20 --times 50 --max-wait-time-secs 5 \
   /robot2/diff_drive_controller/cmd_vel geometry_msgs/msg/TwistStamped \
   '{twist: {linear: {x: 0.2}}}' > "$evidence_dir/robot2-command.log"
 ros2 topic pub --once --max-wait-time-secs 5 \
   /robot2/diff_drive_controller/cmd_vel geometry_msgs/msg/TwistStamped \
   '{twist: {linear: {x: 0.0}}}' > "$evidence_dir/robot2-stop-command.log"
-capture_pose robot1 after-second
-capture_pose robot2 after-second
+capture_pair after-second
 
 displacement() {
   local before=$1

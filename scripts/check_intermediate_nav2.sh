@@ -13,6 +13,8 @@ position_tolerance='0.25'
 yaw_tolerance='0.20'
 expect_status='4'
 fresh_build='false'
+matrix_install_base=${TUTORIAL_INSTALL_BASE:-}
+dependency_overlay=${TUTORIAL_BOT_DEPENDENCY_OVERLAY:-}
 
 while (($#)); do
   case "$1" in
@@ -137,24 +139,30 @@ set +u
 source /opt/ros/jazzy/setup.bash
 set -u
 
-overlay_root="$temp_root/dependency-overlay"
-mkdir -p "$overlay_root/debs" "$overlay_root/root"
-overlay_packages=(
-  ros-jazzy-controller-manager ros-jazzy-controller-manager-msgs
-  ros-jazzy-gz-ros2-control ros-jazzy-ros2controlcli
-  ros-jazzy-joint-trajectory-controller
-)
-missing_nav2=()
-for dependency in nav2_bringup nav2_amcl nav2_map_server nav2_lifecycle_manager; do
-  ros2 pkg prefix "$dependency" >/dev/null 2>&1 || missing_nav2+=("ros-jazzy-${dependency//_/-}")
-done
-overlay_packages+=("${missing_nav2[@]}")
-(
-  cd "$overlay_root/debs"
-  apt-get download "${overlay_packages[@]}"
-) > "$evidence_dir/overlay-download.log" 2>&1
-for package in "$overlay_root"/debs/*.deb; do dpkg-deb -x "$package" "$overlay_root/root"; done
-overlay_prefix="$overlay_root/root/opt/ros/jazzy"
+if [[ -n $dependency_overlay ]]; then
+  [[ $dependency_overlay == /* && -d $dependency_overlay/opt/ros/jazzy ]] || exit 2
+  overlay_prefix="$dependency_overlay/opt/ros/jazzy"
+  overlay_packages=(matrix-shared-ros2controlcli)
+else
+  overlay_root="$temp_root/dependency-overlay"
+  mkdir -p "$overlay_root/debs" "$overlay_root/root"
+  overlay_packages=(
+    ros-jazzy-controller-manager ros-jazzy-controller-manager-msgs
+    ros-jazzy-gz-ros2-control ros-jazzy-ros2controlcli
+    ros-jazzy-joint-trajectory-controller
+  )
+  missing_nav2=()
+  for dependency in nav2_bringup nav2_amcl nav2_map_server nav2_lifecycle_manager; do
+    ros2 pkg prefix "$dependency" >/dev/null 2>&1 || missing_nav2+=("ros-jazzy-${dependency//_/-}")
+  done
+  overlay_packages+=("${missing_nav2[@]}")
+  (
+    cd "$overlay_root/debs"
+    apt-get download "${overlay_packages[@]}"
+  ) > "$evidence_dir/overlay-download.log" 2>&1
+  for package in "$overlay_root"/debs/*.deb; do dpkg-deb -x "$package" "$overlay_root/root"; done
+  overlay_prefix="$overlay_root/root/opt/ros/jazzy"
+fi
 export PATH="$overlay_prefix/bin:$PATH"
 export AMENT_PREFIX_PATH="$overlay_prefix:$AMENT_PREFIX_PATH"
 export CMAKE_PREFIX_PATH="$overlay_prefix:$CMAKE_PREFIX_PATH"
@@ -162,18 +170,29 @@ export LD_LIBRARY_PATH="$overlay_prefix/lib:$LD_LIBRARY_PATH"
 export PYTHONPATH="$overlay_prefix/lib/python3.12/site-packages:$PYTHONPATH"
 printf 'overlay_prefix=%s\npackages=%s\n' "$overlay_prefix" "${overlay_packages[*]}" > "$evidence_dir/overlay.log"
 
-build_command=(
-  colcon --log-base "$temp_root/log" build
-  --base-paths "$project_root/examples/ros2_ws/src"
-  --packages-select tutorial_bot_description tutorial_bot_gazebo tutorial_bot_control tutorial_bot_bringup
-  --build-base "$temp_root/build" --install-base "$temp_root/install"
-  --event-handlers console_direct+
-)
-printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"; printf '\n' >> "$evidence_dir/build.command"
-setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 & build_pid=$!
-wait "$build_pid"; build_pid=''
+if [[ -n $matrix_install_base ]]; then
+  [[ $matrix_install_base == /* && -f $matrix_install_base/setup.bash ]] || {
+    printf 'Invalid TUTORIAL_INSTALL_BASE: %s\n' "$matrix_install_base" >&2
+    exit 2
+  }
+  active_install_base=$matrix_install_base
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.command"
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.log"
+else
+  build_command=(
+    colcon --log-base "$temp_root/log" build
+    --base-paths "$project_root/examples/ros2_ws/src"
+    --packages-select tutorial_bot_description tutorial_bot_gazebo tutorial_bot_control tutorial_bot_bringup
+    --build-base "$temp_root/build" --install-base "$temp_root/install"
+    --event-handlers console_direct+
+  )
+  printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"; printf '\n' >> "$evidence_dir/build.command"
+  setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 & build_pid=$!
+  wait "$build_pid"; build_pid=''
+  active_install_base=$temp_root/install
+fi
 set +u
-source "$temp_root/install/setup.bash"
+source "$active_install_base/setup.bash"
 set -u
 
 bringup_share=$(ros2 pkg prefix --share tutorial_bot_bringup)
@@ -181,13 +200,13 @@ gazebo_share=$(ros2 pkg prefix --share tutorial_bot_gazebo)
 goal_file="$bringup_share/config/$goal_name"
 map_file="$gazebo_share/maps/training.yaml"
 for installed in "$goal_file" "$map_file" "$gazebo_share/maps/training.pgm" "$bringup_share/config/nav2_params.yaml"; do
-  [[ $installed == "$temp_root"/install/* && -f $installed ]] || { printf 'Missing installed asset: %s\n' "$installed" >&2; exit 1; }
+  [[ $installed == "$active_install_base"/* && -f $installed ]] || { printf 'Missing installed asset: %s\n' "$installed" >&2; exit 1; }
 done
 {
   printf 'bringup_share=%s\ngazebo_share=%s\n' "$bringup_share" "$gazebo_share"
   find "$bringup_share/config" "$gazebo_share/maps" "$gazebo_share/worlds" -type f -printf '%p\n' | sort
 } > "$evidence_dir/installed-share.log"
-find "$temp_root/install" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum > "$evidence_dir/install-tree.sha256"
+find "$active_install_base" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum > "$evidence_dir/install-tree.sha256"
 
 goal_x=$(awk '$1=="x:" {print $2; exit}' "$goal_file")
 goal_y=$(awk '$1=="y:" {print $2; exit}' "$goal_file")
@@ -213,8 +232,12 @@ for ((run=1; run<=repeat; run++)); do
 
   ready=false
   for _ in {1..900}; do
-    state=$(ros2 lifecycle get /bt_navigator 2>/dev/null || true)
-    if grep -qx 'active \[3\]' <<< "$state" && ros2 action list 2>/dev/null | grep -qx /navigate_to_pose; then ready=true; break; fi
+    if grep -q 'map_to_odom=ready' "$run_dir/launch.log" && \
+      grep -q 'navigation=ready' "$run_dir/launch.log" && \
+      grep -q 'Creating navigator id navigate_to_pose' "$run_dir/launch.log"; then
+      ready=true
+      break
+    fi
     kill -0 "$launch_pid" 2>/dev/null || break
     sleep 0.2
   done
@@ -227,8 +250,23 @@ for ((run=1; run<=repeat; run++)); do
     fi
   done
   sort -nu -o "$run_dir/pids.log" "$run_dir/pids.log"
+  lifecycle_snapshot_ready=false
+  for _ in {1..4}; do
+    if timeout 8 ros2 lifecycle get > "$run_dir/lifecycle-all.log" 2>&1 && \
+      grep -q '^/amcl: active \[3\]$' "$run_dir/lifecycle-all.log" && \
+      grep -q '^/map_server: active \[3\]$' "$run_dir/lifecycle-all.log" && \
+      grep -q '^/controller_server: active \[3\]$' "$run_dir/lifecycle-all.log" && \
+      grep -q '^/planner_server: active \[3\]$' "$run_dir/lifecycle-all.log" && \
+      grep -q '^/bt_navigator: active \[3\]$' "$run_dir/lifecycle-all.log"; then
+      lifecycle_snapshot_ready=true
+      break
+    fi
+    sleep 0.2
+  done
+  [[ $lifecycle_snapshot_ready == true ]]
   for node in amcl map_server controller_server planner_server bt_navigator; do
-    ros2 lifecycle get "/$node" > "$run_dir/lifecycle-$node.log" 2>&1 || true
+    grep -F "/$node: " "$run_dir/lifecycle-all.log" | sed "s#^/$node: ##" \
+      > "$run_dir/lifecycle-$node.log"
   done
   grep -qx 'active \[3\]' "$run_dir/lifecycle-amcl.log"
   grep -qx 'active \[3\]' "$run_dir/lifecycle-map_server.log"
@@ -237,9 +275,27 @@ for ((run=1; run<=repeat; run++)); do
   grep -qx 'active \[3\]' "$run_dir/lifecycle-bt_navigator.log"
   for topic_type in '/map nav_msgs/msg/OccupancyGrid' '/scan sensor_msgs/msg/LaserScan' '/odom nav_msgs/msg/Odometry' '/tf tf2_msgs/msg/TFMessage'; do
     read -r topic type <<< "$topic_type"
-    timeout 10 ros2 topic echo --once "$topic" "$type" > "$run_dir/topic-${topic#/}.log" 2>&1
+    setsid timeout 10 ros2 topic echo --once "$topic" "$type" \
+      > "$run_dir/topic-${topic#/}.log" 2>&1 &
+    auxiliary_pids+=("$!")
   done
-  timeout 8 ros2 run tf2_ros tf2_echo map odom -r 20 > "$run_dir/map-odom.log" 2>&1 || true
+  for auxiliary_pid in "${auxiliary_pids[@]}"; do
+    wait "$auxiliary_pid"
+  done
+  auxiliary_pids=()
+  setsid timeout 6 ros2 run tf2_ros tf2_echo map odom -r 20 \
+    > "$run_dir/map-odom.log" 2>&1 &
+  map_odom_pid=$!
+  auxiliary_pids+=("$map_odom_pid")
+  for _ in {1..60}; do
+    map_odom_samples=$(grep -c '^At time ' "$run_dir/map-odom.log" || true)
+    ((map_odom_samples >= 50)) && break
+    kill -0 "$map_odom_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -TERM -- "-$map_odom_pid" 2>/dev/null || true
+  wait "$map_odom_pid" 2>/dev/null || true
+  auxiliary_pids=()
   tf_count=$(grep -c '^At time ' "$run_dir/map-odom.log" || true)
   ((tf_count >= 50))
 
@@ -263,8 +319,10 @@ for ((run=1; run<=repeat; run++)); do
     final_w=$(awk '/orientation:/{q=1;next} q && $1=="w:" {print $2; exit}' "$run_dir/amcl-pose.log")
     awk -v x="$final_x" -v y="$final_y" -v gx="$goal_x" -v gy="$goal_y" -v z="$final_z" -v w="$final_w" -v gyaw="$goal_yaw" -v pt="$position_tolerance" -v yt="$yaw_tolerance" 'BEGIN {d=sqrt((x-gx)^2+(y-gy)^2); yaw=atan2(2*w*z,1-2*z*z); e=yaw-gyaw; while(e>3.141592653589793)e-=6.283185307179586; while(e< -3.141592653589793)e+=6.283185307179586; if(e<0)e=-e; printf "final_x=%.6f\nfinal_y=%.6f\nposition_error=%.6f\nyaw_error=%.6f\n",x,y,d,e; exit !(d<=pt && e<=yt)}' > "$run_dir/final-error.log"
   else
-    timeout 10 ros2 service call /lifecycle_manager_navigation/manage_nodes nav2_msgs/srv/ManageLifecycleNodes '{command: 0}' > "$run_dir/lifecycle-manage.log" 2>&1
-    grep -q 'ManageLifecycleNodes_Response' "$run_dir/lifecycle-manage.log"
+    timeout 50 ros2 run tutorial_bot_bringup activate_localization \
+      --phase deactivate --deadline 45 --call-timeout 4 \
+      > "$run_dir/lifecycle-manage.log" 2>&1
+    grep -q '^navigation=inactive$' "$run_dir/lifecycle-manage.log"
     timeout 10 ros2 topic echo --once /scan sensor_msgs/msg/LaserScan > "$run_dir/post-abort-scan.log" 2>&1
     grep -q 'frame_id:' "$run_dir/post-abort-scan.log"
   fi

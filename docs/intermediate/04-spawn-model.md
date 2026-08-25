@@ -43,6 +43,17 @@ gz model --list
 
 초기 `x`, `y`, `z`, yaw는 world frame 기준 spawn pose입니다. 동일 이름의 entity를 두 번 만들면 충돌하므로 다중 로봇에서는 고유 이름과 namespace를 함께 사용합니다.
 
+<figure class="course-figure" id="intermediate-spawn-pose">
+  <img src="../../assets/intermediate/spawn-pose.svg" alt="world 좌표계에서 로봇의 위치와 yaw로 표현한 spawn pose" loading="lazy">
+  <figcaption>그림 1. spawn pose는 world 기준 위치와 yaw이며 entity 이름과 ROS namespace는 별도 계약입니다.</figcaption>
+</figure>
+
+## 계산 예제: 바닥과 겹치지 않는 높이
+
+<div class="course-worked" data-worked-example="spawn-pose">
+본체 collision 높이가 0.20 m이고 바닥 여유를 0.02 m로 두면 중심의 최소 spawn 높이는 \(z_{min}=0.20/2+0.02=0.12\,\mathrm{m}\)입니다. 따라서 예제의 `-z 0.12`는 collision이 바닥 아래에서 시작하지 않게 합니다. yaw \(\psi\)의 진행 방향은 \((\cos\psi,\sin\psi)\)로 읽습니다.
+</div>
+
 ## 문제 해결
 
 entity가 나타나지 않으면 `robot_description` 토픽과 spawn 프로세스의 종료 코드를 확인합니다. 바닥에 끼이면 초기 `z`를 collision 높이보다 약간 크게 둡니다.

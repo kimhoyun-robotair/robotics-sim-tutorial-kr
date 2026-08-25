@@ -1,4 +1,4 @@
-# `gz_ros2_control`과 controller
+# gz_ros2_control과 controller
 
 > **난이도:** 중급  
 > **Gazebo:** Harmonic  
@@ -39,6 +39,17 @@ ros2 control list_hardware_interfaces
 ## 동작 원리
 
 diff drive는 바퀴 velocity command를, trajectory controller는 position command를 사용합니다. controller YAML의 wheel separation 0.38 m와 radius 0.06 m는 Xacro의 기하와 일치해야 합니다.
+
+<figure class="course-figure" id="intermediate-controller-kinematics">
+  <img src="../../assets/intermediate/controller-kinematics.svg" alt="차동구동 바퀴 운동학과 controller lifecycle 상태도" loading="lazy">
+  <figcaption>그림 1. 바퀴 속도는 선속도와 각속도로 변환되고 lifecycle이 interface 소유권을 제한합니다.</figcaption>
+</figure>
+
+## 계산 예제: 바퀴 속도에서 차체 속도로
+
+<div class="course-worked" data-worked-example="controller-kinematics">
+반지름 \(r=0.06\,\mathrm{m}\), 바퀴 간격 \(L=0.38\,\mathrm{m}\), \(\omega_r=8\), \(\omega_l=4\,\mathrm{rad/s}\)이면 \(v=r(\omega_r+\omega_l)/2=0.36\,\mathrm{m/s}\), \(\Omega=r(\omega_r-\omega_l)/L=0.632\,\mathrm{rad/s}\)입니다. trajectory controller를 활성화하기 전 diff drive를 비활성화해야 같은 command interface의 중복 claim을 피할 수 있습니다.
+</div>
 
 ## 문제 해결
 

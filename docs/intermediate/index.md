@@ -15,6 +15,19 @@
 
 이 과정은 Gazebo Classic이 아니라 **Gazebo Harmonic**과 `ros_gz` 계열 패키지를 사용합니다. 로봇의 원본은 URDF/Xacro이며, SDF는 world와 Gazebo 고유 물리·센서 설정에 사용합니다. 같은 로봇을 별도 SDF 원본으로 중복 관리하지 않습니다.
 
+[선행 과정: 초급 프로젝트](../beginner/project-tutorial-bot.md)
+
+<figure class="course-figure" id="intermediate-course-dataflow">
+  <img src="../assets/intermediate/course-dataflow.svg" alt="중급 과정의 모델 실행 관측 제어 자율주행 데이터 흐름도" loading="lazy">
+  <figcaption>그림 1. 중급 과정에서 모델, 실행, 관측, 제어, 자율주행이 이어지는 전체 구조입니다.</figcaption>
+</figure>
+
+## 구조를 따라 계산하기
+
+<div class="course-worked" data-worked-example="course-dataflow">
+한 단계의 출력 집합을 \(O_k\), 다음 단계의 필수 입력 집합을 \(I_{k+1}\)라 두면 연결 조건은 \(I_{k+1}\subseteq O_k\)입니다. 예를 들어 TF 장의 출력 `odom → base_link`와 `/scan` frame은 Nav2의 입력입니다. checker는 단순 실행 문구 대신 이 집합의 토픽, frame, lifecycle 상태를 파싱합니다.
+</div>
+
 ## 과정 구성
 
 1. [고급 SDF](01-advanced-sdf.md)

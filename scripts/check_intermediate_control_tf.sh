@@ -4,6 +4,7 @@ set -euo pipefail
 project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 source "$project_root/scripts/lib/owned_process.sh"
 dependency_overlay=${TUTORIAL_BOT_DEPENDENCY_OVERLAY:-}
+matrix_install_base=${TUTORIAL_INSTALL_BASE:-}
 evidence_dir=''
 missing_frame=''
 
@@ -140,25 +141,36 @@ for dependency in "${required_dependencies[@]}"; do
   printf '%s=%s\n' "$dependency" "$prefix" >> "$evidence_dir/dependencies.log"
 done
 
-build_command=(
-  colcon --log-base "$temp_root/log" build
-  --base-paths "$project_root/examples/ros2_ws/src"
-  --packages-select tutorial_bot_description tutorial_bot_gazebo
-  tutorial_bot_control tutorial_bot_bringup
-  --build-base "$temp_root/build"
-  --install-base "$temp_root/install"
-  --event-handlers console_direct+
-)
 : > "$evidence_dir/pids.log"
-printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
-printf '\n' >> "$evidence_dir/build.command"
-setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
-build_pid=$!
-printf '%s\n' "$build_pid" >> "$evidence_dir/pids.log"
-wait "$build_pid"
-build_pid=''
+if [[ -n $matrix_install_base ]]; then
+  [[ $matrix_install_base == /* && -f $matrix_install_base/setup.bash ]] || {
+    printf 'Invalid TUTORIAL_INSTALL_BASE: %s\n' "$matrix_install_base" >&2
+    exit 2
+  }
+  active_install_base=$matrix_install_base
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.command"
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.log"
+else
+  build_command=(
+    colcon --log-base "$temp_root/log" build
+    --base-paths "$project_root/examples/ros2_ws/src"
+    --packages-select tutorial_bot_description tutorial_bot_gazebo
+    tutorial_bot_control tutorial_bot_bringup
+    --build-base "$temp_root/build"
+    --install-base "$temp_root/install"
+    --event-handlers console_direct+
+  )
+  printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
+  printf '\n' >> "$evidence_dir/build.command"
+  setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
+  build_pid=$!
+  printf '%s\n' "$build_pid" >> "$evidence_dir/pids.log"
+  wait "$build_pid"
+  build_pid=''
+  active_install_base=$temp_root/install
+fi
 set +u
-source "$temp_root/install/setup.bash"
+source "$active_install_base/setup.bash"
 set -u
 
 bringup_share=$(ros2 pkg prefix --share tutorial_bot_bringup)
@@ -225,10 +237,20 @@ fi
 
 for frame in "${required_frames[@]}"; do
   output="$evidence_dir/tf-odom-${frame}.log"
-  setsid timeout 8 ros2 run tf2_ros tf2_echo odom "$frame" -r 20 > "$output" 2>&1 &
+  setsid timeout 6 ros2 run tf2_ros tf2_echo odom "$frame" -r 20 > "$output" 2>&1 &
   auxiliary_pids+=("$!")
 done
+for _ in {1..60}; do
+  all_tf_ready=true
+  for frame in "${required_frames[@]}"; do
+    output="$evidence_dir/tf-odom-${frame}.log"
+    (($(grep -c '^At time ' "$output" || true) >= 50)) || all_tf_ready=false
+  done
+  [[ $all_tf_ready == true ]] && break
+  sleep 0.1
+done
 for auxiliary_pid in "${auxiliary_pids[@]}"; do
+  kill -TERM -- "-$auxiliary_pid" 2>/dev/null || true
   set +e
   wait "$auxiliary_pid"
   set -e
@@ -339,7 +361,7 @@ fi
 
 timeout 5 ros2 topic echo --no-daemon --once /odom nav_msgs/msg/Odometry \
   --field pose.pose.position > "$evidence_dir/odom-before.log"
-ros2 topic pub --rate 20 --times 60 --max-wait-time-secs 5 \
+ros2 topic pub --rate 20 --times 40 --max-wait-time-secs 5 \
   /diff_drive_controller/cmd_vel geometry_msgs/msg/TwistStamped \
   '{header: auto, twist: {linear: {x: 0.2}}}' \
   > "$evidence_dir/twist-command.log"

@@ -247,17 +247,53 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
         name="wait_navigation_inputs",
         output="screen",
     )
-    nav2 = IncludeLaunchDescription(
+    localization = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            str(Path(get_package_share_directory("nav2_bringup")) / "launch" / "bringup_launch.py")
+            str(
+                Path(get_package_share_directory("nav2_bringup"))
+                / "launch"
+                / "localization_launch.py"
+            )
         ),
         launch_arguments={
             "map": str(map_path),
             "params_file": str(nav2_params),
             "use_sim_time": "true",
-            "autostart": "true",
+            "autostart": "false",
             "use_composition": "False",
-            "slam": "False",
+        }.items(),
+    )
+    localization_ready = ExecuteProcess(
+        cmd=[
+            "timeout",
+            "60",
+            "ros2",
+            "run",
+            "tutorial_bot_bringup",
+            "activate_localization",
+            "--phase",
+            "startup",
+            "--deadline",
+            "55",
+            "--call-timeout",
+            "4",
+        ],
+        name="wait_localization",
+        output="screen",
+    )
+    navigation = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            str(
+                Path(get_package_share_directory("nav2_bringup"))
+                / "launch"
+                / "navigation_launch.py"
+            )
+        ),
+        launch_arguments={
+            "params_file": str(nav2_params),
+            "use_sim_time": "true",
+            "autostart": "false",
+            "use_composition": "False",
         }.items(),
     )
     rviz = Node(
@@ -316,15 +352,16 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
                 )
             )
         )
-        nav2_actions: list[Action] = [nav2]
+        navigation_actions: list[Action] = [localization, navigation, localization_ready]
         if rviz_enabled:
-            nav2_actions.append(rviz)
+            navigation_actions.append(rviz)
         actions.append(
             RegisterEventHandler(
                 OnProcessExit(
                     target_action=navigation_ready,
                     on_exit=_after_success(
-                        GroupAction(actions=nav2_actions), "navigation input readiness"
+                        GroupAction(actions=navigation_actions),
+                        "navigation input readiness",
                     ),
                 )
             )

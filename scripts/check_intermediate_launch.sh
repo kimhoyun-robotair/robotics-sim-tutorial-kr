@@ -4,6 +4,7 @@ set -euo pipefail
 project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 source "$project_root/scripts/lib/owned_process.sh"
 dependency_overlay=${TUTORIAL_BOT_DEPENDENCY_OVERLAY:-}
+matrix_install_base=${TUTORIAL_INSTALL_BASE:-}
 world='sensor-test'
 nav2='false'
 evidence_dir=''
@@ -131,25 +132,36 @@ if [[ -n $dependency_overlay ]]; then
   export PYTHONPATH="$overlay_prefix/lib/python3.12/site-packages:$PYTHONPATH"
 fi
 
-build_command=(
-  colcon --log-base "$temp_root/log" build
-  --base-paths "$project_root/examples/ros2_ws/src"
-  --packages-select tutorial_bot_description tutorial_bot_gazebo
-  tutorial_bot_control tutorial_bot_bringup
-  --build-base "$temp_root/build"
-  --install-base "$temp_root/install"
-  --event-handlers console_direct+
-)
 : > "$evidence_dir/pids.log"
-printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
-printf '\n' >> "$evidence_dir/build.command"
-setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
-build_pid=$!
-printf '%s\n' "$build_pid" >> "$evidence_dir/pids.log"
-wait "$build_pid"
-build_pid=''
+if [[ -n $matrix_install_base ]]; then
+  [[ $matrix_install_base == /* && -f $matrix_install_base/setup.bash ]] || {
+    printf 'Invalid TUTORIAL_INSTALL_BASE: %s\n' "$matrix_install_base" >&2
+    exit 2
+  }
+  active_install_base=$matrix_install_base
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.command"
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.log"
+else
+  build_command=(
+    colcon --log-base "$temp_root/log" build
+    --base-paths "$project_root/examples/ros2_ws/src"
+    --packages-select tutorial_bot_description tutorial_bot_gazebo
+    tutorial_bot_control tutorial_bot_bringup
+    --build-base "$temp_root/build"
+    --install-base "$temp_root/install"
+    --event-handlers console_direct+
+  )
+  printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
+  printf '\n' >> "$evidence_dir/build.command"
+  setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
+  build_pid=$!
+  printf '%s\n' "$build_pid" >> "$evidence_dir/pids.log"
+  wait "$build_pid"
+  build_pid=''
+  active_install_base=$temp_root/install
+fi
 set +u
-source "$temp_root/install/setup.bash"
+source "$active_install_base/setup.bash"
 set -u
 
 bringup_share=$(ros2 pkg prefix --share tutorial_bot_bringup)

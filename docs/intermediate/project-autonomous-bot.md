@@ -1,4 +1,4 @@
-# 자율주행 `tutorial_bot` 프로젝트
+# 자율주행 tutorial_bot 프로젝트
 
 > **난이도:** 중급 프로젝트  
 > **Gazebo:** Harmonic  
@@ -62,6 +62,17 @@ ros2 control list_controllers
 
 로봇 구조는 URDF/Xacro가, world와 map은 SDF·map 파일이, 실행 순서는 launch가, 메시지 변환은 `ros_gz`가 담당합니다. 각 책임을 한 원본에만 두어 Gazebo와 ROS 모델의 불일치를 막습니다.
 
+<figure class="course-figure" id="intermediate-project-runtime">
+  <img src="../../assets/intermediate/project-runtime.svg" alt="시뮬레이션 Nav2 action checker로 이어지는 프로젝트 runtime 증거 흐름" loading="lazy">
+  <figcaption>그림 1. 프로젝트 완료는 성공 문구가 아니라 action, TF, sensor, controller, pose 관측의 결합입니다.</figcaption>
+</figure>
+
+## 계산 예제: 세 번의 재현성
+
+<div class="course-worked" data-worked-example="project-runtime">
+세 실행의 위치 오차가 0.05, 0.08, 0.11 m라면 최악 오차 \(\max e_p=0.11\,\mathrm{m}\)이고 모두 0.25 m 기준 안입니다. 하지만 status 4가 세 번이어도 TF나 `/scan`이 끊겼다면 프로젝트는 합격하지 않습니다. matrix는 각 scenario의 parsed observable을 요구하므로 “PASS” banner만 있는 출력은 증거가 아닙니다.
+</div>
+
 ## 문제 해결
 
 실패를 단순 재시작으로 덮지 말고 action status와 최종 pose를 확인합니다. `unreachable_goal.yaml`은 status 6 abort와 이후에도 살아 있는 `/scan`을 확인하는 의도된 fault 예제입니다.
@@ -69,3 +80,5 @@ ros2 control list_controllers
 ## 정리
 
 이 프로젝트는 Gazebo Classic이 아닌 Harmonic에서 실제 ROS 2 Jazzy 자율주행 데이터 흐름을 끝까지 검증합니다.
+
+[다음 과정: 고급 ECS·Transport](../advanced/index.md)

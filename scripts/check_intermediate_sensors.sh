@@ -6,6 +6,7 @@ project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 source "$project_root/scripts/lib/owned_process.sh"
 evidence_dir=''
 expected_width=''
+matrix_install_base=${TUTORIAL_INSTALL_BASE:-}
 
 while (($#)); do
   case "$1" in
@@ -79,20 +80,31 @@ for dependency in ros_gz_bridge ros_gz_image ros_gz_sim robot_state_publisher xa
   ros2 pkg prefix "$dependency" >> "$evidence_dir/dependencies.log"
 done
 
-build_command=(colcon --log-base "$temp_root/log" build
-  --base-paths "$project_root/examples/ros2_ws/src"
-  --packages-select tutorial_bot_description tutorial_bot_gazebo tutorial_bot_control tutorial_bot_bringup
-  --build-base "$temp_root/build" --install-base "$temp_root/install"
-  --event-handlers console_direct+)
-printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
-printf '\n' >> "$evidence_dir/build.command"
-setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
-process_groups+=("$!")
-wait "${process_groups[-1]}"
+if [[ -n $matrix_install_base ]]; then
+  [[ $matrix_install_base == /* && -f $matrix_install_base/local_setup.bash ]] || {
+    printf 'Invalid TUTORIAL_INSTALL_BASE: %s\n' "$matrix_install_base" >&2
+    exit 2
+  }
+  active_install_base=$matrix_install_base
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.command"
+  printf 'reused_install_base=%s\n' "$active_install_base" > "$evidence_dir/build.log"
+else
+  build_command=(colcon --log-base "$temp_root/log" build
+    --base-paths "$project_root/examples/ros2_ws/src"
+    --packages-select tutorial_bot_description tutorial_bot_gazebo tutorial_bot_control tutorial_bot_bringup
+    --build-base "$temp_root/build" --install-base "$temp_root/install"
+    --event-handlers console_direct+)
+  printf '%q ' "${build_command[@]}" > "$evidence_dir/build.command"
+  printf '\n' >> "$evidence_dir/build.command"
+  setsid "${build_command[@]}" > "$evidence_dir/build.log" 2>&1 &
+  process_groups+=("$!")
+  wait "${process_groups[-1]}"
+  active_install_base=$temp_root/install
+fi
 set +u
-source "$temp_root/install/local_setup.bash"
+source "$active_install_base/local_setup.bash"
 set -u
-(cd "$temp_root/install" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
+(cd "$active_install_base" && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
   | sha256sum > "$evidence_dir/install-tree.sha256"
 
 expectations=$(ros2 pkg prefix --share tutorial_bot_gazebo)/config/sensor_expectations.yaml
@@ -167,12 +179,25 @@ stamps: dict[str, list[int]] = {name: [] for name in (
     "scan", "imu", "rgb", "rgb_info", "depth", "depth_info", "points"
 )}
 frames: dict[str, set[str]] = {name: set() for name in stamps}
+warmup_stamps: dict[str, list[int]] = {name: [] for name in stamps}
 laser_residuals: list[float] = []
 laser_extreme: list[float | int] = [0, 0.0, 0.0, 0.0]
 truth_ranges = config["lidar"]["truth_ranges_m"]
+lidar_sigma = config["lidar"]["noise_stddev_m"]
+edge_indices = {
+    index
+    for index, truth in enumerate(truth_ranges)
+    if max(
+        abs(truth - truth_ranges[index - 1]),
+        abs(truth - truth_ranges[(index + 1) % len(truth_ranges)]),
+    ) > 8 * lidar_sigma
+}
 imu_values: list[list[float]] = [[] for _ in range(6)]
 point_finite = 0
 point_total = 0
+laser_finite = 0
+laser_edge_samples = 0
+laser_edge_violations = 0
 dimensions: dict[str, list[int]] = {}
 camera_infos: dict[str, CameraInfo] = {}
 collecting = False
@@ -184,8 +209,11 @@ def remember(name: str, message: LaserScan | Imu | Image | CameraInfo | PointClo
     if collecting:
         stamps[name].append(stamp_ns(message))
         frames[name].add(message.header.frame_id)
+    else:
+        warmup_stamps[name].append(stamp_ns(message))
 
 def scan_callback(message: LaserScan) -> None:
+    global laser_edge_samples, laser_edge_violations, laser_finite
     remember("scan", message)
     if not collecting:
         return
@@ -193,6 +221,17 @@ def scan_callback(message: LaserScan) -> None:
     dimensions["scan_meta"] = [message.angle_min, message.angle_max, message.range_min, message.range_max]
     for index, value in enumerate(message.ranges):
         if math.isfinite(value):
+            laser_finite += 1
+            if index in edge_indices:
+                laser_edge_samples += 1
+                neighbors = (
+                    truth_ranges[index - 1],
+                    truth_ranges[index],
+                    truth_ranges[(index + 1) % len(truth_ranges)],
+                )
+                if not min(neighbors) - 5 * lidar_sigma <= value <= max(neighbors) + 5 * lidar_sigma:
+                    laser_edge_violations += 1
+                continue
             residual = value - truth_ranges[index]
             laser_residuals.append(residual)
             if abs(residual) > abs(float(laser_extreme[3])):
@@ -244,13 +283,39 @@ node.create_subscription(Image, "/camera/depth/image", image_callback("depth"), 
 node.create_subscription(CameraInfo, "/camera/depth/camera_info", info_callback("depth_info"), qos_profile_sensor_data)
 node.create_subscription(PointCloud2, "/camera/points", points_callback, qos_profile_sensor_data)
 
-warmup_end = time.monotonic() + 20.0
-while time.monotonic() < warmup_end:
+warmup_started = time.monotonic()
+warmup_deadline = warmup_started + 20.0
+warmup_counts = {"scan": 20, "imu": 200, "rgb": 60, "rgb_info": 60,
+                 "depth": 60, "depth_info": 60, "points": 60}
+warmup_ready = False
+while time.monotonic() < warmup_deadline:
     rclpy.spin_once(node, timeout_sec=0.05)
+    warmup_seconds = time.monotonic() - warmup_started
+    warmup_ready = warmup_seconds >= 2.0 and all(
+        len(warmup_stamps[name]) >= count
+        and all(current > previous for previous, current in zip(
+            warmup_stamps[name], warmup_stamps[name][1:], strict=False
+        ))
+        for name, count in warmup_counts.items()
+    )
+    if warmup_ready:
+        break
+if not warmup_ready:
+    raise RuntimeError(
+        "sensor warmup did not reach two seconds of monotonic samples on every stream"
+    )
 collecting = True
-collection_end = time.monotonic() + 10.0
-while time.monotonic() < collection_end:
+collection_started = time.monotonic()
+minimum_collection_end = collection_started + 10.0
+collection_deadline = collection_started + 12.0
+minimum_counts = {"scan": 95, "imu": 950, "rgb": 285, "rgb_info": 285,
+                  "depth": 285, "depth_info": 285, "points": 285}
+while time.monotonic() < minimum_collection_end or (
+    time.monotonic() < collection_deadline
+    and any(len(stamps[name]) < count for name, count in minimum_counts.items())
+):
     rclpy.spin_once(node, timeout_sec=0.02)
+collection_seconds = time.monotonic() - collection_started
 node.destroy_node()
 rclpy.shutdown()
 
@@ -284,9 +349,14 @@ if dimensions.get("scan") != [config["lidar"]["samples"]]:
 expected_meta = [config["lidar"][key] for key in ("min_angle_rad", "max_angle_rad", "min_range_m", "max_range_m")]
 if len(scan_meta) != 4 or any(abs(actual - expected) > 1e-5 for actual, expected in zip(scan_meta, expected_meta, strict=True)):
     errors.append(f"scan: metadata expected={expected_meta} actual={scan_meta}")
-finite_ratio = len(laser_residuals) / max(1, len(stamps["scan"]) * config["lidar"]["samples"])
+finite_ratio = laser_finite / max(1, len(stamps["scan"]) * config["lidar"]["samples"])
 if finite_ratio < 0.95:
     errors.append(f"scan: finite_ratio={finite_ratio:.3f} expected>=0.950")
+if laser_edge_violations:
+    errors.append(
+        f"scan: edge_geometry_violations={laser_edge_violations} "
+        f"edge_samples={laser_edge_samples}"
+    )
 
 expected_width = width_override or config["camera"]["width_px"]
 for name in ("rgb", "depth"):
@@ -315,8 +385,12 @@ def check_noise(name: str, values: list[float], truth: float, sigma: float, bias
     mean = statistics.fmean(residuals) if residuals else math.nan
     deviation = statistics.stdev(residuals) if count >= 2 else math.nan
     maximum = max((abs(value) for value in residuals), default=math.inf)
-    noise_results[name] = {"n": count, "mean_error": mean, "stddev": deviation, "max_abs_residual": maximum}
-    if count < 100 or abs(mean) > max(5 * sigma / math.sqrt(max(1, count)), tolerance) or not 0.5 * sigma <= deviation <= 1.5 * sigma or maximum > 5 * sigma:
+    five_sigma_limit = 5 * max(sigma, deviation)
+    noise_results[name] = {"n": count, "mean_error": mean, "stddev": deviation,
+                           "max_abs_residual": maximum, "five_sigma_limit": five_sigma_limit}
+    mean_limit = max(5 * max(sigma, deviation) / math.sqrt(max(1, count)), tolerance)
+    noise_results[name]["mean_limit"] = mean_limit
+    if count < 100 or abs(mean) > mean_limit or not 0.5 * sigma <= deviation <= 1.5 * sigma or maximum > five_sigma_limit:
         errors.append(f"{name}: n={count} mean={mean:.8f} stddev={deviation:.8f} max={maximum:.8f} sigma={sigma:.8f}")
 
 check_noise("lidar", laser_residuals, 0.0, config["lidar"]["noise_stddev_m"], config["lidar"]["bias_m"], 0.0)
@@ -324,9 +398,11 @@ imu_truth = [*config["imu"]["angular_velocity_truth_rad_s"], *config["imu"]["lin
 for axis, values, truth, bias in zip(("wx", "wy", "wz", "ax", "ay", "az"), imu_values, imu_truth, [*config["imu"]["bias"], *config["imu"]["bias"]], strict=True):
     check_noise(f"imu_{axis}", values, truth, config["imu"]["noise_stddev"], bias, config["imu"]["bias_tolerance"])
 
-result = {"passed": not errors, "warmup_seconds": 20, "collection_seconds": 10, "counts": {name: len(value) for name, value in stamps.items()},
+result = {"passed": not errors, "warmup_seconds": warmup_seconds, "collection_seconds": collection_seconds, "counts": {name: len(value) for name, value in stamps.items()},
           "rates_hz": measured_rates, "frames": {name: sorted(value) for name, value in frames.items()}, "dimensions": dimensions,
-          "finite": {"scan_ratio": finite_ratio, "point_ratio": point_finite / max(1, point_total), "point_samples": point_total},
+          "finite": {"scan_ratio": finite_ratio, "point_ratio": point_finite / max(1, point_total), "point_samples": point_total,
+                     "edge_indices": len(edge_indices), "edge_samples": laser_edge_samples,
+                     "edge_geometry_violations": laser_edge_violations},
           "noise": noise_results, "laser_extreme": laser_extreme, "errors": errors}
 output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 for error in errors:

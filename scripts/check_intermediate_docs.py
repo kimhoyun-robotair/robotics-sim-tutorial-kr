@@ -115,6 +115,7 @@ NAV_TARGET = re.compile(
 )
 HTTP_OK: Final = 200
 HTTP_ERROR_MIN: Final = 400
+GENERATED_REFERENCE_PREFIXES: Final = ("examples/ros2_ws/install/",)
 
 
 class DomMetrics(BaseModel):
@@ -230,7 +231,10 @@ def source_reference_errors(
         return (spec.source,)
     references = sorted({match.group(1) for match in SOURCE_REFERENCE.finditer(text)})
     return tuple(
-        reference for reference in references if not (source_root / reference).exists()
+        reference
+        for reference in references
+        if not reference.startswith(GENERATED_REFERENCE_PREFIXES)
+        and not (source_root / reference).exists()
     )
 
 
@@ -349,6 +353,9 @@ def navigation_errors(page: Page, site: str) -> tuple[str, ...]:
     """Drive the primary Intermediate navigation link through page.click."""
     try:
         _ = page.goto(urljoin(site, "/intermediate/"), wait_until="networkidle")
+        drawer = page.locator('label.md-header__button[for="__drawer"]')
+        if drawer.is_visible():
+            drawer.click()
         page.click('a.md-nav__link[href="01-advanced-sdf/"]')
         page.wait_for_url("**/intermediate/01-advanced-sdf/")
     except Error as error:

@@ -41,6 +41,19 @@ ros2 launch tutorial_bot_bringup simulation.launch.py nav2:=false gui:=false rvi
 
 launch는 설치된 `tutorial_bot_gazebo`, `tutorial_bot_description`, `tutorial_bot_control`, `tutorial_bot_bringup` share를 조회합니다. source tree의 우연한 상대 경로가 아니라 설치 결과를 소비하므로 배포 형태도 검증됩니다.
 
+<figure class="course-figure" id="intermediate-launch-readiness">
+  <img src="../../assets/intermediate/launch-readiness.svg" alt="Gazebo 준비부터 Nav2 활성까지의 launch readiness 의존 그래프" loading="lazy">
+  <figcaption>그림 1. launch는 고정 sleep이 아니라 실제 준비 사건으로 다음 프로세스를 시작합니다.</figcaption>
+</figure>
+
+## 계산 예제: 준비 시간의 상한
+
+<div class="course-worked" data-worked-example="launch-readiness">
+단계별 준비 시간을 \(t_g,t_s,t_c,t_b\)라 하면 직렬 임계 경로는 \(T=t_g+t_s+t_c+t_b\)입니다. 측정값이 각각 6, 2, 4, 1초라면 13초입니다. 모든 단계에 무조건 10초 sleep을 넣은 40초와 달리 readiness 방식은 빠른 환경에서 즉시 진행하고, 어느 단계가 timeout인지도 보존합니다.
+</div>
+
+현재 runtime 계약은 `check_intermediate_launch.sh`가 entity, controller, `/clock`, sensor, command와 odometry를 각각 파싱해 모두 관측된 경우에만 종료 코드 0을 냅니다.
+
 ## 문제 해결
 
 `PackageNotFoundError`가 나오면 `source examples/ros2_ws/install/setup.bash`를 실행합니다. GUI가 없는 환경에서는 `gui:=false rviz:=false`로 시작합니다.

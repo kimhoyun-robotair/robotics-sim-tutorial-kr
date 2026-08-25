@@ -8,4 +8,12 @@ install(DIRECTORY config launch rviz
   PATTERN "__pycache__" EXCLUDE
 )
 
+install(PROGRAMS scripts/activate_localization
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(FILES scripts/localization_transition.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()

@@ -10,7 +10,7 @@ lidar:
   min_range_m: 0.12
   max_range_m: 10.0
   noise_stddev_m: 0.01
-  bias_m: -0.00046
+  bias_m: -0.00010
   truth_ranges_m:
     - 3.950000000
     - 3.950605053

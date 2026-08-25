@@ -1,0 +1,134 @@
+schema_version: 1
+assets:
+  - id: course-dataflow
+    path: assets/intermediate/course-dataflow.svg
+    route: intermediate/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: 모델, launch, bridge와 TF, controller, Nav2의 입력과 출력 순서가 구분된다.
+    alt_text: 중급 과정의 모델 실행 관측 제어 자율주행 데이터 흐름도
+    caption: 그림 1. 중급 과정에서 모델, 실행, 관측, 제어, 자율주행이 이어지는 전체 구조입니다.
+    captured_at: '2026-08-25'
+    sha256: aea5bdb7e25bf5df5d075a452061b771a06d07035c26f30028c62caef48d16cb
+    width: 960
+    height: 360
+  - id: inertia-contact
+    path: assets/intermediate/inertia-contact.svg
+    route: intermediate/01-advanced-sdf/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: 질량과 관성, 중력, 수직력, 마찰 한계가 서로 다른 레이블로 보인다.
+    alt_text: 직육면체 관성과 접촉 수직력 마찰력의 관계도
+    caption: 그림 1. 질량과 관성 텐서가 가속을, collision과 마찰이 접촉력을 결정합니다.
+    captured_at: '2026-08-25'
+    sha256: 44c7c3a7a64a1fe02f6b0497ea0aaaac6cfde19af2ec1dac3ecaea15c6ff27d8
+    width: 960
+    height: 360
+  - id: model-conversion
+    path: assets/intermediate/model-conversion.svg
+    route: intermediate/02-urdf-xacro-sdf/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: Xacro에서 URDF와 SDF로 이어지는 변환과 각 형식의 책임이 보인다.
+    alt_text: Xacro에서 URDF와 SDF로 변환되는 모델 책임 흐름도
+    caption: 그림 1. Xacro 원본을 펼쳐 URDF 구조와 Gazebo SDF 확장으로 전달하는 변환 경로입니다.
+    captured_at: '2026-08-25'
+    sha256: ed53e3cc2064c8b3c6f654863631ccaf68d024d8058faac2b89f6ee2f2f7a109
+    width: 960
+    height: 360
+  - id: launch-readiness
+    path: assets/intermediate/launch-readiness.svg
+    route: intermediate/03-ros2-launch/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: Gazebo 준비, spawn, controller, bridge와 TF, Nav2 활성 순서가 보인다.
+    alt_text: Gazebo 준비부터 Nav2 활성까지의 launch readiness 의존 그래프
+    caption: 그림 1. launch는 고정 sleep이 아니라 실제 준비 사건으로 다음 프로세스를 시작합니다.
+    captured_at: '2026-08-25'
+    sha256: 35d2716066454dbf4c1052d330a1d81d3a1178bc5344aad251a28e85d417031e
+    width: 960
+    height: 360
+  - id: spawn-pose
+    path: assets/intermediate/spawn-pose.svg
+    route: intermediate/04-spawn-model/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: world 기준 위치 x y z와 yaw가 entity pose와 연결되어 보인다.
+    alt_text: world 좌표계에서 로봇의 위치와 yaw로 표현한 spawn pose
+    caption: 그림 1. spawn pose는 world 기준 위치와 yaw이며 entity 이름과 ROS namespace는 별도 계약입니다.
+    captured_at: '2026-08-25'
+    sha256: 9d9cce3a6ad0343015ac52314f45b29733aa515976abefb75cbd0d2e576cc209
+    width: 960
+    height: 360
+  - id: bridge-qos
+    path: assets/intermediate/bridge-qos.svg
+    route: intermediate/05-bridge-yaml/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: ROS_TO_GZ 명령과 GZ_TO_ROS 센서 방향, 센서 QoS 선택이 구분된다.
+    alt_text: ROS 2와 Gazebo Transport 사이 bridge 방향과 QoS 선택도
+    caption: 그림 1. 명령은 ROS에서 Gazebo로, 센서와 clock은 Gazebo에서 ROS로 흐릅니다.
+    captured_at: '2026-08-25'
+    sha256: 4bd8a8a0ba58e38efb954bcaa6f1983086031763ef78276a7ddc3fa10b1c646b
+    width: 960
+    height: 360
+  - id: tf-composition
+    path: assets/intermediate/tf-composition.svg
+    route: intermediate/06-tf-rviz/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: odom에서 base_link와 sensor_link로 이어지는 TF 소유자와 합성이 보인다.
+    alt_text: odom base_link sensor_link TF 변환 합성과 소유자 구조도
+    caption: 그림 1. controller와 robot_state_publisher가 서로 다른 TF 경계를 한 번씩 소유합니다.
+    captured_at: '2026-08-25'
+    sha256: 5303b2c49bfe078b3be117789fdea7110808f3a493f34080d87a5752023172c9
+    width: 960
+    height: 360
+  - id: controller-kinematics
+    path: assets/intermediate/controller-kinematics.svg
+    route: intermediate/07-gz-ros2-control/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: 바퀴 반지름과 간격, 선속도와 각속도, lifecycle 전이가 보인다.
+    alt_text: 차동구동 바퀴 운동학과 controller lifecycle 상태도
+    caption: 그림 1. 바퀴 속도는 선속도와 각속도로 변환되고 lifecycle이 interface 소유권을 제한합니다.
+    captured_at: '2026-08-25'
+    sha256: d43ae89b2799e76dd5c670637c9fc0e33dd659606e2ae0a5ff1063dc5c81f619
+    width: 960
+    height: 360
+  - id: sensor-statistics
+    path: assets/intermediate/sensor-statistics.svg
+    route: intermediate/08-advanced-sensors/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: 표본 평균과 표준편차, 관측 rate와 95퍼센트 수신 기준이 보인다.
+    alt_text: 센서의 가우시안 노이즈 분포와 메시지 수신률 계산도
+    caption: 그림 1. 센서 품질은 설정값이 아니라 실제 표본의 rate, 평균, 표준편차로 판정합니다.
+    captured_at: '2026-08-25'
+    sha256: 82b70d3063ab13552a8dea5bf5b89db0f3d995c9cbe75655852bd3da70441f9b
+    width: 960
+    height: 360
+  - id: namespace-isolation
+    path: assets/intermediate/namespace-isolation.svg
+    route: intermediate/09-multi-robot/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: robot1과 robot2의 entity, topic, controller, TF frame이 분리되어 보인다.
+    alt_text: robot1과 robot2의 entity topic controller TF frame 격리도
+    caption: 그림 1. 두 로봇은 clock만 공유하고 entity, topic, controller, TF frame을 분리합니다.
+    captured_at: '2026-08-25'
+    sha256: e644f7ffb9ca153f9608f0907f3ef1e11c510bdfde1e074b4c700af1fbf304f0
+    width: 960
+    height: 360
+  - id: nav2-tolerance
+    path: assets/intermediate/nav2-layers.svg
+    route: intermediate/10-nav2/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: map server, AMCL, planner, costmap, controller와 pose 허용오차가 보인다.
+    alt_text: Nav2 map server AMCL planner costmap controller 계층과 허용오차
+    caption: 그림 1. 지도와 위치추정, 전역 경로, local costmap, controller가 goal까지 이어집니다.
+    captured_at: '2026-08-25'
+    sha256: 78bb4422170a219ee0f56349125e0366a424a8a5a95d445b897922751491152b
+    width: 960
+    height: 360
+  - id: project-runtime
+    path: assets/intermediate/project-runtime.svg
+    route: intermediate/project-autonomous-bot/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: simulation 관측, Nav2 action, checker의 세 번 pose 오차 검증이 이어져 보인다.
+    alt_text: 시뮬레이션 Nav2 action checker로 이어지는 프로젝트 runtime 증거 흐름
+    caption: 그림 1. 프로젝트 완료는 성공 문구가 아니라 action, TF, sensor, controller, pose 관측의 결합입니다.
+    captured_at: '2026-08-25'
+    sha256: 2590ef915779851b0c9086166981e23e3bc2d0097cf7b823b6cae7a67a127c5e
+    width: 960
+    height: 360

@@ -38,6 +38,17 @@ cd ..
 
 launch는 각 Xacro에 model name, namespace, TF prefix와 sensor topic을 전달합니다. bridge와 controller YAML도 같은 namespace 계약을 사용합니다.
 
+<figure class="course-figure" id="intermediate-namespace-isolation">
+  <img src="../../assets/intermediate/namespace-isolation.svg" alt="robot1과 robot2의 entity topic controller TF frame 격리도" loading="lazy">
+  <figcaption>그림 1. 두 로봇은 clock만 공유하고 entity, topic, controller, TF frame을 분리합니다.</figcaption>
+</figure>
+
+## 계산 예제: 교차 영향 판정
+
+<div class="course-worked" data-worked-example="namespace-isolation">
+robot1 명령 전후 변위를 \(d_1\), 명령하지 않은 robot2 변위를 \(d_2\)라 두고 \(d_1\ge0.60\,\mathrm{m}\), \(d_2\le0.02\,\mathrm{m}\)를 요구합니다. 관측값이 각각 0.69 m와 0.004 m라면 이동과 격리가 동시에 합격합니다. TF 역시 `robot1/base_link`와 `robot2/base_link`의 parent 집합 교집합이 없어야 합니다.
+</div>
+
 ## 문제 해결
 
 동일 entity 이름이나 namespace를 주면 launch가 준비 단계 전에 실패해야 정상입니다. TF가 섞이면 `frame_prefix`와 sensor `frame_id`가 같은 접두사를 쓰는지 확인합니다.
