@@ -108,7 +108,10 @@ def reap_sentinel(registration: tuple[int, int] | None) -> tuple[bool, bool, boo
         while process_start_ticks(pid) == expected_ticks and time.monotonic() < deadline:
             time.sleep(POLL_SECONDS)
         if process_start_ticks(pid) == expected_ticks:
-            os.kill(pid, signal.SIGKILL)
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
     remaining = [pid] if process_start_ticks(pid) == expected_ticks else []
     return survived, not remaining, stale_identity, remaining
 
@@ -170,7 +173,8 @@ def main() -> int:
             process.wait(timeout=2)
         dut_exit = 124
     else:
-        dut_exit = normalize_exit(process.wait())
+        completed_exit = normalize_exit(process.wait())
+        dut_exit = 130 if signal_sent == signal.SIGINT.name else completed_exit
     group_survivors = stop_group(process.pid)
     registration = read_registration(registration_path)
     sentinel_survived, sentinel_reaped, stale_identity, sentinel_survivors = reap_sentinel(registration)

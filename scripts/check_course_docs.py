@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -144,8 +143,13 @@ def audit(args: argparse.Namespace) -> tuple[dict[str, object], int]:
                 errors.append(f"{course}: route count does not match manifest contract")
     if args.forbid_advanced_scope:
         advanced_text = "\n".join(
-            path.read_text(encoding="utf-8").lower()
-            for path in (ROOT / "docs/advanced").glob("*.md")
+            [
+                json.dumps(manifest, ensure_ascii=False).lower(),
+                *(
+                    path.read_text(encoding="utf-8").lower()
+                    for path in (ROOT / "docs/advanced").glob("*.md")
+                ),
+            ]
         )
         errors.extend(
             f"forbidden advanced scope: {token}"

@@ -8,12 +8,13 @@
         "additionalProperties": false,
         "properties": {
           "advanced_scope_safe": {"type": "boolean"},
+          "copyright_safe_assets": {"type": "boolean"},
           "korean_readable": {"type": "boolean"},
           "progression_clear": {"type": "boolean"},
           "route": {"minLength": 1, "type": "string"},
           "verdict": {"enum": ["APPROVE", "REQUEST_CHANGES"]}
         },
-        "required": ["route", "progression_clear", "korean_readable", "advanced_scope_safe", "verdict"],
+        "required": ["route", "progression_clear", "korean_readable", "advanced_scope_safe", "copyright_safe_assets", "verdict"],
         "type": "object"
       },
       "type": "array"

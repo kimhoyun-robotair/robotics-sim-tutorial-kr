@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 import yaml
-
 
 WORKSPACE_ROOT = Path(__file__).parents[4]
 CONTRACT = (
@@ -98,7 +98,14 @@ def test_checker_rejects_wrong_reset_response_type(tmp_path: Path) -> None:
 
     # When: the contract checker parses the fixture.
     result = subprocess.run(
-        [sys.executable, str(CHECKER), "--contract", str(fixture), "--evidence", str(evidence)],
+        [
+            sys.executable,
+            str(CHECKER),
+            "--contract",
+            str(fixture),
+            "--evidence",
+            str(evidence),
+        ],
         capture_output=True,
         check=False,
         text=True,
@@ -119,13 +126,18 @@ def test_checker_rejects_wrong_reset_response_type(tmp_path: Path) -> None:
     ],
 )
 def test_plugin_install_layout_is_declared(relative_path: str) -> None:
-    # Given: the plugin package build declaration.
-    cmake = (
-        WORKSPACE_ROOT / "examples/ros2_ws/src/tutorial_bot_plugins/CMakeLists.txt"
-    ).read_text(encoding="utf-8")
+    # Given: the configured test runs against the installed workspace overlay.
+    prefixes = tuple(
+        Path(raw) for raw in os.environ["AMENT_PREFIX_PATH"].split(os.pathsep)
+    )
 
-    # When: install destinations are inspected.
-    normalized = " ".join(cmake.split())
+    # When: the package artifact is resolved from the real install tree.
+    matches = tuple(
+        prefix / relative_path
+        for prefix in prefixes
+        if (prefix / relative_path).is_file()
+    )
 
-    # Then: the canonical contract, schema, and public header are installed.
-    assert relative_path.split("/", maxsplit=3)[-1] in normalized
+    # Then: configure and install produced exactly one nonempty public artifact.
+    assert len(matches) == 1
+    assert matches[0].stat().st_size > 0

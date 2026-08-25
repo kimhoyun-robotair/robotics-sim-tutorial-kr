@@ -114,9 +114,16 @@ def test_missing_browser_has_dedicated_exit_code() -> None:
         site = root / "site" / "reference" / "visual-fixture"
         site.mkdir(parents=True)
         (site / "index.html").write_text("<h1>fixture</h1>", encoding="utf-8")
+        playwright = root / "python" / "playwright"
+        playwright.mkdir(parents=True)
+        (playwright / "__init__.py").write_text(
+            'raise ImportError("forced missing browser")\n',
+            encoding="utf-8",
+        )
         environment = {
             "PATH": str(Path(sys.executable).parent),
             "PLAYWRIGHT_BROWSERS_PATH": str(root / "missing"),
+            "PYTHONPATH": str(root / "python"),
         }
 
         # When: a real-browser route audit is requested without Chromium.

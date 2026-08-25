@@ -1,4 +1,11 @@
 schema_version: 1
+consolidated_fragments:
+  - docs/assets/manifests/task-5.yaml
+  - docs/assets/manifests/task-6.yaml
+  - docs/assets/manifests/task-7.yaml
+  - docs/assets/manifests/task-8.yaml
+  - docs/assets/manifests/task-13.yaml
+consolidated_asset_count: 32
 assets:
   - id: fixture
     path: assets/diagrams/rendering-fixture.svg

@@ -1,7 +1,6 @@
 #include "tutorial_bot_plugins/tutorial_bot_diagnostics.hpp"
 
 #include <gz/common/Console.hh>
-#include <gz/math/Rand.hh>
 #include <gz/msgs/double.pb.h>
 #include <gz/msgs/stringmsg.pb.h>
 #include <gz/plugin/Register.hh>
@@ -55,9 +54,6 @@ void TutorialBotDiagnostics::Configure(
     return;
   }
 
-  const auto deterministicSeed =
-    sdf->Get<unsigned int>("deterministic_seed", 0u).first;
-  gz::math::Rand::Seed(deterministicSeed);
   publishPeriod_ = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
     std::chrono::duration<double>(periodSeconds));
   distancePublisher_ = node_.Advertise<gz::msgs::Double>(distanceTopic_);
@@ -74,7 +70,6 @@ void TutorialBotDiagnostics::Configure(
   gzerr << "TutorialBotDiagnostics configured"
         << " model_name=" << modelName_
         << " publish_period=" << periodSeconds
-        << " deterministic_seed=" << deterministicSeed
         << " distance_topic=" << distanceTopic_
         << " status_topic=" << statusTopic_
         << " world_stats_topic=" << worldStatsTopic_

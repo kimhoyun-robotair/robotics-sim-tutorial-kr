@@ -6,6 +6,33 @@ cleanup_contract:
   isolation: [ROS_DOMAIN_ID, GZ_PARTITION]
   forbidden_commands: [pkill, killall]
   receipt_fields: [dut_exit, termination_reason, survivors, sentinel_reaped]
+audit_contract:
+  task_1_baseline_sha: 20debfafa32877e512f0db6490192cae184473ec
+  task_1_route_counts: {beginner: 12, intermediate: 12, advanced: 7}
+  asset_manifest: docs/assets/manifest.yaml
+  source_files:
+    - examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro
+    - examples/ros2_ws/src/tutorial_bot_bringup/launch/simulation.launch.py
+    - examples/ros2_ws/src/tutorial_bot_gazebo/worlds/advanced-diagnostics.sdf
+    - examples/ros2_ws/src/tutorial_bot_plugins/src/tutorial_bot_diagnostics.cpp
+    - scripts/check_diff_drive.sh
+    - scripts/check_sensors.sh
+    - scripts/check_fuel_world.sh
+    - scripts/check_ros_gz_bridge.sh
+    - scripts/check_intermediate_launch.sh
+    - scripts/check_intermediate_sensors.sh
+    - scripts/check_intermediate_control_tf.sh
+    - scripts/check_intermediate_multi_robot.sh
+    - scripts/check_intermediate_nav2.sh
+    - scripts/check_advanced_course.sh
+  runtime_scenarios:
+    beginner: [diff-drive, sensors, fuel, bridge]
+    intermediate: [launch, sensors, control_tf, multi_robot, nav2]
+    advanced: [distance, transport, physics, headless]
+  installed_artifacts:
+    - tutorial_bot_description/share/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro
+    - tutorial_bot_bringup/share/tutorial_bot_bringup/launch/simulation.launch.py
+    - tutorial_bot_gazebo/share/tutorial_bot_gazebo/worlds/advanced-diagnostics.sdf
 migration_warning_files:
   - docs/compatibility.md
   - docs/index.md

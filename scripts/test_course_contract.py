@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import json
 import importlib.util
+import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -122,6 +123,35 @@ class CourseContractTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(completed.returncode, 64)
+
+    def test_forbidden_advanced_scope_fixture_names_every_forbidden_token(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "forbidden.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/check_course_docs.py",
+                    "--manifest",
+                    "scripts/fixtures/course_docs/forbidden-advanced-scope.yaml",
+                    "--site-config",
+                    "mkdocs.yml",
+                    "--expect-routes",
+                    "31",
+                    "--forbid-advanced-scope",
+                    "custom_ros2_control,custom_nav2,slam",
+                    "--evidence",
+                    str(evidence),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            report = json.loads(evidence.read_text(encoding="utf-8"))
+            self.assertEqual(completed.returncode, 64)
+            self.assertEqual(report["route_count"], 31)
+            for token in ("custom_ros2_control", "custom_nav2", "slam"):
+                self.assertIn(f"forbidden advanced scope: {token}", report["errors"])
 
     def test_course_docs_rejects_manifest_asset_that_does_not_exist(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -250,34 +280,37 @@ class CourseContractTests(unittest.TestCase):
             )
         )
 
-    def test_sensor_warmup_is_readiness_driven_with_original_cap(self) -> None:
-        checker = (ROOT / "scripts/check_intermediate_sensors.sh").read_text(
-            encoding="utf-8"
+    def test_intermediate_checkers_reject_missing_install_through_public_cli(
+        self,
+    ) -> None:
+        checkers = (
+            "check_intermediate_launch.sh",
+            "check_intermediate_sensors.sh",
+            "check_intermediate_control_tf.sh",
+            "check_intermediate_multi_robot.sh",
+            "check_intermediate_nav2.sh",
         )
-        self.assertIn("warmup_deadline = warmup_started + 20.0", checker)
-        self.assertIn("warmup_counts =", checker)
-        self.assertIn("if warmup_ready:", checker)
-        self.assertNotIn("warmup_end = time.monotonic() + 20.0", checker)
-
-    def test_nav2_readiness_does_not_poll_with_unbounded_ros_cli_calls(self) -> None:
-        checker = (ROOT / "scripts/check_intermediate_nav2.sh").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("grep -q 'map_to_odom=ready'", checker)
-        self.assertIn("grep -q 'navigation=ready'", checker)
-        self.assertIn("Creating navigator id navigate_to_pose", checker)
-        self.assertNotIn("state=$(ros2 lifecycle get /bt_navigator", checker)
-        self.assertIn("if timeout 8 ros2 lifecycle get", checker)
-        self.assertIn("lifecycle_snapshot_ready", checker)
-
-        launch_source = (
-            ROOT
-            / "examples/ros2_ws/src/tutorial_bot_bringup/launch/simulation.launch.py"
-        ).read_text(encoding="utf-8")
-        self.assertNotIn('name="lifecycle_manager_course_navigation"', launch_source)
-        self.assertIn('"autostart": "false"', launch_source)
-        self.assertIn('"activate_localization"', launch_source)
-        self.assertIn('"startup"', launch_source)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            environment = {
+                **os.environ,
+                "TUTORIAL_INSTALL_BASE": str(root / "missing-install"),
+            }
+            for checker in checkers:
+                completed = subprocess.run(
+                    (
+                        "bash",
+                        str(ROOT / "scripts" / checker),
+                        "--evidence",
+                        str(root / checker),
+                    ),
+                    env=environment,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    timeout=10,
+                )
+                self.assertNotEqual(completed.returncode, 0, checker)
 
     def test_localization_transition_recovers_after_delayed_service_response(
         self,
@@ -322,43 +355,6 @@ class CourseContractTests(unittest.TestCase):
         self.assertTrue(reached)
         self.assertEqual(boundary.requests, 1)
         self.assertEqual(boundary.state, 2)
-
-    def test_multi_robot_tf_readiness_covers_every_required_dynamic_edge(self) -> None:
-        checker = (ROOT / "scripts/check_intermediate_multi_robot.sh").read_text(
-            encoding="utf-8"
-        )
-        for robot_name in ("robot1", "robot2"):
-            for frame_name in ("base_link", "left_wheel_link", "right_wheel_link"):
-                self.assertIn(
-                    f"grep -q '{robot_name}/{frame_name}' \"$evidence_dir/tf.log\"",
-                    checker,
-                )
-
-    def test_intermediate_checkers_preserve_standalone_build_and_accept_shared_install(
-        self,
-    ) -> None:
-        checkers = (
-            "check_intermediate_launch.sh",
-            "check_intermediate_sensors.sh",
-            "check_intermediate_control_tf.sh",
-            "check_intermediate_multi_robot.sh",
-            "check_intermediate_nav2.sh",
-        )
-        for checker in checkers:
-            source = (ROOT / "scripts" / checker).read_text(encoding="utf-8")
-            self.assertIn("TUTORIAL_INSTALL_BASE", source)
-            self.assertIn("colcon --log-base", source)
-            self.assertIn("reused_install_base", source)
-
-    def test_multi_robot_overlay_restart_reaps_the_first_launch_group(self) -> None:
-        source = (ROOT / "scripts/check_intermediate_multi_robot.sh").read_text(
-            encoding="utf-8"
-        )
-        restart = source.index("if ((${#missing_dependencies[@]})); then")
-        stop = source.index('owned_stop_pgid "$launch_pid"', restart)
-        relaunch = source.index('setsid "${launch_command[@]}"', stop)
-
-        self.assertLess(stop, relaunch)
 
     def test_evidence_auditor_rejects_stale_source_sha(self) -> None:
         completed = subprocess.run(

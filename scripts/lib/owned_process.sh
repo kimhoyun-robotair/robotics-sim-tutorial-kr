@@ -15,8 +15,8 @@ owned_stop_pgid() {
   local pgid=${1:?process group required}
   [[ $pgid =~ ^[1-9][0-9]*$ ]] || return 64
   kill -TERM -- "-$pgid" 2>/dev/null || true
-  local attempt
-  for attempt in {1..50}; do
+  local _
+  for _ in {1..50}; do
     ps -eo pgid= | awk -v target="$pgid" '$1 == target {found=1} END {exit found ? 0 : 1}' || return 0
     sleep 0.1
   done

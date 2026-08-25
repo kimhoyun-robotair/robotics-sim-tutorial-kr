@@ -46,6 +46,7 @@ if(BUILD_TESTING)
   foreach(test_name IN ITEMS
       diagnostics_distance
       diagnostics_model_lifecycle
+      diagnostics_rng_isolation
       diagnostics_physics_cadence)
     ament_add_gtest(${test_name} test/test_${test_name}.cpp TIMEOUT 30)
     target_link_libraries(${test_name}
@@ -57,6 +58,9 @@ if(BUILD_TESTING)
       ENVIRONMENT "GZ_SIM_SYSTEM_PLUGIN_PATH=${CMAKE_CURRENT_BINARY_DIR}"
     )
   endforeach()
+  target_link_libraries(diagnostics_rng_isolation
+    TutorialBotDiagnosticsSystem
+  )
   target_compile_definitions(diagnostics_physics_cadence PRIVATE
     TUTORIAL_BOT_WORLD_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../tutorial_bot_gazebo/worlds"
   )

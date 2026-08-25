@@ -54,3 +54,5 @@ GUI가 열리지 않거나 렌더링이 깨지면 [문제 해결](../getting-sta
 ## 첫 실습
 
 [SDF 기초](03-sdf-basics.md)와 [첫 World](04-first-world.md)에서 순수 Gazebo 예제를 실행합니다. 이어서 [첫 Robot](05-first-robot.md)과 [바퀴와 Joint](06-joints.md)에서 이동 기반 `tutorial_bot`을 만듭니다.
+
+[다음: Gazebo Sim 개요](01-gazebo-overview.md)

@@ -4,6 +4,8 @@ Ubuntu 24.04 LTS, ROS 2 Jazzy, Gazebo Harmonic 환경에서 Gazebo Sim을 처음
 
 튜토리얼 전체는 하나의 공통 로봇 `tutorial_bot`을 점진적으로 발전시킵니다.
 
+현재 과정은 초급 12개, 중급 12개, 고급 7개 경로로 완성되어 있으며, nominal/fault 실행과 cleanup receipt를 함께 검증합니다.
+
 ```text
 SDF World → tutorial_bot의 URDF/Xacro → 센서·DiffDrive → ROS 2 bridge
 → TF·ros2_control·Nav2 → System Plugin·headless test·CI
@@ -38,6 +40,8 @@ mkdocs serve
 - `examples/gazebo/`: ROS 2 없이 실행하는 SDF 예제
 - `examples/ros2_ws/`: ROS 2와 Gazebo를 함께 사용하는 workspace
 - `scripts/`: 반복 검증 자동화
+
+전체 과정의 정적·실행 증거는 `scripts/run_course_matrix.py`와 `scripts/audit_course_evidence.py`로 검사합니다. 실행을 건너뛴 결과는 통과로 인정하지 않습니다.
 
 `ref/`는 로컬 참고용 외부 저장소 경로이며 Git에서 제외됩니다. 그 안의 파일은 수정하지 않습니다.
 

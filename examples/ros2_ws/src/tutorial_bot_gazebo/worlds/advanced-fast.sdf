@@ -17,7 +17,6 @@
       <enable_topic>/tutorial_bot/fast/diagnostics/enable</enable_topic>
       <reset_service>/tutorial_bot/fast/diagnostics/reset</reset_service>
       <publish_period>0.05</publish_period>
-      <deterministic_seed>42</deterministic_seed>
       <world_stats_topic>/world/advanced_fast/stats</world_stats_topic>
       <final_stats_iteration>2000</final_stats_iteration>
     </plugin>

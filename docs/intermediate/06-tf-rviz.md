@@ -63,3 +63,5 @@ RViz의 Message Filter 오류는 토픽 자체보다 frame 연결이나 timestam
 ## 정리
 
 TF와 joint state를 함께 검사해야 Gazebo의 운동이 ROS 2 시각화까지 올바르게 전달됐다고 말할 수 있습니다.
+
+[이전: ros_gz_bridge 심화](05-bridge-yaml.md) · [다음: gz_ros2_control](07-gz-ros2-control.md)

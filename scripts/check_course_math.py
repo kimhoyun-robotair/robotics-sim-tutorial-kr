@@ -2,23 +2,26 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import json
 import math
-from pathlib import Path
 import subprocess
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Final
-import xml.etree.ElementTree as ElementTree
+from xml.etree import ElementTree
 
 import yaml
-
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 DOCS: Final = (
     ROOT / "docs/beginner/05-first-robot.md",
     ROOT / "docs/beginner/06-joints.md",
     ROOT / "docs/beginner/07-diff-drive.md",
+)
+CANONICAL_XACRO: Final = (
+    ROOT
+    / "examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro"
 )
 
 
@@ -36,8 +39,8 @@ class MathAuditError(Exception):
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
-    result.add_argument("--scope", required=True, choices=("beginner-robot",))
-    source = result.add_mutually_exclusive_group(required=True)
+    result.add_argument("--scope", required=True, choices=("beginner-robot", "all"))
+    source = result.add_mutually_exclusive_group()
     source.add_argument("--xacro", type=Path)
     source.add_argument("--fixture", type=Path)
     result.add_argument("--evidence", type=Path, required=True)
@@ -160,14 +163,24 @@ def write_report(path: Path, report: dict[str, str | float | list[str]]) -> None
 
 def main() -> int:
     arguments = parser().parse_args()
+    xacro_path: Path | None = arguments.xacro
+    fixture_path: Path | None = arguments.fixture
+    if arguments.scope == "all":
+        if fixture_path is not None:
+            parser().error("--scope all does not accept --fixture")
+        xacro_path = xacro_path or CANONICAL_XACRO
+    elif xacro_path is None and fixture_path is None:
+        parser().error("--scope beginner-robot requires --xacro or --fixture")
     try:
-        if arguments.xacro is not None:
-            root = expand_xacro(arguments.xacro)
+        if xacro_path is not None:
+            root = expand_xacro(xacro_path)
             model = robot_math(root)
             audit_inertia(root)
             audit_docs(model)
         else:
-            model = load_fixture(arguments.fixture)
+            if fixture_path is None:
+                parser().error("math source is required")
+            model = load_fixture(fixture_path)
         error = direction_error(model)
         if error is not None:
             raise MathAuditError(error)
@@ -184,6 +197,7 @@ def main() -> int:
         "wheel_radius_m": model.wheel_radius_m,
         "wheel_separation_m": model.wheel_separation_m,
         "verified_examples": ["straight", "arc", "spin"],
+        "verified_scopes": ["beginner-robot"],
     }
     write_report(arguments.evidence, report)
     print("beginner robot math verified")

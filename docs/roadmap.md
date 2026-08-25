@@ -14,3 +14,7 @@
 
 초급 12개, 중급 12개, 고급 7개 경로를 `docs/course-manifest.yaml`에서 고정합니다.
 실행 결과는 source SHA와 cleanup receipt가 일치할 때만 현재 증거로 인정합니다.
+
+## 검증 상태
+
+세 과정의 필수 runtime은 nominal과 fault mode를 모두 실행하며, 각 scenario의 파싱된 observable과 owned-process cleanup receipt가 함께 통과해야 완료입니다. 정적 문서만 통과하거나 runtime을 건너뛴 결과는 완료로 표시하지 않습니다.

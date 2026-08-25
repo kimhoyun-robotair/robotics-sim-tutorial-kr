@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "tasks": [],
+  "process_scenarios": [
+    {
+      "result": "result.json",
+      "cleanup": "cleanup.json"
+    }
+  ]
+}

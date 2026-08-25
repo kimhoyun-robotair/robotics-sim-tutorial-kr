@@ -12,7 +12,9 @@ import time
 import unittest
 from collections.abc import Callable
 from pathlib import Path
+from unittest import mock
 
+from scripts import run_owned_process
 
 ROOT = Path(__file__).resolve().parents[1]
 WRAPPER = ROOT / "scripts" / "run_owned_process.py"
@@ -107,6 +109,40 @@ class OwnedProcessTests(unittest.TestCase):
         self.assertTrue(receipt["stale_identity"])
         self.assertEqual(receipt["survivors"], [])
 
+    def test_sentinel_disappearing_before_kill_is_already_reaped(self) -> None:
+        # Given: a short-lived process has disappeared after its registered
+        # identity was observed but before cleanup's final KILL syscall.
+        short_lived = subprocess.Popen(["sleep", "0.05"])
+        expected_ticks = run_owned_process.process_start_ticks(short_lived.pid)
+        self.assertIsNotNone(expected_ticks)
+        short_lived.wait()
+        assert expected_ticks is not None
+        with (
+            mock.patch.object(
+                run_owned_process,
+                "process_start_ticks",
+                side_effect=[expected_ticks, expected_ticks, expected_ticks, None],
+            ),
+            mock.patch.object(
+                run_owned_process.time, "monotonic", side_effect=[0.0, 3.0]
+            ),
+            mock.patch.object(
+                run_owned_process.os,
+                "kill",
+                side_effect=[None, ProcessLookupError()],
+            ),
+        ):
+            # When: sentinel cleanup observes the deterministic disappearance race.
+            survived, reaped, stale, survivors = run_owned_process.reap_sentinel(
+                (short_lived.pid, expected_ticks)
+            )
+
+        # Then: disappearance is success, without weakening stale-identity handling.
+        self.assertTrue(survived)
+        self.assertTrue(reaped)
+        self.assertFalse(stale)
+        self.assertEqual(survivors, [])
+
     def test_sigint_reports_shell_compatible_exit_and_reaps_sentinel(self) -> None:
         completed, receipt = self.run_owned(
             "long_running_owned_fixture.py", timeout=5, signal_after="0.2:INT"
@@ -174,7 +210,7 @@ class OwnedProcessTests(unittest.TestCase):
                 receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
                 self.assertEqual(receipt["termination_reason"], "signal")
                 self.assertEqual(receipt["signal_sent"], "SIGINT")
-                self.assertEqual(receipt["dut_exit"], 0)
+                self.assertEqual(receipt["dut_exit"], 130)
                 self.assertEqual(receipt["survivors"], [])
                 self.assertFalse(Path(f"/proc/{child_pid}").exists(), "owned child survived cleanup")
                 self.assertTrue(

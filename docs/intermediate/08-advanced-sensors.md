@@ -53,3 +53,5 @@ rate가 낮으면 simulation real-time factor와 bridge 처리량을 확인합�
 ## 정리
 
 센서는 설정 텍스트가 아니라 실제 표본의 크기·시간·frame·통계로 검증합니다.
+
+[이전: gz_ros2_control](07-gz-ros2-control.md) · [다음: 다중 로봇](09-multi-robot.md)

@@ -110,6 +110,7 @@ log/
 # Browser and UI-test artifacts
 playwright-report/
 test-results/
+site/
 
 # Read-only external reference repositories
 ref/

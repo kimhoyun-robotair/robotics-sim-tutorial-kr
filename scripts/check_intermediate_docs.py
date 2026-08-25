@@ -1,5 +1,4 @@
 #!/usr/bin/env -S uv run --script
-# noqa: SIZE_OK -- one-file deliverable contains the frozen route table and DOM probe.
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [

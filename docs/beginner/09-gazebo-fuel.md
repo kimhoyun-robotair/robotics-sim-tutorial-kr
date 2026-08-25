@@ -139,3 +139,5 @@ model://Coke → GZ_SIM_RESOURCE_PATH 검색 → 로컬 model.sdf
 ## 정리
 
 Fuel URI는 외부 model을 world에 포함하는 간단한 방법이고, cache는 반복 다운로드를 줄입니다. 다음 장에서는 Gazebo Transport topic을 ROS 2 topic으로 연결하는 `ros_gz_bridge`를 다룹니다.
+
+[이전: 센서](08-sensors.md) · [다음: ROS 2와 연결](10-ros-gz-bridge.md)

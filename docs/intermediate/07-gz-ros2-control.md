@@ -60,3 +60,5 @@ controller가 활성화되지 않으면 interface claim과 joint 이름을 확�
 ## 정리
 
 `gz_ros2_control`은 물리 joint와 ROS 2 controller 사이의 검증 가능한 경계입니다.
+
+[이전: TF·Joint State·RViz](06-tf-rviz.md) · [다음: 센서 심화](08-advanced-sensors.md)

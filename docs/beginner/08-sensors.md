@@ -155,3 +155,5 @@ LiDAR의 수평면에 장애물이 있는지와 `<range><max>`를 확인합니�
 ## 정리
 
 `tutorial_bot`은 이제 주행 명령뿐 아니라 거리, RGB-D 영상, 관성 관찰값도 Gazebo Transport로 발행합니다. 다음 장에서는 Gazebo Fuel의 model URI와 resource path를 다룹니다.
+
+[이전: DiffDrive](07-diff-drive.md) · [다음: Gazebo Fuel](09-gazebo-fuel.md)

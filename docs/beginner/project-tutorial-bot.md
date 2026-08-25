@@ -99,3 +99,5 @@ Gazebo DiffDrive → odometry
 ## 정리
 
 초급 과정의 `tutorial_bot`은 하나의 Xacro 원본에서 DiffDrive·LiDAR·Camera·IMU를 제공하고, ROS 2와 실제 메시지를 주고받습니다. 다음 단계부터는 이 로봇을 ROS 2 launch와 TF 중심의 simulation stack으로 확장합니다.
+
+[이전: ROS 2와 연결](10-ros-gz-bridge.md) · [다음: 중급 과정](../intermediate/index.md)

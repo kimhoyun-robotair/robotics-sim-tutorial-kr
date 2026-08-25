@@ -8,10 +8,15 @@ set -u
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 source "$project_root/scripts/lib/owned_process.sh"
 evidence=''
+world="$project_root/examples/gazebo/worlds/fuel-world.sdf"
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --evidence)
       evidence=$2
+      shift 2
+      ;;
+    --world)
+      world=$2
       shift 2
       ;;
     *)
@@ -66,7 +71,7 @@ if [ -n "$evidence" ]; then
   find "$fuel_cache" -type f \( -name model.config -o -name model.sdf \) -printf '%P\n' | sort > "$evidence/cache-files.log"
 fi
 
-setsid gz sim -s -r "$project_root/examples/gazebo/worlds/fuel-world.sdf" > "$server_log" 2>&1 &
+setsid gz sim -s -r "$world" > "$server_log" 2>&1 &
 server_pid=$!
 
 for _ in $(seq 1 50); do

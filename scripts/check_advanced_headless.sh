@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+project_root=$(cd -- "$(dirname -- "$0")/.." && pwd)
+source "$project_root/scripts/lib/owned_process.sh"
+
 scenario=""
 install_base=""
 evidence=""
@@ -74,7 +77,7 @@ cleanup() {
     pid=${owned_pids[$index]}
     expected=${owned_ticks[$index]}
     if [[ "$(process_ticks "$pid")" == "$expected" ]]; then
-      kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+      owned_stop_pgid "$pid"
       wait "$pid" 2>/dev/null || true
     fi
     if [[ "$(process_ticks "$pid")" == "$expected" ]]; then
@@ -182,7 +185,7 @@ if [[ "$scenario" == "sigint-hold" ]]; then
 fi
 
 if [[ "$scenario" == "missing-model" ]]; then
-  timeout "$readiness_timeout" gz topic -e --json-output -t /lifecycle_bot/diagnostics/status \
+  setsid timeout "$readiness_timeout" gz topic -e --json-output -t /lifecycle_bot/diagnostics/status \
     > "$evidence/status.log" 2>&1 &
   status_pid=$!
   register_process "$status_pid" || exit 70
@@ -200,11 +203,11 @@ if [[ "$scenario" == "missing-model" ]]; then
   exit "$exit_code"
 fi
 
-timeout "$sim_timeout" gz topic -e --json-output -t /tutorial_bot/diagnostics/distance \
+setsid timeout "$sim_timeout" gz topic -e --json-output -t /tutorial_bot/diagnostics/distance \
   > "$evidence/distance.log" 2>&1 &
 distance_pid=$!
 register_process "$distance_pid" || exit 70
-timeout "$sim_timeout" gz topic -e --json-output -t /world/advanced_diagnostics/stats \
+setsid timeout "$sim_timeout" gz topic -e --json-output -t /world/advanced_diagnostics/stats \
   > "$evidence/stats.log" 2>&1 &
 stats_pid=$!
 register_process "$stats_pid" || exit 70

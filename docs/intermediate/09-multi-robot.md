@@ -56,3 +56,5 @@ robot1 명령 전후 변위를 \(d_1\), 명령하지 않은 robot2 변위를 \(d
 ## 정리
 
 다중 로봇의 핵심은 프로세스 수가 아니라 이름, 토픽, controller, TF의 완전한 격리입니다.
+
+[이전: 센서 심화](08-advanced-sensors.md) · [다음: Nav2 연동](10-nav2.md)
