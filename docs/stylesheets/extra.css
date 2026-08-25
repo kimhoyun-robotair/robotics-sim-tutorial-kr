@@ -10,3 +10,35 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+
+.md-typeset .course-figure {
+  margin: 1.5rem auto;
+  max-width: 48rem;
+}
+
+.md-typeset .course-figure img,
+.md-typeset .course-figure svg {
+  display: block;
+  height: auto;
+  max-width: 100%;
+}
+
+.md-typeset .course-figure figcaption {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  margin-top: 0.5rem;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.md-typeset .arithmatex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.md-typeset .course-mermaid {
+  overflow-x: auto;
+  text-align: center;
+}

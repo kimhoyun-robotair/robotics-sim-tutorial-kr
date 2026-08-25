@@ -1,0 +1,13 @@
+schema_version: 1
+assets:
+  - id: fixture
+    path: assets/diagrams/rendering-fixture.svg
+    route: reference/visual-fixture/
+    source_command: python3 scripts/render_fixture_visual.py --output docs/assets/diagrams/rendering-fixture.svg
+    semantic_observable: 로봇, x축, 진행 방향이 서로 다른 색과 레이블로 구분된다.
+    alt_text: 좌표계에서 로봇의 이동 방향을 보여 주는 재현 가능한 도식
+    caption: 그림 1. 로봇, x축, 진행 방향을 구분해 확인하는 재현 가능한 시각 자료입니다.
+    captured_at: '2026-08-25'
+    sha256: 11942af2d8549d773409a2c4cf25341d0cff71dfed813fd839c3f9f176a98f32
+    width: 960
+    height: 480
