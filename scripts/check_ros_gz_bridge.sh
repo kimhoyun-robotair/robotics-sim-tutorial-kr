@@ -5,6 +5,10 @@ source /opt/ros/jazzy/setup.bash
 set -u
 
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+source "$project_root/scripts/lib/owned_process.sh"
+export ROS_DOMAIN_ID=$((40 + $$ % 160))
+export GZ_PARTITION="tutorial_bot_beginner_bridge_${ROS_DOMAIN_ID}_$$"
+owned_validate_isolation "$ROS_DOMAIN_ID" "$GZ_PARTITION"
 model_sdf=$(mktemp)
 server_log=$(mktemp)
 bridge_log=$(mktemp)
@@ -21,7 +25,7 @@ image_bridge_pid=''
 cleanup() {
   for task_pid in "$image_bridge_pid" "$bridge_pid" "$server_pid"; do
     if [ -n "$task_pid" ]; then
-      kill "$task_pid" 2>/dev/null || true
+      owned_stop_pgid "$task_pid"
       wait "$task_pid" 2>/dev/null || true
     fi
   done
@@ -32,7 +36,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 xacro "$project_root/examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro" > "$model_sdf"
-gz sim -s -r "$project_root/examples/gazebo/worlds/first-world.sdf" > "$server_log" 2>&1 &
+setsid gz sim -s -r "$project_root/examples/gazebo/worlds/first-world.sdf" > "$server_log" 2>&1 &
 server_pid=$!
 
 for _ in $(seq 1 30); do
@@ -63,9 +67,9 @@ for _ in $(seq 1 50); do
 done
 
 bridge_config="$project_root/examples/ros2_ws/src/tutorial_bot_bringup/config/bridge.yaml"
-ros2 run ros_gz_bridge parameter_bridge --ros-args -p config_file:="$bridge_config" > "$bridge_log" 2>&1 &
+setsid ros2 run ros_gz_bridge parameter_bridge --ros-args -p config_file:="$bridge_config" > "$bridge_log" 2>&1 &
 bridge_pid=$!
-ros2 run ros_gz_image image_bridge /tutorial_bot/camera/image > "$image_bridge_log" 2>&1 &
+setsid ros2 run ros_gz_image image_bridge /tutorial_bot/camera/image > "$image_bridge_log" 2>&1 &
 image_bridge_pid=$!
 
 for _ in $(seq 1 50); do

@@ -10,6 +10,7 @@
 
 각 장은 앞 장의 파일을 대체하기보다 필요한 기능을 추가합니다. 로봇의 형상과 링크 구조는 URDF/Xacro를 원본으로 관리하고, SDF는 world와 Gazebo 전용 설정에 사용합니다.
 
-## 현재 시작 지점
+## 현재 과정 계약
 
-현재는 기반 문서와 초급의 첫 실습을 제공합니다. 다음 실습부터 `tutorial_bot`의 URDF/Xacro와 바퀴를 만들며, `examples/ros2_ws/src/`의 패키지 디렉터리를 실제 구현에 맞춰 채웁니다.
+초급 12개, 중급 12개, 고급 7개 경로를 `docs/course-manifest.yaml`에서 고정합니다.
+실행 결과는 source SHA와 cleanup receipt가 일치할 때만 현재 증거로 인정합니다.

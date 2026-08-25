@@ -2,6 +2,7 @@
 set -euo pipefail
 
 project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+source "$project_root/scripts/lib/owned_process.sh"
 dependency_overlay=${TUTORIAL_BOT_DEPENDENCY_OVERLAY:-}
 world='sensor-test'
 nav2='false'
@@ -109,6 +110,7 @@ export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 export ROS_DOMAIN_ID="$domain_id"
 export GZ_PARTITION="$partition"
+owned_validate_isolation "$ROS_DOMAIN_ID" "$GZ_PARTITION"
 export ROS2CLI_DISABLE_DAEMON=1
 unset AMENT_PREFIX_PATH CMAKE_PREFIX_PATH COLCON_PREFIX_PATH PYTHONPATH LD_LIBRARY_PATH
 unset GZ_SIM_RESOURCE_PATH GAZEBO_MODEL_PATH

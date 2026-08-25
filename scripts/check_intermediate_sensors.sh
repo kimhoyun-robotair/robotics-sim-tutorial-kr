@@ -3,6 +3,7 @@
 set -euo pipefail
 
 project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+source "$project_root/scripts/lib/owned_process.sh"
 evidence_dir=''
 expected_width=''
 
@@ -64,6 +65,7 @@ trap 'exit 143' TERM
 export PATH=/opt/ros/jazzy/bin:/usr/bin:/bin
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
 export ROS_DOMAIN_ID=$domain_id GZ_PARTITION=$partition ROS2CLI_DISABLE_DAEMON=1
+owned_validate_isolation "$ROS_DOMAIN_ID" "$GZ_PARTITION"
 export ROS_HOME="$temp_root/ros-home"
 unset AMENT_PREFIX_PATH CMAKE_PREFIX_PATH COLCON_PREFIX_PATH PYTHONPATH LD_LIBRARY_PATH
 unset GZ_SIM_RESOURCE_PATH GAZEBO_MODEL_PATH

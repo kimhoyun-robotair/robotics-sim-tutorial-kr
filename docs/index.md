@@ -1,6 +1,6 @@
 # Gazebo Sim 튜토리얼에 오신 것을 환영합니다
 
-> **기준 환경:** Ubuntu 24.04 LTS · ROS 2 Jazzy · Gazebo Harmonic · amd64 / NVIDIA
+> **기준 환경:** Ubuntu 24.04 LTS · ROS 2 Jazzy · Gazebo Harmonic · amd64 · headless/software rendering
 
 이 튜토리얼은 Gazebo Sim을 단순한 GUI 도구가 아니라, 재현 가능한 로봇 시뮬레이션 프로젝트로 사용하는 방법을 다룹니다. 설명을 읽은 뒤 바로 저장소의 예제를 실행하고, 결과를 토픽과 시각화로 확인하는 흐름을 유지합니다.
 
@@ -39,6 +39,9 @@ ros2 --help
 2. [SDF 기초](beginner/03-sdf-basics.md)와 [첫 World](beginner/04-first-world.md)를 실행해 Gazebo server를 확인합니다.
 3. 초급에서 `tutorial_bot`의 이동과 센서를 완성합니다.
 4. 중급과 고급에서 ROS 2 프로젝트 구조와 자동 검증을 더합니다.
+
+전체 학습 경로는 초급 12개, 중급 12개, 고급 7개입니다. 각 경로의 선행 조건과
+후속 구현 작업은 `docs/course-manifest.yaml`에 고정되어 있습니다.
 
 !!! tip "명령 실행 원칙"
 

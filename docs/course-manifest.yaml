@@ -1,0 +1,50 @@
+schema_version: 1
+compatibility: {ubuntu: "24.04", ros: jazzy, gazebo: harmonic, sdformat: "14"}
+route_counts: {beginner: 12, intermediate: 12, advanced: 7}
+cleanup_contract:
+  process_scope: owned_pgid_and_descendants
+  isolation: [ROS_DOMAIN_ID, GZ_PARTITION]
+  forbidden_commands: [pkill, killall]
+  receipt_fields: [dut_exit, termination_reason, survivors, sentinel_reaped]
+migration_warning_files:
+  - docs/compatibility.md
+  - docs/index.md
+  - docs/getting-started/installation-jazzy.md
+  - docs/intermediate/index.md
+  - docs/intermediate/01-advanced-sdf.md
+  - docs/intermediate/02-urdf-xacro-sdf.md
+  - docs/intermediate/05-bridge-yaml.md
+  - docs/intermediate/07-gz-ros2-control.md
+  - docs/intermediate/project-autonomous-bot.md
+routes:
+  - {course: beginner, title: 초급 개요, path: beginner/index.md, prerequisites: []}
+  - {course: beginner, title: Gazebo Sim 개요, path: beginner/01-gazebo-overview.md, prerequisites: [beginner/index.md]}
+  - {course: beginner, title: GUI 기초, path: beginner/02-gui-basics.md, prerequisites: [beginner/01-gazebo-overview.md]}
+  - {course: beginner, title: SDF 기초, path: beginner/03-sdf-basics.md, prerequisites: [beginner/02-gui-basics.md]}
+  - {course: beginner, title: 첫 World, path: beginner/04-first-world.md, prerequisites: [beginner/03-sdf-basics.md]}
+  - {course: beginner, title: 첫 Robot, path: beginner/05-first-robot.md, prerequisites: [beginner/04-first-world.md]}
+  - {course: beginner, title: 바퀴와 Joint, path: beginner/06-joints.md, prerequisites: [beginner/05-first-robot.md]}
+  - {course: beginner, title: DiffDrive, path: beginner/07-diff-drive.md, prerequisites: [beginner/06-joints.md]}
+  - {course: beginner, title: 센서, path: beginner/08-sensors.md, prerequisites: [beginner/07-diff-drive.md]}
+  - {course: beginner, title: Gazebo Fuel, path: beginner/09-gazebo-fuel.md, prerequisites: [beginner/08-sensors.md]}
+  - {course: beginner, title: ROS 2와 연결, path: beginner/10-ros-gz-bridge.md, prerequisites: [beginner/09-gazebo-fuel.md]}
+  - {course: beginner, title: 초급 프로젝트, path: beginner/project-tutorial-bot.md, prerequisites: [beginner/10-ros-gz-bridge.md]}
+  - {course: intermediate, title: 중급 개요, path: intermediate/index.md, prerequisites: [beginner/project-tutorial-bot.md]}
+  - {course: intermediate, title: 고급 SDF, path: intermediate/01-advanced-sdf.md, prerequisites: [intermediate/index.md]}
+  - {course: intermediate, title: URDF·Xacro·SDF, path: intermediate/02-urdf-xacro-sdf.md, prerequisites: [intermediate/01-advanced-sdf.md]}
+  - {course: intermediate, title: ROS 2 Launch, path: intermediate/03-ros2-launch.md, prerequisites: [intermediate/02-urdf-xacro-sdf.md]}
+  - {course: intermediate, title: Robot Spawn, path: intermediate/04-spawn-model.md, prerequisites: [intermediate/03-ros2-launch.md]}
+  - {course: intermediate, title: ros_gz_bridge 심화, path: intermediate/05-bridge-yaml.md, prerequisites: [intermediate/04-spawn-model.md]}
+  - {course: intermediate, title: TF·Joint State·RViz, path: intermediate/06-tf-rviz.md, prerequisites: [intermediate/05-bridge-yaml.md]}
+  - {course: intermediate, title: gz_ros2_control, path: intermediate/07-gz-ros2-control.md, prerequisites: [intermediate/06-tf-rviz.md]}
+  - {course: intermediate, title: 센서 심화, path: intermediate/08-advanced-sensors.md, prerequisites: [intermediate/07-gz-ros2-control.md]}
+  - {course: intermediate, title: 다중 로봇, path: intermediate/09-multi-robot.md, prerequisites: [intermediate/08-advanced-sensors.md]}
+  - {course: intermediate, title: Nav2 연동, path: intermediate/10-nav2.md, prerequisites: [intermediate/09-multi-robot.md]}
+  - {course: intermediate, title: 중급 프로젝트, path: intermediate/project-autonomous-bot.md, prerequisites: [intermediate/10-nav2.md]}
+  - {course: advanced, title: 고급 개요, path: advanced/index.md, prerequisites: [intermediate/project-autonomous-bot.md], implementation_todo: 13}
+  - {course: advanced, title: ECS System Plugin, path: advanced/01-ecs-system-plugin.md, prerequisites: [advanced/index.md], implementation_todo: 9}
+  - {course: advanced, title: Transport 인터페이스, path: advanced/02-transport-interfaces.md, prerequisites: [advanced/01-ecs-system-plugin.md], implementation_todo: 10}
+  - {course: advanced, title: 물리와 주기 디버깅, path: advanced/03-physics-debugging.md, prerequisites: [advanced/02-transport-interfaces.md], implementation_todo: 11}
+  - {course: advanced, title: Headless 통합 테스트, path: advanced/04-headless-integration.md, prerequisites: [advanced/03-physics-debugging.md], implementation_todo: 12}
+  - {course: advanced, title: CI 재현성, path: advanced/05-ci-reproducibility.md, prerequisites: [advanced/04-headless-integration.md], implementation_todo: 14}
+  - {course: advanced, title: Production Stack 프로젝트, path: advanced/project-production-stack.md, prerequisites: [advanced/05-ci-reproducibility.md], implementation_todo: 13}

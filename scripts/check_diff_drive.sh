@@ -5,13 +5,17 @@ source /opt/ros/jazzy/setup.bash
 set -u
 
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+source "$project_root/scripts/lib/owned_process.sh"
+export ROS_DOMAIN_ID=$((40 + $$ % 160))
+export GZ_PARTITION="tutorial_bot_beginner_diff_drive_${ROS_DOMAIN_ID}_$$"
+owned_validate_isolation "$ROS_DOMAIN_ID" "$GZ_PARTITION"
 model_sdf=$(mktemp)
 server_log=$(mktemp)
 server_pid=''
 
 cleanup() {
   if [ -n "$server_pid" ]; then
-    kill "$server_pid" 2>/dev/null || true
+    owned_stop_pgid "$server_pid"
     wait "$server_pid" 2>/dev/null || true
   fi
   rm -f "$model_sdf" "$server_log"
@@ -21,7 +25,7 @@ trap cleanup EXIT INT TERM
 
 xacro "$project_root/examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro" > "$model_sdf"
 gz sdf -k "$model_sdf"
-gz sim -s -r "$project_root/examples/gazebo/worlds/first-world.sdf" > "$server_log" 2>&1 &
+setsid gz sim -s -r "$project_root/examples/gazebo/worlds/first-world.sdf" > "$server_log" 2>&1 &
 server_pid=$!
 
 for _ in $(seq 1 30); do

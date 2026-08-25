@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "final_sha": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
+    "route_reviews": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "advanced_scope_safe": {"type": "boolean"},
+          "korean_readable": {"type": "boolean"},
+          "progression_clear": {"type": "boolean"},
+          "route": {"minLength": 1, "type": "string"},
+          "verdict": {"enum": ["APPROVE", "REQUEST_CHANGES"]}
+        },
+        "required": ["route", "progression_clear", "korean_readable", "advanced_scope_safe", "verdict"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "verdict": {"enum": ["APPROVE", "REQUEST_CHANGES"]}
+  },
+  "required": ["verdict", "final_sha", "route_reviews"],
+  "type": "object"
+}

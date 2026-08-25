@@ -71,6 +71,12 @@ nav:
       - 프로젝트: intermediate/project-autonomous-bot.md
   - 고급:
       - 개요: advanced/index.md
+      - ECS System Plugin: advanced/01-ecs-system-plugin.md
+      - Transport 인터페이스: advanced/02-transport-interfaces.md
+      - 물리와 주기 디버깅: advanced/03-physics-debugging.md
+      - Headless 통합 테스트: advanced/04-headless-integration.md
+      - CI 재현성: advanced/05-ci-reproducibility.md
+      - 프로젝트: advanced/project-production-stack.md
   - 참고:
       - 명령어: reference/commands.md
       - 용어: reference/terminology.md

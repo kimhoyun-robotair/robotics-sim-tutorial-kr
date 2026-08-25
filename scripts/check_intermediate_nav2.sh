@@ -5,6 +5,7 @@ set -euo pipefail
 checker_argv=("$0" "$@")
 command_started_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+source "$project_root/scripts/lib/owned_process.sh"
 evidence_dir=''
 goal_name='project_goal.yaml'
 repeat=1
@@ -200,6 +201,7 @@ for ((run=1; run<=repeat; run++)); do
   date -u +%Y-%m-%dT%H:%M:%SZ > "$run_dir/start.utc"
   export ROS_DOMAIN_ID=$((120 + ($$ + run * 17) % 100))
   export GZ_PARTITION="tutorial_bot_task8_${ROS_DOMAIN_ID}_$$_$run"
+  owned_validate_isolation "$ROS_DOMAIN_ID" "$GZ_PARTITION"
   printf 'os=%s\nros=%s\ngazebo=%s\nros_domain_id=%s\ngz_partition=%s\ntemp_root=%s\n' \
     "$(uname -srvmo)" 'jazzy+disposable-local-deb-overlay' 'gz-sim8' \
     "$ROS_DOMAIN_ID" "$GZ_PARTITION" "$temp_root" > "$run_dir/environment.log"

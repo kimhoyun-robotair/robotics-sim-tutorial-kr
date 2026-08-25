@@ -4,7 +4,7 @@
 > **Gazebo:** Harmonic  
 > **ROS 2:** Jazzy  
 > **Ubuntu:** 24.04 LTS  
-> **Architecture / GPU:** amd64 / NVIDIA
+> **Architecture / Rendering:** amd64 · software rendering 기준, GPU 선택 사항
 
 ## 본편 지원 범위
 
@@ -13,14 +13,15 @@
 - Ubuntu: 24.04 LTS
 - ROS 2: Jazzy
 - Gazebo: Harmonic
-- Architecture / GPU: amd64 / NVIDIA
+- Architecture: amd64
+- Rendering: headless/software rendering을 필수 검증 경로로 사용하며 GPU는 선택 사항
 - 지원 수준: 본편 지원 및 검증
 
 Gazebo 공식 문서도 ROS 2 Jazzy와 Gazebo Harmonic을 권장 조합으로 표시합니다. [공식 호환성 표](https://gazebosim.org/docs/harmonic/ros_installation/)를 확인할 수 있습니다.
 
 ## 지원하지 않는 환경
 
-ARM64, AMD/Intel GPU, WSL, 가상 머신, 다른 운영체제와 다른 ROS/Gazebo 조합은 이 본편의 지원 및 검증 대상이 아닙니다. 해당 환경에서 동작할 수는 있지만, 이 문서의 결과 화면·성능·패키지 이름을 보장하지 않습니다.
+ARM64, WSL, 가상 머신, 다른 운영체제와 다른 ROS/Gazebo 조합은 이 본편의 지원 및 검증 대상이 아닙니다. AMD/Intel/NVIDIA GPU는 선택적으로 사용할 수 있지만 결과 화면·성능은 보장하지 않습니다.
 
 ## 버전 확인
 

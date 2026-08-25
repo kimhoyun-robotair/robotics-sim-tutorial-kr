@@ -2,6 +2,7 @@
 set -euo pipefail
 
 project_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+source "$project_root/scripts/lib/owned_process.sh"
 evidence_dir=''
 robot1_name='robot1'
 robot2_name='robot2'
@@ -115,6 +116,7 @@ export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 export ROS_DOMAIN_ID="$domain_id"
 export GZ_PARTITION="$partition"
+owned_validate_isolation "$ROS_DOMAIN_ID" "$GZ_PARTITION"
 export ROS2CLI_DISABLE_DAEMON=1
 export ROS_HOME="$temp_root/ros-home"
 unset AMENT_PREFIX_PATH CMAKE_PREFIX_PATH COLCON_PREFIX_PATH PYTHONPATH LD_LIBRARY_PATH
