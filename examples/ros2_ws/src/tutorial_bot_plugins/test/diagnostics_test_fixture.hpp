@@ -3,6 +3,7 @@
 
 #include <gz/msgs/boolean.pb.h>
 #include <gz/msgs/double.pb.h>
+#include <gz/msgs/empty.pb.h>
 #include <gz/msgs/entity.pb.h>
 #include <gz/msgs/entity_factory.pb.h>
 #include <gz/msgs/pose.pb.h>
@@ -11,7 +12,11 @@
 #include <gz/sim/ServerConfig.hh>
 #include <gz/transport/Node.hh>
 
+#include <chrono>
+#include <cmath>
+#include <condition_variable>
 #include <cstdint>
+#include <cstddef>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -50,8 +55,14 @@ class DiagnosticsFixture
 {
 public:
   explicit DiagnosticsFixture(const bool withModel)
-  : server_(MakeConfig(withModel))
+  : enableTopic_(withModel ? "/tutorial_bot/diagnostics/enable" :
+      "/unbound_bot/diagnostics/enable"),
+    resetService_(withModel ? "/tutorial_bot/diagnostics/reset" :
+      "/unbound_bot/diagnostics/reset"),
+    server_(MakeConfig(withModel))
   {
+    enablePublisher_ =
+      node_.Advertise<gz::msgs::Boolean>(enableTopic_);
     node_.Subscribe(
       "/tutorial_bot/diagnostics/status",
       &DiagnosticsFixture::OnStatus, this);
@@ -62,7 +73,20 @@ public:
 
   bool Run(const std::uint64_t iterations)
   {
-    return server_.Run(true, iterations, false);
+    if (!server_.Run(true, iterations, false)) {
+      return false;
+    }
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (!awaitingResetPublication_) {
+      return true;
+    }
+    const bool published = condition_.wait_for(
+      lock, std::chrono::milliseconds(200), [this]() {
+        return distances_.size() > resetDistanceCount_ &&
+          std::abs(distances_.back()) <= 1e-6;
+      });
+    awaitingResetPublication_ = !published;
+    return true;
   }
 
   bool SetPose(const double x, const double y)
@@ -76,6 +100,52 @@ public:
     return node_.Request(
       "/world/diagnostics/set_pose", request, 1000u, reply, result) &&
       result && reply.data();
+  }
+
+  bool ControlEndpointsAvailable()
+  {
+    if (!Run(20) || !enablePublisher_.HasConnections()) {
+      return false;
+    }
+    bool accepted = false;
+    return Reset(accepted) && accepted && Run(1);
+  }
+
+  bool PublishEnabled(const bool enabled)
+  {
+    gz::msgs::Boolean message;
+    message.set_data(enabled);
+    return enablePublisher_.Publish(message);
+  }
+
+  bool Reset(bool & accepted)
+  {
+    gz::msgs::Empty request;
+    gz::msgs::Boolean reply;
+    bool result = false;
+    const bool requested = node_.Request(
+      resetService_, request, 200u, reply, result);
+    accepted = requested && result && reply.data();
+    if (accepted) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      awaitingResetPublication_ = true;
+      resetDistanceCount_ = distances_.size();
+    }
+    return requested && result;
+  }
+
+  bool RunUntilStatus(const std::string & expected)
+  {
+    for (std::uint64_t iteration = 0; iteration < 1000; ++iteration) {
+      if (!Run(1)) {
+        return false;
+      }
+      const auto statuses = Statuses();
+      if (!statuses.empty() && statuses.back() == expected) {
+        return true;
+      }
+    }
+    return false;
   }
 
   bool Spawn()
@@ -119,8 +189,16 @@ private:
   static gz::sim::ServerConfig MakeConfig(const bool withModel)
   {
     gz::sim::ServerConfig config;
-    config.SetSdfString(
-      std::string(kWorldPrefix) + (withModel ? kModel : "") + kWorldSuffix);
+    std::string world =
+      std::string(kWorldPrefix) + (withModel ? kModel : "") + kWorldSuffix;
+    if (!withModel) {
+      const auto pluginEnd = world.find("</plugin>");
+      world.insert(
+        pluginEnd,
+        "<enable_topic>/unbound_bot/diagnostics/enable</enable_topic>"
+        "<reset_service>/unbound_bot/diagnostics/reset</reset_service>");
+    }
+    config.SetSdfString(world);
     return config;
   }
 
@@ -134,13 +212,20 @@ private:
   {
     std::lock_guard<std::mutex> lock(mutex_);
     distances_.push_back(message.data());
+    condition_.notify_all();
   }
 
+  std::string enableTopic_;
+  std::string resetService_;
   gz::transport::Node node_;
+  gz::transport::Node::Publisher enablePublisher_;
   gz::sim::Server server_;
   mutable std::mutex mutex_;
+  std::condition_variable condition_;
   std::vector<std::string> statuses_;
   std::vector<double> distances_;
+  bool awaitingResetPublication_{false};
+  std::size_t resetDistanceCount_{0};
 };
 }
 

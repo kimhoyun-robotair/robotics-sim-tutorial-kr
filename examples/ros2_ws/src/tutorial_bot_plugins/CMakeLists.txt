@@ -54,6 +54,38 @@ if(BUILD_TESTING)
       ENVIRONMENT "GZ_SIM_SYSTEM_PLUGIN_PATH=${CMAKE_CURRENT_BINARY_DIR}"
     )
   endforeach()
+
+  foreach(test_name IN ITEMS
+      diagnostics_enable_reset
+      diagnostics_enable_reset_concurrency)
+    if(CMAKE_CXX_FLAGS MATCHES "fsanitize=thread")
+      ament_add_gtest_executable(${test_name} test/test_diagnostics_enable_reset.cpp)
+      set(result_file "${AMENT_TEST_RESULTS_DIR}/${PROJECT_NAME}/${test_name}.gtest.xml")
+      ament_add_test(${test_name}
+        COMMAND /usr/bin/setarch x86_64 -R $<TARGET_FILE:${test_name}>
+          --gtest_output=xml:${result_file}
+        OUTPUT_FILE "${CMAKE_BINARY_DIR}/ament_cmake_gtest/${test_name}.txt"
+        RESULT_FILE "${result_file}"
+        TIMEOUT 30
+      )
+    else()
+      ament_add_gtest(${test_name} test/test_diagnostics_enable_reset.cpp TIMEOUT 30)
+    endif()
+    target_link_libraries(${test_name}
+      gz-msgs10::gz-msgs10
+      gz-sim8::gz-sim8
+      gz-transport13::gz-transport13
+    )
+    string(TOUPPER ${test_name} test_definition)
+    target_compile_definitions(${test_name} PRIVATE ${test_definition})
+    if(CMAKE_CXX_FLAGS MATCHES "fsanitize=thread")
+      target_compile_options(${test_name} PRIVATE -fno-pie)
+      target_link_options(${test_name} PRIVATE -no-pie)
+    endif()
+    set_tests_properties(${test_name} PROPERTIES
+      ENVIRONMENT "GZ_SIM_SYSTEM_PLUGIN_PATH=${CMAKE_CURRENT_BINARY_DIR}"
+    )
+  endforeach()
 endif()
 
 ament_export_include_directories(include)

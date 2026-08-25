@@ -18,6 +18,8 @@
       <model_name>lifecycle_bot</model_name>
       <distance_topic>/lifecycle_bot/diagnostics/distance</distance_topic>
       <status_topic>/lifecycle_bot/diagnostics/status</status_topic>
+      <enable_topic>/lifecycle_bot/diagnostics/enable</enable_topic>
+      <reset_service>/lifecycle_bot/diagnostics/reset</reset_service>
       <publish_period>0.1</publish_period>
     </plugin>
 

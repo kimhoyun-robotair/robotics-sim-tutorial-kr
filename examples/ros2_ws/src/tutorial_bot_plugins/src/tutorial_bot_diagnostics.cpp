@@ -30,6 +30,12 @@ void TutorialBotDiagnostics::Configure(
   if (sdf->HasElement("status_topic")) {
     statusTopic_ = sdf->Get<std::string>("status_topic");
   }
+  if (sdf->HasElement("enable_topic")) {
+    enableTopic_ = sdf->Get<std::string>("enable_topic");
+  }
+  if (sdf->HasElement("reset_service")) {
+    resetService_ = sdf->Get<std::string>("reset_service");
+  }
 
   const double periodSeconds =
     sdf->Get<double>("publish_period", 0.1).first;
@@ -43,6 +49,9 @@ void TutorialBotDiagnostics::Configure(
     std::chrono::duration<double>(periodSeconds));
   distancePublisher_ = node_.Advertise<gz::msgs::Double>(distanceTopic_);
   statusPublisher_ = node_.Advertise<gz::msgs::StringMsg>(statusTopic_);
+  node_.Subscribe(enableTopic_, &TutorialBotDiagnostics::OnEnable, this);
+  node_.Advertise(
+    resetService_, &TutorialBotDiagnostics::OnReset, this);
   stateChanged_ = false;
   lastPublishTime_ = std::chrono::steady_clock::duration::zero();
 }
@@ -64,25 +73,72 @@ void TutorialBotDiagnostics::PostUpdate(
     BindOrWait(ecm);
   }
 
+  ApplyPendingCommands(modelEntity_ != kNullEntity);
+
   if (modelEntity_ != kNullEntity) {
     const auto poseComponent = ecm.Component<components::Pose>(modelEntity_);
     if (poseComponent != nullptr) {
       const auto pose = worldPose(modelEntity_, ecm);
       const bool poseIsFinite =
         std::isfinite(pose.Pos().X()) && std::isfinite(pose.Pos().Y());
-      if (poseIsFinite && previousPose_.has_value()) {
+      if (enabled_ && poseIsFinite && previousPose_.has_value()) {
         distance_ += std::hypot(
           pose.Pos().X() - previousPose_->Pos().X(),
           pose.Pos().Y() - previousPose_->Pos().Y());
       }
-      if (poseIsFinite) {
+      if (enabled_ && poseIsFinite) {
         previousPose_ = pose;
         SetState(State::Ready);
+      } else if (!enabled_) {
+        previousPose_.reset();
+        SetState(State::Disabled);
       }
     }
   }
 
   Publish(info.simTime);
+}
+
+void TutorialBotDiagnostics::ApplyPendingCommands(const bool modelBound)
+{
+  std::optional<bool> enable;
+  bool reset = false;
+  {
+    std::lock_guard<std::mutex> lock(commandMutex_);
+    resetBound_ = modelBound;
+    enable = pendingEnable_;
+    reset = pendingReset_;
+    pendingEnable_.reset();
+    pendingReset_ = false;
+  }
+
+  if (enable.has_value() && enabled_ != *enable) {
+    enabled_ = *enable;
+    previousPose_.reset();
+    stateChanged_ = true;
+  }
+  if (reset) {
+    distance_ = 0.0;
+    previousPose_.reset();
+    stateChanged_ = true;
+  }
+}
+
+void TutorialBotDiagnostics::OnEnable(const gz::msgs::Boolean & message)
+{
+  std::lock_guard<std::mutex> lock(commandMutex_);
+  pendingEnable_ = message.data();
+}
+
+bool TutorialBotDiagnostics::OnReset(
+  const gz::msgs::Empty &, gz::msgs::Boolean & response)
+{
+  std::lock_guard<std::mutex> lock(commandMutex_);
+  response.set_data(resetBound_);
+  if (resetBound_) {
+    pendingReset_ = true;
+  }
+  return true;
 }
 
 void TutorialBotDiagnostics::BindOrWait(const EntityComponentManager & ecm)
@@ -137,6 +193,8 @@ const char * TutorialBotDiagnostics::StateName(const State state)
       return "WAITING_FOR_MODEL";
     case State::Ready:
       return "READY";
+    case State::Disabled:
+      return "DISABLED";
     case State::ModelRemoved:
       return "MODEL_REMOVED";
     case State::InvalidConfig:
