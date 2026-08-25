@@ -3,42 +3,55 @@
 > **난이도:** 초급  
 > **Gazebo:** Harmonic  
 > **ROS 2:** Jazzy  
-> **선행 학습:** 첫 `tutorial_bot`
+> **선행 학습:** [첫 `tutorial_bot`](05-first-robot.md)
 
 ## 학습 목표
 
-- link와 joint가 로봇의 강체 구조를 어떻게 연결하는지 설명합니다.
-- `tutorial_bot`에 좌우 바퀴 link와 continuous joint를 추가합니다.
-- joint axis와 joint limit을 목적에 맞게 선택합니다.
+- link의 parent/child 관계와 joint의 자유도(DOF)를 설명합니다.
+- 바퀴 원통과 joint axis가 같은 물리 축을 나타내도록 배치합니다.
+- 설치된 2단계 모델에 센서가 섞이지 않았는지 확인합니다.
 
-## 배경 지식
+## link를 잇는 joint
 
-Joint는 parent link와 child link의 상대 운동을 정의합니다. `fixed` joint는 상대 운동을 허용하지 않고, `revolute` joint는 제한된 범위 안에서 한 축 회전을 허용합니다. 바퀴처럼 회전 범위가 제한되지 않는 구조에는 `continuous` joint를 사용합니다.
+<pre class="course-mermaid">
+flowchart TD
+  B[base_link - parent] --> LJ[left_wheel_joint]
+  B --> RJ[right_wheel_joint]
+  LJ --> LT[continuous - 1 DOF]
+  RJ --> RT[continuous - 1 DOF]
+  LT --> L[left_wheel_link - child]
+  RT --> R[right_wheel_link - child]
+</pre>
 
-이번 바퀴 joint의 axis는 `0 1 0`입니다. 즉, 각 바퀴의 축은 robot의 y축 방향이고 바퀴는 그 축을 중심으로 회전합니다. `continuous` joint에는 upper/lower limit을 넣지 않습니다. 회전 각도를 제한해야 하는 arm 또는 lidar tilt joint에는 `revolute` joint와 limit을 사용합니다.
+URDF 트리는 한 root link에서 시작합니다. 각 joint는 기준이 되는 **parent link**, 움직이는 **child link**, 허용할 운동을 정합니다.
 
-## 예제 파일
+| joint 종류 | 허용 운동 | 자유도 | 이 로봇에서의 용도 |
+|---|---|---:|---|
+| `fixed` | 없음 | 0 | 센서를 몸체에 고정할 때 |
+| `revolute` | 제한된 축 회전 | 1 | 회전 각도 범위가 있는 관절 |
+| <code class="course-nowrap">continuous</code> | 제한 없는 축 회전 | 1 | 좌우 바퀴 |
 
-이번 장에서 수정하는 Xacro 원본은 다음입니다.
+## 축을 눈으로 읽기
 
-`examples/ros2_ws/src/tutorial_bot_description/urdf/stages/02-wheels-and-joints.xacro`
+<figure markdown="span">
+  ![로봇의 전진 x축, 좌우 y축과 바퀴 joint 회전축 관계](../assets/beginner/joint-axis.svg)
+  <figcaption>그림 2. 두 바퀴의 joint axis는 y축과 나란하고, 바퀴는 그&nbsp;축을 중심으로 굴러 x방향으로 이동합니다.</figcaption>
+</figure>
 
-이 파일의 `wheel` 매크로는 왼쪽과 오른쪽에 같은 원통 link를 만들고, y 위치만 다르게 지정합니다. 바퀴의 질량은 0.3 kg, 반지름은 0.06 m, 폭은 0.04 m입니다.
+두 joint의 `<axis xyz="0 1 0"/>`은 회전축이 +y 방향임을 뜻합니다. URDF cylinder의 기본 길이 축은 z축이므로 visual과 collision을 x축으로 $90^\circ$ 회전해 원통의 길이 축도 y축에 맞춥니다. 축과 원통 방향이 다르면 바퀴가 옆으로 도는 것처럼 보이거나 접촉 운동이 잘못됩니다.
 
-## 실행
-
-Xacro를 다시 확장한 뒤 두 child link와 두 joint가 생성됐는지 확인합니다.
+## 설치된 2단계 모델 검사
 
 ```bash
 source /opt/ros/jazzy/setup.zsh
 stage="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/02-wheels-and-joints.xacro"
-xacro "$stage" > /tmp/tutorial_bot.urdf
-check_urdf /tmp/tutorial_bot.urdf
+xacro "$stage" > /tmp/tutorial_bot-stage-02.urdf
+check_urdf /tmp/tutorial_bot-stage-02.urdf
+gz sdf -p /tmp/tutorial_bot-stage-02.urdf > /tmp/tutorial_bot-stage-02.sdf
+gz sdf -k /tmp/tutorial_bot-stage-02.sdf
 ```
 
-## 결과 확인
-
-출력에 다음 구조가 나타나면 정상입니다.
+정상 inventory는 link 3개(`base_link`, 좌우 wheel), joint 2개뿐입니다. DiffDrive plugin과 LiDAR, camera, IMU는 아직 없어야 합니다.
 
 ```text
 root Link: base_link has 2 child(ren)
@@ -46,17 +59,31 @@ root Link: base_link has 2 child(ren)
     child(2): right_wheel_link
 ```
 
-생성된 URDF를 Gazebo가 읽을 수 있는 SDF로 변환해도 됩니다.
+## 원통 바퀴의 관성
 
-```bash
-gz sdf -p /tmp/tutorial_bot.urdf > /tmp/tutorial_bot.sdf
-gz sdf -k /tmp/tutorial_bot.sdf
-```
+바퀴 하나는 질량 $m=0.3\,\mathrm{kg}$, 반지름 $r=0.06\,\mathrm{m}$, 폭 $w=0.04\,\mathrm{m}$인 실린더입니다. y축이 회전축이므로
 
-## 동작 원리
+\[
+I_{yy}=\frac{mr^2}{2}=0.000540\,\mathrm{kg\,m^2}
+\]
 
-바퀴 geometry는 URDF cylinder의 기본 축인 z축을 x축으로 90° 회전해 y축을 따라 놓습니다. joint axis도 y축으로 맞추므로, visual·collision·관성·joint가 같은 물리적 바퀴를 설명합니다.
+이고, 나머지 두 축은
 
-## 정리
+\[
+I_{xx}=I_{zz}=\frac{m(3r^2+w^2)}{12}=0.000310\,\mathrm{kg\,m^2}
+\]
 
-`tutorial_bot`은 이제 base link, left wheel, right wheel로 구성됩니다. 다음 단계에서는 [DiffDrive](07-diff-drive.md)를 연결해 속도 명령으로 로봇을 움직입니다.
+입니다. 이 값은 `stage_wheel_inertia` 매크로의 계산과 같습니다.
+
+??? note "왜 회전축의 식이 다른가요?"
+    질량이 회전축에서 얼마나 멀리 분포하는지가 관성을 결정합니다. 실린더 중심축 둘레 회전에는 반지름만 관여하지만, 옆으로 넘어뜨리는 두 축에는 반지름과 폭이 모두 관여합니다. 더 긴 유도는 중급 물리 장에서 다룹니다.
+
+## 문제 해결
+
+- `joint xml is not initialized correctly`: parent와 child link 이름이 실제 link 이름과 같은지 확인합니다.
+- 바퀴가 차체 안쪽에 있음: joint origin의 y 값이 왼쪽 `+0.19`, 오른쪽 `-0.19`인지 확인합니다.
+- 바퀴가 다른 축으로 회전함: cylinder origin의 `rpy`와 joint axis를 함께 확인합니다.
+
+## 다음 단계
+
+[DiffDrive](07-diff-drive.md)에서 두 바퀴 속도와 로봇 속도의 관계를 계산합니다.

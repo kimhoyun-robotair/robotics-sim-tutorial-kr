@@ -1,68 +1,76 @@
-# Xacro로 `tutorial_bot` 만들기
+# Xacro로 `tutorial_bot` <span class="course-nowrap">만들기</span>
 
 > **난이도:** 초급  
 > **Gazebo:** Harmonic  
 > **ROS 2:** Jazzy  
-> **선행 학습:** 첫 World
+> **선행 학습:** [첫 World](04-first-world.md)
 
 ## 학습 목표
 
-- URDF와 Xacro의 역할을 구분합니다.
-- `tutorial_bot`의 첫 base link를 Xacro로 관리합니다.
-- 생성된 URDF가 올바른 링크 구조인지 검사합니다.
+- URDF, Xacro, SDF가 맡는 일을 구분합니다.
+- 설치된 1단계 Xacro에서 `base_link`를 생성하고 검사합니다.
+- 모델의 질량과 크기로 직육면체 관성 모멘트를 계산합니다.
 
-## 배경 지식
+## 하나의 로봇, 세 가지 표현
 
-URDF는 ROS 2에서 robot description을 표현하는 XML 형식입니다. Xacro는 URDF를 생성할 때 반복되는 값과 구조를 정리하는 매크로 언어입니다. 이 저장소에서는 Xacro를 로봇 형상의 원본으로 사용합니다.
+<figure markdown="span">
+  ![Xacro 원본이 URDF를 거쳐 Gazebo의 SDF 모델로 변환되는 흐름](../assets/beginner/robot-format-flow.svg)
+  <figcaption>그림 1. 이 과정에서는 Xacro 하나를 원본으로 유지하고, 도구가 URDF와 SDF를 차례로 생성합니다.</figcaption>
+</figure>
 
-Gazebo에 필요한 world, physics, sensor와 plugin 설정은 이후 SDF에 추가합니다. 같은 로봇을 별도의 SDF 원본으로 다시 작성하지 않습니다.
+- **URDF**는 link와 joint로 ROS 로봇의 구조를 표현하는 XML 형식입니다.
+- **Xacro**는 치수, 공식, 반복 구조를 재사용해 URDF를 생성합니다.
+- **SDF**는 Gazebo가 world, physics, sensor, system plugin까지 실행할 때 사용하는 형식입니다.
 
-## 예제 파일
+따라서 세 파일을 따로 고치는 것이 아닙니다. 이 저장소의 Xacro를 `xacro`가 URDF로 확장하고, Gazebo가 이를 SDF로 변환합니다.
 
-이번 장의 원본은 다음 파일입니다.
+## 설치된 1단계 모델 실행
 
-`examples/ros2_ws/src/tutorial_bot_description/urdf/stages/01-base.xacro`
-
-`base_link`는 0.45 m × 0.32 m × 0.12 m 직육면체 몸체입니다. visual과 collision을 같은 단순 형상으로 시작하고, 관성은 질량 5 kg에 맞는 직육면체 근사값을 사용합니다.
-
-## 실행
-
-저장소 루트에서 Xacro를 URDF로 확장한 뒤 구조를 검사합니다.
+먼저 description package를 빌드했다면, 저장소 위치가 아니라 설치 공간에서 단계 파일을 찾습니다.
 
 ```bash
 source /opt/ros/jazzy/setup.zsh
 stage="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/01-base.xacro"
-xacro "$stage" > /tmp/tutorial_bot.urdf
-check_urdf /tmp/tutorial_bot.urdf
+xacro "$stage" > /tmp/tutorial_bot-stage-01.urdf
+check_urdf /tmp/tutorial_bot-stage-01.urdf
+gz sdf -p /tmp/tutorial_bot-stage-01.urdf > /tmp/tutorial_bot-stage-01.sdf
+gz sdf -k /tmp/tutorial_bot-stage-01.sdf
 ```
 
-Bash를 사용한다면 첫 줄을 `source /opt/ros/jazzy/setup.bash`로 바꿉니다.
+Bash에서는 첫 줄의 `setup.zsh`를 `setup.bash`로 바꿉니다. `check_urdf`가 `root Link: base_link`를 출력하고 SDF 검사가 조용히 끝나면 성공입니다. 1단계 inventory에는 `base_link` 하나만 있으며, 바퀴나 센서는 아직 없습니다.
 
-## 결과 확인
+!!! tip "설치 공간이 없다면"
+    저장소 루트의 `examples/ros2_ws`에서 `colcon build --packages-select tutorial_bot_description`을 실행하고 `install/setup.zsh`를 source합니다.
 
-`check_urdf` 출력에 `root Link: base_link`가 보이고 오류가 없으면 Xacro가 올바른 단일 link URDF를 만들었습니다.
+## 직육면체 몸체와 관성
 
-## ROS 2 package 확인
+`base_link`는 질량 $m=5.0\,\mathrm{kg}$, 크기 $x=0.45\,\mathrm{m}$, $y=0.32\,\mathrm{m}$, $z=0.12\,\mathrm{m}$인 직육면체입니다. 중심을 지나는 각 축의 관성 모멘트는 다음과 같습니다.
 
-Xacro 파일은 실제 ROS 2 package에도 설치됩니다. 현재 PC처럼 여러 Python 설치가 공존하면 ROS 2 Jazzy가 사용하는 시스템 Python을 명시해 빌드합니다.
+\[
+I_{xx}=\frac{m(y^2+z^2)}{12}
+\]
 
-```bash
-cd examples/ros2_ws
-colcon build --packages-select tutorial_bot_description --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3
-source install/setup.zsh
-ros2 pkg prefix tutorial_bot_description
-```
+\[
+I_{yy}=\frac{m(x^2+z^2)}{12}
+\]
 
-마지막 명령이 `install/tutorial_bot_description` 경로를 출력하면 package resource 설치까지 완료된 것입니다.
+\[
+I_{zz}=\frac{m(x^2+y^2)}{12}
+\]
 
-## 동작 원리
+값을 대입하면 $I_{xx}=0.0487$, $I_{yy}=0.0904$, $I_{zz}=0.1270\,\mathrm{kg\,m^2}$입니다. 길이가 가장 넓게 퍼진 x-y 평면에 수직인 z축의 값이 가장 큽니다.
 
-Xacro 파일의 `box_inertia` 매크로는 직육면체의 질량과 크기에서 관성 텐서를 계산합니다. 이 값은 이후 Gazebo가 로봇의 가속과 충돌을 계산할 때 사용합니다. 초급 확장 단계에서는 같은 Xacro 원본에 바퀴 link와 revolute joint를 더해 `tutorial_bot`을 이동 가능한 로봇으로 발전시킵니다.
+??? note "계산을 한 줄씩 보기"
+    예를 들어 $I_{xx}=5.0(0.32^2+0.12^2)/12=0.048666\ldots$입니다. Xacro의 `stage_box_inertia` 매크로도 같은 식을 계산하며, 문서에서는 소수 넷째 자리로 반올림했습니다.
 
-## 정리
+관성이 없거나 실제 크기와 크게 다르면 Gazebo에서 가속과 충돌 반응이 부자연스러워집니다. visual은 보이는 모양, collision은 접촉에 쓰는 모양, inertial은 힘에 대한 반응을 맡습니다.
 
-이 장에서는 `tutorial_bot`의 base link와 관성 값을 Xacro 원본으로 만들었습니다. 바퀴와 관절은 초급 확장 단계에서 같은 Xacro 파일에 추가합니다.
+## 문제 해결
+
+- `package 'tutorial_bot_description' not found`: workspace를 빌드한 뒤 그 workspace의 `install/setup.zsh`를 source합니다.
+- `xacro: command not found`: `sudo apt install ros-jazzy-xacro`를 확인합니다.
+- 1단계에 바퀴나 센서가 보임: canonical 최종 Xacro가 아니라 반드시 `01-base.xacro` 경로인지 확인합니다.
 
 ## 다음 단계
 
-[바퀴와 Joint](06-joints.md)에서 좌우 바퀴 link와 continuous joint를 추가합니다.
+[바퀴와 Joint](06-joints.md)에서 parent/child 관계와 회전축을 추가합니다.

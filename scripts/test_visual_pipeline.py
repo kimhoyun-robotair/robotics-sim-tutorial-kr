@@ -211,3 +211,35 @@ def test_asset_checker_rejects_stale_generated_asset() -> None:
         # Then: stale content cannot be reported as a successful capture.
         assert result.returncode == 1
         assert "stale generated asset" in result.stdout
+
+
+def test_asset_checker_merges_task_fragment_with_base_manifest(tmp_path: Path) -> None:
+    # Given: the global visual manifest and both integrated course fragments.
+    evidence = tmp_path / "assets.json"
+
+    # When: both are audited against the real documentation asset tree.
+    result = run_cli(
+        "check_course_assets.py",
+        "--manifest",
+        "docs/assets/manifest.yaml",
+        "--fragments",
+        "docs/assets/manifests/task-5.yaml",
+        "docs/assets/manifests/task-6.yaml",
+        "--evidence",
+        str(evidence),
+    )
+
+    # Then: fragment assets participate in duplicate and orphan detection.
+    assert result.returncode == 0, result.stdout
+    report = json.loads(evidence.read_text(encoding="utf-8"))
+    assert [asset["id"] for asset in report["assets"]] == [
+        "fixture",
+        "beginner-index",
+        "beginner-01",
+        "beginner-02",
+        "beginner-03",
+        "beginner-04",
+        "beginner-05-format-flow",
+        "beginner-06-joint-axis",
+        "beginner-07-diff-drive-trajectories",
+    ]

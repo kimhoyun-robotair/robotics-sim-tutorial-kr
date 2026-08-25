@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">Xacro, URDF, SDF 변환 흐름</title>
+  <desc id="desc">Xacro 원본이 URDF 로봇 구조를 만들고 Gazebo가 SDF 실행 모델로 변환하는 흐름</desc>
+  <rect width="960" height="360" rx="24" fill="#eef4f8"/>
+  <g font-family="sans-serif" text-anchor="middle">
+    <g transform="translate(70 80)">
+      <rect width="220" height="170" rx="18" fill="#1565c0"/>
+      <text x="110" y="65" fill="white" font-size="34" font-weight="700">Xacro</text>
+      <text x="110" y="108" fill="white" font-size="22">치수 · 공식 · 매크로</text>
+      <text x="110" y="140" fill="white" font-size="18">저장소 원본</text>
+    </g>
+    <g transform="translate(370 80)">
+      <rect width="220" height="170" rx="18" fill="#00796b"/>
+      <text x="110" y="65" fill="white" font-size="34" font-weight="700">URDF</text>
+      <text x="110" y="108" fill="white" font-size="22">link · joint 트리</text>
+      <text x="110" y="140" fill="white" font-size="18">xacro 명령의 출력</text>
+    </g>
+    <g transform="translate(670 80)">
+      <rect width="220" height="170" rx="18" fill="#6a1b9a"/>
+      <text x="110" y="65" fill="white" font-size="34" font-weight="700">SDF</text>
+      <text x="110" y="108" fill="white" font-size="22">Gazebo 실행 모델</text>
+      <text x="110" y="140" fill="white" font-size="18">physics · system</text>
+    </g>
+    <g fill="#263238" font-size="20" font-weight="700">
+      <text x="330" y="145">xacro</text>
+      <text x="630" y="145">gz sdf -p</text>
+    </g>
+  </g>
+  <g stroke="#455a64" stroke-width="8" fill="#455a64">
+    <path d="M300 180h55"/>
+    <path d="M355 180l-22-14v28z"/>
+    <path d="M600 180h55"/>
+    <path d="M655 180l-22-14v28z"/>
+  </g>
+  <text x="480" y="315" text-anchor="middle" fill="#17324d" font-family="sans-serif" font-size="24">한 원본에서 구조 검사와 시뮬레이션 실행까지</text>
+</svg>

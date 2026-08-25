@@ -1,0 +1,29 @@
+schema_version: 1
+assets:
+  - id: beginner-05-format-flow
+    path: assets/beginner/robot-format-flow.svg
+    route: beginner/05-first-robot/
+    source_command: repository-authored SVG derived from the installed Xacro conversion flow
+    semantic_observable: Xacro에서 URDF를 거쳐 Gazebo SDF로 변환되는 단방향 흐름이 보인다.
+    alt_text: Xacro 원본이 URDF를 거쳐 Gazebo의 SDF 모델로 변환되는 흐름
+    caption: 그림 1. 이 과정에서는 Xacro 하나를 원본으로 유지하고, 도구가 URDF와 SDF를 차례로 생성합니다.
+    captured_at: '2026-08-25'
+    sha256: 3eed643975241408f14f78068d13c7734a3d00c2e9975a173385b75715911e2e
+  - id: beginner-06-joint-axis
+    path: assets/beginner/joint-axis.svg
+    route: beginner/06-joints/
+    source_command: repository-authored SVG derived from stage 02 joint origins and axes
+    semantic_observable: parent base와 두 child wheel, +x 전진 방향, y축 회전축이 구분된다.
+    alt_text: 로봇의 전진 x축, 좌우 y축과 바퀴 joint 회전축 관계
+    caption: 그림 2. 두 바퀴의 joint axis는 y축과 나란하고, 바퀴는 그&nbsp;축을 중심으로 굴러 x방향으로 이동합니다.
+    captured_at: '2026-08-25'
+    sha256: a5b6b57befc67524e75d253505faf0335db8cd5a8151c663f12901415ef9bf57
+  - id: beginner-07-diff-drive-trajectories
+    path: assets/beginner/diff-drive-trajectories.svg
+    route: beginner/07-diff-drive/
+    source_command: repository-authored SVG derived from canonical DiffDrive wheel mapping
+    semantic_observable: 직진, 왼쪽 원호, 제자리 회전의 속도 관계와 궤적이 구분된다.
+    alt_text: 좌우 바퀴 속도 조합에 따른 직진, 원호, 제자리 회전 궤적
+    caption: 그림 3. 같은 속도는 직진, 서로 다른 양의 속도는 원호, 반&#x2060;대&nbsp;속도는 제자리 회전을 만듭니다.
+    captured_at: '2026-08-25'
+    sha256: b9f82dd22cc5b31d2a953fa04650aa2f32d0fa6b39a9294873ca1c892a678793

@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import xml.etree.ElementTree as ElementTree
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
@@ -124,3 +125,34 @@ def test_beginner_docs_invoke_the_matching_installed_stage() -> None:
             "xacro examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro"
             not in content
         )
+
+
+def test_stage_three_freezes_dimensions_and_runtime_observables() -> None:
+    # Given: the stage installed for the beginner DiffDrive chapter.
+    stage = PACKAGE_ROOT / "urdf/stages/03-diff-drive.xacro"
+
+    # When: the public Xacro command expands it to the runtime robot description.
+    expansion = subprocess.run(
+        ["xacro", str(stage)],
+        check=True,
+        capture_output=True,
+        text=True,
+        cwd=REPOSITORY_ROOT,
+    )
+    robot = ElementTree.fromstring(expansion.stdout)
+    plugin = robot.find(".//plugin[@name='gz::sim::systems::DiffDrive']")
+    wheel = robot.find(".//link[@name='left_wheel_link']/visual/geometry/cylinder")
+
+    # Then: the installed stage and runtime gate expose the dimensions and motion
+    # signals that the worked examples must preserve.
+    assert plugin is not None
+    assert wheel is not None
+    assert plugin.findtext("wheel_radius") == "0.06"
+    assert plugin.findtext("wheel_separation") == "0.38"
+    assert wheel.attrib == {"radius": "0.06", "length": "0.04"}
+    runtime_gate = (REPOSITORY_ROOT / "scripts/check_diff_drive.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "/model/tutorial_bot/cmd_vel" in runtime_gate
+    assert "/model/tutorial_bot/odometry" in runtime_gate
+    assert "pose_x > 0.05 && linear_x > 0.15" in runtime_gate

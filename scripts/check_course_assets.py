@@ -2,18 +2,22 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping, Sequence
 import hashlib
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import Final, TypeAlias
 
 import yaml
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 VISUAL_SUFFIXES: Final = frozenset({".png", ".webp", ".svg"})
 PRIVATE_PATH: Final = re.compile(r"(?:/home/|/Users/|[A-Za-z]:\\\\Users\\\\)")
+JsonValue: TypeAlias = (
+    str | int | float | bool | None | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +36,7 @@ class ManifestError(ValueError):
     pass
 
 
-def required_text(item: dict[str, object], field: str, index: int) -> str:
+def required_text(item: Mapping[str, JsonValue], field: str, index: int) -> str:
     value = item.get(field)
     if not isinstance(value, str):
         raise ManifestError(f"asset {index}: {field} must be text")
@@ -71,7 +75,7 @@ def load_visual_assets(path: Path) -> list[VisualAsset]:
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
     result.add_argument("--manifest", required=True)
-    result.add_argument("--fragments")
+    result.add_argument("--fragments", nargs="+")
     result.add_argument("--assets-root")
     result.add_argument("--site-dir")
     result.add_argument("--evidence", required=True)
@@ -123,7 +127,10 @@ def site_errors(asset: VisualAsset, site_dir: Path) -> list[str]:
     return errors
 
 
-def audit(assets: list[VisualAsset], assets_root: Path, site_dir: Path | None) -> tuple[dict[str, object], int]:
+def audit(
+    manifests: tuple[Path, ...], assets_root: Path, site_dir: Path | None
+) -> tuple[dict[str, JsonValue], int]:
+    assets = [asset for manifest in manifests for asset in load_visual_assets(manifest)]
     errors: list[str] = []
     ids = [asset.asset_id for asset in assets]
     paths = [asset.path for asset in assets]
@@ -142,17 +149,17 @@ def audit(assets: list[VisualAsset], assets_root: Path, site_dir: Path | None) -
         if path.is_file() and path.suffix.lower() in VISUAL_SUFFIXES
     }
     errors.extend(f"unregistered asset: {path}" for path in sorted(actual - registered))
-    records = [
-        {
+    records: list[JsonValue] = []
+    for asset in assets:
+        record: dict[str, JsonValue] = {
             "id": asset.asset_id,
             "path": asset.path,
             "sha256": hashlib.sha256((assets_root / Path(asset.path).relative_to("assets")).read_bytes()).hexdigest()
             if (assets_root / Path(asset.path).relative_to("assets")).is_file()
             else None,
         }
-        for asset in assets
-    ]
-    report: dict[str, object] = {
+        records.append(record)
+    report: dict[str, JsonValue] = {
         "schema_version": 1,
         "status": "pass" if not errors else "fail",
         "assets": records,
@@ -167,14 +174,15 @@ def audit(assets: list[VisualAsset], assets_root: Path, site_dir: Path | None) -
 def main() -> int:
     arguments = parser().parse_args()
     manifest = resolved(arguments.manifest)
+    fragments = tuple(
+        resolved(fragment)
+        for raw_fragment in arguments.fragments or ()
+        for fragment in raw_fragment.split(",")
+    )
     assets_root = resolved(arguments.assets_root) if arguments.assets_root else ROOT / "docs" / "assets"
     site_dir = resolved(arguments.site_dir) if arguments.site_dir else None
     try:
-        assets = load_visual_assets(manifest)
-        if arguments.fragments:
-            for fragment in arguments.fragments.split(","):
-                assets.extend(load_visual_assets(resolved(fragment)))
-        report, exit_code = audit(assets, assets_root, site_dir)
+        report, exit_code = audit((manifest, *fragments), assets_root, site_dir)
     except ManifestError as error:
         report, exit_code = {"schema_version": 1, "status": "fail", "errors": [str(error)]}, 64
     evidence = Path(arguments.evidence)
