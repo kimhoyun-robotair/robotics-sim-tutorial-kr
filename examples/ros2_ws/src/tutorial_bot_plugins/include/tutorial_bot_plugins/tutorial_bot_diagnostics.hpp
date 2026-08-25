@@ -4,10 +4,12 @@
 #include <gz/math/Pose3.hh>
 #include <gz/msgs/boolean.pb.h>
 #include <gz/msgs/empty.pb.h>
+#include <gz/msgs/world_stats.pb.h>
 #include <gz/sim/System.hh>
 #include <gz/transport/Node.hh>
 
 #include <chrono>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -55,6 +57,8 @@ private:
   std::string statusTopic_{"/tutorial_bot/diagnostics/status"};
   std::string enableTopic_{"/tutorial_bot/diagnostics/enable"};
   std::string resetService_{"/tutorial_bot/diagnostics/reset"};
+  std::string worldStatsTopic_;
+  std::uint64_t finalStatsIteration_{0};
   std::chrono::steady_clock::duration publishPeriod_{std::chrono::milliseconds(100)};
   Entity modelEntity_{kNullEntity};
   std::optional<gz::math::Pose3d> previousPose_;
@@ -66,6 +70,7 @@ private:
   gz::transport::Node node_;
   gz::transport::Node::Publisher distancePublisher_;
   gz::transport::Node::Publisher statusPublisher_;
+  gz::transport::Node::Publisher worldStatsPublisher_;
   std::mutex commandMutex_;
   std::optional<bool> pendingEnable_;
   bool pendingReset_{false};

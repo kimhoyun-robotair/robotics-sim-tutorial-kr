@@ -1,8 +1,11 @@
 #include "tutorial_bot_plugins/tutorial_bot_diagnostics.hpp"
 
+#include <gz/common/Console.hh>
+#include <gz/math/Rand.hh>
 #include <gz/msgs/double.pb.h>
 #include <gz/msgs/stringmsg.pb.h>
 #include <gz/plugin/Register.hh>
+#include <gz/sim/Conversions.hh>
 #include <gz/sim/EntityComponentManager.hh>
 #include <gz/sim/Util.hh>
 #include <gz/sim/components/Model.hh>
@@ -36,24 +39,46 @@ void TutorialBotDiagnostics::Configure(
   if (sdf->HasElement("reset_service")) {
     resetService_ = sdf->Get<std::string>("reset_service");
   }
+  if (sdf->HasElement("world_stats_topic")) {
+    worldStatsTopic_ = sdf->Get<std::string>("world_stats_topic");
+  }
+  finalStatsIteration_ = sdf->Get<std::uint64_t>("final_stats_iteration", 0u).first;
 
   const double periodSeconds =
     sdf->Get<double>("publish_period", 0.1).first;
   if (modelName_.empty() || !std::isfinite(periodSeconds) || periodSeconds <= 0.0) {
     SetState(State::InvalidConfig);
     statusPublisher_ = node_.Advertise<gz::msgs::StringMsg>(statusTopic_);
+    gzerr << "TutorialBotDiagnostics configuration state=INVALID_CONFIG"
+          << " model_name=" << modelName_
+          << " publish_period=" << periodSeconds << std::endl;
     return;
   }
 
+  const auto deterministicSeed =
+    sdf->Get<unsigned int>("deterministic_seed", 0u).first;
+  gz::math::Rand::Seed(deterministicSeed);
   publishPeriod_ = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
     std::chrono::duration<double>(periodSeconds));
   distancePublisher_ = node_.Advertise<gz::msgs::Double>(distanceTopic_);
   statusPublisher_ = node_.Advertise<gz::msgs::StringMsg>(statusTopic_);
+  if (!worldStatsTopic_.empty() && finalStatsIteration_ > 0u) {
+    worldStatsPublisher_ =
+      node_.Advertise<gz::msgs::WorldStatistics>(worldStatsTopic_);
+  }
   node_.Subscribe(enableTopic_, &TutorialBotDiagnostics::OnEnable, this);
   node_.Advertise(
     resetService_, &TutorialBotDiagnostics::OnReset, this);
   stateChanged_ = false;
   lastPublishTime_ = std::chrono::steady_clock::duration::zero();
+  gzerr << "TutorialBotDiagnostics configured"
+        << " model_name=" << modelName_
+        << " publish_period=" << periodSeconds
+        << " deterministic_seed=" << deterministicSeed
+        << " distance_topic=" << distanceTopic_
+        << " status_topic=" << statusTopic_
+        << " world_stats_topic=" << worldStatsTopic_
+        << " final_stats_iteration=" << finalStatsIteration_ << std::endl;
 }
 
 void TutorialBotDiagnostics::PostUpdate(
@@ -97,6 +122,9 @@ void TutorialBotDiagnostics::PostUpdate(
   }
 
   Publish(info.simTime);
+  if (worldStatsPublisher_ && info.iterations == finalStatsIteration_) {
+    worldStatsPublisher_.Publish(gz::sim::convert<gz::msgs::WorldStatistics>(info));
+  }
 }
 
 void TutorialBotDiagnostics::ApplyPendingCommands(const bool modelBound)
@@ -181,6 +209,10 @@ void TutorialBotDiagnostics::Publish(
 void TutorialBotDiagnostics::SetState(const State state)
 {
   if (state_ != state) {
+    gzerr << "TutorialBotDiagnostics state_transition"
+          << " model_name=" << modelName_
+          << " from=" << StateName(state_)
+          << " to=" << StateName(state) << std::endl;
     state_ = state;
     stateChanged_ = true;
   }

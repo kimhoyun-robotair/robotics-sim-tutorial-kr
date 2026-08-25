@@ -43,7 +43,10 @@ if(BUILD_TESTING)
   find_package(gz-sim8 REQUIRED)
   find_package(gz-transport13 REQUIRED)
 
-  foreach(test_name IN ITEMS diagnostics_distance diagnostics_model_lifecycle)
+  foreach(test_name IN ITEMS
+      diagnostics_distance
+      diagnostics_model_lifecycle
+      diagnostics_physics_cadence)
     ament_add_gtest(${test_name} test/test_${test_name}.cpp TIMEOUT 30)
     target_link_libraries(${test_name}
       gz-msgs10::gz-msgs10
@@ -54,6 +57,9 @@ if(BUILD_TESTING)
       ENVIRONMENT "GZ_SIM_SYSTEM_PLUGIN_PATH=${CMAKE_CURRENT_BINARY_DIR}"
     )
   endforeach()
+  target_compile_definitions(diagnostics_physics_cadence PRIVATE
+    TUTORIAL_BOT_WORLD_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../tutorial_bot_gazebo/worlds"
+  )
 
   foreach(test_name IN ITEMS
       diagnostics_enable_reset
