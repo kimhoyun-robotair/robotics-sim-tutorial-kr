@@ -223,7 +223,7 @@ def test_asset_checker_merges_task_fragment_with_base_manifest(tmp_path: Path) -
         "--manifest",
         "docs/assets/manifest.yaml",
         "--fragments",
-        "docs/assets/manifests/task-7.yaml",
+        "docs/assets/manifests/task-13.yaml",
         "--evidence",
         str(evidence),
     )
@@ -231,7 +231,7 @@ def test_asset_checker_merges_task_fragment_with_base_manifest(tmp_path: Path) -
     # Then: fragment assets participate in duplicate and orphan detection.
     assert result.returncode == 0, result.stdout
     report = json.loads(evidence.read_text(encoding="utf-8"))
-    assert [asset["id"] for asset in report["assets"]] == [
+    assert {asset["id"] for asset in report["assets"]} == {
         "fixture",
         "beginner-index",
         "beginner-01",
@@ -245,4 +245,23 @@ def test_asset_checker_merges_task_fragment_with_base_manifest(tmp_path: Path) -
         "beginner-09-fuel-resource-flow",
         "beginner-10-bridge-dataflow",
         "beginner-project-final-observable",
-    ]
+        "course-dataflow",
+        "inertia-contact",
+        "model-conversion",
+        "launch-readiness",
+        "spawn-pose",
+        "bridge-qos",
+        "tf-composition",
+        "controller-kinematics",
+        "sensor-statistics",
+        "namespace-isolation",
+        "nav2-tolerance",
+        "project-runtime",
+        "advanced-course-architecture",
+        "advanced-ecs-lifecycle",
+        "advanced-transport-boundary",
+        "advanced-sim-time",
+        "advanced-headless-taxonomy",
+        "advanced-ci-reproducibility",
+        "advanced-production-stack",
+    }

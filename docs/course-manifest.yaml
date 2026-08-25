@@ -41,10 +41,10 @@ routes:
   - {course: intermediate, title: 다중 로봇, path: intermediate/09-multi-robot.md, prerequisites: [intermediate/08-advanced-sensors.md]}
   - {course: intermediate, title: Nav2 연동, path: intermediate/10-nav2.md, prerequisites: [intermediate/09-multi-robot.md]}
   - {course: intermediate, title: 중급 프로젝트, path: intermediate/project-autonomous-bot.md, prerequisites: [intermediate/10-nav2.md]}
-  - {course: advanced, title: 고급 개요, path: advanced/index.md, prerequisites: [intermediate/project-autonomous-bot.md], implementation_todo: 13}
-  - {course: advanced, title: ECS System Plugin, path: advanced/01-ecs-system-plugin.md, prerequisites: [advanced/index.md], implementation_todo: 9}
-  - {course: advanced, title: Transport 인터페이스, path: advanced/02-transport-interfaces.md, prerequisites: [advanced/01-ecs-system-plugin.md], implementation_todo: 10}
-  - {course: advanced, title: 물리와 주기 디버깅, path: advanced/03-physics-debugging.md, prerequisites: [advanced/02-transport-interfaces.md], implementation_todo: 11}
-  - {course: advanced, title: Headless 통합 테스트, path: advanced/04-headless-integration.md, prerequisites: [advanced/03-physics-debugging.md], implementation_todo: 12}
-  - {course: advanced, title: CI 재현성, path: advanced/05-ci-reproducibility.md, prerequisites: [advanced/04-headless-integration.md], implementation_todo: 14}
-  - {course: advanced, title: Production Stack 프로젝트, path: advanced/project-production-stack.md, prerequisites: [advanced/05-ci-reproducibility.md], implementation_todo: 13}
+  - {course: advanced, title: 고급 개요, path: advanced/index.md, prerequisites: [intermediate/project-autonomous-bot.md], implementation_todo: 13, visual_id: advanced-course-architecture}
+  - {course: advanced, title: ECS System Plugin, path: advanced/01-ecs-system-plugin.md, prerequisites: [advanced/index.md], implementation_todo: 9, visual_id: advanced-ecs-lifecycle}
+  - {course: advanced, title: Transport 인터페이스, path: advanced/02-transport-interfaces.md, prerequisites: [advanced/01-ecs-system-plugin.md], implementation_todo: 10, visual_id: advanced-transport-boundary}
+  - {course: advanced, title: 물리와 주기 디버깅, path: advanced/03-physics-debugging.md, prerequisites: [advanced/02-transport-interfaces.md], implementation_todo: 11, visual_id: advanced-sim-time}
+  - {course: advanced, title: Headless 통합 테스트, path: advanced/04-headless-integration.md, prerequisites: [advanced/03-physics-debugging.md], implementation_todo: 12, visual_id: advanced-headless-taxonomy}
+  - {course: advanced, title: CI 재현성, path: advanced/05-ci-reproducibility.md, prerequisites: [advanced/04-headless-integration.md], implementation_todo: 14, visual_id: advanced-ci-reproducibility}
+  - {course: advanced, title: Production Stack 프로젝트, path: advanced/project-production-stack.md, prerequisites: [advanced/05-ci-reproducibility.md], implementation_todo: 13, visual_id: advanced-production-stack}

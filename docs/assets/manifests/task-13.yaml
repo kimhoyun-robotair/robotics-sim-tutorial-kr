@@ -1,0 +1,79 @@
+schema_version: 1
+assets:
+  - id: advanced-course-architecture
+    path: assets/advanced/course-architecture.svg
+    route: advanced/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: ECS System, Transport, simulation time, headless gate와 CI evidence가 순서대로 이어진다.
+    alt_text: ECS System Transport simulation time headless 검사 CI 증거가 이어지는 고급 과정 구조도
+    caption: 그림 1. ECS 관측은 Transport와 simulation time 검증을 거쳐 headless·CI 증거로 전달됩니다.
+    captured_at: '2026-08-26'
+    sha256: af2ab8e8138e79c0d5009f98b1eff7a6c3ba1f8dafe36f039ef2692a3cb53ab0
+    width: 960
+    height: 360
+  - id: advanced-ecs-lifecycle
+    path: assets/advanced/ecs-lifecycle.svg
+    route: advanced/01-ecs-system-plugin/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: WAITING_FOR_MODEL, READY, DISABLED, MODEL_REMOVED와 fresh baseline 전이가 구분된다.
+    alt_text: WAITING FOR MODEL READY DISABLED MODEL REMOVED와 재결합 기준점을 보여 주는 ECS 생명주기 상태도
+    caption: 그림 1. 모델이 제거되면 거리를 동결하고, 재등장한 entity는 거리 0의 새 기준점으로 결합합니다.
+    captured_at: '2026-08-26'
+    sha256: 3bb5ab6372ecd2681c1d2f97527af25095a600fda26e849af5c802b96201db3e
+    width: 960
+    height: 360
+  - id: advanced-transport-boundary
+    path: assets/advanced/transport-boundary.svg
+    route: advanced/02-transport-interfaces/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: Transport callback, mailbox, simulation update의 thread 소유권 경계가 보인다.
+    alt_text: Transport callback이 mailbox를 거쳐 simulation update에서 ECS 상태에 적용되는 thread 경계도
+    caption: 그림 1. Transport callback은 명령만 mailbox에 기록하고 ECS 상태 전이는 simulation update가 소유합니다.
+    captured_at: '2026-08-26'
+    sha256: 4a784e39133c7700d45a353c9b8eb549d2447aff00433f640b2808d3efc8d537
+    width: 960
+    height: 360
+  - id: advanced-sim-time
+    path: assets/advanced/sim-time-debug.svg
+    route: advanced/03-physics-debugging/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: 같은 2초 simulation에서 0.05초와 0.2초 publish period의 표본 수 차이가 보인다.
+    alt_text: 같은 2초 simulation에서 0점05초와 0점2초 publish 주기의 메시지 수를 비교하는 막대 도식
+    caption: 그림 1. 같은 simulation time에서 publish period가 네 배이면 실제 메시지 수도 약 네 배 차이 납니다.
+    captured_at: '2026-08-26'
+    sha256: 66ce77931cf27c499167882db959a3487843b541dc1cbf307cac7c362804c1e6
+    width: 960
+    height: 360
+  - id: advanced-headless-taxonomy
+    path: assets/advanced/headless-exit-taxonomy.svg
+    route: advanced/04-headless-integration/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: nominal, usage, missing model, missing plugin, timeout, cleanup 종료 코드가 구분된다.
+    alt_text: headless checker의 nominal usage missing model missing plugin timeout cleanup 종료 코드를 구분한 도식
+    caption: 그림 1. 종료 코드는 원인을 분류하고, scenario·표본·cleanup 파일이 실제 관측을 증명합니다.
+    captured_at: '2026-08-26'
+    sha256: c334bf48f55b88f029770bc17aaa1e8ec47afff0b80da57049e5cc2615775d7e
+    width: 960
+    height: 360
+  - id: advanced-ci-reproducibility
+    path: assets/advanced/ci-reproducibility.svg
+    route: advanced/05-ci-reproducibility/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: 같은 source SHA에서 Pages와 ROS Gazebo runtime gate가 독립 evidence를 만든다.
+    alt_text: 같은 source SHA에서 strict MkDocs Pages와 ROS Gazebo headless 검증이 독립적으로 evidence를 만드는 CI 구조도
+    caption: 그림 1. 문서와 runtime gate는 독립적으로 실패하지만 같은 source SHA와 artifact 보존 계약을 공유합니다.
+    captured_at: '2026-08-26'
+    sha256: 965c48d037fd5cbd274956095c7b4ac10919c2453e435ae7ff3b3383d0a08a4e
+    width: 960
+    height: 360
+  - id: advanced-production-stack
+    path: assets/advanced/production-stack.svg
+    route: advanced/project-production-stack/
+    source_command: repository-authored SVG; verify with scripts/check_course_assets.py
+    semantic_observable: fresh install을 중심으로 distance, Transport, physics, headless cleanup 검사가 결합된다.
+    alt_text: fresh install을 중심으로 lifecycle Transport physics headless cleanup checker가 결합되는 production stack 구조도
+    caption: 그림 1. 전체 checker는 네 runtime 축을 같은 fresh install과 source SHA에 묶어 검증합니다.
+    captured_at: '2026-08-26'
+    sha256: 57a1056d719b0a37178976ab1a5f70115a740b2e63f0715f44fc94655d0ed409
+    width: 960
+    height: 360
