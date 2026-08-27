@@ -42,4 +42,4 @@ gz topic --help
 
 ## 다음 단계
 
-[Jazzy 환경 설치](installation-jazzy.md)를 확인한 뒤, [SDF 기초](../beginner/03-sdf-basics.md)와 [첫 World](../beginner/04-first-world.md)를 실행합니다.
+[Jazzy 환경 설치](02_installation-jazzy.md)를 확인한 뒤, [SDF 기초](../03_beginner/03-sdf-basics.md)와 [첫 World](../03_beginner/04-first-world.md)를 실행합니다.

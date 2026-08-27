@@ -36,7 +36,7 @@ def test_beginner_foundation_routes_h1s_and_commands_are_stable() -> None:
     nav_paths = {next(iter(item.values())) for item in beginner_nav}
 
     for filename, heading, command in BEGINNER_PAGES:
-        relative = f"beginner/{filename}"
+        relative = f"03_beginner/{filename}"
         page = (ROOT / "docs" / relative).read_text(encoding="utf-8")
         assert relative in nav_paths
         assert page.splitlines()[0] == f"# {heading}"
@@ -56,7 +56,7 @@ def test_beginner_foundations_have_route_specific_learning_evidence() -> None:
     }.issubset({asset["id"] for asset in assets})
 
     for filename, _heading, command in BEGINNER_PAGES[1:]:
-        page = (ROOT / "docs" / "beginner" / filename).read_text(encoding="utf-8")
+        page = (ROOT / "docs" / "03_beginner" / filename).read_text(encoding="utf-8")
         assert command is not None and command in page
         assert '<figure class="course-figure">' in page
         assert "alt=\"" in page
@@ -64,8 +64,8 @@ def test_beginner_foundations_have_route_specific_learning_evidence() -> None:
         assert "## 예상 관찰" in page
         assert "## 문제 해결" in page
 
-    sdf_page = (ROOT / "docs" / "beginner" / "03-sdf-basics.md").read_text(encoding="utf-8")
-    overview_page = (ROOT / "docs" / "beginner" / "01-gazebo-overview.md").read_text(encoding="utf-8")
+    sdf_page = (ROOT / "docs" / "03_beginner" / "03-sdf-basics.md").read_text(encoding="utf-8")
+    overview_page = (ROOT / "docs" / "03_beginner" / "01-gazebo-overview.md").read_text(encoding="utf-8")
     assert "x y z roll pitch yaw" in sdf_page
     assert "\\[" in sdf_page and "\\tag{" in sdf_page
     assert "RTF" in overview_page and "\\[" in overview_page

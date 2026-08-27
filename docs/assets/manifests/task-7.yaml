@@ -2,7 +2,7 @@ schema_version: 1
 assets:
   - id: beginner-08-sensor-observables
     path: assets/beginner/sensor-observables.svg
-    route: beginner/08-sensors/
+    route: 03_beginner/08-sensors/
     source_command: repository-authored SVG derived from the parsed final-stage sensor contract
     semantic_observable: LiDAR 광선과 360 sample, RGB-D 화면 geometry, IMU 축과 세 update rate가 구분된다.
     alt_text: 로봇에서 퍼지는 라이다 광선과 RGB-D 카메라 화면 및 IMU 축
@@ -11,7 +11,7 @@ assets:
     sha256: 50bad17d789bef664f3381e88f4613742809e84169112b3445b7c7e28f2677c6
   - id: beginner-09-fuel-resource-flow
     path: assets/beginner/fuel-resource-flow.svg
-    route: beginner/09-gazebo-fuel/
+    route: 03_beginner/09-gazebo-fuel/
     source_command: repository-authored SVG derived from the Fuel world URI and checker cache flow
     semantic_observable: Fuel HTTPS URI와 cache 경로, model URI와 resource path 경로가 분리되어 보인다.
     alt_text: Fuel HTTPS URI와 cache 및 로컬 resource path가 월드 모델로 해석되는 흐름
@@ -20,7 +20,7 @@ assets:
     sha256: 6a209dead75de3c0d005a67de5b108336d042aaa2a444a954713e397aa9ed7ec
   - id: beginner-10-bridge-dataflow
     path: assets/beginner/bridge-dataflow.svg
-    route: beginner/10-ros-gz-bridge/
+    route: 03_beginner/10-ros-gz-bridge/
     source_command: repository-authored SVG derived from bridge.yaml and image_bridge invocation
     semantic_observable: Gazebo Transport와 ROS 2 사이에서 parameter bridge와 image bridge가 맡는 경로가 구분된다.
     alt_text: Gazebo Transport 센서 토픽이 parameter bridge와 image bridge를 거쳐 ROS 2 토픽으로 변환되는 흐름
@@ -29,7 +29,7 @@ assets:
     sha256: 5d86c96914f7d28c7e6a62ed418920c0e16e5946e99e6651c7b71b098a072a9d
   - id: beginner-project-final-observable
     path: assets/beginner/final-project-observable.svg
-    route: beginner/project-tutorial-bot/
+    route: 03_beginner/11_project-tutorial-bot/
     source_command: repository-authored SVG derived from the final bridge checker observables
     semantic_observable: Gazebo의 로봇 이동과 ROS 2의 odom, scan, image, IMU, clock 결과가 한 흐름으로 보인다.
     alt_text: 이동하는 tutorial bot과 ROS 2에서 확인하는 오도메트리 라이다 카메라 IMU 시계 결과

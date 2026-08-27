@@ -147,7 +147,7 @@ def audit(args: argparse.Namespace) -> tuple[dict[str, object], int]:
                 json.dumps(manifest, ensure_ascii=False).lower(),
                 *(
                     path.read_text(encoding="utf-8").lower()
-                    for path in (ROOT / "docs/advanced").glob("*.md")
+                    for path in (ROOT / "docs/05_advanced").glob("*.md")
                 ),
             ]
         )

@@ -2,7 +2,7 @@ schema_version: 1
 assets:
   - id: fixture
     path: assets/diagrams/rendering-fixture.svg
-    route: reference/visual-fixture/
+    route: 06_reference/03_visual-fixture/
     source_command: python3 scripts/render_fixture_visual.py --output docs/assets/diagrams/rendering-fixture.svg
     semantic_observable: 로봇, x축, 진행 방향이 구분된다.
     alt_text: ''

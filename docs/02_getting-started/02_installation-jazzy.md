@@ -61,4 +61,4 @@ sudo apt install ros-jazzy-ros-gz
 
 ## 자주 발생하는 문제
 
-Gazebo GUI가 열리지 않거나 렌더링 오류가 나면 [문제 해결](troubleshooting.md)을 확인합니다. 이 저장소의 공식 지원 범위는 native Ubuntu, amd64, NVIDIA입니다.
+Gazebo GUI가 열리지 않거나 렌더링 오류가 나면 [문제 해결](03_troubleshooting.md)을 확인합니다. 이 저장소의 공식 지원 범위는 native Ubuntu, amd64, NVIDIA입니다.

@@ -25,7 +25,7 @@ def test_nav2_worked_example_renders_mathjax_in_chromium(tmp_path: Path) -> None
         browser = playwright.chromium.launch(channel="chrome", headless=True)
         page = browser.new_page(viewport={"width": 1280, "height": 900})
         page.goto(
-            (site / "intermediate/10-nav2/index.html").as_uri(),
+            (site / "04_intermediate/10-nav2/index.html").as_uri(),
             wait_until="domcontentloaded",
         )
         worked = page.locator('.course-worked[data-worked-example="nav2-tolerance"]')

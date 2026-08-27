@@ -65,7 +65,7 @@ World 안의 Physics System이 중력과 접촉을 계산하고, SceneBroadcaste
 ## 문제 해결
 
 - `gz sdf -k`가 실패하면 오류에 표시된 XML 요소와 닫는 태그부터 확인합니다.
-- server는 시작하지만 GUI가 열리지 않으면 [문제 해결](../getting-started/troubleshooting.md)의 GUI 항목을 확인합니다.
+- server는 시작하지만 GUI가 열리지 않으면 [문제 해결](../02_getting-started/03_troubleshooting.md)의 GUI 항목을 확인합니다.
 - 실행 위치가 저장소 루트가 아니면 상대 경로가 달라집니다. `pwd`를 실행해 확인하세요.
 
 ## 정리

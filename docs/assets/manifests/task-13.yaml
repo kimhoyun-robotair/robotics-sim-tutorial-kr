@@ -2,7 +2,7 @@ schema_version: 1
 assets:
   - id: advanced-course-architecture
     path: assets/advanced/course-architecture.svg
-    route: advanced/
+    route: 05_advanced/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: ECS System, Transport, simulation time, headless gate와 CI evidence가 순서대로 이어진다.
     alt_text: ECS System Transport simulation time headless 검사 CI 증거가 이어지는 고급 과정 구조도
@@ -13,7 +13,7 @@ assets:
     height: 360
   - id: advanced-ecs-lifecycle
     path: assets/advanced/ecs-lifecycle.svg
-    route: advanced/01-ecs-system-plugin/
+    route: 05_advanced/01-ecs-system-plugin/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: WAITING_FOR_MODEL, READY, DISABLED, MODEL_REMOVED와 fresh baseline 전이가 구분된다.
     alt_text: WAITING FOR MODEL READY DISABLED MODEL REMOVED와 재결합 기준점을 보여 주는 ECS 생명주기 상태도
@@ -24,7 +24,7 @@ assets:
     height: 360
   - id: advanced-transport-boundary
     path: assets/advanced/transport-boundary.svg
-    route: advanced/02-transport-interfaces/
+    route: 05_advanced/02-transport-interfaces/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: Transport callback, mailbox, simulation update의 thread 소유권 경계가 보인다.
     alt_text: Transport callback이 mailbox를 거쳐 simulation update에서 ECS 상태에 적용되는 thread 경계도
@@ -35,7 +35,7 @@ assets:
     height: 360
   - id: advanced-sim-time
     path: assets/advanced/sim-time-debug.svg
-    route: advanced/03-physics-debugging/
+    route: 05_advanced/03-physics-debugging/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 같은 2초 simulation에서 0.05초와 0.2초 publish period의 표본 수 차이가 보인다.
     alt_text: 같은 2초 simulation에서 0점05초와 0점2초 publish 주기의 메시지 수를 비교하는 막대 도식
@@ -46,7 +46,7 @@ assets:
     height: 360
   - id: advanced-headless-taxonomy
     path: assets/advanced/headless-exit-taxonomy.svg
-    route: advanced/04-headless-integration/
+    route: 05_advanced/04-headless-integration/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: nominal, usage, missing model, missing plugin, timeout, cleanup 종료 코드가 구분된다.
     alt_text: headless checker의 nominal usage missing model missing plugin timeout cleanup 종료 코드를 구분한 도식
@@ -57,7 +57,7 @@ assets:
     height: 360
   - id: advanced-ci-reproducibility
     path: assets/advanced/ci-reproducibility.svg
-    route: advanced/05-ci-reproducibility/
+    route: 05_advanced/05-ci-reproducibility/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 같은 source SHA에서 Pages와 ROS Gazebo runtime gate가 독립 evidence를 만든다.
     alt_text: 같은 source SHA에서 strict MkDocs Pages와 ROS Gazebo headless 검증이 독립적으로 evidence를 만드는 CI 구조도
@@ -68,7 +68,7 @@ assets:
     height: 360
   - id: advanced-production-stack
     path: assets/advanced/production-stack.svg
-    route: advanced/project-production-stack/
+    route: 05_advanced/06_project-production-stack/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: fresh install을 중심으로 distance, Transport, physics, headless cleanup 검사가 결합된다.
     alt_text: fresh install을 중심으로 lifecycle Transport physics headless cleanup checker가 결합되는 production stack 구조도

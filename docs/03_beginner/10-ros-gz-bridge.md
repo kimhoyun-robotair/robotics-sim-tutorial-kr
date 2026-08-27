@@ -156,4 +156,4 @@ Camera는 `ros_gz_bridge` YAML 항목이 아니라 `ros_gz_image image_bridge`�
 
 ROS 2와 Gazebo는 bridge를 통해 명시적으로 연결됩니다. 다음 마지막 초급 프로젝트에서는 이 경로와 `tutorial_bot`의 모든 기능을 함께 검증합니다.
 
-[이전: Gazebo Fuel](09-gazebo-fuel.md) · [다음: 초급 프로젝트](project-tutorial-bot.md)
+[이전: Gazebo Fuel](09-gazebo-fuel.md) · [다음: 초급 프로젝트](11_project-tutorial-bot.md)

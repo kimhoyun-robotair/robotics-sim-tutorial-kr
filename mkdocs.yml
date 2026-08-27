@@ -51,47 +51,47 @@ extra_javascript:
 
 nav:
   - 홈: index.md
-  - 학습 로드맵: roadmap.md
+  - 학습 로드맵: 01_roadmap.md
   - 시작하기:
-      - 호환성: compatibility.md
-      - Gazebo Harmonic 소개: getting-started/gazebo-harmonic.md
-      - Jazzy 환경 설치: getting-started/installation-jazzy.md
-      - 문제 해결: getting-started/troubleshooting.md
+      - 호환성: 02_getting-started/00_compatibility.md
+      - Gazebo Harmonic 소개: 02_getting-started/01_gazebo-harmonic.md
+      - Jazzy 환경 설치: 02_getting-started/02_installation-jazzy.md
+      - 문제 해결: 02_getting-started/03_troubleshooting.md
   - 초급:
-      - 개요: beginner/index.md
-      - Gazebo Sim 개요: beginner/01-gazebo-overview.md
-      - GUI 기초: beginner/02-gui-basics.md
-      - SDF 기초: beginner/03-sdf-basics.md
-      - 첫 World: beginner/04-first-world.md
-      - 첫 Robot: beginner/05-first-robot.md
-      - 바퀴와 Joint: beginner/06-joints.md
-      - DiffDrive: beginner/07-diff-drive.md
-      - 센서: beginner/08-sensors.md
-      - Gazebo Fuel: beginner/09-gazebo-fuel.md
-      - ROS 2와 연결: beginner/10-ros-gz-bridge.md
-      - 프로젝트: beginner/project-tutorial-bot.md
+      - 개요: 03_beginner/index.md
+      - Gazebo Sim 개요: 03_beginner/01-gazebo-overview.md
+      - GUI 기초: 03_beginner/02-gui-basics.md
+      - SDF 기초: 03_beginner/03-sdf-basics.md
+      - 첫 World: 03_beginner/04-first-world.md
+      - 첫 Robot: 03_beginner/05-first-robot.md
+      - 바퀴와 Joint: 03_beginner/06-joints.md
+      - DiffDrive: 03_beginner/07-diff-drive.md
+      - 센서: 03_beginner/08-sensors.md
+      - Gazebo Fuel: 03_beginner/09-gazebo-fuel.md
+      - ROS 2와 연결: 03_beginner/10-ros-gz-bridge.md
+      - 프로젝트: 03_beginner/11_project-tutorial-bot.md
   - 중급:
-      - 개요: intermediate/index.md
-      - 고급 SDF: intermediate/01-advanced-sdf.md
-      - URDF·Xacro·SDF: intermediate/02-urdf-xacro-sdf.md
-      - ROS 2 Launch: intermediate/03-ros2-launch.md
-      - Robot Spawn: intermediate/04-spawn-model.md
-      - ros_gz_bridge 심화: intermediate/05-bridge-yaml.md
-      - TF·Joint State·RViz: intermediate/06-tf-rviz.md
-      - gz_ros2_control: intermediate/07-gz-ros2-control.md
-      - 센서 심화: intermediate/08-advanced-sensors.md
-      - 다중 로봇: intermediate/09-multi-robot.md
-      - Nav2 연동: intermediate/10-nav2.md
-      - 프로젝트: intermediate/project-autonomous-bot.md
+      - 개요: 04_intermediate/index.md
+      - 고급 SDF: 04_intermediate/01-advanced-sdf.md
+      - URDF·Xacro·SDF: 04_intermediate/02-urdf-xacro-sdf.md
+      - ROS 2 Launch: 04_intermediate/03-ros2-launch.md
+      - Robot Spawn: 04_intermediate/04-spawn-model.md
+      - ros_gz_bridge 심화: 04_intermediate/05-bridge-yaml.md
+      - TF·Joint State·RViz: 04_intermediate/06-tf-rviz.md
+      - gz_ros2_control: 04_intermediate/07-gz-ros2-control.md
+      - 센서 심화: 04_intermediate/08-advanced-sensors.md
+      - 다중 로봇: 04_intermediate/09-multi-robot.md
+      - Nav2 연동: 04_intermediate/10-nav2.md
+      - 프로젝트: 04_intermediate/11_project-autonomous-bot.md
   - 고급:
-      - 개요: advanced/index.md
-      - ECS System Plugin: advanced/01-ecs-system-plugin.md
-      - Transport 인터페이스: advanced/02-transport-interfaces.md
-      - 물리와 주기 디버깅: advanced/03-physics-debugging.md
-      - Headless 통합 테스트: advanced/04-headless-integration.md
-      - CI 재현성: advanced/05-ci-reproducibility.md
-      - 프로젝트: advanced/project-production-stack.md
+      - 개요: 05_advanced/index.md
+      - ECS System Plugin: 05_advanced/01-ecs-system-plugin.md
+      - Transport 인터페이스: 05_advanced/02-transport-interfaces.md
+      - 물리와 주기 디버깅: 05_advanced/03-physics-debugging.md
+      - Headless 통합 테스트: 05_advanced/04-headless-integration.md
+      - CI 재현성: 05_advanced/05-ci-reproducibility.md
+      - 프로젝트: 05_advanced/06_project-production-stack.md
   - 참고:
-      - 명령어: reference/commands.md
-      - 용어: reference/terminology.md
-      - 렌더링 Fixture: reference/visual-fixture.md
+      - 명령어: 06_reference/01_commands.md
+      - 용어: 06_reference/02_terminology.md
+      - 렌더링 Fixture: 06_reference/03_visual-fixture.md

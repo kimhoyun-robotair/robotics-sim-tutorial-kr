@@ -15,7 +15,7 @@
 
 이 과정은 Gazebo Classic이 아니라 **Gazebo Harmonic**과 `ros_gz` 계열 패키지를 사용합니다. 로봇의 원본은 URDF/Xacro이며, SDF는 world와 Gazebo 고유 물리·센서 설정에 사용합니다. 같은 로봇을 별도 SDF 원본으로 중복 관리하지 않습니다.
 
-[선행 과정: 초급 프로젝트](../beginner/project-tutorial-bot.md)
+[선행 과정: 초급 프로젝트](../03_beginner/11_project-tutorial-bot.md)
 
 <figure class="course-figure" id="intermediate-course-dataflow">
   <img src="../assets/intermediate/course-dataflow.svg" alt="중급 과정의 모델 실행 관측 제어 자율주행 데이터 흐름도" loading="lazy">
@@ -40,7 +40,7 @@
 8. [센서 심화](08-advanced-sensors.md)
 9. [다중 로봇](09-multi-robot.md)
 10. [Nav2 연동](10-nav2.md)
-11. [프로젝트: 자율주행 `tutorial_bot`](project-autonomous-bot.md)
+11. [프로젝트: 자율주행 `tutorial_bot`](11_project-autonomous-bot.md)
 
 ## 공통 예제 파일
 

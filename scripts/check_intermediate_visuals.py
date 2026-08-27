@@ -74,8 +74,8 @@ HELP_TEXT: Final = (
     "--gazebo-title REGEX --rviz-title REGEX --evidence DIR\n"
 )
 FROZEN_ROUTES = (
-    "/intermediate/", "/intermediate/01-advanced-sdf/", "/intermediate/02-urdf-xacro-sdf/", "/intermediate/03-ros2-launch/", "/intermediate/04-spawn-model/", "/intermediate/05-bridge-yaml/",
-    "/intermediate/06-tf-rviz/", "/intermediate/07-gz-ros2-control/", "/intermediate/08-advanced-sensors/", "/intermediate/09-multi-robot/", "/intermediate/10-nav2/", "/intermediate/project-autonomous-bot/",
+    "/04_intermediate/", "/04_intermediate/01-advanced-sdf/", "/04_intermediate/02-urdf-xacro-sdf/", "/04_intermediate/03-ros2-launch/", "/04_intermediate/04-spawn-model/", "/04_intermediate/05-bridge-yaml/",
+    "/04_intermediate/06-tf-rviz/", "/04_intermediate/07-gz-ros2-control/", "/04_intermediate/08-advanced-sensors/", "/04_intermediate/09-multi-robot/", "/04_intermediate/10-nav2/", "/04_intermediate/11_project-autonomous-bot/",
 )
 WINDOW_LINE = re.compile(
     r'^\s+(?P<xid>0x[0-9a-f]+) "(?P<title>.*?)":'

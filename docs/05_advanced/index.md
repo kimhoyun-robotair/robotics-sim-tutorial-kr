@@ -3,7 +3,7 @@
 > **난이도:** 고급  
 > **Gazebo:** Harmonic  
 > **ROS 2:** Jazzy  
-> **선행 학습:** [중급 프로젝트](../intermediate/project-autonomous-bot.md)
+> **선행 학습:** [중급 프로젝트](../04_intermediate/11_project-autonomous-bot.md)
 
 ## 과정 목표
 
@@ -28,7 +28,7 @@
 3. [물리와 주기 디버깅](03-physics-debugging.md)
 4. [Headless 통합 테스트](04-headless-integration.md)
 5. [CI 재현성](05-ci-reproducibility.md)
-6. [Production Stack 프로젝트](project-production-stack.md)
+6. [Production Stack 프로젝트](06_project-production-stack.md)
 
 ## 설치 산출물 확인
 
@@ -54,4 +54,4 @@ printf 'advanced-install=ready\n'
 - [Gazebo Transport tutorials](https://gazebosim.org/api/transport/13/tutorials.html)
 - [ROS 2 Jazzy documentation](https://docs.ros.org/en/jazzy/)
 
-[선행 과정](../intermediate/project-autonomous-bot.md) · [다음: ECS System Plugin](01-ecs-system-plugin.md)
+[선행 과정](../04_intermediate/11_project-autonomous-bot.md) · [다음: ECS System Plugin](01-ecs-system-plugin.md)

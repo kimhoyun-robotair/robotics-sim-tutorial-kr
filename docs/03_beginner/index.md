@@ -49,7 +49,7 @@ test -f examples/gazebo/worlds/first-world.sdf
 
 ## 막히면
 
-GUI가 열리지 않거나 렌더링이 깨지면 [문제 해결](../getting-started/troubleshooting.md)을 먼저 확인합니다. 명령은 모두 저장소 루트에서 실행하며, 상대 경로가 다르면 `pwd`로 현재 위치를 확인합니다.
+GUI가 열리지 않거나 렌더링이 깨지면 [문제 해결](../02_getting-started/03_troubleshooting.md)을 먼저 확인합니다. 명령은 모두 저장소 루트에서 실행하며, 상대 경로가 다르면 `pwd`로 현재 위치를 확인합니다.
 
 ## 첫 실습
 

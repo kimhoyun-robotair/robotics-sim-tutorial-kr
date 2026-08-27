@@ -81,4 +81,4 @@ ros2 control list_controllers
 
 이 프로젝트는 Gazebo Classic이 아닌 Harmonic에서 실제 ROS 2 Jazzy 자율주행 데이터 흐름을 끝까지 검증합니다.
 
-[다음 과정: 고급 ECS·Transport](../advanced/index.md)
+[다음 과정: 고급 ECS·Transport](../05_advanced/index.md)

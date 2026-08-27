@@ -33,7 +33,7 @@ Gazebo 패키지와 `ros-jazzy-ros-gz` 설치 상태를 확인합니다.
 dpkg-query -W 'ros-jazzy-ros-gz*' 'gz-harmonic*'
 ```
 
-패키지가 없다면 [설치 문서](installation-jazzy.md)의 명령을 다시 실행합니다.
+패키지가 없다면 [설치 문서](02_installation-jazzy.md)의 명령을 다시 실행합니다.
 
 ## GUI가 열리지 않음
 

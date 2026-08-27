@@ -15,9 +15,9 @@ import yaml
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 DOCS: Final = (
-    ROOT / "docs/beginner/05-first-robot.md",
-    ROOT / "docs/beginner/06-joints.md",
-    ROOT / "docs/beginner/07-diff-drive.md",
+    ROOT / "docs/03_beginner/05-first-robot.md",
+    ROOT / "docs/03_beginner/06-joints.md",
+    ROOT / "docs/03_beginner/07-diff-drive.md",
 )
 CANONICAL_XACRO: Final = (
     ROOT

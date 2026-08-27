@@ -116,7 +116,7 @@ def test_public_xacro_fault_contract_rejects_missing_parent_without_mutation(
 
 
 def test_beginner_docs_invoke_the_matching_installed_stage() -> None:
-    docs_root = REPOSITORY_ROOT / "docs/beginner"
+    docs_root = REPOSITORY_ROOT / "docs/03_beginner"
 
     for document, stage in DOC_STAGES:
         content = (docs_root / document).read_text(encoding="utf-8")

@@ -84,12 +84,12 @@ def test_beginner_sensor_routes_explain_the_parsed_runtime_contract() -> None:
         "08-sensors.md": ("360 - 1", "`inf`", "100 Hz", "30 Hz"),
         "09-gazebo-fuel.md": ("GZ_FUEL_CACHE_PATH", "GZ_SIM_RESOURCE_PATH"),
         "10-ros-gz-bridge.md": ("ros_gz_bridge", "image_bridge", "dependency"),
-        "project-tutorial-bot.md": ("/scan", "/imu", "/clock"),
+        "11_project-tutorial-bot.md": ("/scan", "/imu", "/clock"),
     }
 
     # When: each page is inspected for the concepts that explain the parsed contract.
     for filename, markers in requirements.items():
-        page = (ROOT / "docs/beginner" / filename).read_text(encoding="utf-8")
+        page = (ROOT / "docs/03_beginner" / filename).read_text(encoding="utf-8")
         for marker in markers:
             assert marker in page
 
@@ -107,10 +107,10 @@ def test_beginner_sensor_routes_have_registered_visual_learning_evidence() -> No
         "08-sensors.md",
         "09-gazebo-fuel.md",
         "10-ros-gz-bridge.md",
-        "project-tutorial-bot.md",
+        "11_project-tutorial-bot.md",
     ):
-        page = (ROOT / "docs/beginner" / filename).read_text(encoding="utf-8")
-        route = f"beginner/{filename.removesuffix('.md')}/"
+        page = (ROOT / "docs/03_beginner" / filename).read_text(encoding="utf-8")
+        route = f"03_beginner/{filename.removesuffix('.md')}/"
         assert route in routes
         assert '<figure class="course-figure"' in page
         assert "<figcaption>그림" in page

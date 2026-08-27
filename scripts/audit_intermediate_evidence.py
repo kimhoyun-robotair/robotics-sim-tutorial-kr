@@ -32,17 +32,17 @@ JsonValue = TypeAliasType("JsonValue", None | bool | int | float | str | Sequenc
 JsonMap = TypeAliasType("JsonMap", dict[str, JsonValue])
 RFC3339: Final = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z$")
 HANDOFF_REQUIREMENTS: Final = (
-    ("10.1", "docs/intermediate/01-advanced-sdf.md"),
-    ("10.2", "docs/intermediate/02-urdf-xacro-sdf.md"),
-    ("10.3", "docs/intermediate/03-ros2-launch.md"),
-    ("10.4", "docs/intermediate/04-spawn-model.md"),
-    ("10.5", "docs/intermediate/05-bridge-yaml.md"),
-    ("10.6", "docs/intermediate/06-tf-rviz.md"),
-    ("10.7", "docs/intermediate/07-gz-ros2-control.md"),
-    ("10.8", "docs/intermediate/08-advanced-sensors.md"),
-    ("10.9", "docs/intermediate/09-multi-robot.md"),
-    ("10.10", "docs/intermediate/10-nav2.md"),
-    ("10.11", "docs/intermediate/project-autonomous-bot.md"),
+    ("10.1", "docs/04_intermediate/01-advanced-sdf.md"),
+    ("10.2", "docs/04_intermediate/02-urdf-xacro-sdf.md"),
+    ("10.3", "docs/04_intermediate/03-ros2-launch.md"),
+    ("10.4", "docs/04_intermediate/04-spawn-model.md"),
+    ("10.5", "docs/04_intermediate/05-bridge-yaml.md"),
+    ("10.6", "docs/04_intermediate/06-tf-rviz.md"),
+    ("10.7", "docs/04_intermediate/07-gz-ros2-control.md"),
+    ("10.8", "docs/04_intermediate/08-advanced-sensors.md"),
+    ("10.9", "docs/04_intermediate/09-multi-robot.md"),
+    ("10.10", "docs/04_intermediate/10-nav2.md"),
+    ("10.11", "docs/04_intermediate/11_project-autonomous-bot.md"),
 )
 COMPARE_LOGS: Final = {"nominal-diff-drive": "diff-drive.log", "nominal-sensors": "sensors.log", "nominal-ros-gz-bridge": "bridge.log"}
 RUNTIME_FINGERPRINT_NORMALIZERS: Final = {
@@ -55,7 +55,7 @@ RUNTIME_FINGERPRINT_NORMALIZERS: Final = {
         "ROS cmd_vel to Gazebo verified; Gazebo sensors to ROS verified.",
     ),
 }
-ARTIFACT_EVIDENCE_PREFIX: Final = ".omo/evidence/intermediate/"
+ARTIFACT_EVIDENCE_PREFIX: Final = ".omo/evidence/04_intermediate/"
 
 
 JSON_ADAPTER: Final[TypeAdapter[JsonValue]] = TypeAdapter(JsonValue)

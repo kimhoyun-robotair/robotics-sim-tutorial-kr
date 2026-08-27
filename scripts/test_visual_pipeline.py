@@ -25,7 +25,7 @@ def run_cli(script: str, *arguments: str) -> subprocess.CompletedProcess[str]:
 def test_rendering_config_declares_math_mermaid_and_fixture() -> None:
     # Given: the repository rendering configuration and fixture page.
     config = yaml.safe_load((ROOT / "mkdocs.yml").read_text(encoding="utf-8"))
-    fixture = ROOT / "docs" / "reference" / "visual-fixture.md"
+    fixture = ROOT / "docs" / "06_reference" / "03_visual-fixture.md"
 
     # When: rendering features are inspected.
     extensions = config["markdown_extensions"]
@@ -184,7 +184,7 @@ def test_asset_checker_rejects_stale_generated_asset() -> None:
                     "assets:",
                     "  - id: fixture",
                     "    path: assets/fixture.svg",
-                    "    route: reference/visual-fixture/",
+                    "    route: 06_reference/03_visual-fixture/",
                     "    source_command: python3 scripts/render_fixture_visual.py --output docs/assets/fixture.svg",
                     "    semantic_observable: 도식이 보인다.",
                     "    alt_text: 재현 가능한 도식",

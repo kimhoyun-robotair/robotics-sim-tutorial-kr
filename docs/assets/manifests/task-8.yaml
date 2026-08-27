@@ -2,7 +2,7 @@ schema_version: 1
 assets:
   - id: course-dataflow
     path: assets/intermediate/course-dataflow.svg
-    route: intermediate/
+    route: 04_intermediate/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 모델, launch, bridge와 TF, controller, Nav2의 입력과 출력 순서가 구분된다.
     alt_text: 중급 과정의 모델 실행 관측 제어 자율주행 데이터 흐름도
@@ -13,7 +13,7 @@ assets:
     height: 360
   - id: inertia-contact
     path: assets/intermediate/inertia-contact.svg
-    route: intermediate/01-advanced-sdf/
+    route: 04_intermediate/01-advanced-sdf/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 질량과 관성, 중력, 수직력, 마찰 한계가 서로 다른 레이블로 보인다.
     alt_text: 직육면체 관성과 접촉 수직력 마찰력의 관계도
@@ -24,7 +24,7 @@ assets:
     height: 360
   - id: model-conversion
     path: assets/intermediate/model-conversion.svg
-    route: intermediate/02-urdf-xacro-sdf/
+    route: 04_intermediate/02-urdf-xacro-sdf/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: Xacro에서 URDF와 SDF로 이어지는 변환과 각 형식의 책임이 보인다.
     alt_text: Xacro에서 URDF와 SDF로 변환되는 모델 책임 흐름도
@@ -35,7 +35,7 @@ assets:
     height: 360
   - id: launch-readiness
     path: assets/intermediate/launch-readiness.svg
-    route: intermediate/03-ros2-launch/
+    route: 04_intermediate/03-ros2-launch/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: Gazebo 준비, spawn, controller, bridge와 TF, Nav2 활성 순서가 보인다.
     alt_text: Gazebo 준비부터 Nav2 활성까지의 launch readiness 의존 그래프
@@ -46,7 +46,7 @@ assets:
     height: 360
   - id: spawn-pose
     path: assets/intermediate/spawn-pose.svg
-    route: intermediate/04-spawn-model/
+    route: 04_intermediate/04-spawn-model/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: world 기준 위치 x y z와 yaw가 entity pose와 연결되어 보인다.
     alt_text: world 좌표계에서 로봇의 위치와 yaw로 표현한 spawn pose
@@ -57,7 +57,7 @@ assets:
     height: 360
   - id: bridge-qos
     path: assets/intermediate/bridge-qos.svg
-    route: intermediate/05-bridge-yaml/
+    route: 04_intermediate/05-bridge-yaml/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: ROS_TO_GZ 명령과 GZ_TO_ROS 센서 방향, 센서 QoS 선택이 구분된다.
     alt_text: ROS 2와 Gazebo Transport 사이 bridge 방향과 QoS 선택도
@@ -68,7 +68,7 @@ assets:
     height: 360
   - id: tf-composition
     path: assets/intermediate/tf-composition.svg
-    route: intermediate/06-tf-rviz/
+    route: 04_intermediate/06-tf-rviz/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: odom에서 base_link와 sensor_link로 이어지는 TF 소유자와 합성이 보인다.
     alt_text: odom base_link sensor_link TF 변환 합성과 소유자 구조도
@@ -79,7 +79,7 @@ assets:
     height: 360
   - id: controller-kinematics
     path: assets/intermediate/controller-kinematics.svg
-    route: intermediate/07-gz-ros2-control/
+    route: 04_intermediate/07-gz-ros2-control/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 바퀴 반지름과 간격, 선속도와 각속도, lifecycle 전이가 보인다.
     alt_text: 차동구동 바퀴 운동학과 controller lifecycle 상태도
@@ -90,7 +90,7 @@ assets:
     height: 360
   - id: sensor-statistics
     path: assets/intermediate/sensor-statistics.svg
-    route: intermediate/08-advanced-sensors/
+    route: 04_intermediate/08-advanced-sensors/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 표본 평균과 표준편차, 관측 rate와 95퍼센트 수신 기준이 보인다.
     alt_text: 센서의 가우시안 노이즈 분포와 메시지 수신률 계산도
@@ -101,7 +101,7 @@ assets:
     height: 360
   - id: namespace-isolation
     path: assets/intermediate/namespace-isolation.svg
-    route: intermediate/09-multi-robot/
+    route: 04_intermediate/09-multi-robot/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: robot1과 robot2의 entity, topic, controller, TF frame이 분리되어 보인다.
     alt_text: robot1과 robot2의 entity topic controller TF frame 격리도
@@ -112,7 +112,7 @@ assets:
     height: 360
   - id: nav2-tolerance
     path: assets/intermediate/nav2-layers.svg
-    route: intermediate/10-nav2/
+    route: 04_intermediate/10-nav2/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: map server, AMCL, planner, costmap, controller와 pose 허용오차가 보인다.
     alt_text: Nav2 map server AMCL planner costmap controller 계층과 허용오차
@@ -123,7 +123,7 @@ assets:
     height: 360
   - id: project-runtime
     path: assets/intermediate/project-runtime.svg
-    route: intermediate/project-autonomous-bot/
+    route: 04_intermediate/11_project-autonomous-bot/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: simulation 관측, Nav2 action, checker의 세 번 pose 오차 검증이 이어져 보인다.
     alt_text: 시뮬레이션 Nav2 action checker로 이어지는 프로젝트 runtime 증거 흐름

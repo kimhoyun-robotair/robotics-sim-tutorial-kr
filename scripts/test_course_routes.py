@@ -82,7 +82,7 @@ def test_asset_loader_includes_task_manifest_fragments() -> None:
         record = {
             "id": "route-visual",
             "path": "assets/intermediate/route.svg",
-            "route": "intermediate/route/",
+            "route": "04_intermediate/route/",
             "source_command": "repository-authored SVG",
             "semantic_observable": "고유 구조가 보인다.",
             "alt_text": "고유 구조도",
@@ -111,7 +111,7 @@ def test_missing_browser_has_dedicated_exit_code() -> None:
     # Given: a built fixture route and an explicitly empty browser path.
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
-        site = root / "site" / "reference" / "visual-fixture"
+        site = root / "site" / "06_reference" / "visual-fixture"
         site.mkdir(parents=True)
         (site / "index.html").write_text("<h1>fixture</h1>", encoding="utf-8")
         playwright = root / "python" / "playwright"

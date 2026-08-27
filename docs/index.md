@@ -35,8 +35,8 @@ ros2 --help
 
 ## 학습 순서
 
-1. [호환성](compatibility.md)과 [Harmonic 소개](getting-started/gazebo-harmonic.md)를 읽습니다.
-2. [SDF 기초](beginner/03-sdf-basics.md)와 [첫 World](beginner/04-first-world.md)를 실행해 Gazebo server를 확인합니다.
+1. [호환성](02_getting-started/00_compatibility.md)과 [Harmonic 소개](02_getting-started/01_gazebo-harmonic.md)를 읽습니다.
+2. [SDF 기초](03_beginner/03-sdf-basics.md)와 [첫 World](03_beginner/04-first-world.md)를 실행해 Gazebo server를 확인합니다.
 3. 초급에서 `tutorial_bot`의 이동과 센서를 완성합니다.
 4. 중급과 고급에서 ROS 2 프로젝트 구조와 자동 검증을 더합니다.
 

@@ -52,65 +52,65 @@ class RouteSpec:
 
 
 FROZEN_ROUTES: tuple[RouteSpec, ...] = (
-    RouteSpec("/intermediate/", "중급 과정: ROS 2 통합", "docs/intermediate/index.md"),
+    RouteSpec("/04_intermediate/", "중급 과정: ROS 2 통합", "docs/04_intermediate/index.md"),
     RouteSpec(
-        "/intermediate/01-advanced-sdf/",
+        "/04_intermediate/01-advanced-sdf/",
         "고급 SDF와 물리 속성",
-        "docs/intermediate/01-advanced-sdf.md",
+        "docs/04_intermediate/01-advanced-sdf.md",
     ),
     RouteSpec(
-        "/intermediate/02-urdf-xacro-sdf/",
+        "/04_intermediate/02-urdf-xacro-sdf/",
         "URDF·Xacro·SDF 구분",
-        "docs/intermediate/02-urdf-xacro-sdf.md",
+        "docs/04_intermediate/02-urdf-xacro-sdf.md",
     ),
     RouteSpec(
-        "/intermediate/03-ros2-launch/",
+        "/04_intermediate/03-ros2-launch/",
         "ROS 2 Launch 실행",
-        "docs/intermediate/03-ros2-launch.md",
+        "docs/04_intermediate/03-ros2-launch.md",
     ),
     RouteSpec(
-        "/intermediate/04-spawn-model/",
+        "/04_intermediate/04-spawn-model/",
         "Robot Spawn과 위치",
-        "docs/intermediate/04-spawn-model.md",
+        "docs/04_intermediate/04-spawn-model.md",
     ),
     RouteSpec(
-        "/intermediate/05-bridge-yaml/",
+        "/04_intermediate/05-bridge-yaml/",
         "ros_gz_bridge YAML 심화",
-        "docs/intermediate/05-bridge-yaml.md",
+        "docs/04_intermediate/05-bridge-yaml.md",
     ),
     RouteSpec(
-        "/intermediate/06-tf-rviz/",
+        "/04_intermediate/06-tf-rviz/",
         "TF·Joint State·RViz 검증",
-        "docs/intermediate/06-tf-rviz.md",
+        "docs/04_intermediate/06-tf-rviz.md",
     ),
     RouteSpec(
-        "/intermediate/07-gz-ros2-control/",
+        "/04_intermediate/07-gz-ros2-control/",
         "gz_ros2_control과 controller",
-        "docs/intermediate/07-gz-ros2-control.md",
+        "docs/04_intermediate/07-gz-ros2-control.md",
     ),
     RouteSpec(
-        "/intermediate/08-advanced-sensors/",
+        "/04_intermediate/08-advanced-sensors/",
         "센서 심화: 노이즈와 주기",
-        "docs/intermediate/08-advanced-sensors.md",
+        "docs/04_intermediate/08-advanced-sensors.md",
     ),
     RouteSpec(
-        "/intermediate/09-multi-robot/",
+        "/04_intermediate/09-multi-robot/",
         "다중 로봇 namespace와 TF",
-        "docs/intermediate/09-multi-robot.md",
+        "docs/04_intermediate/09-multi-robot.md",
     ),
     RouteSpec(
-        "/intermediate/10-nav2/", "Gazebo와 Nav2 연동", "docs/intermediate/10-nav2.md"
+        "/04_intermediate/10-nav2/", "Gazebo와 Nav2 연동", "docs/04_intermediate/10-nav2.md"
     ),
     RouteSpec(
-        "/intermediate/project-autonomous-bot/",
+        "/04_intermediate/11_project-autonomous-bot/",
         "자율주행 tutorial_bot 프로젝트",
-        "docs/intermediate/project-autonomous-bot.md",
+        "docs/04_intermediate/11_project-autonomous-bot.md",
     ),
 )
 ROUTE_LOOKUP = {item.route: item for item in FROZEN_ROUTES}
 SOURCE_REFERENCE = re.compile(r"(?<![\w/])((?:examples|scripts)/[A-Za-z0-9_.\-/]+)")
 NAV_TARGET = re.compile(
-    r"^\s{6}- [^:]+:\s+(intermediate/[A-Za-z0-9_.\-]+\.md)\s*$", re.MULTILINE
+    r"^\s{6}- [^:]+:\s+(04_intermediate/[A-Za-z0-9_.\-]+\.md)\s*$", re.MULTILINE
 )
 HTTP_OK: Final = 200
 HTTP_ERROR_MIN: Final = 400
@@ -351,12 +351,12 @@ def audit_route(page: Page, route: str, site: str, source_root: Path) -> RouteRe
 def navigation_errors(page: Page, site: str) -> tuple[str, ...]:
     """Drive the primary Intermediate navigation link through page.click."""
     try:
-        _ = page.goto(urljoin(site, "/intermediate/"), wait_until="networkidle")
+        _ = page.goto(urljoin(site, "/04_intermediate/"), wait_until="networkidle")
         drawer = page.locator('label.md-header__button[for="__drawer"]')
         if drawer.is_visible():
             drawer.click()
         page.click('a.md-nav__link[href="01-advanced-sdf/"]')
-        page.wait_for_url("**/intermediate/01-advanced-sdf/")
+        page.wait_for_url("**/04_intermediate/01-advanced-sdf/")
     except Error as error:
         return (str(error),)
     return ()

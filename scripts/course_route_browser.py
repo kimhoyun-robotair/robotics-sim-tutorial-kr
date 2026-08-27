@@ -118,7 +118,7 @@ def browser_records(
                             clipping = page.evaluate(
                                 "() => document.documentElement.scrollWidth <= document.documentElement.clientWidth"
                             )
-                            if asset.route.startswith("intermediate/"):
+                            if asset.route.startswith("04_intermediate/"):
                                 worked = page.locator(
                                     f'.course-worked[data-worked-example="{asset.asset_id}"]'
                                 )

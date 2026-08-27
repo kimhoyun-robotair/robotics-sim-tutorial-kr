@@ -45,4 +45,4 @@ printf 'ci-inputs=installed\n'
 - [GitHub Actions workflow syntax](https://docs.github.com/actions/using-workflows/workflow-syntax-for-github-actions)
 - [MkDocs Material publishing guide](https://squidfunk.github.io/mkdocs-material/publishing-your-site/)
 
-[이전: Headless 통합 테스트](04-headless-integration.md) · [다음: Production Stack 프로젝트](project-production-stack.md)
+[이전: Headless 통합 테스트](04-headless-integration.md) · [다음: Production Stack 프로젝트](06_project-production-stack.md)

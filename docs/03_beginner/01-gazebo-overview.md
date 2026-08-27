@@ -13,7 +13,7 @@
 
 ## 선행 학습
 
-[Gazebo Harmonic 소개](../getting-started/gazebo-harmonic.md)를 읽고 `gz sim --versions`가 실행되는 환경을 준비합니다. 실습은 저장소 루트에서 진행합니다.
+[Gazebo Harmonic 소개](../02_getting-started/01_gazebo-harmonic.md)를 읽고 `gz sim --versions`가 실행되는 환경을 준비합니다. 실습은 저장소 루트에서 진행합니다.
 
 ## 실행
 
@@ -59,7 +59,7 @@ gz sim examples/gazebo/worlds/first-world.sdf
 ## 문제 해결
 
 - `Unable to find or download file`이 나오면 저장소 루트에서 명령을 실행했는지 `pwd`로 확인합니다.
-- GUI 창이 뜨지 않으면 `gz sim -s examples/gazebo/worlds/first-world.sdf`로 Server가 시작되는지 분리해서 확인하고 [문제 해결](../getting-started/troubleshooting.md)을 참고합니다.
+- GUI 창이 뜨지 않으면 `gz sim -s examples/gazebo/worlds/first-world.sdf`로 Server가 시작되는지 분리해서 확인하고 [문제 해결](../02_getting-started/03_troubleshooting.md)을 참고합니다.
 - RTF가 계속 낮으면 일시 정지 여부를 먼저 확인한 뒤 센서·렌더링 부하를 줄여 원인을 나눠 봅니다.
 
 ## 다음 단계

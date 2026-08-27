@@ -20,7 +20,7 @@ SDF World → tutorial_bot의 URDF/Xacro → 센서·DiffDrive → ROS 2 bridge
 | Gazebo | Harmonic |
 | 아키텍처 / GPU | amd64 / NVIDIA |
 
-다른 조합은 본편의 검증 대상이 아닙니다. 자세한 정책은 [호환성 문서](docs/compatibility.md)를 확인하세요.
+다른 조합은 본편의 검증 대상이 아닙니다. 자세한 정책은 [호환성 문서](docs/02_getting-started/00_compatibility.md)를 확인하세요.
 
 ## 문서 보기
 
