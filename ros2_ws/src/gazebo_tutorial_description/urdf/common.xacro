@@ -1,0 +1,132 @@
+<?xml version="1.0"?>
+<!--
+  Shared Xacro helpers for the tutorial robots.
+
+  Coordinate convention (REP-103): +x forward, +y left, +z up.
+  All dimensions use metres, mass uses kilograms, and angles use radians.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="PI" value="3.141592653589793"/>
+
+  <!-- RViz materials. Gazebo materials are selected in <gazebo> tags. -->
+  <material name="tutorial_blue">
+    <color rgba="0.12 0.42 0.80 1.0"/>
+  </material>
+  <material name="tutorial_orange">
+    <color rgba="0.95 0.45 0.08 1.0"/>
+  </material>
+  <material name="tutorial_dark">
+    <color rgba="0.08 0.09 0.11 1.0"/>
+  </material>
+  <material name="tutorial_gray">
+    <color rgba="0.45 0.48 0.52 1.0"/>
+  </material>
+
+  <!-- Solid cuboid inertia about its centre of mass. -->
+  <xacro:macro name="box_inertial"
+               params="mass x y z origin_xyz:='0 0 0' origin_rpy:='0 0 0'">
+    <inertial>
+      <origin xyz="${origin_xyz}" rpy="${origin_rpy}"/>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (y * y + z * z) / 12.0}"
+        ixy="0.0"
+        ixz="0.0"
+        iyy="${mass * (x * x + z * z) / 12.0}"
+        iyz="0.0"
+        izz="${mass * (x * x + y * y) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!--
+    Solid cylinder inertia. Its symmetry axis is local +z; origin_rpy must
+    match the visual/collision rotation when the cylinder represents a wheel.
+  -->
+  <xacro:macro name="cylinder_inertial"
+               params="mass radius length origin_xyz:='0 0 0' origin_rpy:='0 0 0'">
+    <inertial>
+      <origin xyz="${origin_xyz}" rpy="${origin_rpy}"/>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (3.0 * radius * radius + length * length) / 12.0}"
+        ixy="0.0"
+        ixz="0.0"
+        iyy="${mass * (3.0 * radius * radius + length * length) / 12.0}"
+        iyz="0.0"
+        izz="${mass * radius * radius / 2.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- Solid sphere inertia about its centre. -->
+  <xacro:macro name="sphere_inertial"
+               params="mass radius origin_xyz:='0 0 0' origin_rpy:='0 0 0'">
+    <inertial>
+      <origin xyz="${origin_xyz}" rpy="${origin_rpy}"/>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${2.0 * mass * radius * radius / 5.0}"
+        ixy="0.0"
+        ixz="0.0"
+        iyy="${2.0 * mass * radius * radius / 5.0}"
+        iyz="0.0"
+        izz="${2.0 * mass * radius * radius / 5.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ODE contact parameters shared by wheels and chassis parts. -->
+  <xacro:macro name="gazebo_contact"
+               params="reference mu1:=1.0 mu2:=1.0 kp:=1000000.0 kd:=10.0 min_depth:=0.001 max_vel:=0.1">
+    <gazebo reference="${reference}">
+      <mu1>${mu1}</mu1>
+      <mu2>${mu2}</mu2>
+      <kp>${kp}</kp>
+      <kd>${kd}</kd>
+      <minDepth>${min_depth}</minDepth>
+      <maxVel>${max_vel}</maxVel>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- A reusable wheel link and continuous joint. Wheel axle is local +y. -->
+  <xacro:macro name="simple_wheel"
+               params="name parent xyz radius width mass material:=tutorial_dark mu1:=1.2 mu2:=1.2">
+    <link name="${name}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="${PI / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${radius}" length="${width}"/>
+        </geometry>
+        <material name="${material}"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${PI / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${radius}" length="${width}"/>
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial
+        mass="${mass}"
+        radius="${radius}"
+        length="${width}"
+        origin_rpy="${PI / 2.0} 0 0"/>
+    </link>
+
+    <joint name="${name}_joint" type="continuous">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="20.0" velocity="30.0"/>
+      <dynamics damping="0.05" friction="0.0"/>
+    </joint>
+
+    <gazebo reference="${name}_link">
+      <material>Gazebo/Black</material>
+      <mu1>${mu1}</mu1>
+      <mu2>${mu2}</mu2>
+      <kp>1000000.0</kp>
+      <kd>10.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+  </xacro:macro>
+</robot>

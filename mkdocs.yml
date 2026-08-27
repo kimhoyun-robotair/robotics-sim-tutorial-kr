@@ -1,5 +1,17 @@
-site_name: Gazebo Sim 튜토리얼 (한국어)
-site_description: Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic을 위한 실행 중심 튜토리얼
+site_name: ROS 2 Humble × Gazebo Classic 11 튜토리얼
+site_description: Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11을 위한 실행 중심 한국어 튜토리얼
+repo_url: https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr
+repo_name: kimhoyun-robotair/gazebo-sim-tutorial-kr
+edit_uri: edit/Humble/docs/
+
+# main 브랜치의 Jazzy/Harmonic 문서는 Humble 브랜치 사이트에서 노출하지 않는다.
+exclude_docs: |
+  01_roadmap.md
+  02_getting-started/**
+  03_beginner/**
+  04_intermediate/**
+  05_advanced/**
+  06_reference/**
 
 theme:
   name: material
@@ -7,8 +19,11 @@ theme:
   features:
     - navigation.tabs
     - navigation.sections
+    - navigation.expand
     - navigation.top
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -25,16 +40,26 @@ theme:
         icon: material/brightness-4
         name: 밝은 테마로 전환
 
+plugins:
+  - search:
+      lang: ko
+
 markdown_extensions:
   - admonition
   - attr_list
   - md_in_html
+  - tables
   - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
+  - pymdownx.inlinehilite
   - pymdownx.arithmatex:
       generic: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: course-mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - toc:
@@ -51,47 +76,13 @@ extra_javascript:
 
 nav:
   - 홈: index.md
-  - 학습 로드맵: 01_roadmap.md
-  - 시작하기:
-      - 호환성: 02_getting-started/00_compatibility.md
-      - Gazebo Harmonic 소개: 02_getting-started/01_gazebo-harmonic.md
-      - Jazzy 환경 설치: 02_getting-started/02_installation-jazzy.md
-      - 문제 해결: 02_getting-started/03_troubleshooting.md
-  - 초급:
-      - 개요: 03_beginner/index.md
-      - Gazebo Sim 개요: 03_beginner/01-gazebo-overview.md
-      - GUI 기초: 03_beginner/02-gui-basics.md
-      - SDF 기초: 03_beginner/03-sdf-basics.md
-      - 첫 World: 03_beginner/04-first-world.md
-      - 첫 Robot: 03_beginner/05-first-robot.md
-      - 바퀴와 Joint: 03_beginner/06-joints.md
-      - DiffDrive: 03_beginner/07-diff-drive.md
-      - 센서: 03_beginner/08-sensors.md
-      - Gazebo Fuel: 03_beginner/09-gazebo-fuel.md
-      - ROS 2와 연결: 03_beginner/10-ros-gz-bridge.md
-      - 프로젝트: 03_beginner/11_project-tutorial-bot.md
-  - 중급:
-      - 개요: 04_intermediate/index.md
-      - 고급 SDF: 04_intermediate/01-advanced-sdf.md
-      - URDF·Xacro·SDF: 04_intermediate/02-urdf-xacro-sdf.md
-      - ROS 2 Launch: 04_intermediate/03-ros2-launch.md
-      - Robot Spawn: 04_intermediate/04-spawn-model.md
-      - ros_gz_bridge 심화: 04_intermediate/05-bridge-yaml.md
-      - TF·Joint State·RViz: 04_intermediate/06-tf-rviz.md
-      - gz_ros2_control: 04_intermediate/07-gz-ros2-control.md
-      - 센서 심화: 04_intermediate/08-advanced-sensors.md
-      - 다중 로봇: 04_intermediate/09-multi-robot.md
-      - Nav2 연동: 04_intermediate/10-nav2.md
-      - 프로젝트: 04_intermediate/11_project-autonomous-bot.md
-  - 고급:
-      - 개요: 05_advanced/index.md
-      - ECS System Plugin: 05_advanced/01-ecs-system-plugin.md
-      - Transport 인터페이스: 05_advanced/02-transport-interfaces.md
-      - 물리와 주기 디버깅: 05_advanced/03-physics-debugging.md
-      - Headless 통합 테스트: 05_advanced/04-headless-integration.md
-      - CI 재현성: 05_advanced/05-ci-reproducibility.md
-      - 프로젝트: 05_advanced/06_project-production-stack.md
-  - 참고:
-      - 명령어: 06_reference/01_commands.md
-      - 용어: 06_reference/02_terminology.md
-      - 렌더링 Fixture: 06_reference/03_visual-fixture.md
+  - 1. 환경 구성: 01_setup.md
+  - 2. URDF · Xacro · SDF: 02_urdf_xacro_sdf.md
+  - 3. 2륜 + Caster 실습: 03_diffbot.md
+  - 4. 4륜 Rover 실습: 04_rover.md
+  - 5. 센서와 RViz: 05_sensors.md
+  - 6. URDF 기반 TF · Odom: 06_tf_rviz.md
+  - 7. 커스텀 Gazebo 플러그인: 07_custom_plugin.md
+  - 8. 문제 해결 · 검증: 08_debugging.md
+  - 9. 설계 원칙 · 다음 단계: 09_next_steps.md
+  - 10. 빠른 참고표: 10_reference.md

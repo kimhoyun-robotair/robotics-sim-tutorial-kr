@@ -1,0 +1,101 @@
+name: ROS 2 Humble and Gazebo Classic 11
+
+on:
+  push:
+    branches: [Humble]
+  pull_request:
+    branches: [Humble]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: humble-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-contracts:
+    name: Static tutorial contracts (no ROS)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Validate source, XML, links, and plugin contracts
+        run: python3 scripts/validate_humble.py
+      - name: Run validator regression tests
+        run: python3 -m unittest discover -s tests -p 'test_validate_humble.py' -v
+      - name: Build Korean documentation strictly
+        run: |
+          python3 -m pip install --disable-pip-version-check -r requirements-docs.txt
+          mkdocs build --strict
+
+  humble-build:
+    name: Humble build, Xacro, and SDF
+    needs: static-contracts
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    container:
+      image: osrf/ros:humble-desktop-full-jammy
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and model validation tools
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            python3-colcon-common-extensions \
+            python3-rosdep \
+            liburdfdom-tools
+      - name: Resolve Humble dependencies
+        run: |
+          set -euo pipefail
+          source /opt/ros/humble/setup.bash
+          if [[ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]]; then
+            rosdep init
+          fi
+          rosdep update --rosdistro humble
+          rosdep install \
+            --from-paths ros2_ws/src \
+            --ignore-src \
+            --rosdistro humble \
+            -r -y
+      - name: Build tutorial workspace
+        working-directory: ros2_ws
+        run: |
+          set -euo pipefail
+          source /opt/ros/humble/setup.bash
+          colcon build \
+            --symlink-install \
+            --event-handlers console_direct+
+      - name: Expand Xacro and validate URDF and SDF
+        run: |
+          set -euo pipefail
+          source /opt/ros/humble/setup.bash
+          source ros2_ws/install/setup.bash
+          python3 scripts/validate_humble.py --require-ros-tools
+      - name: Import every launch description
+        run: |
+          set -euo pipefail
+          source /opt/ros/humble/setup.bash
+          source ros2_ws/install/setup.bash
+          for launch_path in ros2_ws/src/gazebo_tutorial_bringup/launch/*.launch.py; do
+            launch_file="$(basename "$launch_path")"
+            ros2 launch gazebo_tutorial_bringup "$launch_file" --show-args >/dev/null
+          done
+      - name: Run package tests
+        working-directory: ros2_ws
+        run: |
+          set -euo pipefail
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          colcon test \
+            --return-code-on-test-failure \
+            --event-handlers console_direct+
+          colcon test-result --verbose

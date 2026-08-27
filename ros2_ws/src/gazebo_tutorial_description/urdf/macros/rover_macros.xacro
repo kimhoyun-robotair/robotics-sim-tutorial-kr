@@ -1,0 +1,169 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- 4륜 로버 두 모델이 공유하는 치수와 관성 매크로 -->
+  <xacro:property name="rover_wheel_radius" value="0.16"/>
+  <xacro:property name="rover_wheel_width" value="0.08"/>
+  <xacro:property name="rover_track_width" value="0.62"/>
+  <xacro:property name="rover_wheelbase" value="0.56"/>
+  <xacro:property name="PI" value="3.141592653589793"/>
+
+  <material name="rover_blue">
+    <color rgba="0.08 0.32 0.72 1"/>
+  </material>
+  <material name="rover_dark">
+    <color rgba="0.04 0.05 0.07 1"/>
+  </material>
+  <material name="rover_metal">
+    <color rgba="0.55 0.58 0.62 1"/>
+  </material>
+
+  <xacro:macro name="box_inertial" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (y * y + z * z) / 12.0}"
+        ixy="0.0"
+        ixz="0.0"
+        iyy="${mass * (x * x + z * z) / 12.0}"
+        iyz="0.0"
+        izz="${mass * (x * x + y * y) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- 실린더 geometry의 기본 대칭축은 local z축이다. visual/collision을 x축으로
+       90도 돌리므로 관성도 대칭축이 rover의 y축을 향하도록 적는다. -->
+  <xacro:macro name="wheel_inertial" params="mass radius width">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (3.0 * radius * radius + width * width) / 12.0}"
+        ixy="0.0"
+        ixz="0.0"
+        iyy="${mass * radius * radius / 2.0}"
+        iyz="0.0"
+        izz="${mass * (3.0 * radius * radius + width * width) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="rover_base" params="body_mass:=12.0">
+    <!-- base_footprint는 바닥 투영점이며 질량/충돌이 없는 TF 전용 링크다. -->
+    <link name="base_footprint"/>
+
+    <link name="base_link">
+      <visual>
+        <geometry>
+          <box size="0.72 0.50 0.16"/>
+        </geometry>
+        <material name="rover_blue"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.72 0.50 0.16"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertial mass="${body_mass}" x="0.72" y="0.50" z="0.16"/>
+    </link>
+
+    <joint name="base_footprint_joint" type="fixed">
+      <parent link="base_footprint"/>
+      <child link="base_link"/>
+      <origin xyz="0 0 0.24" rpy="0 0 0"/>
+    </joint>
+
+    <!-- 진행 방향(+x)을 쉽게 알아볼 수 있는 전방 표식 -->
+    <link name="front_marker_link">
+      <visual>
+        <geometry>
+          <box size="0.08 0.30 0.05"/>
+        </geometry>
+        <material name="rover_metal"/>
+      </visual>
+      <xacro:box_inertial mass="0.05" x="0.08" y="0.30" z="0.05"/>
+    </link>
+    <joint name="front_marker_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="front_marker_link"/>
+      <origin xyz="0.32 0 0.105" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rover_wheel_link" params="name">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="${PI / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${rover_wheel_radius}" length="${rover_wheel_width}"/>
+        </geometry>
+        <material name="rover_dark"/>
+      </visual>
+      <!-- Ackermann 플러그인은 wheel joint child의 첫 collision에서 반지름과
+           바퀴 중심을 읽는다. 따라서 wheel link에는 collision을 정확히 하나 둔다. -->
+      <collision>
+        <origin xyz="0 0 0" rpy="${PI / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${rover_wheel_radius}" length="${rover_wheel_width}"/>
+        </geometry>
+      </collision>
+      <xacro:wheel_inertial mass="0.8" radius="${rover_wheel_radius}" width="${rover_wheel_width}"/>
+    </link>
+
+    <gazebo reference="${name}">
+      <material>Gazebo/Black</material>
+      <mu1>1.2</mu1>
+      <mu2>1.2</mu2>
+      <kp>1000000.0</kp>
+      <kd>10.0</kd>
+      <minDepth>0.001</minDepth>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="fixed_axle_wheel" params="prefix parent x y z">
+    <xacro:rover_wheel_link name="${prefix}_wheel_link"/>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${parent}"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="40.0" velocity="30.0"/>
+      <dynamics damping="0.05" friction="0.0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="steered_wheel" params="prefix parent x y z">
+    <!-- URDF에는 universal joint가 없으므로 조향과 구름을 두 joint로 분리한다. -->
+    <link name="${prefix}_steering_link">
+      <visual>
+        <geometry>
+          <box size="0.06 0.06 0.10"/>
+        </geometry>
+        <material name="rover_metal"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.06 0.06 0.10"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertial mass="0.15" x="0.06" y="0.06" z="0.10"/>
+    </link>
+    <joint name="${prefix}_steering_joint" type="revolute">
+      <parent link="${parent}"/>
+      <child link="${prefix}_steering_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <!-- max_steer=0.60 rad일 때 안쪽 바퀴 목표각은 약 0.833 rad이다. -->
+      <limit lower="-1.0" upper="1.0" effort="40.0" velocity="2.0"/>
+      <dynamics damping="0.3" friction="0.1"/>
+    </joint>
+
+    <xacro:rover_wheel_link name="${prefix}_wheel_link"/>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${prefix}_steering_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="40.0" velocity="30.0"/>
+      <dynamics damping="0.05" friction="0.0"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

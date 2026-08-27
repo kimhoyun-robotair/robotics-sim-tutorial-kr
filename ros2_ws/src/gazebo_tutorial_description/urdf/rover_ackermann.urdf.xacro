@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<robot name="rover_ackermann" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find gazebo_tutorial_description)/urdf/macros/rover_macros.xacro"/>
+
+  <xacro:rover_base body_mass="12.0"/>
+
+  <!-- 앞바퀴: vertical steering joint + passive rolling joint -->
+  <xacro:steered_wheel
+    prefix="front_left" parent="base_link"
+    x="${rover_wheelbase / 2.0}" y="${rover_track_width / 2.0}" z="-0.08"/>
+  <xacro:steered_wheel
+    prefix="front_right" parent="base_link"
+    x="${rover_wheelbase / 2.0}" y="-${rover_track_width / 2.0}" z="-0.08"/>
+
+  <!-- 뒷바퀴: 플러그인이 토크를 가하는 continuous drive joint -->
+  <xacro:fixed_axle_wheel
+    prefix="rear_left" parent="base_link"
+    x="-${rover_wheelbase / 2.0}" y="${rover_track_width / 2.0}" z="-0.08"/>
+  <xacro:fixed_axle_wheel
+    prefix="rear_right" parent="base_link"
+    x="-${rover_wheelbase / 2.0}" y="-${rover_track_width / 2.0}" z="-0.08"/>
+
+  <!-- 선택 항목인 steering_wheel_joint를 실제 link로 제공하면 플러그인 시작 시
+       "joint not found" 경고가 발생하지 않고 조향 핸들 상태도 함께 관찰할 수 있다. -->
+  <link name="steering_wheel_link">
+    <visual>
+      <origin rpy="${PI / 2.0} 0 0"/>
+      <geometry>
+        <cylinder radius="0.07" length="0.015"/>
+      </geometry>
+      <material name="rover_dark"/>
+    </visual>
+    <xacro:wheel_inertial mass="0.05" radius="0.07" width="0.015"/>
+  </link>
+  <joint name="steering_wheel_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="steering_wheel_link"/>
+    <origin xyz="0.06 0 0.16" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-7.85" upper="7.85" effort="1.0" velocity="10.0"/>
+  </joint>
+
+  <gazebo>
+    <plugin name="rover_ackermann_drive" filename="libgazebo_ros_ackermann_drive.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>cmd_vel:=cmd_vel</remapping>
+        <!-- 내장 Ackermann odom은 world pose이므로 wheel odom과 분리한다. -->
+        <remapping>odom:=ground_truth/odom</remapping>
+      </ros>
+
+      <!-- Humble gazebo_ros_ackermann_drive.cpp가 실제로 읽는 joint 태그 -->
+      <front_left_joint>front_left_wheel_joint</front_left_joint>
+      <front_right_joint>front_right_wheel_joint</front_right_joint>
+      <rear_left_joint>rear_left_wheel_joint</rear_left_joint>
+      <rear_right_joint>rear_right_wheel_joint</rear_right_joint>
+      <left_steering_joint>front_left_steering_joint</left_steering_joint>
+      <right_steering_joint>front_right_steering_joint</right_steering_joint>
+      <steering_wheel_joint>steering_wheel_joint</steering_wheel_joint>
+
+      <max_speed>2.0</max_speed>
+      <max_steer>0.60</max_steer>
+      <max_steering_angle>7.85</max_steering_angle>
+
+      <left_steering_pid_gain>80 0 2</left_steering_pid_gain>
+      <left_steering_i_range>0 0</left_steering_i_range>
+      <right_steering_pid_gain>80 0 2</right_steering_pid_gain>
+      <right_steering_i_range>0 0</right_steering_i_range>
+      <linear_velocity_pid_gain>20 0 0.5</linear_velocity_pid_gain>
+      <linear_velocity_i_range>0 0</linear_velocity_i_range>
+      <update_rate>100</update_rate>
+
+      <publish_odom>true</publish_odom>
+      <!-- 별도 rear-wheel/steering 적분 노드가 odom TF를 단독 소유한다. -->
+      <publish_odom_tf>false</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+      <publish_distance>true</publish_distance>
+      <odometry_frame>world</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <covariance_x>0.001</covariance_x>
+      <covariance_y>0.001</covariance_y>
+      <covariance_yaw>0.01</covariance_yaw>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="rover_ackermann_joint_states" filename="libgazebo_ros_joint_state_publisher.so">
+      <ros>
+        <namespace>/</namespace>
+      </ros>
+      <update_rate>50</update_rate>
+      <joint_name>front_left_steering_joint</joint_name>
+      <joint_name>front_right_steering_joint</joint_name>
+      <joint_name>front_left_wheel_joint</joint_name>
+      <joint_name>front_right_wheel_joint</joint_name>
+      <joint_name>rear_left_wheel_joint</joint_name>
+      <joint_name>rear_right_wheel_joint</joint_name>
+      <joint_name>steering_wheel_joint</joint_name>
+    </plugin>
+  </gazebo>
+</robot>

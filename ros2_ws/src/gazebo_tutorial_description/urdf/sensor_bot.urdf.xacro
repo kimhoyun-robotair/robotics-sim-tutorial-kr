@@ -1,0 +1,421 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="sensor_bot">
+  <!--
+    Gazebo Classic 11 + gazebo_ros_pkgs용 센서 실습 로봇.
+
+    sensor_profile:
+      all      - IMU + mono/stereo/RGBD/fisheye + 2D/3D LiDAR
+      cameras  - IMU + 모든 카메라
+      lidars   - IMU + 2D/3D LiDAR
+      minimal  - 구동계 + IMU
+  -->
+  <xacro:arg name="sensor_profile" default="all"/>
+  <xacro:property name="sensor_profile" value="$(arg sensor_profile)"/>
+  <xacro:property name="enable_cameras"
+    value="${sensor_profile == 'all' or sensor_profile == 'cameras'}"/>
+  <xacro:property name="enable_lidars"
+    value="${sensor_profile == 'all' or sensor_profile == 'lidars'}"/>
+
+  <xacro:property name="wheel_radius" value="0.10"/>
+  <xacro:property name="wheel_width" value="0.045"/>
+  <xacro:property name="wheel_separation" value="0.43"/>
+
+  <material name="body_blue">
+    <color rgba="0.10 0.35 0.75 1.0"/>
+  </material>
+  <material name="dark_gray">
+    <color rgba="0.08 0.08 0.08 1.0"/>
+  </material>
+  <material name="sensor_gray">
+    <color rgba="0.30 0.32 0.35 1.0"/>
+  </material>
+  <material name="sensor_green">
+    <color rgba="0.10 0.75 0.35 1.0"/>
+  </material>
+
+  <xacro:macro name="box_inertial" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (y * y + z * z) / 12.0}" ixy="0.0" ixz="0.0"
+        iyy="${mass * (x * x + z * z) / 12.0}" iyz="0.0"
+        izz="${mass * (x * x + y * y) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="sensor_box" params="name parent xyz size color:=sensor_gray">
+    <link name="${name}">
+      <visual>
+        <geometry>
+          <box size="${size}"/>
+        </geometry>
+        <material name="${color}"/>
+      </visual>
+      <xacro:box_inertial mass="0.05" x="0.04" y="0.04" z="0.04"/>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- ROS optical convention: +Z forward, +X right, +Y down. -->
+  <xacro:macro name="optical_frame" params="name parent">
+    <link name="${name}"/>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+      <origin xyz="0 0 0" rpy="${-pi / 2.0} 0 ${-pi / 2.0}"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- 바닥 투영 프레임. 차체 중심은 지면에서 0.18 m 위에 있다. -->
+  <link name="base_footprint"/>
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.55 0.38 0.16"/>
+      </geometry>
+      <material name="body_blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.55 0.38 0.16"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertial mass="7.0" x="0.55" y="0.38" z="0.16"/>
+  </link>
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.18" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:macro name="drive_wheel" params="side y">
+    <link name="${side}_wheel_link">
+      <visual>
+        <origin rpy="${pi / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="dark_gray"/>
+      </visual>
+      <collision>
+        <origin rpy="${pi / 2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.45"/>
+        <inertia
+          ixx="${0.45 * (3.0 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12.0}"
+          ixy="0" ixz="0"
+          iyy="${0.45 * wheel_radius * wheel_radius / 2.0}"
+          iyz="0"
+          izz="${0.45 * (3.0 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12.0}"/>
+      </inertial>
+    </link>
+    <joint name="${side}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${side}_wheel_link"/>
+      <origin xyz="0 ${y} -0.08" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="20.0" velocity="30.0"/>
+      <dynamics damping="0.05" friction="0.0"/>
+    </joint>
+    <gazebo reference="${side}_wheel_link">
+      <material>Gazebo/Black</material>
+      <mu1>1.2</mu1>
+      <mu2>1.2</mu2>
+      <kp>1000000</kp>
+      <kd>10</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:drive_wheel side="left" y="${wheel_separation / 2.0}"/>
+  <xacro:drive_wheel side="right" y="${-wheel_separation / 2.0}"/>
+
+  <link name="caster_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.20"/>
+      <inertia ixx="0.0002" ixy="0" ixz="0" iyy="0.0002" iyz="0" izz="0.0002"/>
+    </inertial>
+  </link>
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_link"/>
+    <origin xyz="-0.20 0 -0.13" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="caster_link">
+    <material>Gazebo/Black</material>
+    <mu1>0.01</mu1>
+    <mu2>0.01</mu2>
+  </gazebo>
+
+  <gazebo reference="base_link">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+
+  <!-- Wheel encoder odometry: odometry_source=0 means encoder integration. -->
+  <gazebo>
+    <plugin name="sensor_bot_diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>cmd_vel:=cmd_vel</remapping>
+        <remapping>odom:=odom</remapping>
+      </ros>
+      <update_rate>50</update_rate>
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>${wheel_separation}</wheel_separation>
+      <wheel_diameter>${2.0 * wheel_radius}</wheel_diameter>
+      <max_wheel_torque>20.0</max_wheel_torque>
+      <max_wheel_acceleration>3.0</max_wheel_acceleration>
+      <odometry_source>0</odometry_source>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <!-- Wheel TF는 joint_states를 받은 robot_state_publisher가 URDF parent 기준으로 발행한다. -->
+      <publish_wheel_tf>false</publish_wheel_tf>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <covariance_x>0.001</covariance_x>
+      <covariance_y>0.001</covariance_y>
+      <covariance_yaw>0.01</covariance_yaw>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="sensor_bot_joint_states" filename="libgazebo_ros_joint_state_publisher.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>joint_states:=joint_states</remapping>
+      </ros>
+      <update_rate>50</update_rate>
+      <joint_name>left_wheel_joint</joint_name>
+      <joint_name>right_wheel_joint</joint_name>
+    </plugin>
+  </gazebo>
+
+  <!-- IMU는 모든 프로필에서 사용한다. -->
+  <xacro:sensor_box name="imu_link" parent="base_link" xyz="0 0 0.10" size="0.05 0.04 0.02"/>
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <update_rate>100</update_rate>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0</mean><stddev>0.0002</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>0.0002</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>0.0002</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0</mean><stddev>0.017</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>0.017</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>0.017</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+      <plugin name="imu_ros" filename="libgazebo_ros_imu_sensor.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/out:=imu/data</remapping>
+        </ros>
+        <frame_name>imu_link</frame_name>
+        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <xacro:if value="${enable_cameras}">
+    <!-- 단안 카메라: L8 포맷이 sensor_msgs/Image의 mono8 encoding으로 변환된다. -->
+    <xacro:sensor_box name="camera_link" parent="base_link"
+      xyz="0.30 -0.12 0.07" size="0.06 0.05 0.05"/>
+    <xacro:optical_frame name="camera_optical_frame" parent="camera_link"/>
+    <gazebo reference="camera_link">
+      <sensor name="mono_camera_sensor" type="camera">
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <update_rate>15</update_rate>
+        <camera name="mono">
+          <horizontal_fov>1.0471975512</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+            <format>L8</format>
+          </image>
+          <clip><near>0.05</near><far>30.0</far></clip>
+          <noise><type>gaussian</type><mean>0</mean><stddev>0.003</stddev></noise>
+        </camera>
+        <plugin name="mono_camera_ros" filename="libgazebo_ros_camera.so">
+          <ros><namespace>/</namespace></ros>
+          <camera_name>camera</camera_name>
+          <frame_name>camera_optical_frame</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- 하나의 multicamera 센서가 같은 시각에 좌/우 영상을 렌더링한다. -->
+    <xacro:sensor_box name="stereo_camera_link" parent="base_link"
+      xyz="0.30 0 0.15" size="0.06 0.12 0.04"/>
+    <xacro:optical_frame name="stereo_camera_optical_frame" parent="stereo_camera_link"/>
+    <gazebo reference="stereo_camera_link">
+      <sensor name="stereo_camera_sensor" type="multicamera">
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <update_rate>10</update_rate>
+        <camera name="left">
+          <pose>0 0.04 0 0 0 0</pose>
+          <horizontal_fov>1.0471975512</horizontal_fov>
+          <image><width>320</width><height>240</height><format>R8G8B8</format></image>
+          <clip><near>0.05</near><far>30.0</far></clip>
+          <noise><type>gaussian</type><mean>0</mean><stddev>0.003</stddev></noise>
+        </camera>
+        <camera name="right">
+          <pose>0 -0.04 0 0 0 0</pose>
+          <horizontal_fov>1.0471975512</horizontal_fov>
+          <image><width>320</width><height>240</height><format>R8G8B8</format></image>
+          <clip><near>0.05</near><far>30.0</far></clip>
+          <noise><type>gaussian</type><mean>0</mean><stddev>0.003</stddev></noise>
+        </camera>
+        <plugin name="stereo_camera_ros" filename="libgazebo_ros_camera.so">
+          <ros><namespace>/</namespace></ros>
+          <camera_name>stereo</camera_name>
+          <frame_name>stereo_camera_optical_frame</frame_name>
+          <hack_baseline>0.08</hack_baseline>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- depth 센서는 RGB, depth, CameraInfo, PointCloud2를 한 플러그인에서 발행한다. -->
+    <xacro:sensor_box name="rgbd_camera_link" parent="base_link"
+      xyz="0.30 0.12 0.07" size="0.06 0.07 0.05" color="sensor_green"/>
+    <xacro:optical_frame name="rgbd_camera_optical_frame" parent="rgbd_camera_link"/>
+    <gazebo reference="rgbd_camera_link">
+      <sensor name="rgbd_camera_sensor" type="depth">
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <update_rate>10</update_rate>
+        <camera name="rgbd">
+          <horizontal_fov>1.0471975512</horizontal_fov>
+          <image><width>320</width><height>240</height><format>R8G8B8</format></image>
+          <clip><near>0.10</near><far>12.0</far></clip>
+          <noise><type>gaussian</type><mean>0</mean><stddev>0.002</stddev></noise>
+        </camera>
+        <plugin name="rgbd_camera_ros" filename="libgazebo_ros_camera.so">
+          <ros><namespace>/</namespace></ros>
+          <camera_name>rgbd</camera_name>
+          <frame_name>rgbd_camera_optical_frame</frame_name>
+          <min_depth>0.10</min_depth>
+          <max_depth>12.0</max_depth>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- Gazebo 11 wide-angle camera의 equidistant 렌즈 모델. -->
+    <xacro:sensor_box name="fisheye_camera_link" parent="base_link"
+      xyz="0.06 -0.10 0.22" size="0.06 0.06 0.05" color="sensor_green"/>
+    <xacro:optical_frame name="fisheye_camera_optical_frame" parent="fisheye_camera_link"/>
+    <gazebo reference="fisheye_camera_link">
+      <sensor name="fisheye_camera_sensor" type="wideanglecamera">
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <update_rate>10</update_rate>
+        <camera name="fisheye">
+          <horizontal_fov>3.1415926535</horizontal_fov>
+          <image><width>320</width><height>240</height><format>R8G8B8</format></image>
+          <clip><near>0.05</near><far>30.0</far></clip>
+          <lens>
+            <type>equidistant</type>
+            <scale_to_hfov>true</scale_to_hfov>
+            <cutoff_angle>1.5707</cutoff_angle>
+            <env_texture_size>512</env_texture_size>
+          </lens>
+        </camera>
+        <plugin name="fisheye_camera_ros" filename="libgazebo_ros_camera.so">
+          <ros><namespace>/</namespace></ros>
+          <camera_name>fisheye</camera_name>
+          <frame_name>fisheye_camera_optical_frame</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:if>
+
+  <xacro:if value="${enable_lidars}">
+    <!-- 수평 한 줄만 스캔하므로 LaserScan으로 내보낸다. -->
+    <xacro:sensor_box name="lidar_2d_link" parent="base_link"
+      xyz="0.13 0 0.22" size="0.07 0.07 0.05"/>
+    <gazebo reference="lidar_2d_link">
+      <sensor name="lidar_2d_sensor" type="ray">
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <update_rate>15</update_rate>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>720</samples><resolution>1</resolution>
+              <min_angle>-${pi}</min_angle><max_angle>${pi}</max_angle>
+            </horizontal>
+          </scan>
+          <range><min>0.12</min><max>15.0</max><resolution>0.01</resolution></range>
+          <noise><type>gaussian</type><mean>0</mean><stddev>0.01</stddev></noise>
+        </ray>
+        <plugin name="lidar_2d_ros" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>/</namespace>
+            <remapping>~/out:=scan</remapping>
+          </ros>
+          <output_type>sensor_msgs/LaserScan</output_type>
+          <frame_name>lidar_2d_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- 수직 채널을 가진 ray 센서는 PointCloud2로 내보낸다. -->
+    <xacro:sensor_box name="lidar_3d_link" parent="base_link"
+      xyz="-0.12 0 0.22" size="0.09 0.09 0.07" color="sensor_green"/>
+    <gazebo reference="lidar_3d_link">
+      <sensor name="lidar_3d_sensor" type="ray">
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <update_rate>10</update_rate>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>360</samples><resolution>1</resolution>
+              <min_angle>-${pi}</min_angle><max_angle>${pi}</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>16</samples><resolution>1</resolution>
+              <min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle>
+            </vertical>
+          </scan>
+          <range><min>0.20</min><max>20.0</max><resolution>0.02</resolution></range>
+          <noise><type>gaussian</type><mean>0</mean><stddev>0.015</stddev></noise>
+        </ray>
+        <plugin name="lidar_3d_ros" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>/</namespace>
+            <remapping>~/out:=points</remapping>
+          </ros>
+          <output_type>sensor_msgs/PointCloud2</output_type>
+          <frame_name>lidar_3d_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:if>
+</robot>

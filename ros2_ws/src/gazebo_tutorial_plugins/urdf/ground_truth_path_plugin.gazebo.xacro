@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!-- Copyright 2026 gazebo-sim-tutorial-kr contributors (Apache-2.0) -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    사용 예:
+      <xacro:include filename="$(find gazebo_tutorial_plugins)/urdf/ground_truth_path_plugin.gazebo.xacro"/>
+      <xacro:ground_truth_path_plugin ros_namespace="/tutorial_bot"/>
+  -->
+  <xacro:macro
+    name="ground_truth_path_plugin"
+    params="ros_namespace:='/' topic:='ground_truth_path' frame:='world' update_rate:=10.0 max_points:=2000">
+    <gazebo>
+      <plugin name="ground_truth_path" filename="libground_truth_path_plugin.so">
+        <ros>
+          <namespace>${ros_namespace}</namespace>
+        </ros>
+        <update_rate>${update_rate}</update_rate>
+        <topic>${topic}</topic>
+        <frame>${frame}</frame>
+        <max_points>${max_points}</max_points>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+</robot>

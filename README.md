@@ -1,28 +1,111 @@
-# Gazebo Sim 튜토리얼 (한국어)
+# ROS 2 Humble × Gazebo Classic 11 튜토리얼 (한국어)
 
-Ubuntu 24.04 LTS, ROS 2 Jazzy, Gazebo Harmonic 환경에서 Gazebo Sim을 처음 실행하는 단계부터 ROS 2 연동, 시스템 플러그인과 자동화 테스트까지 학습하는 실행 중심 튜토리얼입니다.
+이 브랜치는 Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11을 기준으로 모바일 로봇 시뮬레이션을 처음부터 끝까지 실습하는 한국어 과정입니다. 단순히 모델을 화면에 띄우는 데서 멈추지 않고, 키보드 조종, wheel odometry, TF, RViz 궤적, 카메라·LiDAR·IMU, 그리고 C++ 커스텀 Gazebo 플러그인까지 하나의 워크스페이스에서 재현합니다.
 
-튜토리얼 전체는 하나의 공통 로봇 `tutorial_bot`을 점진적으로 발전시킵니다.
-
-현재 과정은 초급 12개, 중급 12개, 고급 7개 경로로 완성되어 있으며, nominal/fault 실행과 cleanup receipt를 함께 검증합니다.
-
-```text
-SDF World → tutorial_bot의 URDF/Xacro → 센서·DiffDrive → ROS 2 bridge
-→ TF·ros2_control·Nav2 → System Plugin·headless test·CI
-```
+> **브랜치 안내**
+> 이 내용은 `Humble` 브랜치 전용입니다. `main`은 Jazzy/Gazebo Harmonic 과정이며 이 브랜치의 명령과 섞어 사용하지 마세요.
 
 ## 지원 환경
 
-| 항목 | 본편 지원 환경 |
+| 항목 | 검증 기준 |
 | --- | --- |
-| 운영체제 | Ubuntu 24.04 LTS |
-| ROS 2 | Jazzy |
-| Gazebo | Harmonic |
-| 아키텍처 / GPU | amd64 / NVIDIA |
+| 운영체제 | Ubuntu 22.04 LTS (Jammy) |
+| ROS 2 | Humble Hawksbill |
+| 시뮬레이터 | Gazebo Classic 11 (`gazebo`, `gzserver`, `gzclient`) |
+| ROS 연동 | `gazebo_ros_pkgs` / `gazebo_plugins` |
+| 빌드 | `colcon`, CMake, Python 3 |
 
-다른 조합은 본편의 검증 대상이 아닙니다. 자세한 정책은 [호환성 문서](docs/02_getting-started/00_compatibility.md)를 확인하세요.
+Gazebo Classic은 2025년 1월에 공식 지원이 종료된 레거시 제품입니다. 기존 Humble 시스템을 학습·유지보수하기 위한 과정으로 사용하고, 신규 프로젝트라면 최신 ROS 2와 새 Gazebo 조합도 함께 검토하세요.
 
-## 문서 보기
+## 5분 시작
+
+```bash
+sudo apt update
+sudo apt install -y \
+  build-essential cmake git ripgrep \
+  liburdfdom-tools python3-venv \
+  ros-humble-desktop \
+  ros-humble-gazebo-ros-pkgs \
+  ros-humble-rviz-imu-plugin \
+  ros-humble-xacro \
+  ros-humble-teleop-twist-keyboard \
+  python3-colcon-common-extensions \
+  python3-rosdep
+
+if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
+  sudo rosdep init
+fi
+rosdep update --rosdistro humble
+
+cd ~
+git clone --branch Humble --single-branch \
+  https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr.git
+cd gazebo-sim-tutorial-kr/ros2_ws
+
+source /opt/ros/humble/setup.bash
+rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
+colcon build --symlink-install
+source install/setup.bash
+```
+
+첫 번째 로봇을 실행합니다.
+
+```bash
+ros2 launch gazebo_tutorial_bringup diffbot.launch.py
+```
+
+새 터미널에서 같은 환경을 source한 뒤 키보드 조종을 시작합니다.
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args --remap cmd_vel:=/cmd_vel
+```
+
+RViz의 `Path` 표시에는 `/wheel_odom_path`가, Gazebo 플러그인이 계산한 odometry에는 `/odom`이 사용됩니다.
+
+## 실습 바로가기
+
+| 실습 | 실행 명령 | 핵심 결과 |
+| --- | --- | --- |
+| 2륜 + caster | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` | DiffDrive, `/odom`, TF, RViz Path |
+| 4륜 skid/differential | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` | 네 바퀴 구동과 skid steering |
+| 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` | 조향 기구, Ackermann 궤적 |
+| 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` | IMU, 카메라, 2D/3D LiDAR |
+| 카메라만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` | mono, stereo, RGBD, fisheye |
+| LiDAR만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` | LaserScan, PointCloud2 |
+
+각 launch는 `gui:=false`, `rviz:=false`, `pause:=true`, `world:=...` 같은 인자를 지원합니다. 정확한 인자 목록은 다음 명령으로 확인할 수 있습니다.
+
+```bash
+ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
+```
+
+## 학습 순서
+
+1. [환경 구성](docs/01_setup.md)
+2. [URDF·Xacro·SDF 이해](docs/02_urdf_xacro_sdf.md)
+3. [2륜 로봇 실습](docs/03_diffbot.md)
+4. [4륜 rover 실습](docs/04_rover.md)
+5. [Gazebo 센서와 RViz](docs/05_sensors.md)
+6. [URDF 기반 TF와 wheel odom 궤적](docs/06_tf_rviz.md)
+7. [C++ 커스텀 Gazebo 플러그인](docs/07_custom_plugin.md)
+8. [문제 해결과 검증](docs/08_debugging.md)
+9. [다음 단계와 설계 원칙](docs/09_next_steps.md)
+10. [명령·토픽·프레임 참고표](docs/10_reference.md)
+
+## 저장소 구성
+
+```text
+ros2_ws/src/
+├── gazebo_tutorial_description/  # URDF/Xacro 로봇과 센서 모델
+├── gazebo_tutorial_bringup/      # Gazebo·spawn·RViz 통합 launch/world/config
+├── gazebo_tutorial_tools/        # Odom → Path, Ackermann wheel odom 노드
+└── gazebo_tutorial_plugins/      # Gazebo Classic C++ ModelPlugin
+```
+
+문서 사이트를 로컬에서 보려면 저장소 루트에서 다음을 실행합니다.
 
 ```bash
 python3 -m venv .venv
@@ -31,20 +114,6 @@ pip install -r requirements-docs.txt
 mkdocs serve
 ```
 
-브라우저에서 표시되는 주소를 열면 됩니다. 정적 빌드만 확인하려면 `mkdocs build --strict`를 실행합니다.
-
-## 저장소 구성
-
-- `docs/`: MkDocs 문서 원본
-- `docs/images/`: 문서에서 사용하는 미디어
-- `examples/gazebo/`: ROS 2 없이 실행하는 SDF 예제
-- `examples/ros2_ws/`: ROS 2와 Gazebo를 함께 사용하는 workspace
-- `scripts/`: 반복 검증 자동화
-
-전체 과정의 정적·실행 증거는 `scripts/run_course_matrix.py`와 `scripts/audit_course_evidence.py`로 검사합니다. 실행을 건너뛴 결과는 통과로 인정하지 않습니다.
-
-`ref/`는 로컬 참고용 외부 저장소 경로이며 Git에서 제외됩니다. 그 안의 파일은 수정하지 않습니다.
-
 ## 라이선스
 
-이 저장소는 [Apache License 2.0](LICENSE)를 따릅니다.
+코드와 문서는 [Apache License 2.0](LICENSE)을 따릅니다.
