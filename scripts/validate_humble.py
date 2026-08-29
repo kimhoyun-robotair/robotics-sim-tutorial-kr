@@ -45,7 +45,34 @@ CHAPTER_HINTS = {
     "07": ("plugin",),
     "08": ("troubleshoot", "debug", "tips"),
     "09": ("next",),
+    "10": ("reference",),
 }
+
+HUMBLE_TONE_DOCUMENTS = (
+    "README.md",
+    "docs/index.md",
+    "docs/01_setup.md",
+    "docs/02_urdf_xacro_sdf.md",
+    "docs/03_diffbot.md",
+    "docs/04_rover.md",
+    "docs/05_sensors.md",
+    "docs/06_tf_rviz.md",
+    "docs/07_custom_plugin.md",
+    "docs/08_debugging.md",
+    "docs/09_next_steps.md",
+    "docs/10_reference.md",
+    "ros2_ws/src/gazebo_tutorial_bringup/README.md",
+    "ros2_ws/src/gazebo_tutorial_description/README.md",
+    "ros2_ws/src/gazebo_tutorial_plugins/README.md",
+    "ros2_ws/src/gazebo_tutorial_tools/README.md",
+)
+
+# Formal-polite Korean endings are intentionally excluded from this tutorial.
+# ``니다`` needs an extra Hangul-final check: it is polite in 합니다/입니다,
+# but it is also part of plain forms such as 아니다.
+POLITE_ENDING = re.compile(
+    r"(?:습니다|니다|ㅂ니다|세요|십시오)(?=$|[\s.!?…,:;)\]}\"'”’])"
+)
 
 DRIVE_MODELS = {
     "diffbot.urdf.xacro": "diff",
@@ -489,11 +516,14 @@ def validate_drive_plugin(v: Validator, path: Path, root: ET.Element, drive_kind
         publish_odom_tf = (first_child_text(plugin, "publish_odom_tf") or "").lower()
         v.require(publish_odom_tf in {"false", "0"}, path, "Ackermann built-in plugin은 odom TF를 발행하면 안 됩니다")
         v.require(first_child_text(plugin, "odometry_frame") == "world", path, "Ackermann built-in odometry_frame은 world여야 합니다")
-        v.require(
-            first_child_text(plugin, "publish_steerangle") is None,
-            path,
-            "Humble Ackermann plugin은 publish_steerangle 태그나 /steerangle 토픽을 지원하지 않습니다",
-        )
+        # gazebo_ros_pkgs 3.9.0 supports this optional diagnostic output.
+        publish_steerangle = (first_child_text(plugin, "publish_steerangle") or "").lower()
+        if publish_steerangle:
+            v.require(
+                publish_steerangle in {"true", "1", "false", "0"},
+                path,
+                "Ackermann <publish_steerangle>은 boolean 값이어야 합니다",
+            )
         joint_tags = (
             "front_left_joint",
             "front_right_joint",
@@ -537,13 +567,36 @@ def validate_robot_contracts(v: Validator) -> None:
     sensor_root = v.parse_xml(sensor_path) if sensor_path.is_file() else None
     if sensor_root is not None:
         validate_drive_plugin(v, sensor_path, sensor_root, "diff")
-        validate_sensor_contract(v, sensor_path, sensor_root)
+        sensor_roots = [sensor_root]
+        include_nodes = [
+            node for node in sensor_root.iter()
+            if node.tag == XACRO_INCLUDE
+        ]
+        for include in include_nodes:
+            filename = include.get("filename", "")
+            marker = "/urdf/sensors/"
+            if marker not in filename:
+                continue
+            relative = filename.split(marker, 1)[1]
+            included_path = urdf_dir / "sensors" / relative
+            v.require(included_path.is_file(), sensor_path, f"sensor Xacro include 누락: {relative}")
+            if included_path.is_file():
+                included_root = v.parse_xml(included_path)
+                if included_root is not None:
+                    sensor_roots.append(included_root)
+        v.require(len(sensor_roots) > 1, sensor_path, "분리된 urdf/sensors/*.xacro include가 없습니다")
+        validate_sensor_contract(v, sensor_path, sensor_roots)
 
     validate_path_visualization_contract(v)
 
 
-def validate_sensor_contract(v: Validator, path: Path, root: ET.Element) -> None:
-    sensors = [node for node in root.iter() if local_name(node.tag) == "sensor"]
+def validate_sensor_contract(
+    v: Validator,
+    path: Path,
+    roots: Sequence[ET.Element],
+) -> None:
+    nodes = [node for root in roots for node in root.iter()]
+    sensors = [node for node in nodes if local_name(node.tag) == "sensor"]
     types = Counter(node.get("type", "") for node in sensors)
     for sensor_type in ("imu", "camera", "multicamera", "depth", "wideanglecamera"):
         v.require(types[sensor_type] >= 1, path, f"필수 sensor type 누락: {sensor_type}")
@@ -556,40 +609,153 @@ def validate_sensor_contract(v: Validator, path: Path, root: ET.Element) -> None
     }
     filenames = {
         node.get("filename", "")
-        for node in root.iter()
+        for node in nodes
         if local_name(node.tag) == "plugin"
     }
     for filename in required_plugins:
         v.require(filename in filenames, path, f"필수 sensor plugin 누락: {filename}")
 
+    image_noise_sensors = [
+        sensor for sensor in sensors
+        if sensor.get("type") in {"camera", "multicamera", "depth"}
+    ]
+    for sensor in image_noise_sensors:
+        noise_parameters = set(all_text(sensor, "stddev"))
+        v.require(
+            bool(noise_parameters)
+            and noise_parameters == {"${image_noise_stddev}"},
+            path,
+            f"{sensor.get('type')} <camera><noise>는 image_noise_stddev macro parameter를 사용해야 합니다",
+        )
+
+    fisheye_sensors = [
+        sensor for sensor in sensors
+        if sensor.get("type") == "wideanglecamera"
+    ]
+    v.require(len(fisheye_sensors) == 1, path, "fisheye wideanglecamera가 정확히 하나 필요합니다")
+    for sensor in fisheye_sensors:
+        fisheye_plugins = find_plugins(sensor, "libgazebo_ros_camera.so")
+        v.require(
+            len(fisheye_plugins) == 1,
+            path,
+            "fisheye wideanglecamera에 libgazebo_ros_camera.so가 필요합니다",
+        )
+        lens_types = [
+            first_child_text(lens, "type") or ""
+            for lens in sensor.iter()
+            if local_name(lens.tag) == "lens"
+        ]
+        v.require(
+            lens_types == ["${lens_type}"],
+            path,
+            "fisheye <lens><type>은 lens_type macro parameter를 사용해야 합니다",
+        )
+
     multicameras = [node for node in sensors if node.get("type") == "multicamera"]
     v.require(any(len(child_elements(node, "camera")) >= 2 for node in multicameras), path, "stereo multicamera에는 camera가 2개 이상 필요합니다")
     stereo_plugins = [
-        node for node in root.iter()
+        node
+        for sensor in multicameras
+        for node in sensor.iter()
         if local_name(node.tag) == "plugin"
-        and node.get("name") == "stereo_camera_ros"
+        and node.get("filename") == "libgazebo_ros_camera.so"
     ]
     v.require(len(stereo_plugins) == 1, path, "stereo camera ROS plugin이 정확히 하나 필요합니다")
-    if stereo_plugins:
+
+    stereo_cameras = [
+        camera
+        for sensor in multicameras
+        for camera in child_elements(sensor, "camera")
+    ]
+    cameras_by_name = {camera.get("name", ""): camera for camera in stereo_cameras}
+    v.require(set(cameras_by_name) == {"left", "right"}, path, "stereo camera 이름은 left/right여야 합니다")
+    left_pose = first_child_text(cameras_by_name.get("left", ET.Element("camera")), "pose") or ""
+    right_pose = first_child_text(cameras_by_name.get("right", ET.Element("camera")), "pose") or ""
+    v.require(
+        re.search(r"\$\{\s*baseline\s*/\s*2(?:\.0)?\s*\}", left_pose) is not None,
+        path,
+        "stereo left camera pose에 +baseline/2 물리 오프셋이 필요합니다",
+    )
+    v.require(
+        re.search(r"\$\{\s*-baseline\s*/\s*2(?:\.0)?\s*\}", right_pose) is not None,
+        path,
+        "stereo right camera pose에 -baseline/2 물리 오프셋이 필요합니다",
+    )
+
+    main_root = roots[0]
+    stereo_calls = [
+        node for node in main_root.iter()
+        if local_name(node.tag) == "gazebo_stereo_camera"
+    ]
+    v.require(bool(stereo_calls), path, "sensor_bot에 gazebo_stereo_camera macro 호출이 없습니다")
+    for call in stereo_calls:
         try:
-            stereo_baseline = float(
-                first_child_text(stereo_plugins[0], "hack_baseline") or "0"
-            )
+            configured_baseline = float(call.get("baseline", "0"))
         except ValueError:
-            stereo_baseline = 0.0
-        v.require(stereo_baseline > 0.0, path, "stereo CameraInfo에 양수 hack_baseline이 필요합니다")
+            configured_baseline = 0.0
+        v.require(
+            configured_baseline > 0.0,
+            path,
+            "gazebo_stereo_camera 호출에는 양수 baseline이 필요합니다",
+        )
+        camera_name = call.get("camera_name", "").strip("/")
+        v.require(camera_name == "stereo", path, "stereo macro camera_name은 stereo여야 합니다")
+        rviz_path = v.root / "ros2_ws" / "src" / "gazebo_tutorial_bringup" / "rviz" / "sensors.rviz"
+        rviz_text = v.read_text(rviz_path) if rviz_path.is_file() else ""
+        for side in ("left", "right"):
+            topic = f"/{camera_name}/{side}/image_raw"
+            v.require(topic in rviz_text, rviz_path, f"stereo RViz topic 누락: {topic}")
+
+    fisheye_calls = [
+        node for node in main_root.iter()
+        if local_name(node.tag) == "gazebo_fisheye_camera"
+    ]
+    v.require(bool(fisheye_calls), path, "sensor_bot에 gazebo_fisheye_camera macro 호출이 없습니다")
+    for call in fisheye_calls:
+        v.require(
+            call.get("lens_type") == "equidistant",
+            path,
+            "fisheye macro lens_type은 equidistant여야 합니다",
+        )
 
     ray_outputs = {
         first_child_text(plugin, "output_type")
+        for root in roots
         for plugin in find_plugins(root, "libgazebo_ros_ray_sensor.so")
     }
     v.require("sensor_msgs/LaserScan" in ray_outputs, path, "2D LiDAR LaserScan output_type이 없습니다")
     v.require("sensor_msgs/PointCloud2" in ray_outputs, path, "3D LiDAR PointCloud2 output_type이 없습니다")
-    remappings = set(all_text(root, "remapping"))
-    for topic in ("imu/data", "scan", "points"):
-        v.require(any(value.split(":=", 1)[-1].strip("/") == topic for value in remappings), path, f"sensor topic remapping 누락: {topic}")
+    remappings = {
+        value
+        for root in roots
+        for value in all_text(root, "remapping")
+    }
+    generic_topic_remap = any(
+        value.split(":=", 1)[-1].strip() == "${topic}"
+        for value in remappings
+    )
+    topic_macros = {
+        "imu/data": "gazebo_imu_sensor",
+        "scan": "gazebo_lidar_2d",
+        "points": "gazebo_lidar_3d",
+    }
+    for topic, macro_name in topic_macros.items():
+        concrete_remap = any(
+            value.split(":=", 1)[-1].strip("/") == topic
+            for value in remappings
+        )
+        matching_calls = [
+            node for node in main_root.iter()
+            if local_name(node.tag) == macro_name
+            and node.get("topic", "").strip("/") == topic
+        ]
+        v.require(
+            concrete_remap or (generic_topic_remap and bool(matching_calls)),
+            path,
+            f"{macro_name} 호출의 sensor topic remapping 누락: {topic}",
+        )
 
-    args = [node.get("name") for node in root.iter() if node.tag == f"{{{XACRO_NS}}}arg"]
+    args = [node.get("name") for node in nodes if node.tag == f"{{{XACRO_NS}}}arg"]
     v.require("sensor_profile" in args, path, "고비용 센서를 선택할 sensor_profile Xacro arg가 없습니다")
 
 
@@ -703,10 +869,10 @@ def select_humble_chapters(v: Validator) -> list[Path]:
     return selected
 
 
-def without_markdown_code(text: str) -> str:
-    lines: list[str] = []
+def markdown_prose_lines(text: str) -> Iterable[tuple[int, str]]:
+    """Yield line-numbered Markdown prose with fenced/inline code removed."""
     fence: Optional[str] = None
-    for line in text.splitlines():
+    for line_number, line in enumerate(text.splitlines(), start=1):
         stripped = line.lstrip()
         marker = stripped[:3]
         if marker in {"```", "~~~"}:
@@ -716,8 +882,29 @@ def without_markdown_code(text: str) -> str:
                 fence = None
             continue
         if fence is None:
-            lines.append(re.sub(r"`[^`]*`", "", line))
-    return "\n".join(lines)
+            yield line_number, re.sub(r"`[^`]*`", "", line)
+
+
+def without_markdown_code(text: str) -> str:
+    return "\n".join(line for _, line in markdown_prose_lines(text))
+
+
+def polite_tone_violations(text: str) -> Iterable[tuple[int, str]]:
+    """Yield formal-polite endings found in Markdown prose."""
+    for line_number, prose in markdown_prose_lines(text):
+        for match in POLITE_ENDING.finditer(prose):
+            ending = match.group(0)
+            if ending == "니다":
+                if match.start() == 0:
+                    continue
+                preceding = prose[match.start() - 1]
+                codepoint = ord(preceding) - 0xAC00
+                # A ``-ㅂ니다`` form is encoded as a preceding Hangul syllable
+                # whose final-consonant (jongseong) index is bieup (17).
+                if not (0 <= codepoint <= 0xD7A3 - 0xAC00 and codepoint % 28 == 17):
+                    continue
+                ending = preceding + ending
+            yield line_number, ending
 
 
 def local_markdown_targets(text: str) -> Iterable[str]:
@@ -770,6 +957,21 @@ def validate_docs(v: Validator) -> None:
             if resolved is None:
                 continue
             v.require(markdown_target_exists(resolved), path, f"깨진 local 문서 링크: {target}")
+
+    # The user-facing Humble course uses the plain declarative ``~하다`` style.
+    # Keep code examples out of this check because command output and copied API
+    # identifiers are not tutorial narration.
+    for relative in HUMBLE_TONE_DOCUMENTS:
+        path = v.root / relative
+        v.require(path.is_file(), path.parent, f"문체 검사 대상 문서 누락: {path.name}")
+        if not path.is_file():
+            continue
+        for line_number, ending in polite_tone_violations(v.read_text(path)):
+            v.require(
+                False,
+                f"{v.display_path(path)}:{line_number}",
+                f"~하다체 문서에 격식 존댓말 어미가 남아 있습니다: {ending}",
+            )
 
     mkdocs = v.root / "mkdocs.yml"
     v.require(mkdocs.is_file(), v.root, "mkdocs.yml이 없습니다")

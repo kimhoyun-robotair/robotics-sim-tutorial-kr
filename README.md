@@ -1,9 +1,9 @@
 # ROS 2 Humble × Gazebo Classic 11 튜토리얼 (한국어)
 
-이 브랜치는 Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11을 기준으로 모바일 로봇 시뮬레이션을 처음부터 끝까지 실습하는 한국어 과정입니다. 단순히 모델을 화면에 띄우는 데서 멈추지 않고, 키보드 조종, wheel odometry, TF, RViz 궤적, 카메라·LiDAR·IMU, 그리고 C++ 커스텀 Gazebo 플러그인까지 하나의 워크스페이스에서 재현합니다.
+이 브랜치는 Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11을 기준으로 모바일 로봇 시뮬레이션을 처음부터 끝까지 실습하는 한국어 과정이다. 단순히 모델을 화면에 띄우는 데서 멈추지 않고, 키보드 조종, wheel odometry, TF, RViz 궤적, 카메라·LiDAR·IMU, 그리고 C++ 커스텀 Gazebo 플러그인까지 하나의 워크스페이스에서 재현한다.
 
 > **브랜치 안내**
-> 이 내용은 `Humble` 브랜치 전용입니다. `main`은 Jazzy/Gazebo Harmonic 과정이며 이 브랜치의 명령과 섞어 사용하지 마세요.
+> 이 내용은 `Humble` 브랜치 전용이다. `main`은 Jazzy/Gazebo Harmonic 과정이므로 이 브랜치의 명령과 섞어 사용하지 않는다.
 
 ## 지원 환경
 
@@ -15,7 +15,7 @@
 | ROS 연동 | `gazebo_ros_pkgs` / `gazebo_plugins` |
 | 빌드 | `colcon`, CMake, Python 3 |
 
-Gazebo Classic은 2025년 1월에 공식 지원이 종료된 레거시 제품입니다. 기존 Humble 시스템을 학습·유지보수하기 위한 과정으로 사용하고, 신규 프로젝트라면 최신 ROS 2와 새 Gazebo 조합도 함께 검토하세요.
+Gazebo Classic은 2025년 1월에 공식 지원이 종료된 레거시 제품이다. 이 과정은 기존 Humble 시스템을 학습·유지보수하는 데 사용한다. 신규 프로젝트라면 최신 ROS 2와 새 Gazebo 조합도 함께 검토한다.
 
 ## 5분 시작
 
@@ -48,13 +48,13 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-첫 번째 로봇을 실행합니다.
+첫 번째 로봇을 실행한다.
 
 ```bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py
 ```
 
-새 터미널에서 같은 환경을 source한 뒤 키보드 조종을 시작합니다.
+새 터미널에서 같은 환경을 source한 뒤 키보드 조종을 시작한다.
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -63,7 +63,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
 
-RViz의 `Path` 표시에는 `/wheel_odom_path`가, Gazebo 플러그인이 계산한 odometry에는 `/odom`이 사용됩니다.
+RViz의 `Path` 표시에는 `/wheel_odom_path`를 사용하고, Gazebo 플러그인이 계산한 odometry에는 `/odom`을 사용한다.
 
 ## 실습 바로가기
 
@@ -76,7 +76,7 @@ RViz의 `Path` 표시에는 `/wheel_odom_path`가, Gazebo 플러그인이 계산
 | 카메라만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` | mono, stereo, RGBD, fisheye |
 | LiDAR만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` | LaserScan, PointCloud2 |
 
-각 launch는 `gui:=false`, `rviz:=false`, `pause:=true`, `world:=...` 같은 인자를 지원합니다. 정확한 인자 목록은 다음 명령으로 확인할 수 있습니다.
+각 launch는 `gui:=false`, `rviz:=false`, `pause:=true`, `world:=...` 같은 인자를 지원한다. 정확한 인자 목록은 다음 명령으로 확인한다.
 
 ```bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
@@ -105,7 +105,7 @@ ros2_ws/src/
 └── gazebo_tutorial_plugins/      # Gazebo Classic C++ ModelPlugin
 ```
 
-문서 사이트를 로컬에서 보려면 저장소 루트에서 다음을 실행합니다.
+문서 사이트를 로컬에서 보려면 저장소 루트에서 다음을 실행한다.
 
 ```bash
 python3 -m venv .venv
@@ -116,4 +116,4 @@ mkdocs serve
 
 ## 라이선스
 
-코드와 문서는 [Apache License 2.0](LICENSE)을 따릅니다.
+코드와 문서는 [Apache License 2.0](LICENSE)을 따른다.

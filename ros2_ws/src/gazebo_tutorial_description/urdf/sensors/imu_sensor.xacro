@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!-- Copyright 2026 gazebo-sim-tutorial-kr contributors (Apache-2.0) -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro
+    name="gazebo_imu_sensor"
+    params="prefix parent xyz rpy:='0 0 0' ros_namespace:='/' topic:='imu/data' update_rate:=100.0 angular_stddev:=0.0002 linear_stddev:=0.017 visualize:=false">
+    <xacro:sensor_mount_box
+      link_name="${prefix}_link" parent="${parent}" xyz="${xyz}" rpy="${rpy}"
+      size_x="0.05" size_y="0.04" size_z="0.02" color="sensor_gray"/>
+
+    <gazebo reference="${prefix}_link">
+      <sensor name="${prefix}_sensor" type="imu">
+        <always_on>true</always_on>
+        <visualize>${visualize}</visualize>
+        <update_rate>${update_rate}</update_rate>
+        <imu>
+          <angular_velocity>
+            <x><noise type="gaussian"><mean>0</mean><stddev>${angular_stddev}</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0</mean><stddev>${angular_stddev}</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0</mean><stddev>${angular_stddev}</stddev></noise></z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x><noise type="gaussian"><mean>0</mean><stddev>${linear_stddev}</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0</mean><stddev>${linear_stddev}</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0</mean><stddev>${linear_stddev}</stddev></noise></z>
+          </linear_acceleration>
+        </imu>
+        <plugin name="${prefix}_ros" filename="libgazebo_ros_imu_sensor.so">
+          <ros>
+            <namespace>${ros_namespace}</namespace>
+            <remapping>~/out:=${topic}</remapping>
+          </ros>
+          <frame_name>${prefix}_link</frame_name>
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

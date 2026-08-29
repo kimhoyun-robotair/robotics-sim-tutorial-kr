@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<!-- Copyright 2026 gazebo-sim-tutorial-kr contributors (Apache-2.0) -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro
+    name="gazebo_stereo_camera"
+    params="prefix parent xyz rpy:='0 0 0' ros_namespace:='/' camera_name:='stereo' update_rate:=10.0 width:=320 height:=240 horizontal_fov:=1.0471975512 near:=0.05 far:=30.0 baseline:=0.08 image_noise_stddev:=0.003 visualize:=false">
+    <xacro:sensor_mount_box
+      link_name="${prefix}_link" parent="${parent}" xyz="${xyz}" rpy="${rpy}"
+      size_x="0.06" size_y="0.12" size_z="0.04" color="sensor_gray"/>
+    <xacro:sensor_optical_frame frame_name="${prefix}_optical_frame" parent="${prefix}_link"/>
+
+    <gazebo reference="${prefix}_link">
+      <sensor name="${prefix}_sensor" type="multicamera">
+        <always_on>true</always_on>
+        <visualize>${visualize}</visualize>
+        <update_rate>${update_rate}</update_rate>
+        <camera name="left">
+          <pose>0 ${baseline / 2.0} 0 0 0 0</pose>
+          <horizontal_fov>${horizontal_fov}</horizontal_fov>
+          <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
+          <clip><near>${near}</near><far>${far}</far></clip>
+          <noise><type>gaussian</type><mean>0</mean><stddev>${image_noise_stddev}</stddev></noise>
+        </camera>
+        <camera name="right">
+          <pose>0 ${-baseline / 2.0} 0 0 0 0</pose>
+          <horizontal_fov>${horizontal_fov}</horizontal_fov>
+          <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
+          <clip><near>${near}</near><far>${far}</far></clip>
+          <noise><type>gaussian</type><mean>0</mean><stddev>${image_noise_stddev}</stddev></noise>
+        </camera>
+        <plugin name="${prefix}_ros" filename="libgazebo_ros_camera.so">
+          <ros><namespace>${ros_namespace}</namespace></ros>
+          <camera_name>${camera_name}</camera_name>
+          <frame_name>${prefix}_optical_frame</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

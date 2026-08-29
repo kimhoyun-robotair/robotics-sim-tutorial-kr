@@ -11,7 +11,7 @@
 > 이 코드는 **Ubuntu 22.04 + ROS 2 Humble + Gazebo Classic 11** 전용이다.
 > Gazebo Classic은 2025년 1월 지원이 종료되었다. 기존 Humble 시스템을 학습하고
 > 유지보수하기 위한 예제로 사용하고, 새 장기 프로젝트라면 최신 Gazebo의 System
-> Plugin과 `ros_gz`로 옮기는 계획도 함께 세우자.
+> Plugin과 `ros_gz`로 옮기는 계획도 함께 세워야 한다.
 
 ## 7.1 무엇을 만들 것인가
 
@@ -40,7 +40,7 @@ gazebo_tutorial_plugins/
     └── ground_truth_path_plugin.gazebo.xacro
 ```
 
-플러그인의 출력은 제어용 오도메트리가 아니다. 두 경로의 역할을 먼저 구분하자.
+플러그인 출력은 제어용 오도메트리로 사용하지 않는다. 두 경로의 역할을 먼저 구분해야 한다.
 
 | 데이터 | 계산 근거 | 일반적인 용도 |
 |---|---|---|
@@ -83,6 +83,105 @@ URDF의 `<plugin>` 아래에 다음 SDF 파라미터를 넣을 수 있다.
 | `frame` | `world` | `Path.header.frame_id`, 빈 문자열 금지 |
 | `max_points` | `2000` | 최근에 보관할 pose 수, 양의 정수 |
 
+### 기본값과 유효성 규칙
+
+표의 값은 문서에만 적어 둔 값이 아니라
+`include/gazebo_tutorial_plugins/path_recorder_config.hpp`의 실제 기본값이다. 같은 구조체가
+값의 범위도 검사하므로 URDF와 C++ 사이의 설정 계약을 한 곳에서 관리한다.
+
+```cpp
+struct PathRecorderConfig
+{
+  double update_rate{10.0};
+  std::string topic{"ground_truth_path"};
+  std::string frame{"world"};
+  std::size_t max_points{2000U};
+
+  [[nodiscard]] bool IsValid() const noexcept
+  {
+    return std::isfinite(update_rate) && update_rate > 0.0 &&
+           !topic.empty() && !frame.empty() && max_points > 0U;
+  }
+
+  [[nodiscard]] std::chrono::nanoseconds PublishPeriod() const noexcept
+  {
+    using Nanoseconds = std::chrono::nanoseconds;
+    using Rep = Nanoseconds::rep;
+    constexpr long double kNanosecondsPerSecond = 1'000'000'000.0L;
+
+    const long double count = kNanosecondsPerSecond /
+      static_cast<long double>(update_rate);
+    if (count >= static_cast<long double>(std::numeric_limits<Rep>::max())) {
+      return Nanoseconds::max();
+    }
+    if (count <= 1.0L) {
+      return Nanoseconds{1};
+    }
+    return Nanoseconds{static_cast<Rep>(count)};
+  }
+};
+```
+
+`PublishPeriod()`는 Hz를 nanosecond 주기로 변환하고 극단적으로 큰 주파수도 최소 1 ns로
+제한한다. 이 주기를 `SimulationRateGate`에 전달해 physics step 수가 아닌 simulation
+time을 기준으로 발행한다.
+
+### SDF 파라미터 파싱
+
+Gazebo는 URDF의 `<gazebo><plugin>...</plugin></gazebo>` 블록을 spawn 과정에서 SDF로
+변환한다. 따라서 `ModelPlugin::Load()`의 두 번째 인자는 `sdf::ElementPtr`이다. 실제
+`ReadConfig()`는 요소가 있을 때만 덮어쓰고, 생략한 값에는 구조체 기본값을 유지한다.
+
+```cpp
+static gazebo_tutorial_plugins::PathRecorderConfig ReadConfig(
+  const sdf::ElementPtr & sdf)
+{
+  gazebo_tutorial_plugins::PathRecorderConfig config;
+
+  if (sdf->HasElement("update_rate")) {
+    config.update_rate = sdf->Get<double>("update_rate");
+  }
+  if (sdf->HasElement("topic")) {
+    config.topic = sdf->Get<std::string>("topic");
+  }
+  if (sdf->HasElement("frame")) {
+    config.frame = sdf->Get<std::string>("frame");
+  }
+  if (sdf->HasElement("max_points")) {
+    const int max_points = sdf->Get<int>("max_points");
+    config.max_points = max_points > 0 ? static_cast<std::size_t>(max_points) : 0U;
+  }
+
+  return config;
+}
+```
+
+`sdf->Get<T>()`의 템플릿 타입은 XML 텍스트를 변환할 C++ 타입이다. `max_points`를 먼저
+부호 있는 정수로 읽는 이유는 `-1`을 큰 `std::size_t`로 바꾸지 않고 잘못된 값으로
+거부하기 위해서이다. `Load()`는 실제로 다음 순서로 파싱과 유효성 검사를 수행한다.
+
+```cpp
+gazebo_tutorial_plugins::PathRecorderConfig config;
+try {
+  config = ReadConfig(sdf);
+} catch (const std::exception & error) {
+  gzerr << "[GroundTruthPathPlugin] SDF 파라미터 읽기에 실패한다: "
+        << error.what() << "\n";
+  return;
+}
+if (!config.IsValid()) {
+  gzerr << "[GroundTruthPathPlugin] 잘못된 설정이다: update_rate="
+        << config.update_rate << ", topic='" << config.topic
+        << "', frame='" << config.frame << "', max_points="
+        << config.max_points << ". 플러그인을 시작하지 않는다.\n";
+  return;
+}
+```
+
+변환 예외나 범위 오류가 발생하면 `gzerr`를 남긴 뒤 플러그인 초기화를 중단한다. 모델
+자체는 spawn되지만 `/ground_truth_path`는 생기지 않으므로 Gazebo server 로그를 함께
+확인해야 한다.
+
 `frame`은 좌표 변환 기능이 아니라 메시지에 붙이는 좌표계 이름이다. 코드는
 `WorldPose()`를 그대로 넣으므로 기본값 `world`가 정확하다. 실제 변환 없이
 `frame`만 `odom`이나 `map`으로 바꾸면 숫자는 그대로인데 이름만 달라진 잘못된
@@ -95,10 +194,31 @@ URDF의 `<plugin>` 아래에 다음 SDF 파라미터를 넣을 수 있다.
 
 ## 7.4 구현 읽기
 
+### ModelPlugin 수명 주기
+
+Gazebo Classic이 호출하는 순서를 먼저 알면 각 코드가 필요한 이유를 이해하기 쉽다.
+
+| 단계 | 호출 시점 | 이 플러그인의 작업 |
+|---|---|---|
+| 생성자 | shared library에서 인스턴스를 만들 때 | callback과 분리해 둘 상태 객체를 생성한다 |
+| `Load(model, sdf)` | URDF/SDF 모델을 world에 삽입할 때 한 번 | 설정 파싱, ROS node·publisher 생성, update event 연결을 수행한다 |
+| `OnUpdate(state, info)` | 물리 엔진의 `WorldUpdateBegin`마다 반복 | simulation time rate gate를 통과한 world pose를 Path에 추가한다 |
+| 소멸자 | 모델 제거 또는 `gzserver` 종료 시 | callback을 비활성화하고 event·ROS·Gazebo 자원을 해제한다 |
+
+`Load()`가 성공하기 전에는 update callback을 연결하지 않는다. 반대로 종료할 때는 먼저
+`active=false`로 바꾸고 event 연결을 끊은 뒤 상태를 해제한다. 이 순서가 로딩 실패와
+종료 중 callback 경합을 모두 막는다.
+
 ### ModelPlugin 등록
 
 `src/ground_truth_path_plugin.cpp`의 클래스는 `gazebo::ModelPlugin`을 상속하고
-마지막에 다음 매크로로 등록된다.
+마지막에 다음 매크로로 등록한다.
+
+```cpp
+class GroundTruthPathPlugin final : public ModelPlugin
+```
+
+공유 라이브러리 끝에서는 실제 등록 매크로를 호출한다.
 
 ```cpp
 GZ_REGISTER_MODEL_PLUGIN(GroundTruthPathPlugin)
@@ -107,16 +227,23 @@ GZ_REGISTER_MODEL_PLUGIN(GroundTruthPathPlugin)
 이 매크로가 Gazebo의 플러그인 팩터리 심볼을 공유 라이브러리에 만든다. 클래스만
 작성하고 등록 매크로를 빼면 라이브러리는 발견되더라도 인스턴스를 만들 수 없다.
 
+실제 소스는 생성자, 소멸자, `Load()`, state와 event connection 멤버를 이 클래스에
+구현한다.
+
 ### ROS 2 노드와 publisher 생성
 
 `Load()`는 모델이 삽입될 때 한 번 호출된다. 직접 `rclcpp::init()`을 호출하거나
-별도 spin thread를 만드는 대신 다음 API를 사용한다.
+별도 spin thread를 만드는 대신 실제 소스에서 다음 API를 사용한다.
 
 ```cpp
 auto ros_node = gazebo_ros::Node::Get(sdf);
+if (!ros_node) {
+  gzerr << "[GroundTruthPathPlugin] gazebo_ros::Node 생성에 실패한다. "
+        << "같은 namespace에 중복된 plugin name이 있는지 확인해야 한다.\n";
+  return;
+}
 auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
-auto publisher =
-  ros_node->create_publisher<nav_msgs::msg::Path>(config.topic, qos);
+auto publisher = ros_node->create_publisher<nav_msgs::msg::Path>(config.topic, qos);
 ```
 
 `gazebo_ros::Node::Get()`은 `<ros>`의 namespace와 remapping을 적용하고 노드를
@@ -132,10 +259,10 @@ publisher는 `reliable + transient_local`이다. 따라서 RViz를 늦게 켜도
 `Load()`의 마지막 단계에서 world update event를 연결한다.
 
 ```cpp
-update_connection_ = gazebo::event::Events::ConnectWorldUpdateBegin(
-  [weak_state](const gazebo::common::UpdateInfo & info) {
-    if (const auto state = weak_state.lock()) {
-      GroundTruthPathPlugin::OnUpdate(*state, info);
+update_connection_ = event::Events::ConnectWorldUpdateBegin(
+  [weak_state](const common::UpdateInfo & info) {
+    if (const auto locked_state = weak_state.lock()) {
+      GroundTruthPathPlugin::OnUpdate(*locked_state, info);
     }
   });
 ```
@@ -151,6 +278,34 @@ wall clock이나 `std::chrono::steady_clock`이 아니라
 
 각 `PoseStamped`와 Path 헤더에는 같은 Gazebo simulation stamp가 들어간다. `/clock`
 callback의 도착 순서에 의존하는 `ros_node_->now()`를 사용하지 않은 이유다.
+
+world pose를 ROS 메시지로 옮겨 발행하는 실제 핵심 코드는 다음과 같다.
+
+```cpp
+const auto world_pose = state.model->WorldPose();
+geometry_msgs::msg::PoseStamped pose;
+pose.header.frame_id = state.config.frame;
+pose.header.stamp.sec = static_cast<std::int32_t>(info.simTime.sec);
+pose.header.stamp.nanosec = static_cast<std::uint32_t>(info.simTime.nsec);
+pose.pose.position.x = world_pose.Pos().X();
+pose.pose.position.y = world_pose.Pos().Y();
+pose.pose.position.z = world_pose.Pos().Z();
+pose.pose.orientation.x = world_pose.Rot().X();
+pose.pose.orientation.y = world_pose.Rot().Y();
+pose.pose.orientation.z = world_pose.Rot().Z();
+pose.pose.orientation.w = world_pose.Rot().W();
+
+if (state.path.poses.size() >= state.config.max_points) {
+  state.path.poses.erase(state.path.poses.begin());
+}
+state.path.poses.emplace_back(std::move(pose));
+state.path.header.frame_id = state.config.frame;
+state.path.header.stamp = state.path.poses.back().header.stamp;
+state.path_publisher->publish(state.path);
+```
+
+위치와 quaternion은 Gazebo `ignition::math::Pose3d`의 각 성분을 ROS 메시지에 그대로
+대응한다.
 
 ### 유한한 메모리 사용
 
@@ -180,6 +335,26 @@ ROS executor와 Gazebo physics thread가 같은 객체를 동시에 만질 수 �
 3. destructor는 atomic `active`를 `false`로 만들고 `event::ConnectionPtr`을 해제한다.
 4. mutex를 얻은 뒤 publisher, ROS node, model 포인터를 해제한다.
 
+실제 소멸자는 이 순서를 다음과 같이 구현한다.
+
+```cpp
+~GroundTruthPathPlugin() override
+{
+  auto state = std::move(state_);
+  if (!state) {
+    return;
+  }
+
+  state->active.store(false, std::memory_order_release);
+  update_connection_.reset();
+
+  std::lock_guard<std::mutex> lock(state->mutex);
+  state->path_publisher.reset();
+  state->ros_node.reset();
+  state->model.reset();
+}
+```
+
 `OnUpdate()`도 mutex 바깥과 안에서 `active`를 두 번 확인한다. destructor가 먼저
 lock을 얻거나 event 시스템에 callback 호출이 남아 있어도 플러그인 객체의 해제된
 메모리를 참조하지 않는다. 이 패턴은 나중에 ROS subscriber나 service를 추가할 때
@@ -187,6 +362,63 @@ lock을 얻거나 event 시스템에 callback 호출이 남아 있어도 플러�
 보호된 변수나 queue에 넣고, 다음 physics update에서 적용하는 구조가 안전하다.
 
 ## 7.5 빌드와 단위 테스트
+
+### CMake에서 ModelPlugin 공유 라이브러리 만들기
+
+Gazebo가 `dlopen()`할 대상은 실행 파일이 아니라 `SHARED` library이다. 저장소의
+`CMakeLists.txt`는 실제로 다음 target을 만들고 필요한 ROS 2·Gazebo 의존성을 연결한다.
+
+```cmake
+find_package(ament_cmake REQUIRED)
+find_package(gazebo_dev REQUIRED)
+find_package(gazebo_ros REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+
+link_directories(${gazebo_dev_LIBRARY_DIRS})
+
+add_library(ground_truth_path_plugin SHARED
+  src/ground_truth_path_plugin.cpp
+)
+target_include_directories(ground_truth_path_plugin
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(ground_truth_path_plugin
+  gazebo_dev
+  gazebo_ros
+  geometry_msgs
+  nav_msgs
+  rclcpp
+)
+```
+
+target 이름이 `ground_truth_path_plugin`이므로 Linux 빌드 결과 이름은
+`libground_truth_path_plugin.so`가 된다. 이는 뒤에서 URDF `<plugin filename>`에 적는
+이름과 정확히 일치해야 한다. 설치 규칙은 library와 Xacro 매크로를 각각 `lib`와 package
+share 경로에 배치한다.
+
+```cmake
+install(
+  TARGETS ground_truth_path_plugin
+  EXPORT export_ground_truth_path_plugin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+install(
+  DIRECTORY urdf/
+  DESTINATION share/${PROJECT_NAME}/urdf
+)
+
+ament_export_targets(export_ground_truth_path_plugin HAS_LIBRARY_TARGET)
+ament_export_dependencies(gazebo_dev gazebo_ros geometry_msgs nav_msgs rclcpp)
+ament_package()
+```
+
+### 의존성 설치와 빌드
 
 의존 패키지를 설치한다. 이미 설치했다면 `apt`는 변경 없이 끝난다.
 
@@ -210,6 +442,8 @@ colcon build --symlink-install \
 source install/setup.bash
 ```
 
+### 빌드 결과 확인
+
 빌드 결과는 다음 명령으로 확인한다.
 
 ```bash
@@ -217,6 +451,8 @@ ros2 pkg prefix gazebo_tutorial_plugins
 find "$(ros2 pkg prefix gazebo_tutorial_plugins)/lib" \
   -maxdepth 1 -name 'libground_truth_path_plugin.so' -print
 ```
+
+### 단위 테스트
 
 단위 테스트는 Gazebo GUI를 띄우지 않고 설정과 시간 gate의 순수 C++ 부분을 검사한다.
 
@@ -276,7 +512,33 @@ remapping도 사용할 수 있다.
 
 ### 제공된 Xacro 매크로 사용하기
 
-설명 패키지의 Xacro에서 매크로 파일을 include하고 한 번 호출할 수도 있다.
+여러 로봇에 같은 `<plugin>` 블록을 복사하면 topic이나 기본값을 바꿀 때 파일마다 수정해야
+한다. 저장소는 plugin 패키지의
+`urdf/ground_truth_path_plugin.gazebo.xacro`에 다음 매크로를 별도 파일로 둔다.
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro
+    name="ground_truth_path_plugin"
+    params="ros_namespace:='/' topic:='ground_truth_path' frame:='world' update_rate:=10.0 max_points:=2000">
+    <gazebo>
+      <plugin name="ground_truth_path" filename="libground_truth_path_plugin.so">
+        <ros>
+          <namespace>${ros_namespace}</namespace>
+        </ros>
+        <update_rate>${update_rate}</update_rate>
+        <topic>${topic}</topic>
+        <frame>${frame}</frame>
+        <max_points>${max_points}</max_points>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+</robot>
+```
+
+설명 패키지의 main robot Xacro는 구현을 복사하지 않고 파일을 include한 뒤 필요한 값만
+인자로 전달한다. `diffbot.urdf.xacro`도 같은 include와 호출 패턴을 사용한다.
 
 ```xml
 <xacro:include
@@ -288,6 +550,21 @@ remapping도 사용할 수 있다.
   frame="world"
   update_rate="10.0"
   max_points="2000"/>
+```
+
+include는 매크로 정의를 읽을 뿐 플러그인을 자동으로 추가하지 않는다. 반드시
+`<xacro:ground_truth_path_plugin .../>`을 `<robot>` 안에서 호출해야 최종 URDF에
+`<gazebo><plugin>`이 생성된다. 로봇마다 namespace와 topic만 다르게 전달하면 같은 매크로를
+재사용할 수 있다.
+
+### 생성된 URDF 확인
+
+빌드 전에 Xacro 출력에서 plugin block과 최종 파라미터를 확인한다.
+
+```bash
+xacro ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro \
+  > /tmp/diffbot.urdf
+rg -n -A12 'libground_truth_path_plugin.so' /tmp/diffbot.urdf
 ```
 
 URDF를 수정한 뒤에는 설명 패키지와 플러그인 패키지를 다시 빌드하고 overlay를 다시
@@ -320,7 +597,30 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py
 
 ## 7.7 토픽 확인과 RViz 시각화
 
-Gazebo가 실행되고 로봇이 spawn된 상태에서 최종 토픽 이름을 확인한다.
+### 실행
+
+첫 번째 터미널에서 플러그인을 포함한 diffbot과 기본 RViz 설정을 함께 실행한다.
+
+```bash
+cd ~/gazebo-sim-tutorial-kr/ros2_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch gazebo_tutorial_bringup diffbot.launch.py rviz:=true
+```
+
+두 번째 터미널에서 keyboard teleop을 실행한다. 직진, 회전, 제자리 회전 명령을 주면
+ground-truth Path와 wheel-odometry Path가 함께 늘어나야 한다.
+
+```bash
+source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args --remap cmd_vel:=/cmd_vel
+```
+
+### 토픽 계약 확인
+
+Gazebo가 실행되고 로봇이 spawn된 상태에서 최종 토픽 이름과 타입, QoS, 주파수를
+확인한다.
 
 ```bash
 source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
@@ -333,8 +633,10 @@ ros2 topic hz /ground_truth_path
 예상 타입은 `nav_msgs/msg/Path`이며, 시뮬레이션을 재생한 동안 측정 주파수는 약
 10 Hz다. pause 상태에서는 `ros2 topic hz`가 새 메시지를 받지 못하는 것이 정상이다.
 
-keyboard teleop으로 로봇을 직진, 회전, 제자리 회전시키며 경로가 늘어나는지 본다.
-그 다음 RViz를 연다.
+### RViz를 수동으로 구성하기
+
+기본 launch는 RViz를 자동으로 실행한다. 플러그인을 다른 launch에 붙여 RViz가 열리지
+않은 경우에는 다음 명령으로 별도 실행한다.
 
 ```bash
 rviz2 --ros-args -p use_sim_time:=true
@@ -395,21 +697,48 @@ ros2 run tf2_ros static_transform_publisher \
 
 spawn pose나 odom 초기점이 다르면 위 명령을 그대로 쓰면 안 된다. 실제 두 좌표계의
 변환을 계산해 넣거나 공통 좌표계로 pose를 변환하는 노드를 사용한다. 프레임 이름만
-같게 바꾸는 것은 변환이 아니다.
+같게 바꿔서는 좌표 변환이 되지 않는다.
 
 미끄러운 바닥에서 급회전하거나 wheel radius를 일부러 조금 틀리게 설정하면 두
 Path가 점점 벌어진다. 이 차이가 wheel odom의 누적 오차다.
 
 ## 7.8 공유 라이브러리와 `GAZEBO_PLUGIN_PATH`
 
-URDF의 `filename="libground_truth_path_plugin.so"`는 실행 파일 경로가 아니다.
+URDF의 `filename="libground_truth_path_plugin.so"`는 실행 파일 경로를 뜻하지 않는다.
 Gazebo는 `GAZEBO_PLUGIN_PATH`에 등록된 디렉터리를 차례로 검색해 이 파일을 찾는다.
 
 이 패키지의 `package.xml`에는 다음 export가 들어 있다.
 
 ```xml
-<gazebo_ros gazebo_plugin_path="${prefix}/lib" />
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>gazebo_tutorial_plugins</name>
+  <version>0.1.0</version>
+  <description>ROS 2 Humble과 Gazebo Classic 11을 위한 교육용 ModelPlugin 모음</description>
+  <maintainer email="kimhoyun.robotair@gmail.com">kimhoyun-robotair</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>gazebo_dev</depend>
+  <depend>gazebo_ros</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclcpp</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <gazebo_ros gazebo_plugin_path="${prefix}/lib" />
+  </export>
+</package>
 ```
+
+`<depend>`는 build와 실행 의존성을 rosdep과 ament index에 알린다.
+`gazebo_plugin_path` export는 설치 prefix의 `lib`를 환경 hook에 등록한다. 이 두 설정은
+역할이 다르므로 CMake link가 성공했다는 이유로 package export를 생략하면 안 된다.
 
 정상적으로 빌드한 뒤 `install/setup.bash`를 source하면 `gazebo_ros`가 패키지의
 `lib` 경로를 Gazebo 검색 경로에 추가한다. 현재 상태는 다음처럼 확인한다.
@@ -528,7 +857,7 @@ ros2 topic echo --once /ground_truth_path
 
 ## 7.11 확장 과제
 
-기본 플러그인이 안정적으로 동작한 뒤 다음 순서로 기능을 확장해 보자.
+기본 플러그인이 안정적으로 동작한 뒤 다음 순서로 기능을 확장한다.
 
 1. 누적 이동 거리와 ground-truth 속도를 별도 토픽으로 발행한다.
 2. ROS 2 service로 Path를 지우되, service callback에서는 요청 flag만 세우고 실제

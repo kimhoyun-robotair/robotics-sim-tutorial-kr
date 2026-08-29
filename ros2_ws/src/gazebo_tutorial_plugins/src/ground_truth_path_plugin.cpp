@@ -88,7 +88,7 @@ public:
   void Load(physics::ModelPtr model, sdf::ElementPtr sdf) override
   {
     if (!model || !sdf) {
-      gzerr << "[GroundTruthPathPlugin] model 또는 SDF 포인터가 비어 있습니다.\n";
+      gzerr << "[GroundTruthPathPlugin] model 또는 SDF 포인터가 비어 있다.\n";
       return;
     }
 
@@ -96,23 +96,23 @@ public:
     try {
       config = ReadConfig(sdf);
     } catch (const std::exception & error) {
-      gzerr << "[GroundTruthPathPlugin] SDF 파라미터를 읽지 못했습니다: "
+      gzerr << "[GroundTruthPathPlugin] SDF 파라미터 읽기에 실패한다: "
             << error.what() << "\n";
       return;
     }
     if (!config.IsValid()) {
-      gzerr << "[GroundTruthPathPlugin] 잘못된 설정입니다: update_rate="
+      gzerr << "[GroundTruthPathPlugin] 잘못된 설정이다: update_rate="
             << config.update_rate << ", topic='" << config.topic
             << "', frame='" << config.frame << "', max_points="
-            << config.max_points << ". 플러그인을 시작하지 않습니다.\n";
+            << config.max_points << ". 플러그인을 시작하지 않는다.\n";
       return;
     }
 
     try {
       auto ros_node = gazebo_ros::Node::Get(sdf);
       if (!ros_node) {
-        gzerr << "[GroundTruthPathPlugin] gazebo_ros::Node를 만들지 못했습니다. "
-              << "같은 namespace에 중복된 plugin name이 있는지 확인하세요.\n";
+        gzerr << "[GroundTruthPathPlugin] gazebo_ros::Node 생성에 실패한다. "
+              << "같은 namespace에 중복된 plugin name이 있는지 확인해야 한다.\n";
         return;
       }
       auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
@@ -142,7 +142,7 @@ public:
           }
         });
       if (!update_connection_) {
-        throw std::runtime_error("WorldUpdateBegin event 연결을 만들지 못했습니다.");
+        throw std::runtime_error("WorldUpdateBegin event 연결 생성에 실패한다.");
       }
 
       RCLCPP_INFO(
@@ -215,7 +215,7 @@ private:
       state.path.poses.clear();
       state.rate_gate.Reset();
       RCLCPP_INFO(
-        state.ros_node->get_logger(), "simulation time reset 감지: 경로를 초기화합니다.");
+        state.ros_node->get_logger(), "simulation time reset 감지: 경로를 초기화한다.");
     }
     state.previous_simulation_time = simulation_time;
 

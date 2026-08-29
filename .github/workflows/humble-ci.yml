@@ -55,8 +55,11 @@ jobs:
             liburdfdom-tools
       - name: Resolve Humble dependencies
         run: |
-          set -euo pipefail
+          # ROS 2 Humble setup scripts read variables before defining them.
+          # Enable nounset only after every environment overlay has been sourced.
+          set -eo pipefail
           source /opt/ros/humble/setup.bash
+          set -u
           if [[ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]]; then
             rosdep init
           fi
@@ -69,22 +72,25 @@ jobs:
       - name: Build tutorial workspace
         working-directory: ros2_ws
         run: |
-          set -euo pipefail
+          set -eo pipefail
           source /opt/ros/humble/setup.bash
+          set -u
           colcon build \
             --symlink-install \
             --event-handlers console_direct+
       - name: Expand Xacro and validate URDF and SDF
         run: |
-          set -euo pipefail
+          set -eo pipefail
           source /opt/ros/humble/setup.bash
           source ros2_ws/install/setup.bash
+          set -u
           python3 scripts/validate_humble.py --require-ros-tools
       - name: Import every launch description
         run: |
-          set -euo pipefail
+          set -eo pipefail
           source /opt/ros/humble/setup.bash
           source ros2_ws/install/setup.bash
+          set -u
           for launch_path in ros2_ws/src/gazebo_tutorial_bringup/launch/*.launch.py; do
             launch_file="$(basename "$launch_path")"
             ros2 launch gazebo_tutorial_bringup "$launch_file" --show-args >/dev/null
@@ -92,9 +98,10 @@ jobs:
       - name: Run package tests
         working-directory: ros2_ws
         run: |
-          set -euo pipefail
+          set -eo pipefail
           source /opt/ros/humble/setup.bash
           source install/setup.bash
+          set -u
           colcon test \
             --return-code-on-test-failure \
             --event-handlers console_direct+

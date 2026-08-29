@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!-- Copyright 2026 gazebo-sim-tutorial-kr contributors (Apache-2.0) -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro
+    name="gazebo_rgbd_camera"
+    params="prefix parent xyz rpy:='0 0 0' ros_namespace:='/' camera_name:='rgbd' update_rate:=10.0 width:=320 height:=240 horizontal_fov:=1.0471975512 min_depth:=0.10 max_depth:=12.0 image_noise_stddev:=0.002 visualize:=false">
+    <xacro:sensor_mount_box
+      link_name="${prefix}_link" parent="${parent}" xyz="${xyz}" rpy="${rpy}"
+      size_x="0.06" size_y="0.07" size_z="0.05" color="sensor_green"/>
+    <xacro:sensor_optical_frame frame_name="${prefix}_optical_frame" parent="${prefix}_link"/>
+
+    <gazebo reference="${prefix}_link">
+      <sensor name="${prefix}_sensor" type="depth">
+        <always_on>true</always_on>
+        <visualize>${visualize}</visualize>
+        <update_rate>${update_rate}</update_rate>
+        <camera name="${camera_name}">
+          <horizontal_fov>${horizontal_fov}</horizontal_fov>
+          <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
+          <clip><near>${min_depth}</near><far>${max_depth}</far></clip>
+          <!-- 이 noise는 [0,1] 범위의 RGB color channel에 적용되며 depth 거리 잡음이 아니다. -->
+          <noise><type>gaussian</type><mean>0</mean><stddev>${image_noise_stddev}</stddev></noise>
+        </camera>
+        <plugin name="${prefix}_ros" filename="libgazebo_ros_camera.so">
+          <ros><namespace>${ros_namespace}</namespace></ros>
+          <camera_name>${camera_name}</camera_name>
+          <frame_name>${prefix}_optical_frame</frame_name>
+          <min_depth>${min_depth}</min_depth>
+          <max_depth>${max_depth}</max_depth>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!-- Copyright 2026 gazebo-sim-tutorial-kr contributors (Apache-2.0) -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro
+    name="gazebo_lidar_3d"
+    params="prefix parent xyz rpy:='0 0 0' ros_namespace:='/' topic:='points' update_rate:=10.0 horizontal_samples:=360 vertical_samples:=16 min_horizontal_angle:=-3.141592653589793 max_horizontal_angle:=3.141592653589793 min_vertical_angle:=-0.261799 max_vertical_angle:=0.261799 min_range:=0.20 max_range:=20.0 range_resolution:=0.02 noise_stddev:=0.015 visualize:=false">
+    <xacro:sensor_mount_box
+      link_name="${prefix}_link" parent="${parent}" xyz="${xyz}" rpy="${rpy}"
+      size_x="0.09" size_y="0.09" size_z="0.07" color="sensor_green"/>
+
+    <gazebo reference="${prefix}_link">
+      <sensor name="${prefix}_sensor" type="ray">
+        <always_on>true</always_on>
+        <visualize>${visualize}</visualize>
+        <update_rate>${update_rate}</update_rate>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>${horizontal_samples}</samples>
+              <resolution>1</resolution>
+              <min_angle>${min_horizontal_angle}</min_angle>
+              <max_angle>${max_horizontal_angle}</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>${vertical_samples}</samples>
+              <resolution>1</resolution>
+              <min_angle>${min_vertical_angle}</min_angle>
+              <max_angle>${max_vertical_angle}</max_angle>
+            </vertical>
+          </scan>
+          <range><min>${min_range}</min><max>${max_range}</max><resolution>${range_resolution}</resolution></range>
+          <noise><type>gaussian</type><mean>0</mean><stddev>${noise_stddev}</stddev></noise>
+        </ray>
+        <plugin name="${prefix}_ros" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>${ros_namespace}</namespace>
+            <remapping>~/out:=${topic}</remapping>
+          </ros>
+          <output_type>sensor_msgs/PointCloud2</output_type>
+          <frame_name>${prefix}_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

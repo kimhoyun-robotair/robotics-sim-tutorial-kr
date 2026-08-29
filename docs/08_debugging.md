@@ -245,6 +245,44 @@ ldd install/gazebo_tutorial_plugins/lib/libground_truth_path_plugin.so
 ABI가 맞지 않는 ROS/Gazebo 배포판에서 만든 `.so`를 복사해 쓰지 말고 Humble + Gazebo 11
 환경에서 다시 빌드한다.
 
+플러그인 파일을 찾았는데도 joint나 topic 설정이 의심되면 Xacro 원본을 추측하지 않고,
+실제로 전개된 URDF에서 plugin 블록을 확인한다.
+
+```bash
+xacro \
+  ~/gazebo-sim-tutorial-kr/ros2_ws/src/\
+gazebo_tutorial_description/urdf/diffbot.urdf.xacro \
+  > /tmp/diffbot.urdf
+
+rg -n -A35 -B3 \
+  'libgazebo_ros_diff_drive.so|<left_joint>|<right_joint>|<wheel_' \
+  /tmp/diffbot.urdf
+gz sdf -p /tmp/diffbot.urdf > /tmp/diffbot.sdf
+rg -n -A35 -B3 'libgazebo_ros_diff_drive.so' /tmp/diffbot.sdf
+```
+
+첫 번째 검색은 Xacro가 만든 ROS/Gazebo 확장 태그를 보여 주고, 두 번째 검색은 Gazebo가
+URDF를 SDF로 변환한 뒤 해석하는 plugin 설정을 보여 준다. 두 결과에서 joint 이름,
+wheel separation/diameter, remapping이 의도한 값인지 대조한다.
+
+### CI shell에서 ROS 환경을 source할 때
+
+Bash의 `nounset` 옵션(`set -u`)을 켠 상태에서 Humble의 setup script를 먼저 읽으면 setup
+내부가 아직 정의하지 않은 환경 변수를 조회하여 `unbound variable`로 끝날 수 있다.
+엄격한 CI shell에서는 ROS와 overlay를 모두 source한 뒤 `nounset`을 켠다.
+
+```bash
+set -eo pipefail
+source /opt/ros/humble/setup.bash
+source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+set -u
+
+ros2 pkg prefix gazebo_tutorial_description
+```
+
+`set -euo pipefail` 자체를 제거하는 것이 아니라, `-u`를 활성화하는 시점만 setup 뒤로
+옮기는 방식이다. 이 순서는 GitHub Actions와 로컬 CI script에 동일하게 적용한다.
+
 ## 10. GUI 없는 headless 검증
 
 CI나 원격 서버에서는 gzclient와 RViz를 끄고 gzserver만 실행한다.
