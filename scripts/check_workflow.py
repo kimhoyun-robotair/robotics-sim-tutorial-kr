@@ -69,6 +69,16 @@ def validate_pages(jobs: dict[str, Job]) -> list[str]:
         errors.append("Pages build runner changed")
     if not required_build.issubset(build_actions):
         errors.append("Pages build actions changed")
+    main_only_actions = {
+        "actions/configure-pages@v5",
+        "actions/upload-pages-artifact@v3",
+    }
+    for step in steps(build):
+        if (
+            step.get("uses") in main_only_actions
+            and step.get("if") != "github.ref == 'refs/heads/main'"
+        ):
+            errors.append("Pages setup and artifact upload must run only on main")
     if deploy.get("needs") != "build":
         errors.append("Pages deploy must depend only on build")
     if "actions/deploy-pages@v4" not in deploy_actions:

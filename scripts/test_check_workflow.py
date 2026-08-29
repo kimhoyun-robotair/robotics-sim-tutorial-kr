@@ -61,6 +61,27 @@ def test_checker_rejects_pages_dependency_regression(tmp_path: Path) -> None:
     assert result.returncode == 1
 
 
+def test_checker_rejects_pages_setup_on_jazzy(tmp_path: Path) -> None:
+    fixture_root = tmp_path / "repository"
+    workflow_dir = fixture_root / ".github/workflows"
+    workflow_dir.mkdir(parents=True)
+    workflow = yaml.load(WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    configure = next(
+        step
+        for step in workflow["jobs"]["build"]["steps"]
+        if step.get("uses") == "actions/configure-pages@v5"
+    )
+    configure.pop("if")
+    fixture = workflow_dir / "pages.yml"
+    fixture.write_text(yaml.safe_dump(workflow, sort_keys=False), encoding="utf-8")
+    copytree(ROOT / "scripts/ci", fixture_root / "scripts/ci")
+
+    result = run_checker(fixture)
+
+    assert result.returncode == 1
+    assert "must run only on main" in result.stderr
+
+
 def test_checker_rejects_parallel_selected_test_execution(tmp_path: Path) -> None:
     # Given: the real workflow helpers without the serialized CTest contract.
     fixture_root = tmp_path / "repository"
