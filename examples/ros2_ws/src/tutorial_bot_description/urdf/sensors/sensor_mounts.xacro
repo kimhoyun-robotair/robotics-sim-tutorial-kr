@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    센서의 물리적인 link / joint만 정의한다. 센서 모델은 lidar.xacro,
+    cameras.xacro, imu.xacro에 분리해 같은 mount를 여러 센서 구성에서 재사용한다.
+  -->
+  <xacro:macro name="sensor_box_inertia" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass * (y * y + z * z) / 12.0}"
+               ixy="0.0"
+               ixz="0.0"
+               iyy="${mass * (x * x + z * z) / 12.0}"
+               iyz="0.0"
+               izz="${mass * (x * x + y * y) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="tutorial_sensor_mounts">
+    <link name="lidar_link">
+      <xacro:sensor_box_inertia mass="0.05" x="0.08" y="0.08" z="0.03"/>
+      <visual>
+        <geometry><cylinder radius="0.04" length="0.03"/></geometry>
+        <material name="sensor_dark"><color rgba="0.12 0.12 0.12 1.0"/></material>
+      </visual>
+    </link>
+    <joint name="lidar_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="lidar_link"/>
+      <origin xyz="0.10 0 0.09" rpy="0 0 0"/>
+    </joint>
+
+    <link name="camera_link">
+      <xacro:sensor_box_inertia mass="0.05" x="0.04" y="0.08" z="0.05"/>
+      <visual>
+        <geometry><box size="0.04 0.08 0.05"/></geometry>
+        <material name="camera_black"><color rgba="0.04 0.04 0.04 1.0"/></material>
+      </visual>
+    </link>
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="0.24 0 0.02" rpy="0 0 0"/>
+    </joint>
+
+    <!-- REP 103 optical frame: +z forward, +x right, +y down. -->
+    <link name="camera_optical_frame"/>
+    <joint name="camera_optical_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child link="camera_optical_frame"/>
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+    </joint>
+
+    <link name="imu_link">
+      <xacro:sensor_box_inertia mass="0.02" x="0.03" y="0.03" z="0.02"/>
+    </link>
+    <joint name="imu_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="imu_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="fixed_camera_mount" params="name xyz">
+    <link name="${name}_link">
+      <xacro:sensor_box_inertia mass="0.03" x="0.035" y="0.05" z="0.04"/>
+      <visual>
+        <geometry><box size="0.035 0.05 0.04"/></geometry>
+        <material name="gallery_camera"><color rgba="0.15 0.15 0.18 1.0"/></material>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}_link"/>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+    </joint>
+    <link name="${name}_optical_frame"/>
+    <joint name="${name}_optical_joint" type="fixed">
+      <parent link="${name}_link"/>
+      <child link="${name}_optical_frame"/>
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="sensor_gallery_mounts">
+    <xacro:fixed_camera_mount name="mono_camera" xyz="0.24 0 0.09"/>
+    <xacro:fixed_camera_mount name="stereo_left" xyz="0.24 0.05 0.15"/>
+    <xacro:fixed_camera_mount name="stereo_right" xyz="0.24 -0.05 0.15"/>
+    <xacro:fixed_camera_mount name="fisheye_camera" xyz="0.16 0 0.20"/>
+
+    <link name="lidar_3d_link">
+      <xacro:sensor_box_inertia mass="0.08" x="0.10" y="0.10" z="0.06"/>
+      <visual>
+        <geometry><cylinder radius="0.05" length="0.06"/></geometry>
+        <material name="gallery_lidar"><color rgba="0.1 0.1 0.12 1.0"/></material>
+      </visual>
+    </link>
+    <joint name="lidar_3d_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="lidar_3d_link"/>
+      <origin xyz="-0.04 0 0.15" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

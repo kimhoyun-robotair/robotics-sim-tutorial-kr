@@ -8,7 +8,9 @@ install(DIRECTORY config launch rviz
   PATTERN "__pycache__" EXCLUDE
 )
 
-install(PROGRAMS scripts/activate_localization
+install(PROGRAMS
+  scripts/activate_localization
+  scripts/odom_to_path
   DESTINATION lib/${PROJECT_NAME}
 )
 

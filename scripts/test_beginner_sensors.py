@@ -11,18 +11,24 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 STAGE = ROOT / "examples/ros2_ws/src/tutorial_bot_description/urdf/stages/04-sensors-final.xacro"
+GALLERY = ROOT / "examples/ros2_ws/src/tutorial_bot_description/urdf/stages/05-sensor-gallery.xacro"
 EXPECTATIONS = ROOT / "examples/ros2_ws/src/tutorial_bot_gazebo/config/sensor_expectations.yaml"
+GALLERY_BRIDGE = ROOT / "examples/ros2_ws/src/tutorial_bot_bringup/config/bridge-sensor-gallery.yaml"
 
 
-def expanded_robot() -> ET.Element:
+def expanded(path: Path) -> ET.Element:
     result = subprocess.run(
-        ["xacro", str(STAGE)],
+        ["xacro", str(path)],
         cwd=ROOT,
         check=True,
         capture_output=True,
         text=True,
     )
     return ET.fromstring(result.stdout)
+
+
+def expanded_robot() -> ET.Element:
+    return expanded(STAGE)
 
 
 def sensor(root: ET.Element, name: str) -> ET.Element:
@@ -78,6 +84,39 @@ def test_installed_stage_and_expectations_describe_the_same_sensor_behavior() ->
     assert float(text(imu, "update_rate")) == expected["imu"]["expected_rate_hz"]
     imu_noise = [float(item.text or "nan") for item in imu.findall(".//stddev")]
     assert imu_noise == [expected["imu"]["noise_stddev"]] * 6
+
+
+def test_sensor_gallery_topics_frames_and_bridge_stay_aligned() -> None:
+    robot = expanded(GALLERY)
+    expected_topics = {
+        "lidar": "/tutorial_bot/lidar",
+        "lidar_3d": "/tutorial_bot/lidar_3d",
+        "camera": "/tutorial_bot/camera",
+        "mono_camera": "/tutorial_bot/mono/image",
+        "stereo_left": "/tutorial_bot/stereo/left/image",
+        "stereo_right": "/tutorial_bot/stereo/right/image",
+        "fisheye_camera": "/tutorial_bot/fisheye/image",
+        "imu": "/tutorial_bot/imu",
+    }
+
+    for name, expected_topic in expected_topics.items():
+        assert sensor(robot, name).findtext("topic") == expected_topic
+    assert sensor(robot, "lidar").findtext("pose") == "0 0 0 0 0 0"
+
+    mappings = yaml.safe_load(GALLERY_BRIDGE.read_text(encoding="utf-8"))
+    gz_to_ros = {
+        item.get("gz_topic_name", item.get("topic_name")): item.get(
+            "ros_topic_name", item.get("topic_name")
+        )
+        for item in mappings
+    }
+    assert gz_to_ros["/tutorial_bot/mono/camera_info"] == "/mono/camera_info"
+    assert gz_to_ros["/tutorial_bot/stereo/left/camera_info"] == "/stereo/left/camera_info"
+    assert gz_to_ros["/tutorial_bot/stereo/right/camera_info"] == "/stereo/right/camera_info"
+    assert gz_to_ros["/tutorial_bot/fisheye/camera_info"] == "/fisheye/camera_info"
+    assert gz_to_ros["/tutorial_bot/camera/depth_image"] == "/camera/depth/image"
+
+
 def test_beginner_sensor_routes_explain_the_parsed_runtime_contract() -> None:
     # Given: the four final beginner routes.
     requirements = {

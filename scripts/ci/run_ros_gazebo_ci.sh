@@ -76,7 +76,7 @@ set -u
 colcon --log-base /work/test-log test --build-base /work/build --install-base /work/install \
   --executor sequential --packages-select tutorial_bot_plugins tutorial_bot_tests \
   --event-handlers console_direct+ --ctest-args -R \
-  '^(advanced_contract|advanced_framework_cli|advanced_headless_integration|diagnostics_distance|diagnostics_enable_reset|diagnostics_enable_reset_concurrency|diagnostics_model_lifecycle|diagnostics_physics_cadence)$' \
+  '^(advanced_contract|advanced_framework_cli|advanced_headless_integration|rover_examples|diagnostics_distance|diagnostics_enable_reset|diagnostics_enable_reset_concurrency|diagnostics_model_lifecycle|diagnostics_physics_cadence)$' \
   > "$evidence/test.log" 2>&1
 colcon test-result --test-result-base /work/build --verbose > "$evidence/test-results.log" 2>&1
 

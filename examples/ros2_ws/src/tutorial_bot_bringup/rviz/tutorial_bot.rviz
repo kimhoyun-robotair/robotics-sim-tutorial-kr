@@ -21,28 +21,85 @@ Visualization Manager:
       Description Topic:
         Value: /robot_description
     - Class: rviz_default_plugins/LaserScan
-      Name: LaserScan
+      Name: 2D LiDAR
       Enabled: true
       Topic:
         Reliability Policy: Best Effort
         Value: /scan
+    - Class: rviz_default_plugins/Odometry
+      Name: Wheel Odometry
+      Enabled: true
+      Keep: 1000
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /odom
+    - Class: rviz_default_plugins/Path
+      Name: Wheel Odom Trajectory
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.03
+      Topic:
+        Reliability Policy: Reliable
+        Value: /wheel_odom_path
     - Class: rviz_default_plugins/PointCloud2
-      Name: PointCloud2
+      Name: RGB-D PointCloud2
       Enabled: true
       Topic:
         Reliability Policy: Best Effort
         Value: /camera/points
+    - Class: rviz_default_plugins/PointCloud2
+      Name: 3D LiDAR PointCloud2
+      Enabled: false
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /lidar_3d/points
+    - Class: rviz_default_plugins/Camera
+      Name: RGB Camera
+      Enabled: true
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /camera/image
+    - Class: rviz_default_plugins/Image
+      Name: Mono Camera
+      Enabled: false
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /mono/image
+    - Class: rviz_default_plugins/Image
+      Name: Stereo Left
+      Enabled: false
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /stereo/left/image
+    - Class: rviz_default_plugins/Image
+      Name: Stereo Right
+      Enabled: false
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /stereo/right/image
+    - Class: rviz_default_plugins/Image
+      Name: Fisheye Camera
+      Enabled: false
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /fisheye/image
+    - Class: rviz_imu_plugin/Imu
+      Name: IMU
+      Enabled: true
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /imu
     - Class: rviz_default_plugins/TF
       Name: TF
       Enabled: true
     - Class: rviz_default_plugins/Path
-      Name: Path
+      Name: Nav2 Plan
       Enabled: true
       Topic:
         Reliability Policy: Reliable
         Value: /plan
   Global Options:
-    Fixed Frame: map
+    Fixed Frame: odom
   Name: root
   Views:
     Current:

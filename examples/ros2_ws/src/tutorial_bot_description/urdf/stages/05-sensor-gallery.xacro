@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tutorial_bot_sensor_gallery">
+  <xacro:include filename="../macros/stage_components.xacro"/>
+  <xacro:include filename="../sensors/sensor_mounts.xacro"/>
+  <xacro:include filename="../sensors/lidar.xacro"/>
+  <xacro:include filename="../sensors/cameras.xacro"/>
+  <xacro:include filename="../sensors/imu.xacro"/>
+
+  <xacro:stage_base/>
+  <xacro:stage_wheels/>
+  <xacro:stage_diff_drive model_name="tutorial_bot_sensor_gallery"/>
+  <xacro:tutorial_sensor_mounts/>
+  <xacro:sensor_gallery_mounts/>
+
+  <xacro:gpu_lidar_2d reference="lidar_link" sensor_name="lidar"
+                       topic="/tutorial_bot/lidar" frame_id="lidar_link"/>
+  <xacro:gpu_lidar_3d reference="lidar_3d_link" sensor_name="lidar_3d"
+                       topic="/tutorial_bot/lidar_3d" frame_id="lidar_3d_link"/>
+  <xacro:imu_sensor reference="imu_link" sensor_name="imu"
+                    topic="/tutorial_bot/imu" frame_id="imu_link"/>
+  <xacro:mono_camera_sensor reference="mono_camera_link" sensor_name="mono_camera"
+                            topic="/tutorial_bot/mono" frame_id="mono_camera_optical_frame"/>
+  <xacro:stereo_camera_pair left_reference="stereo_left_link"
+                            right_reference="stereo_right_link"
+                            topic_prefix="/tutorial_bot/stereo"
+                            left_frame_id="stereo_left_optical_frame"
+                            right_frame_id="stereo_right_optical_frame"/>
+  <xacro:rgbd_camera_sensor reference="camera_link" sensor_name="camera"
+                             topic="/tutorial_bot/camera" frame_id="camera_optical_frame"/>
+  <xacro:fisheye_camera_sensor reference="fisheye_camera_link" sensor_name="fisheye_camera"
+                                topic="/tutorial_bot/fisheye" frame_id="fisheye_camera_optical_frame"/>
+
+</robot>

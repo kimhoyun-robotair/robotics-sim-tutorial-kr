@@ -10,6 +10,11 @@ if(BUILD_TESTING)
   ament_add_pytest_test(advanced_framework_cli test_advanced_framework_cli.py TIMEOUT 30)
   ament_add_pytest_test(advanced_headless_integration test_advanced_headless.py TIMEOUT 180)
   ament_add_pytest_test(run_tdd_phase test_run_tdd_phase.py TIMEOUT 30)
+  ament_add_pytest_test(
+    rover_examples
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../../scripts/test_rover_examples.py
+    TIMEOUT 30
+  )
 endif()
 
 ament_package()

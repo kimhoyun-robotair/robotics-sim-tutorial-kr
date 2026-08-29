@@ -125,10 +125,8 @@ process_groups+=("$!")
 setsid ros2 run ros_gz_bridge parameter_bridge --ros-args -p config_file:="$bridge" \
   > "$evidence_dir/bridge.log" 2>&1 &
 process_groups+=("$!")
-setsid ros2 run ros_gz_image image_bridge /tutorial_bot/camera/image \
-  /tutorial_bot/camera/depth/image --ros-args \
+setsid ros2 run ros_gz_image image_bridge /tutorial_bot/camera/image --ros-args \
   -r /tutorial_bot/camera/image:=/camera/image \
-  -r /tutorial_bot/camera/depth/image:=/camera/depth/image \
   > "$evidence_dir/image-bridge.log" 2>&1 &
 process_groups+=("$!")
 

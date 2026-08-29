@@ -1,5 +1,8 @@
-site_name: Gazebo Sim 튜토리얼 (한국어)
-site_description: Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic을 위한 실행 중심 튜토리얼
+site_name: ROS 2 Jazzy × Gazebo Harmonic 튜토리얼
+site_description: Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic을 위한 실행 중심 한국어 튜토리얼
+repo_url: https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr
+repo_name: kimhoyun-robotair/gazebo-sim-tutorial-kr
+edit_uri: edit/Jazzy/docs/
 
 theme:
   name: material
@@ -7,8 +10,11 @@ theme:
   features:
     - navigation.tabs
     - navigation.sections
+    - navigation.expand
     - navigation.top
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -29,6 +35,7 @@ markdown_extensions:
   - admonition
   - attr_list
   - md_in_html
+  - tables
   - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true

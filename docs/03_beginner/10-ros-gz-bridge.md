@@ -1,25 +1,25 @@
-# Gazebo와 <span class="course-nowrap">ROS 2</span> 연결
+# Gazebo와 ROS 2를 `ros_gz_bridge`로 연결하기
 
-> **난이도:** 초급  
-> **Gazebo:** Harmonic  
-> **ROS 2:** Jazzy  
+> **난이도:** 초급
+> **Gazebo:** Harmonic
+> **ROS 2:** Jazzy
 > **선행 학습:** Gazebo Fuel
 
 ## 학습 목표
 
-- ROS 2 DDS topic과 Gazebo Transport topic의 역할을 구분합니다.
-- YAML로 ROS → Gazebo와 Gazebo → ROS bridge를 설정합니다.
-- `/cmd_vel`, `/odom`, `/scan`, `/imu`, Camera, `/clock`의 실제 전달을 확인합니다.
+- Gazebo Transport와 ROS 2 DDS가 서로 다른 통신 계층임을 설명한다.
+- YAML에서 topic 이름, message type, 방향, QoS를 지정한다.
+- 명령은 ROS → Gazebo로, sensor·odom·TF·clock은 Gazebo → ROS로 연결한다.
+- image 전용 bridge와 일반 parameter bridge의 역할을 구분한다.
+- ROS topic을 RViz의 Image, Camera, LaserScan, PointCloud2, IMU, Odometry, Path display에 연결한다.
 
-## 배경 지식
+## 1. 같은 topic 이름만으로 연결되지는 않는다
 
-Gazebo는 내부 통신에 Gazebo Transport를 사용하고 ROS 2는 DDS를 사용합니다. 같은 이름의 topic이라도 두 통신 계층은 자동으로 연결되지 않습니다. `ros_gz_bridge`는 지정한 메시지 형식과 방향에 따라 두 계층 사이에서 메시지를 변환합니다.
-
-이 예제에서는 ROS 2의 `/cmd_vel`을 Gazebo의 `/model/tutorial_bot/cmd_vel`로 보내고, Gazebo의 odometry·LiDAR·IMU·clock을 ROS 2 topic으로 가져옵니다. Camera는 이미지 전용 도구인 `ros_gz_image`로 ROS 2 `sensor_msgs/msg/Image`를 발행합니다.
+Gazebo는 Gazebo Transport를 사용하고 ROS 2는 DDS를 사용한다. 두 graph에 `/scan`이라는 이름이 있어도 message type과 transport가 다르면 자동으로 데이터가 흐르지 않는다. `ros_gz_bridge`가 두 message를 변환해야 한다.
 
 <figure class="course-figure" markdown="span">
   ![Gazebo Transport 센서 토픽이 parameter bridge와 image bridge를 거쳐 ROS 2 토픽으로 변환되는 흐름](../assets/beginner/bridge-dataflow.svg)
-  <figcaption>그림 6. 일반 메시지는 <code>parameter_bridge</code>, 픽셀 데이터는 <code>image_bridge</code>를 거칩니다. <code>/cmd_vel</code>만 반대 방향으로 흐릅니다.</figcaption>
+  <figcaption>그림 6. 명령은 ROS에서 Gazebo로, 관측값은 Gazebo에서 ROS로 흐른다.</figcaption>
 </figure>
 
 <pre class="course-mermaid">
@@ -27,44 +27,24 @@ flowchart LR
   G[Gazebo Transport] --> P[parameter_bridge]
   G --> I[image_bridge]
   P --> R[ROS 2 sensor topics]
-  I --> C[ROS 2 image topic]
+  I --> C[ROS 2 image topics]
   R --> P --> G
 </pre>
 
-## 예제 파일
+## 2. bridge 항목을 다섯 칸으로 읽는다
 
-Bridge YAML은 실제 ament package에 있습니다.
+기본 설정은 `tutorial_bot_bringup/config/bridge.yaml`에 있다. 한 항목은 ROS topic, Gazebo topic, ROS type, Gazebo type, 방향을 정의한다.
 
-`examples/ros2_ws/src/tutorial_bot_bringup/config/bridge.yaml`
-
-IMU와 센서 System 설정은 기존 `tutorial_bot` Xacro와 world 원본에 누적됩니다.
-
-`examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro`
-
-`examples/gazebo/worlds/first-world.sdf`
-
-통합 headless 검증은 다음 스크립트가 담당합니다.
-
-`scripts/check_ros_gz_bridge.sh`
-
-## dependency preflight
-
-실행 전에 필요한 ROS package가 설치됐는지 확인합니다. checker도 같은 preflight를 수행하며, 누락된 package 이름과 설치 명령을 함께 출력합니다.
-
-```bash
-for package in ros_gz_bridge ros_gz_image xacro; do
-  ros2 pkg prefix "$package" >/dev/null || {
-    echo "누락: $package"
-    echo "설치: sudo apt install ros-jazzy-${package//_/-}"
-  }
-done
+```yaml
+- ros_topic_name: "/scan"
+  gz_topic_name: "/tutorial_bot/lidar"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
 ```
 
-예를 들어 `ros_gz_image`가 없으면 `image_bridge`를 시작한 뒤 기다리는 대신 즉시 `sudo apt install ros-jazzy-ros-gz-image`를 안내해야 합니다. 이는 실행 중 timeout과 설치 누락을 구분합니다.
-
-## Bridge YAML 읽기
-
-`bridge.yaml`의 한 항목은 ROS topic, Gazebo topic, 두 메시지 형식, 방향을 정의합니다.
+Gazebo의 `/tutorial_bot/lidar`를 ROS의 `/scan`으로 이름까지 바꾼다. 센서는 `GZ_TO_ROS`, 속도 명령은 `ROS_TO_GZ`를 사용한다.
 
 ```yaml
 - ros_topic_name: "/cmd_vel"
@@ -74,86 +54,249 @@ done
   direction: ROS_TO_GZ
 ```
 
-`ROS_TO_GZ`는 ROS 발행자를 Gazebo 구독자로 연결합니다. 반대로 LiDAR와 IMU 항목의 `GZ_TO_ROS`는 Gazebo sensor 메시지를 ROS로 보냅니다. Sensor data에는 `SENSOR_DATA`, `/clock`에는 `CLOCK` QoS profile을 지정했습니다.
+방향을 반대로 쓰면 양쪽 topic이 목록에는 보여도 command가 구독자에게 도달하지 않는다.
 
-메시지 anatomy는 “주소, 형식, 방향” 세 칸으로 읽으면 됩니다. `/tutorial_bot/lidar` + `gz.msgs.LaserScan` + `GZ_TO_ROS`가 `/scan` + `sensor_msgs/msg/LaserScan`으로 바뀝니다. 내부 전송 세부보다 YAML에서 이 세 값이 정확한지가 초급 단계의 핵심입니다.
+## 3. 기본 robot의 전체 mapping을 작성한다
 
-## 실행
+| 데이터 | Gazebo type | ROS type | 방향 |
+|---|---|---|---|
+| `/clock` | `gz.msgs.Clock` | `rosgraph_msgs/msg/Clock` | GZ → ROS |
+| `/cmd_vel` | `gz.msgs.Twist` | `geometry_msgs/msg/Twist` | ROS → GZ |
+| `/odom` | `gz.msgs.Odometry` | `nav_msgs/msg/Odometry` | GZ → ROS |
+| `/tf` | `gz.msgs.Pose_V` | `tf2_msgs/msg/TFMessage` | GZ → ROS |
+| `/joint_states` | `gz.msgs.Model` | `sensor_msgs/msg/JointState` | GZ → ROS |
+| `/scan` | `gz.msgs.LaserScan` | `sensor_msgs/msg/LaserScan` | GZ → ROS |
+| `/imu` | `gz.msgs.IMU` | `sensor_msgs/msg/Imu` | GZ → ROS |
+| RGB-D depth | `gz.msgs.Image` | `sensor_msgs/msg/Image` | GZ → ROS |
+| RGB-D points | `gz.msgs.PointCloudPacked` | `sensor_msgs/msg/PointCloud2` | GZ → ROS |
 
-저장소 루트에서 전체 전달 경로를 검증합니다.
+RGB-D 관련 YAML은 다음처럼 작성한다.
+
+```yaml
+- ros_topic_name: "/camera/depth/image"
+  gz_topic_name: "/tutorial_bot/camera/depth_image"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+
+- ros_topic_name: "/camera/points"
+  gz_topic_name: "/tutorial_bot/camera/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+```
+
+`SENSOR_DATA` QoS는 sensor stream에 맞는 best-effort 계열 설정을 선택한다. `/clock`에는 `CLOCK`을 사용한다. subscriber가 reliable만 요구하면 best-effort sensor publisher와 호환되지 않을 수 있으므로 `ros2 topic info -v`로 QoS도 확인한다.
+
+## 4. image는 `ros_gz_image`로 연결한다
+
+압축되지 않은 여러 image stream은 `ros_gz_image image_bridge`로 연결한다. RGB-D의 RGB, mono, stereo pair, fisheye를 한 process에서 지정하고 ROS 이름으로 remap한다.
+
+```bash
+ros2 run ros_gz_image image_bridge \
+  /tutorial_bot/camera/image \
+  /tutorial_bot/mono/image \
+  /tutorial_bot/stereo/left/image \
+  /tutorial_bot/stereo/right/image \
+  /tutorial_bot/fisheye/image \
+  --ros-args \
+  -r /tutorial_bot/camera/image:=/camera/image \
+  -r /tutorial_bot/mono/image:=/mono/image \
+  -r /tutorial_bot/stereo/left/image:=/stereo/left/image \
+  -r /tutorial_bot/stereo/right/image:=/stereo/right/image \
+  -r /tutorial_bot/fisheye/image:=/fisheye/image
+```
+
+기본 robot만 실행한다면 첫 번째 topic만 지정하면 된다.
+
+```bash
+ros2 run ros_gz_image image_bridge /tutorial_bot/camera/image \
+  --ros-args -r /tutorial_bot/camera/image:=/camera/image
+```
+
+## 5. 실행 전 dependency를 확인한다
+
+설치 누락과 runtime timeout을 구분하기 위해 preflight를 먼저 수행한다.
+
+```bash
+for package in ros_gz_bridge ros_gz_image ros_gz_sim xacro; do
+  ros2 pkg prefix "$package" >/dev/null || {
+    echo "누락: $package"
+    echo "설치: sudo apt install ros-jazzy-${package//_/-}"
+  }
+done
+```
+
+저장소의 checker도 같은 dependency 검사를 제공한다.
+
+```bash
+./scripts/check_ros_gz_bridge.sh --preflight-only
+```
+
+## 6. 기본 bridge를 실행한다
+
+Gazebo에 기본 `tutorial_bot`이 spawn된 상태에서 다음을 실행한다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source examples/ros2_ws/install/setup.bash
+bridge="$(ros2 pkg prefix --share tutorial_bot_bringup)/config/bridge.yaml"
+ros2 run ros_gz_bridge parameter_bridge --ros-args \
+  -p config_file:="$bridge"
+```
+
+별도 터미널에서 RGB image를 연결한다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 run ros_gz_image image_bridge /tutorial_bot/camera/image \
+  --ros-args -r /tutorial_bot/camera/image:=/camera/image
+```
+
+topic의 존재, type, publisher 수를 확인한다.
+
+```bash
+ros2 topic list | sort
+ros2 topic type /scan
+ros2 topic info -v /scan
+ros2 topic echo --once /odom
+ros2 topic echo --once /imu
+ros2 topic echo --once /camera/points
+```
+
+## 7. sensor gallery bridge를 실행한다
+
+앞 장의 `05-sensor-gallery.xacro`를 실행했다면 gallery 전용 YAML을 사용한다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source examples/ros2_ws/install/setup.bash
+gallery_bridge="$(ros2 pkg prefix --share tutorial_bot_bringup)/config/bridge-sensor-gallery.yaml"
+ros2 run ros_gz_bridge parameter_bridge --ros-args \
+  -p config_file:="$gallery_bridge"
+```
+
+`bridge-sensor-gallery.yaml`에는 다음 3D LiDAR mapping도 들어 있다.
+
+```yaml
+- ros_topic_name: "/lidar_3d/points"
+  gz_topic_name: "/tutorial_bot/lidar_3d/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+  qos_profile: SENSOR_DATA
+```
+
+image bridge는 앞 절의 다섯 topic 명령을 함께 실행한다. bridge를 시작하기 전에 `gz topic -i -t /tutorial_bot/lidar_3d/points`로 Gazebo type이 `gz.msgs.PointCloudPacked`인지 확인한다.
+
+## 8. TF와 wheel odom trajectory를 만든다
+
+Gazebo DiffDrive가 동적 `odom → base_link` TF를 발행하고 `robot_state_publisher`가 URDF의 fixed sensor TF를 발행한다. gallery Xacro를 사용한 경우 다음처럼 robot description을 제공한다.
+
+바퀴 joint는 fixed joint가 아니므로 URDF만으로 현재 회전각을 알 수 없다. 예제의 Gazebo `JointStatePublisher` System이 `/model/<이름>/joint_state`를 발행하고 bridge가 이를 ROS `/joint_states`로 바꾼다. `robot_state_publisher`는 이 값을 받아 `base_link → *_wheel_link` 동적 TF를 만든다.
+
+```yaml
+- ros_topic_name: "/joint_states"
+  gz_topic_name: "/model/tutorial_bot_sensor_gallery/joint_state"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
+```
+
+```bash
+gallery="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/05-sensor-gallery.xacro"
+ros2 run robot_state_publisher robot_state_publisher --ros-args \
+  -p use_sim_time:=true \
+  -p robot_description:="$(xacro "$gallery")"
+```
+
+`/odom`의 pose를 RViz Path로 누적한다.
+
+```bash
+ros2 run tutorial_bot_bringup odom_to_path --ros-args \
+  -p odom_topic:=/odom \
+  -p path_topic:=/wheel_odom_path \
+  -p max_poses:=2000 \
+  -p minimum_translation:=0.01
+```
+
+`minimum_translation`은 거의 같은 pose를 계속 저장하지 않기 위한 거리 문턱이고 `max_poses`는 memory가 무한히 증가하지 않도록 하는 상한이다.
+
+## 9. keyboard teleop으로 왕복 경로를 검증한다
+
+native Gazebo DiffDrive는 ROS `/cmd_vel`의 `geometry_msgs/msg/Twist`를 bridge로 받는다.
+
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args -r cmd_vel:=/cmd_vel
+```
+
+직진, 좌회전, 우회전을 차례로 입력하고 다음 값을 확인한다.
+
+```bash
+ros2 topic hz /odom
+ros2 topic echo --once /wheel_odom_path
+ros2 run tf2_ros tf2_echo odom lidar_link
+```
+
+`/wheel_odom_path`의 pose 수가 늘고 RViz 선이 로봇 이동을 따라가면 command → wheel motion → odom → Path 흐름이 연결된 것이다.
+
+## 10. RViz display를 연결한다
+
+IMU display는 별도 package를 설치한다.
+
+```bash
+sudo apt install ros-jazzy-rviz-imu-plugin
+rviz2 -d "$(ros2 pkg prefix --share tutorial_bot_bringup)/rviz/tutorial_bot.rviz"
+```
+
+Fixed Frame은 `odom`으로 지정한다.
+
+| Display | Topic | 확인할 결과 |
+|---|---|---|
+| RobotModel | `/robot_description` | sensor link가 본체에 고정된다 |
+| TF | `/tf`, `/tf_static` | `odom → base_link → sensor_link`가 이어진다 |
+| Odometry | `/odom` | pose 화살표가 이동한다 |
+| Path | `/wheel_odom_path` | wheel odom trajectory가 누적된다 |
+| LaserScan | `/scan` | 2D scan이 장애물 윤곽을 만든다 |
+| PointCloud2 | `/camera/points` | RGB-D point cloud가 나타난다 |
+| PointCloud2 | `/lidar_3d/points` | 3D LiDAR 층이 나타난다 |
+| Camera/Image | `/camera/image`, `/mono/image`, `/stereo/*/image`, `/fisheye/image` | 각 image가 갱신된다 |
+| `rviz_imu_plugin/Imu` | `/imu` | orientation과 축이 갱신된다 |
+
+## 11. 자동 통합 검증을 실행한다
+
+기본 robot의 양방향 경로는 다음 checker로 검증한다.
 
 ```bash
 ./scripts/check_ros_gz_bridge.sh
 ```
 
-스크립트는 headless Gazebo에 `tutorial_bot`을 spawn하고, `parameter_bridge`와 `image_bridge`를 시작합니다. ROS `/cmd_vel`에 `linear.x = 0.2`를 한 번 발행한 뒤, ROS 쪽의 odometry·LiDAR·Camera·IMU·clock을 확인합니다.
-
-정상 출력 예시는 다음과 같습니다.
+checker는 ROS `/cmd_vel`을 보내고 `/odom`, `/scan`, `/imu`, RGB image, `/clock`을 실제 메시지에서 읽는다.
 
 ```text
 ROS cmd_vel to Gazebo verified: odom x=0.40..., linear.x=0.20...
 Gazebo sensors to ROS verified: scan=360, image=320x240, IMU and clock received.
 ```
 
-`scan` 숫자는 ROS CLI가 출력한 수신 range 항목 수입니다. 정상 검증은 성공 문구가 아니라 `/scan`의 360개 값과 `angle_min/max`, `range_min/max`, Camera의 320×240 geometry, IMU field, 증가하는 `/clock`을 파싱합니다.
-
-## 직접 실행하기
-
-Gazebo가 이미 실행되고 `tutorial_bot`이 spawn된 상태라면, 다른 terminal에서 YAML bridge를 시작할 수 있습니다.
-
-```bash
-source /opt/ros/jazzy/setup.bash
-ros2 run ros_gz_bridge parameter_bridge --ros-args \
-  -p config_file:=examples/ros2_ws/src/tutorial_bot_bringup/config/bridge.yaml
-```
-
-Camera는 별도 terminal에서 연결합니다.
-
-```bash
-source /opt/ros/jazzy/setup.bash
-ros2 run ros_gz_image image_bridge /tutorial_bot/camera/image
-```
-
-그 다음 ROS 2에서 속도 명령과 sensor topic을 확인합니다.
-
-```bash
-ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.2}}'
-ros2 topic echo --once /scan sensor_msgs/msg/LaserScan
-ros2 topic echo --once /imu sensor_msgs/msg/Imu
-ros2 topic echo --once /clock rosgraph_msgs/msg/Clock
-```
-
-## 결과 확인
-
-Bridge가 실행되면 ROS 2 topic 목록에 다음이 나타납니다.
-
-```text
-/clock
-/cmd_vel
-/odom
-/scan
-/imu
-/tutorial_bot/camera/image
-```
-
-`/odom`의 `pose.pose.position.x`가 양수이고 `twist.twist.linear.x`가 약 `0.2`이면, ROS 명령이 Gazebo DiffDrive와 ROS odometry까지 왕복한 것입니다.
-
 ## 자주 발생하는 문제
 
-### ROS topic이 나타나지 않습니다
+### ROS topic은 있지만 메시지가 없다
 
-Gazebo sensor topic이 먼저 생긴 뒤 bridge를 실행했는지와 YAML의 `gz_topic_name`을 확인합니다. ROS topic 이름과 Gazebo topic 이름은 이 예제처럼 다를 수 있습니다.
+YAML의 방향, `gz_topic_name`, Gazebo message type을 `gz topic -i` 결과와 비교한다. 존재하지 않는 Gazebo topic을 bridge해도 ROS 이름만 보일 수 있다.
 
-### Camera topic에 이미지가 없습니다
+### RViz의 LaserScan 또는 PointCloud2가 오류 상태이다
 
-Camera는 `ros_gz_bridge` YAML 항목이 아니라 `ros_gz_image image_bridge`가 처리합니다. `gz sim`의 렌더 엔진과 `/tutorial_bot/camera/image` topic 존재 여부도 확인합니다.
+QoS를 Best Effort로 바꾸고 `header.frame_id`에서 Fixed Frame까지 TF가 이어지는지 확인한다. sensor message가 있어도 TF가 없으면 3D 공간에 놓을 수 없다.
 
-### 시간이 벽시계와 다릅니다
+### `/clock`은 움직이는데 node timestamp가 벽시계이다
 
-`/clock`은 simulation time입니다. simulation이 일시 정지되면 이 시계도 멈추고, 빠르게 계산되면 벽시계와 다른 속도로 갑니다. 이후 ROS node를 만들 때는 `use_sim_time`을 사용해 센서 timestamp와 같은 기준으로 시간을 맞춥니다.
+ROS node에 `use_sim_time:=true`를 전달한다. simulation이 pause되면 `/clock`과 sensor timestamp도 멈추는 것이 정상이다.
 
 ## 정리
 
-ROS 2와 Gazebo는 bridge를 통해 명시적으로 연결됩니다. 다음 마지막 초급 프로젝트에서는 이 경로와 `tutorial_bot`의 모든 기능을 함께 검증합니다.
+bridge는 topic 이름뿐 아니라 양쪽 type, 방향, QoS를 명시하는 변환 경계이다. 다음 프로젝트에서는 launch, teleop, sensor, TF, wheel odom trajectory를 한 번에 실행한다.
 
 [이전: Gazebo Fuel](09-gazebo-fuel.md) · [다음: 초급 프로젝트](11_project-tutorial-bot.md)

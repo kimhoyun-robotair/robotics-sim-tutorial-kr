@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="mono_camera_sensor"
+               params="reference sensor_name topic frame_id update_rate:=30 width:=640 height:=480 hfov:=1.047 near:=0.10 far:=30.0">
+    <gazebo reference="${reference}">
+      <sensor name="${sensor_name}" type="camera">
+        <pose>0 0 0 0 0 0</pose>
+        <!-- CameraInfo는 이 image topic의 마지막 경로를 camera_info로 바꿔 발행한다. -->
+        <topic>${topic}/image</topic>
+        <gz_frame_id>${frame_id}</gz_frame_id>
+        <always_on>true</always_on>
+        <update_rate>${update_rate}</update_rate>
+        <visualize>true</visualize>
+        <camera name="${sensor_name}">
+          <horizontal_fov>${hfov}</horizontal_fov>
+          <image><width>${width}</width><height>${height}</height><format>L8</format></image>
+          <clip><near>${near}</near><far>${far}</far></clip>
+          <noise><type>gaussian</type><mean>0.0</mean><stddev>0.007</stddev></noise>
+          <optical_frame_id>${frame_id}</optical_frame_id>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- 두 pinhole camera를 baseline만큼 떨어뜨려 stereo pair를 구성한다. -->
+  <xacro:macro name="stereo_camera_pair"
+               params="left_reference right_reference topic_prefix left_frame_id right_frame_id update_rate:=20 width:=640 height:=480">
+    <xacro:mono_camera_sensor reference="${left_reference}" sensor_name="stereo_left"
+                              topic="${topic_prefix}/left" frame_id="${left_frame_id}"
+                              update_rate="${update_rate}" width="${width}" height="${height}"/>
+    <xacro:mono_camera_sensor reference="${right_reference}" sensor_name="stereo_right"
+                              topic="${topic_prefix}/right" frame_id="${right_frame_id}"
+                              update_rate="${update_rate}" width="${width}" height="${height}"/>
+  </xacro:macro>
+
+  <xacro:macro name="rgbd_camera_sensor"
+               params="reference sensor_name topic frame_id update_rate:=30 width:=320 height:=240 hfov:=1.047 near:=0.1 far:=10.0">
+    <gazebo reference="${reference}">
+      <sensor name="${sensor_name}" type="rgbd_camera">
+        <!-- RGB-D는 이 base topic 아래에 image, depth_image, points를 만든다. -->
+        <topic>${topic}</topic>
+        <gz_frame_id>${frame_id}</gz_frame_id>
+        <always_on>true</always_on>
+        <update_rate>${update_rate}</update_rate>
+        <visualize>true</visualize>
+        <camera name="${sensor_name}">
+          <horizontal_fov>${hfov}</horizontal_fov>
+          <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
+          <clip><near>${near}</near><far>${far}</far></clip>
+          <optical_frame_id>${frame_id}</optical_frame_id>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Harmonic의 WideAngleCameraSensor가 읽는 wideanglecamera + lens 조합이다. -->
+  <xacro:macro name="fisheye_camera_sensor"
+               params="reference sensor_name topic frame_id update_rate:=15 width:=640 height:=480 hfov:=2.792527">
+    <gazebo reference="${reference}">
+      <sensor name="${sensor_name}" type="wideanglecamera">
+        <!-- WideAngleCamera도 일반 Camera와 같은 image / camera_info 규칙을 따른다. -->
+        <topic>${topic}/image</topic>
+        <gz_frame_id>${frame_id}</gz_frame_id>
+        <always_on>true</always_on>
+        <update_rate>${update_rate}</update_rate>
+        <visualize>true</visualize>
+        <camera name="${sensor_name}">
+          <horizontal_fov>${hfov}</horizontal_fov>
+          <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
+          <clip><near>0.10</near><far>30.0</far></clip>
+          <lens>
+            <type>equisolid_angle</type>
+            <scale_to_hfov>true</scale_to_hfov>
+            <cutoff_angle>1.57079632679</cutoff_angle>
+            <env_texture_size>512</env_texture_size>
+          </lens>
+          <optical_frame_id>${frame_id}</optical_frame_id>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

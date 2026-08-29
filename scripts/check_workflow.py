@@ -14,7 +14,7 @@ ALLOWED_ROS_ACTIONS = {
 }
 SELECTED_TEST_PATTERN = (
     "^(advanced_contract|advanced_framework_cli|advanced_headless_integration|"
-    "diagnostics_distance|diagnostics_enable_reset|"
+    "rover_examples|diagnostics_distance|diagnostics_enable_reset|"
     "diagnostics_enable_reset_concurrency|diagnostics_model_lifecycle|"
     "diagnostics_physics_cadence)$"
 )

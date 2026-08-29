@@ -1,4 +1,4 @@
-# Xacro로 `tutorial_bot` <span class="course-nowrap">만들기</span>
+# Xacro로 `tutorial_bot` 만들기
 
 > **난이도:** 초급  
 > **Gazebo:** Harmonic  
@@ -7,70 +7,164 @@
 
 ## 학습 목표
 
-- URDF, Xacro, SDF가 맡는 일을 구분합니다.
-- 설치된 1단계 Xacro에서 `base_link`를 생성하고 검사합니다.
-- 모델의 질량과 크기로 직육면체 관성 모멘트를 계산합니다.
+- URDF, Xacro, SDF가 맡는 범위를 코드로 비교한다.
+- Xacro include와 macro 호출이 최종 URDF로 전개되는 과정을 확인한다.
+- `base_link`의 visual, collision, inertial을 직접 읽는다.
+- 질량과 크기에서 직육면체 관성 모멘트를 계산한다.
 
 ## 하나의 로봇, 세 가지 표현
 
 <figure markdown="span">
   ![Xacro 원본이 URDF를 거쳐 Gazebo의 SDF 모델로 변환되는 흐름](../assets/beginner/robot-format-flow.svg)
-  <figcaption>그림 1. 이 과정에서는 Xacro 하나를 원본으로 유지하고, 도구가 URDF와 SDF를 차례로 생성합니다.</figcaption>
+  <figcaption>그림 1. Xacro 하나를 원본으로 유지하고 도구가 URDF와 SDF를 차례로 생성한다.</figcaption>
 </figure>
 
-- **URDF**는 link와 joint로 ROS 로봇의 구조를 표현하는 XML 형식입니다.
-- **Xacro**는 치수, 공식, 반복 구조를 재사용해 URDF를 생성합니다.
-- **SDF**는 Gazebo가 world, physics, sensor, system plugin까지 실행할 때 사용하는 형식입니다.
+| 형식 | 주된 역할 | 이 저장소의 예 |
+|---|---|---|
+| URDF | ROS 로봇의 link·joint 트리를 표현한다. | `xacro` 명령이 만든 `/tmp/tutorial_bot-stage-01.urdf` |
+| Xacro | 변수, 수식, include, macro로 URDF 중복을 줄인다. | `urdf/stages/01-base.xacro`와 `urdf/macros/stage_components.xacro` |
+| SDF | Gazebo world, physics, sensor, System plugin까지 표현한다. | `first-world.sdf`와 URDF에서 변환한 model SDF |
 
-따라서 세 파일을 따로 고치는 것이 아닙니다. 이 저장소의 Xacro를 `xacro`가 URDF로 확장하고, Gazebo가 이를 SDF로 변환합니다.
+세 형식을 따로 유지하는 것이 아니다. 이 과정에서는 Xacro를 원본으로 두고, `xacro`가 URDF를 생성하며, Gazebo가 URDF를 SDF model로 변환한다.
 
-## 설치된 1단계 모델 실행
+## 1단계 Xacro의 실제 구조
 
-먼저 description package를 빌드했다면, 저장소 위치가 아니라 설치 공간에서 단계 파일을 찾습니다.
+1단계 파일은 include와 macro 호출만 가진다.
+
+```xml
+<!-- urdf/stages/01-base.xacro -->
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tutorial_bot">
+  <xacro:include filename="../macros/stage_components.xacro"/>
+  <xacro:stage_base/>
+</robot>
+```
+
+`xacro:include`가 재사용 가능한 정의를 불러오고, `xacro:stage_base`가 다음 macro를 호출한다.
+
+```xml
+<!-- urdf/macros/stage_components.xacro -->
+<xacro:macro name="stage_base">
+  <link name="base_link">
+    <xacro:stage_box_inertia mass="5.0" x="0.45" y="0.32" z="0.12"/>
+    <visual>
+      <geometry><box size="0.45 0.32 0.12"/></geometry>
+      <material name="tutorial_blue">
+        <color rgba="0.10 0.35 0.80 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry><box size="0.45 0.32 0.12"/></geometry>
+    </collision>
+  </link>
+</xacro:macro>
+```
+
+macro를 사용하면 차체의 크기와 질량을 관성 계산에도 같은 값으로 전달할 수 있다. 수식을 한 번만 정의하므로 visual 크기를 바꾼 뒤 관성 값을 수동으로 고치는 실수를 줄인다.
+
+## 관성 macro 읽기
+
+직육면체 관성은 다음 Xacro 수식으로 계산한다.
+
+```xml
+<xacro:macro name="stage_box_inertia" params="mass x y z">
+  <inertial>
+    <mass value="${mass}"/>
+    <inertia ixx="${mass * (y * y + z * z) / 12.0}"
+             ixy="0.0" ixz="0.0"
+             iyy="${mass * (x * x + z * z) / 12.0}"
+             iyz="0.0"
+             izz="${mass * (x * x + y * y) / 12.0}"/>
+  </inertial>
+</xacro:macro>
+```
+
+질량 $m=5.0\,\mathrm{kg}$, 크기 $x=0.45\,\mathrm{m}$, $y=0.32\,\mathrm{m}$, $z=0.12\,\mathrm{m}$를 대입하면 다음 값을 얻는다.
+
+\[
+I_{xx}=\frac{m(y^2+z^2)}{12}=0.0487
+\]
+
+\[
+I_{yy}=\frac{m(x^2+z^2)}{12}=0.0904
+\]
+
+\[
+I_{zz}=\frac{m(x^2+y^2)}{12}=0.1270\;\mathrm{kg\,m^2}
+\]
+
+??? note "수치가 어떻게 나오는가"
+    예를 들어 $I_{xx}=5.0(0.32^2+0.12^2)/12=0.048666\ldots$이다. Xacro는 같은 식을 계산하고, 본문은 소수 넷째 자리로 반올림한다.
+
+관성이 없거나 실제 형상과 크게 다르면 가속과 충돌 반응이 부자연스러워진다. visual은 보이는 모양, collision은 접촉 형상, inertial은 힘에 대한 반응을 맡는다.
+
+## Xacro를 URDF로 전개하기
+
+먼저 description package를 빌드하고 설치 공간을 source한다.
 
 ```bash
-source /opt/ros/jazzy/setup.zsh
+source /opt/ros/jazzy/setup.bash
+cd examples/ros2_ws
+colcon build --packages-select tutorial_bot_description --symlink-install
+source install/setup.bash
+cd ../..
+```
+
+설치된 1단계 파일을 URDF로 전개한다.
+
+```bash
 stage="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/stages/01-base.xacro"
 xacro "$stage" > /tmp/tutorial_bot-stage-01.urdf
 check_urdf /tmp/tutorial_bot-stage-01.urdf
-gz sdf -p /tmp/tutorial_bot-stage-01.urdf > /tmp/tutorial_bot-stage-01.sdf
-gz sdf -k /tmp/tutorial_bot-stage-01.sdf
 ```
 
-Bash에서는 첫 줄의 `setup.zsh`를 `setup.bash`로 바꿉니다. `check_urdf`가 `root Link: base_link`를 출력하고 SDF 검사가 조용히 끝나면 성공입니다. 1단계 inventory에는 `base_link` 하나만 있으며, 바퀴나 센서는 아직 없습니다.
+전개 결과에는 Xacro 태그가 사라지고 실제 URDF 값이 들어간다.
 
-!!! tip "설치 공간이 없다면"
-    저장소 루트의 `examples/ros2_ws`에서 `colcon build --packages-select tutorial_bot_description`을 실행하고 `install/setup.zsh`를 source합니다.
+```bash
+grep -nE '<link|<mass|<inertia|<box' /tmp/tutorial_bot-stage-01.urdf
+```
 
-## 직육면체 몸체와 관성
+핵심 결과는 다음 형태이다.
 
-`base_link`는 질량 $m=5.0\,\mathrm{kg}$, 크기 $x=0.45\,\mathrm{m}$, $y=0.32\,\mathrm{m}$, $z=0.12\,\mathrm{m}$인 직육면체입니다. 중심을 지나는 각 축의 관성 모멘트는 다음과 같습니다.
+```xml
+<link name="base_link">
+  <inertial>
+    <mass value="5.0"/>
+    <inertia ixx="0.04866666666666667"
+             ixy="0.0" ixz="0.0"
+             iyy="0.090375"
+             iyz="0.0"
+             izz="0.12704166666666666"/>
+  </inertial>
+  <visual>
+    <geometry><box size="0.45 0.32 0.12"/></geometry>
+  </visual>
+  <collision>
+    <geometry><box size="0.45 0.32 0.12"/></geometry>
+  </collision>
+</link>
+```
 
-\[
-I_{xx}=\frac{m(y^2+z^2)}{12}
-\]
+`check_urdf`가 `root Link: base_link`를 출력하면 link 트리가 유효하다.
 
-\[
-I_{yy}=\frac{m(x^2+z^2)}{12}
-\]
+## URDF를 Gazebo SDF로 변환하기
 
-\[
-I_{zz}=\frac{m(x^2+y^2)}{12}
-\]
+같은 URDF를 Gazebo가 읽는 model SDF로 변환하고 검사한다.
 
-값을 대입하면 $I_{xx}=0.0487$, $I_{yy}=0.0904$, $I_{zz}=0.1270\,\mathrm{kg\,m^2}$입니다. 길이가 가장 넓게 퍼진 x-y 평면에 수직인 z축의 값이 가장 큽니다.
+```bash
+gz sdf -p /tmp/tutorial_bot-stage-01.urdf > /tmp/tutorial_bot-stage-01.sdf
+gz sdf -k /tmp/tutorial_bot-stage-01.sdf
+grep -nE '<model|<link|<visual|<collision|<inertial' \
+  /tmp/tutorial_bot-stage-01.sdf
+```
 
-??? note "계산을 한 줄씩 보기"
-    예를 들어 $I_{xx}=5.0(0.32^2+0.12^2)/12=0.048666\ldots$입니다. Xacro의 `stage_box_inertia` 매크로도 같은 식을 계산하며, 문서에서는 소수 넷째 자리로 반올림했습니다.
-
-관성이 없거나 실제 크기와 크게 다르면 Gazebo에서 가속과 충돌 반응이 부자연스러워집니다. visual은 보이는 모양, collision은 접촉에 쓰는 모양, inertial은 힘에 대한 반응을 맡습니다.
+URDF의 `<robot name="tutorial_bot">`은 SDF의 `<model name="tutorial_bot">`로, `base_link`는 같은 이름의 SDF link로 변환된다. 1단계 inventory에는 `base_link` 하나만 있으며 wheel, sensor, DiffDrive plugin은 아직 없어야 한다.
 
 ## 문제 해결
 
-- `package 'tutorial_bot_description' not found`: workspace를 빌드한 뒤 그 workspace의 `install/setup.zsh`를 source합니다.
-- `xacro: command not found`: `sudo apt install ros-jazzy-xacro`를 확인합니다.
-- 1단계에 바퀴나 센서가 보임: canonical 최종 Xacro가 아니라 반드시 `01-base.xacro` 경로인지 확인합니다.
+- `package 'tutorial_bot_description' not found`가 나오면 workspace를 빌드한 뒤 `install/setup.bash`를 source한다.
+- `xacro: command not found`가 나오면 `sudo apt install ros-jazzy-xacro`로 설치한다.
+- `check_urdf`가 XML 오류를 내면 먼저 `xacro "$stage"`의 stderr에서 include 경로와 macro 이름을 확인한다.
+- 1단계 결과에 wheel이나 sensor가 보이면 최종 Xacro가 아니라 `01-base.xacro`를 사용했는지 확인한다.
 
-## 다음 단계
-
-[바퀴와 Joint](06-joints.md)에서 parent/child 관계와 회전축을 추가합니다.
+[다음: 바퀴와 Joint](06-joints.md)

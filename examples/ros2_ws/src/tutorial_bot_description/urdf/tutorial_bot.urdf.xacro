@@ -1,5 +1,9 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tutorial_bot">
+  <xacro:include filename="sensors/sensor_mounts.xacro"/>
+  <xacro:include filename="sensors/lidar.xacro"/>
+  <xacro:include filename="sensors/cameras.xacro"/>
+  <xacro:include filename="sensors/imu.xacro"/>
   <!--
     The default arguments intentionally preserve the beginner model and Gazebo
     topic contract.  Intermediate launches override these values per entity.
@@ -97,55 +101,27 @@
   <xacro:wheel side="left" y_position="0.19"/>
   <xacro:wheel side="right" y_position="-0.19"/>
 
-  <link name="lidar_link">
-    <xacro:box_inertia mass="0.05" x="0.08" y="0.08" z="0.03"/>
+  <!-- 구동축이 아닌 fixed caster를 낮은 마찰의 구형 접촉으로 근사한다. -->
+  <link name="caster_link">
+    <inertial>
+      <mass value="0.08"/>
+      <inertia ixx="0.0000392" ixy="0" ixz="0"
+               iyy="0.0000392" iyz="0" izz="0.0000392"/>
+    </inertial>
     <visual>
-      <geometry>
-        <cylinder radius="0.04" length="0.03"/>
-      </geometry>
-      <material name="sensor_dark">
-        <color rgba="0.12 0.12 0.12 1.0"/>
-      </material>
+      <geometry><sphere radius="0.035"/></geometry>
+      <material name="caster_gray"><color rgba="0.35 0.35 0.35 1.0"/></material>
     </visual>
+    <collision><geometry><sphere radius="0.035"/></geometry></collision>
   </link>
-  <joint name="lidar_joint" type="fixed">
+  <joint name="caster_joint" type="fixed">
     <parent link="base_link"/>
-    <child link="lidar_link"/>
-    <origin xyz="0.10 0 0.09" rpy="0 0 0"/>
+    <child link="caster_link"/>
+    <origin xyz="-0.17 0 -0.085" rpy="0 0 0"/>
   </joint>
+  <gazebo reference="caster_link"><mu1>0.05</mu1><mu2>0.05</mu2></gazebo>
 
-  <link name="camera_link">
-    <xacro:box_inertia mass="0.05" x="0.04" y="0.08" z="0.05"/>
-    <visual>
-      <geometry>
-        <box size="0.04 0.08 0.05"/>
-      </geometry>
-      <material name="camera_black">
-        <color rgba="0.04 0.04 0.04 1.0"/>
-      </material>
-    </visual>
-  </link>
-  <joint name="camera_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="camera_link"/>
-    <origin xyz="0.24 0 0.02" rpy="0 0 0"/>
-  </joint>
-
-  <link name="camera_optical_frame"/>
-  <joint name="camera_optical_joint" type="fixed">
-    <parent link="camera_link"/>
-    <child link="camera_optical_frame"/>
-    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
-  </joint>
-
-  <link name="imu_link">
-    <xacro:box_inertia mass="0.02" x="0.03" y="0.03" z="0.02"/>
-  </link>
-  <joint name="imu_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="imu_link"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
+  <xacro:tutorial_sensor_mounts/>
 
   <xacro:if value="${control_backend == 'gazebo_diff_drive'}">
   <gazebo>
@@ -155,6 +131,15 @@
       <wheel_separation>0.38</wheel_separation>
       <wheel_radius>0.06</wheel_radius>
       <odom_publish_frequency>30</odom_publish_frequency>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>/model/$(arg model_name)/joint_state</topic>
+      <update_rate>30</update_rate>
+      <joint_name>left_wheel_joint</joint_name>
+      <joint_name>right_wheel_joint</joint_name>
     </plugin>
   </gazebo>
   </xacro:if>
@@ -191,78 +176,10 @@
     </gazebo>
   </xacro:if>
 
-  <gazebo reference="lidar_link">
-    <sensor name="lidar" type="gpu_lidar">
-      <pose>-0.10 0 0 0 0 0</pose>
-      <topic>$(arg lidar_topic)</topic>
-      <gz_frame_id>$(arg tf_prefix)lidar_link</gz_frame_id>
-      <always_on>true</always_on>
-      <update_rate>10</update_rate>
-      <visualize>true</visualize>
-      <lidar>
-        <scan>
-          <horizontal>
-            <samples>360</samples>
-            <resolution>1</resolution>
-            <min_angle>-3.14159265359</min_angle>
-            <max_angle>3.14159265359</max_angle>
-          </horizontal>
-        </scan>
-        <range>
-          <min>0.12</min>
-          <max>10.0</max>
-          <resolution>0.01</resolution>
-        </range>
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.01</stddev>
-        </noise>
-      </lidar>
-    </sensor>
-  </gazebo>
-
-  <gazebo reference="camera_link">
-    <sensor name="camera" type="rgbd_camera">
-      <topic>$(arg camera_topic)</topic>
-      <gz_frame_id>$(arg tf_prefix)camera_optical_frame</gz_frame_id>
-      <always_on>true</always_on>
-      <update_rate>30</update_rate>
-      <visualize>true</visualize>
-      <camera>
-        <horizontal_fov>1.047</horizontal_fov>
-        <image>
-          <width>320</width>
-          <height>240</height>
-          <format>R8G8B8</format>
-        </image>
-        <clip>
-          <near>0.1</near>
-          <far>10.0</far>
-        </clip>
-        <optical_frame_id>$(arg tf_prefix)camera_optical_frame</optical_frame_id>
-      </camera>
-    </sensor>
-  </gazebo>
-
-  <gazebo reference="imu_link">
-    <sensor name="imu" type="imu">
-      <topic>$(arg imu_topic)</topic>
-      <gz_frame_id>$(arg tf_prefix)imu_link</gz_frame_id>
-      <always_on>true</always_on>
-      <update_rate>100</update_rate>
-      <imu>
-        <angular_velocity>
-          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></x>
-          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></y>
-          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></z>
-        </angular_velocity>
-        <linear_acceleration>
-          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></x>
-          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></y>
-          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></z>
-        </linear_acceleration>
-      </imu>
-    </sensor>
-  </gazebo>
+  <xacro:gpu_lidar_2d reference="lidar_link" sensor_name="lidar"
+                       topic="$(arg lidar_topic)" frame_id="$(arg tf_prefix)lidar_link"/>
+  <xacro:rgbd_camera_sensor reference="camera_link" sensor_name="camera"
+                             topic="$(arg camera_topic)" frame_id="$(arg tf_prefix)camera_optical_frame"/>
+  <xacro:imu_sensor reference="imu_link" sensor_name="imu"
+                    topic="$(arg imu_topic)" frame_id="$(arg tf_prefix)imu_link"/>
 </robot>

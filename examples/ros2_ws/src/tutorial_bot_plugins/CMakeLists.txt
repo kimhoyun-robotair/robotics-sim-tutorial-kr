@@ -37,6 +37,10 @@ install(FILES include/tutorial_bot_plugins/diagnostics_contract.hpp
   DESTINATION include/tutorial_bot_plugins
 )
 
+ament_environment_hooks(
+  "${CMAKE_CURRENT_SOURCE_DIR}/hooks/tutorial_bot_plugins.dsv.in"
+)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(gz-msgs10 REQUIRED)

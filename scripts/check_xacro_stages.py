@@ -34,15 +34,22 @@ class StageFailure(Exception):
 
 BASE = Inventory(frozenset({"base_link"}), frozenset(), frozenset(), frozenset())
 WHEELS = Inventory(
-    frozenset({"base_link", "left_wheel_link", "right_wheel_link"}),
-    frozenset({"left_wheel_joint", "right_wheel_joint"}),
+    frozenset(
+        {"base_link", "left_wheel_link", "right_wheel_link", "caster_link"}
+    ),
+    frozenset({"left_wheel_joint", "right_wheel_joint", "caster_joint"}),
     frozenset(),
     frozenset(),
 )
 DIFF_DRIVE = Inventory(
     WHEELS.links,
     WHEELS.joints,
-    frozenset({"gz::sim::systems::DiffDrive"}),
+    frozenset(
+        {
+            "gz::sim::systems::DiffDrive",
+            "gz::sim::systems::JointStatePublisher",
+        }
+    ),
     frozenset(),
 )
 FINAL = Inventory(
@@ -51,6 +58,7 @@ FINAL = Inventory(
             "base_link",
             "left_wheel_link",
             "right_wheel_link",
+            "caster_link",
             "lidar_link",
             "camera_link",
             "camera_optical_frame",
@@ -61,13 +69,14 @@ FINAL = Inventory(
         {
             "left_wheel_joint",
             "right_wheel_joint",
+            "caster_joint",
             "lidar_joint",
             "camera_joint",
             "camera_optical_joint",
             "imu_joint",
         }
     ),
-    frozenset({"gz::sim::systems::DiffDrive"}),
+    DIFF_DRIVE.plugins,
     frozenset({"lidar", "camera", "imu"}),
 )
 EXPECTATIONS = (

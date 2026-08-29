@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="rover_wheel_radius" value="0.10"/>
+  <xacro:property name="rover_wheel_width" value="0.06"/>
+  <xacro:property name="rover_track_width" value="0.62"/>
+  <xacro:property name="rover_wheelbase" value="0.56"/>
+
+  <xacro:macro name="rover_box_inertia" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass * (y * y + z * z) / 12.0}" ixy="0" ixz="0"
+               iyy="${mass * (x * x + z * z) / 12.0}" iyz="0"
+               izz="${mass * (x * x + y * y) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="rover_wheel_inertia" params="mass radius width">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass * (3.0 * radius * radius + width * width) / 12.0}"
+               ixy="0" ixz="0" iyy="${mass * radius * radius / 2.0}"
+               iyz="0"
+               izz="${mass * (3.0 * radius * radius + width * width) / 12.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="rover_chassis">
+    <link name="base_footprint"/>
+    <link name="base_link">
+      <xacro:rover_box_inertia mass="12.0" x="0.72" y="0.50" z="0.14"/>
+      <visual>
+        <geometry><box size="0.72 0.50 0.14"/></geometry>
+        <material name="rover_blue"><color rgba="0.08 0.32 0.72 1"/></material>
+      </visual>
+      <collision><geometry><box size="0.72 0.50 0.14"/></geometry></collision>
+    </link>
+    <joint name="base_footprint_joint" type="fixed">
+      <parent link="base_footprint"/>
+      <child link="base_link"/>
+      <origin xyz="0 0 0.17" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="rover_wheel_link" params="name">
+    <link name="${name}">
+      <xacro:rover_wheel_inertia mass="0.6"
+          radius="${rover_wheel_radius}" width="${rover_wheel_width}"/>
+      <visual>
+        <origin rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder radius="${rover_wheel_radius}" length="${rover_wheel_width}"/>
+        </geometry>
+        <material name="tire_black"><color rgba="0.04 0.04 0.04 1"/></material>
+      </visual>
+      <collision>
+        <origin rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder radius="${rover_wheel_radius}" length="${rover_wheel_width}"/>
+        </geometry>
+      </collision>
+    </link>
+    <gazebo reference="${name}">
+      <mu1>1.0</mu1>
+      <mu2>0.6</mu2>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="fixed_axle_wheel" params="prefix x y">
+    <xacro:rover_wheel_link name="${prefix}_wheel_link"/>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="${x} ${y} -0.07" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="30" velocity="30"/>
+      <dynamics damping="0.05" friction="0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="steered_wheel" params="prefix x y">
+    <link name="${prefix}_knuckle_link">
+      <xacro:rover_box_inertia mass="0.05" x="0.03" y="0.03" z="0.08"/>
+    </link>
+    <joint name="${prefix}_steering_joint" type="revolute">
+      <parent link="base_link"/>
+      <child link="${prefix}_knuckle_link"/>
+      <origin xyz="${x} ${y} -0.07" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-0.70" upper="0.70" effort="40" velocity="2.0"/>
+      <dynamics damping="0.2" friction="0"/>
+    </joint>
+    <xacro:rover_wheel_link name="${prefix}_wheel_link"/>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${prefix}_knuckle_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="30" velocity="30"/>
+      <dynamics damping="0.05" friction="0"/>
+    </joint>
+  </xacro:macro>
+</robot>

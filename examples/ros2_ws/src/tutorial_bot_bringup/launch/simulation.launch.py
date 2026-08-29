@@ -185,10 +185,9 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
     image_bridge = Node(
         package="ros_gz_image",
         executable="image_bridge",
-        arguments=["/tutorial_bot/camera/image", "/tutorial_bot/camera/depth/image"],
+        arguments=["/tutorial_bot/camera/image"],
         remappings=[
             ("/tutorial_bot/camera/image", "/camera/image"),
-            ("/tutorial_bot/camera/depth/image", "/camera/depth/image"),
         ],
         output="screen",
     )
@@ -303,6 +302,21 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
         parameters=[{"use_sim_time": True}],
         output="screen",
     )
+    wheel_odom_path = Node(
+        package="tutorial_bot_bringup",
+        executable="odom_to_path",
+        name="wheel_odom_to_path",
+        parameters=[
+            {
+                "use_sim_time": True,
+                "odom_topic": "/odom",
+                "path_topic": "/wheel_odom_path",
+                "max_poses": 2000,
+                "minimum_translation": 0.01,
+            }
+        ],
+        output="screen",
+    )
 
     actions: list[Action] = [
         gazebo,
@@ -310,6 +324,7 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
         spawn,
         parameter_bridge,
         image_bridge,
+        wheel_odom_path,
         RegisterEventHandler(
             OnProcessExit(
                 target_action=spawn,
