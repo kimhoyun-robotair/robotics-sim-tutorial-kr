@@ -7,24 +7,24 @@
 
 ## 학습 목표
 
-- Gazebo server, GUI, Transport의 책임을 구분한다.
+- Gazebo server, GUI, Transport의 개념을 익히고 담당 범위를 구분한다.
 - SDF world가 system plugin을 불러오는 방식을 코드로 확인한다.
 - Gazebo Transport 토픽과 ROS 2 토픽이 별도 graph인 이유를 이해한다.
 - server-only 실행, GUI 연결, 토픽 조회를 각각 수행한다.
 
-## Gazebo를 세 부분으로 나눈다
+## Gazebo는 3개로 구분이 가능하다
 
 Gazebo Sim은 하나의 창처럼 보이지만 역할을 분리할 수 있다.
 
-| 부분 | 책임 | 대표 확인 명령 |
+| 부분 | 책임 | 대표적인 명령 |
 | --- | --- | --- |
 | Server | 물리 step, entity/component 상태, system 실행 | `gz sim -s -r world.sdf` |
 | GUI | scene 렌더링, 카메라 조작, GUI plugin | `gz sim -g` |
 | Transport | Gazebo process 사이의 topic·service 통신 | `gz topic -l`, `gz service -l` |
 
-GUI를 닫았다고 항상 물리 server의 문제인 것은 아니다. 이 구조를 이용하면 SDF parser, server, rendering, ROS bridge를 순서대로 분리해 진단할 수 있다.
+GUI가 강제 종료되었다고 해서 항상 물리 server의 문제인 것은 아니다. 이 구조를 이용하면 SDF parser, server, rendering, ROS bridge를 순서대로 분리해 어디가 문제인지 진단할 수 있다.
 
-## SDF가 world와 system을 구성한다
+## SDF는 world와 system을 구성한다
 
 SDF는 simulation world, model, link, joint, sensor, plugin을 표현하는 XML 형식이다. 다음 코드는 `examples/gazebo/worlds/first-world.sdf`의 핵심 구조를 축약한 예이다.
 
@@ -69,7 +69,7 @@ SDF는 simulation world, model, link, joint, sensor, plugin을 표현하는 XML 
 </sdf>
 ```
 
-`<max_step_size>0.001</max_step_size>`는 simulation time을 한 번 갱신할 때 1 ms씩 진행하게 한다. `<real_time_factor>1.0</real_time_factor>`는 계산 성능이 충분할 때 simulation time과 wall time의 목표 비율을 1로 둔다. 두 값을 곱해서 sensor publish rate를 정하는 것이 아니라 physics update와 계산 부하를 정하는 값으로 이해한다.
+`<max_step_size>0.001</max_step_size>`는 simulation time을 한 번 갱신할 때 1 ms씩 진행하게 한다. `<real_time_factor>1.0</real_time_factor>`는 계산 성능이 충분할 때 simulation time과 wall time의 목표 비율을 1로 둔다. 다만 단순히 두 값을 곱해서 sensor publish rate를 정하는 것은 아니고 physics update와 계산 부하에 따라서 정해지는 값으로 이해해야 한다.
 
 world에서 명시적으로 불러온 system의 역할은 다음과 같다.
 
