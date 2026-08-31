@@ -1,0 +1,38 @@
+site_name: Isaac Sim 5.1 한국어 튜토리얼
+site_description: Ubuntu 24.04 LTS와 ROS 2 Jazzy에서 배우는 NVIDIA Isaac Sim 5.1 실행 중심 과정
+repo_url: https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr
+edit_uri: edit/IsaacSim5.1/docs/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search:
+      lang:
+        - ko
+        - en
+
+strict: true
+
