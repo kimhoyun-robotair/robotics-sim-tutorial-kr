@@ -5,11 +5,11 @@
 > **ROS 2:** Jazzy  
 > **선행 학습:** [Jazzy 환경 설치](02_installation-jazzy.md)
 
-오류를 한꺼번에 고치려 하면 SDF, Gazebo server, rendering, bridge, ROS 2 overlay 가운데 원인을 찾기 어렵다. 이 장에서는 환경 → 정적 파일 → Gazebo Transport → ROS 2 bridge → TF·controller 순서로 경계를 좁힌다.
+오류를 한꺼번에 고치려 하면 SDF, Gazebo server, rendering, bridge, ROS 2 overlay 가운데 원인을 찾기 어렵다. 이 장에서는 환경 → 정적 파일 → Gazebo Transport → ROS 2 bridge → TF·controller 순서로 진단 범위를 줄여나간다.
 
-## 먼저 진단 정보를 고정한다
+## 먼저 문제 파악을 위한 정보를 찾는다.
 
-문제가 발생한 터미널에서 다음 출력을 저장한다. 다른 터미널의 환경은 같다고 가정하지 않는다.
+문제가 발생한 터미널에서 다음 출력을 저장한다.
 
 ```bash
 date -Is
@@ -323,7 +323,7 @@ ros2 pkg prefix tutorial_bot_bringup
 
 ## 재현 보고에 포함할 내용
 
-도움을 요청할 때 다음 정보를 함께 제공한다.
+LLM Agent나 타인에게 도움을 요청할 때 다음 정보를 함께 제공하면 좋다.
 
 1. 실행한 전체 명령과 현재 working directory를 기록한다.
 2. `ROS_DISTRO`, `gz sim --versions`, package prefix 출력을 기록한다.

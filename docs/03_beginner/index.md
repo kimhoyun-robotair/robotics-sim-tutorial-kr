@@ -7,7 +7,7 @@
 
 ## 목표
 
-초급 과정은 작은 SDF world를 관찰하는 데서 시작해, 같은 로봇에 기능을 한 단계씩 더하는 흐름으로 진행한다. GUI와 SDF를 먼저 익히고, Xacro로 차체와 바퀴를 만든 뒤 DiffDrive로 움직인다. 마지막에는 Gazebo Transport와 ROS 2를 연결해 키보드 명령, wheel odometry, 센서 데이터를 직접 확인한다.
+초급 과정은 작은 SDF world를 켜보는 것부터 시작해, 같은 로봇에 기능을 한 단계씩 더하는 흐름으로 진행한다. GUI와 SDF를 먼저 익히고, Xacro로 차체와 바퀴를 만든 뒤 DiffDrive로 움직인다. 마지막에는 Gazebo Transport와 ROS 2를 연결해 키보드 명령, wheel odometry, 센서 데이터를 직접 확인한다.
 
 <figure class="course-figure">
   <img src="../assets/diagrams/beginner-learning-path.svg" alt="Gazebo 개요에서 첫 world 실행까지 이어지는 초급 학습 경로 도식" loading="lazy">
@@ -16,7 +16,7 @@
 
 ## 학습 흐름
 
-1. Gazebo Server, GUI, simulation time, RTF를 관찰한다.
+1. Gazebo Server, GUI, simulation time, RTF를 직접 확인해본다.
 2. SDF의 `world → model → link` 계층과 System plugin을 읽는다.
 3. URDF와 Xacro로 차체, 좌우 구동 바퀴, joint를 단계적으로 구성한다.
 4. `gz::sim::systems::DiffDrive`를 붙이고 직진·원호·제자리 회전을 검증한다.
@@ -36,7 +36,7 @@
 </robot>
 ```
 
-이 구조 덕분에 차체만 있는 1단계, joint까지 있는 2단계, 구동 plugin까지 있는 3단계를 서로 비교할 수 있다.
+이러한 학습 구조를 통해 차체만 있는 1단계, joint까지 있는 2단계, 구동 plugin까지 있는 3단계를 서로 비교할 수 있다.
 
 <pre class="course-mermaid">
 flowchart TB

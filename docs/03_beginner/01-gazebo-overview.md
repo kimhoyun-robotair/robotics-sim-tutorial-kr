@@ -93,6 +93,6 @@ GUI에서 바꾼 pose는 실행 중인 상태만 바꾼다. 재실행해도 같�
 - `Unable to find or download file`이 나오면 저장소 루트에서 실행했는지 `pwd`로 확인한다.
 - GUI가 뜨지 않으면 `gz sim -s ...`로 Server 시작 여부를 먼저 분리해 확인한다.
 - stats topic이 없으면 world 이름이 `first_world`인지 `gz topic -l`에서 다시 확인한다.
-- RTF가 계속 낮으면 Pause 여부를 먼저 확인한 뒤 센서·렌더링 부하를 줄여 원인을 나눈다.
+- RTF가 계속 낮으면 Pause 여부를 먼저 확인한 뒤 센서·렌더링 부하를 줄여 원인을 분리한다.
 
 [다음: Gazebo GUI 기초](02-gui-basics.md)

@@ -79,6 +79,7 @@ gz fuel download \
 기본 cache는 보통 `~/.gz/fuel`이다. 실습 cache를 저장소 작업 파일과 분리하려면 환경 변수를 명시한다.
 
 ```bash
+mkdir -p .fuel-cache/
 export GZ_FUEL_CACHE_PATH="$PWD/.fuel-cache"
 gz fuel download \
   -u 'https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coke'

@@ -308,6 +308,7 @@ topic 이름을 추측하지 말고 `gz topic -l` 결과를 먼저 사용한다.
 ## 10. ROS 2와 RViz에서 시각화한다
 
 다음 장의 gallery bridge를 실행한 뒤 RViz 설정을 연다.
+이 RViz 시각화 튜토리얼은 뒤에 나올 `ros-gz-bridge` 튜토리얼을 끝내고 다시 해보는 것을 추천한다.
 
 ```bash
 sudo apt install ros-jazzy-rviz-imu-plugin

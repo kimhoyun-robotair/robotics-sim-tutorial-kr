@@ -123,7 +123,7 @@ System plugin은 world나 model에 실행 기능을 붙인다. `first-world.sdf`
         name="gz::sim::systems::Imu"/>
 ```
 
-`Physics`는 world 전체의 강체를 갱신한다. `Sensors`는 렌더링 기반 sensor를 갱신하고, `Imu`는 IMU sensor를 처리한다. 이후 로봇에 넣는 DiffDrive는 model 수준 plugin이므로 그 model의 wheel joint만 제어한다.
+`Physics`는 world 전체의 물리법칙을 갱신한다. `Sensors`는 렌더링 기반 sensor를 갱신하고, `Imu`는 IMU sensor를 처리한다. 이후 로봇에 넣는 DiffDrive는 model 수준 plugin이므로 그 model의 wheel joint만 제어한다.
 
 ## 검사와 전개 결과 확인
 

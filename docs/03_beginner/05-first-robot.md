@@ -22,14 +22,14 @@
 | 형식 | 주된 역할 | 이 저장소의 예 |
 |---|---|---|
 | URDF | ROS 로봇의 link·joint 트리를 표현한다. | `xacro` 명령이 만든 `/tmp/tutorial_bot-stage-01.urdf` |
-| Xacro | 변수, 수식, include, macro로 URDF 중복을 줄인다. | `urdf/stages/01-base.xacro`와 `urdf/macros/stage_components.xacro` |
+| Xacro | 변수, 수식, include, macro로 URDF 재사용성을 높인다. | `urdf/stages/01-base.xacro`와 `urdf/macros/stage_components.xacro` |
 | SDF | Gazebo world, physics, sensor, System plugin까지 표현한다. | `first-world.sdf`와 URDF에서 변환한 model SDF |
 
 세 형식을 따로 유지하는 것이 아니다. 이 과정에서는 Xacro를 원본으로 두고, `xacro`가 URDF를 생성하며, Gazebo가 URDF를 SDF model로 변환한다.
 
 ## 1단계 Xacro의 실제 구조
 
-1단계 파일은 include와 macro 호출만 가진다.
+첫번째로 우리가 사용할 1단계 파일은 include와 macro 호출만 가진다.
 
 ```xml
 <!-- urdf/stages/01-base.xacro -->
@@ -60,11 +60,11 @@
 </xacro:macro>
 ```
 
-macro를 사용하면 차체의 크기와 질량을 관성 계산에도 같은 값으로 전달할 수 있다. 수식을 한 번만 정의하므로 visual 크기를 바꾼 뒤 관성 값을 수동으로 고치는 실수를 줄인다.
+macro를 사용하면 차체의 크기와 질량을 관성 계산에도 같은 값으로 전달할 수 있다. 수식을 한번만 정의하고, 값만 전달해서 재사용 가능하기 때문에 수동으로 값을 일일히 고칠 때 발생할 수 있는 휴먼 에러를 최소화 할 수 있다.
 
 ## 관성 macro 읽기
 
-직육면체 관성은 다음 Xacro 수식으로 계산한다.
+직육면체의 관성(Inertia)은 다음 Xacro 수식으로 계산한다.
 
 ```xml
 <xacro:macro name="stage_box_inertia" params="mass x y z">
