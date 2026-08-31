@@ -1,9 +1,0 @@
-schema_version: 1
-route_counts: {beginner: 0, intermediate: 0, advanced: 7}
-routes:
-  - {course: advanced, title: 고급 개요, path: 05_advanced/index.md, prerequisites: [], implementation_todo: 13}
-  - {course: advanced, title: Transport 인터페이스, path: 05_advanced/02-transport-interfaces.md, prerequisites: [05_advanced/01-ecs-system-plugin.md], implementation_todo: 10}
-  - {course: advanced, title: 물리와 주기 디버깅, path: 05_advanced/03-physics-debugging.md, prerequisites: [05_advanced/02-transport-interfaces.md], implementation_todo: 11}
-  - {course: advanced, title: Headless 통합 테스트, path: 05_advanced/04-headless-integration.md, prerequisites: [05_advanced/03-physics-debugging.md], implementation_todo: 12}
-  - {course: advanced, title: CI 재현성, path: 05_advanced/05-ci-reproducibility.md, prerequisites: [05_advanced/04-headless-integration.md], implementation_todo: 14}
-  - {course: advanced, title: Production Stack 프로젝트, path: 05_advanced/06_project-production-stack.md, prerequisites: [05_advanced/05-ci-reproducibility.md], implementation_todo: 13}
