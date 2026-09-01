@@ -10,13 +10,13 @@
 | ROS | ROS 2 Humble |
 | Gazebo | Gazebo Classic 11 |
 | 저장소 브랜치 | `Humble` |
-| workspace | `gazebo-sim-tutorial-kr/ros2_ws` |
+| workspace | `robotics-sim-tutorial-kr/ros2_ws` |
 
 ## 매 터미널에서 실행
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ```
 
 환경이 섞였는지 확인한다.
@@ -24,7 +24,7 @@ source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
 ```bash
 echo "ROS_DISTRO=$ROS_DISTRO"
 gazebo --version
-git -C ~/gazebo-sim-tutorial-kr branch --show-current
+git -C ~/robotics-sim-tutorial-kr branch --show-current
 ```
 
 예상값은 각각 `humble`, `Gazebo ... version 11.x`, `Humble`이다.
@@ -44,7 +44,7 @@ sudo apt install -y \
   python3-colcon-common-extensions \
   python3-rosdep
 
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
 colcon build --symlink-install
@@ -271,7 +271,7 @@ find $(ros2 pkg prefix gazebo_tutorial_plugins) \
 ## 모델·world 정적 검사
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 
 for model in diffbot rover_diff rover_ackermann sensor_bot; do
   xacro src/gazebo_tutorial_description/urdf/${model}.urdf.xacro \

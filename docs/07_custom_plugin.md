@@ -433,7 +433,7 @@ sudo apt install -y \
 워크스페이스 루트에서 의존성을 확인하고 패키지만 빌드한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install \
@@ -571,7 +571,7 @@ URDF를 수정한 뒤에는 설명 패키지와 플러그인 패키지를 다시
 source한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 colcon build --symlink-install \
   --packages-select gazebo_tutorial_plugins YOUR_DESCRIPTION_PACKAGE
@@ -602,7 +602,7 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py
 첫 번째 터미널에서 플러그인을 포함한 diffbot과 기본 RViz 설정을 함께 실행한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py rviz:=true
@@ -612,7 +612,7 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py rviz:=true
 ground-truth Path와 wheel-odometry Path가 함께 늘어나야 한다.
 
 ```bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
@@ -623,7 +623,7 @@ Gazebo가 실행되고 로봇이 spawn된 상태에서 최종 토픽 이름과 �
 확인한다.
 
 ```bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 topic list -t | rg 'ground_truth_path|truth_path'
 ros2 topic info --verbose /ground_truth_path
 ros2 topic echo --once /ground_truth_path

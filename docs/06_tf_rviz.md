@@ -300,7 +300,7 @@ ros2 run tf2_ros tf2_echo odom base_footprint
 먼저 workspace를 빌드하고 한 로봇을 실행한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 colcon build --symlink-install
 source install/setup.bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py
@@ -420,7 +420,7 @@ Visualization Manager:
 별도 터미널에서 키보드 teleop을 시작한다.
 
 ```bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```

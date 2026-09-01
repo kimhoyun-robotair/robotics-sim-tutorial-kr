@@ -4,8 +4,6 @@
 
 예제는 **ROS 2 Humble + Gazebo Classic 11 + `gazebo_ros_pkgs` 3.9 계열**을 대상으로 한다. 새 Gazebo에서 사용하는 `ros_gz` 플러그인이나 `<gz_frame_id>` 같은 태그를 이 예제에 섞어 쓰지 않아야 한다.
 
-이 장의 학습 흐름은 [MOGI-ROS Week-5-6 Gazebo sensors](https://github.com/MOGI-ROS/Week-5-6-Gazebo-sensors)의 센서별 실습 구성을 참고한다. 다만 대상 시뮬레이터가 다르므로 모델 구조, 플러그인, 토픽 계약, 코드와 설명은 Gazebo Classic 11에 맞게 새로 작성한다.
-
 ## 5.1 학습 목표
 
 이 장을 마치면 다음 작업을 수행할 수 있다.
@@ -99,7 +97,7 @@ install(
 워크스페이스를 빌드하고 전체 센서 모델을 실행한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 colcon build --symlink-install
 source install/setup.bash

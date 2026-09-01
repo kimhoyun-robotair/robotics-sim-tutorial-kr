@@ -9,7 +9,7 @@ entity → topic/QoS → TF** 순서로 관측하면 대부분의 문제를 빠�
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py verbose:=true
 ```
 
@@ -228,7 +228,7 @@ ros2 topic hz /joint_states
 빠졌다는 뜻이다. workspace를 다시 빌드하고 현재 터미널에서 install space를 source한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 colcon build --symlink-install
 source install/setup.bash
 printenv GAZEBO_PLUGIN_PATH
@@ -250,7 +250,7 @@ ABI가 맞지 않는 ROS/Gazebo 배포판에서 만든 `.so`를 복사해 쓰지
 
 ```bash
 xacro \
-  ~/gazebo-sim-tutorial-kr/ros2_ws/src/\
+  ~/robotics-sim-tutorial-kr/ros2_ws/src/\
 gazebo_tutorial_description/urdf/diffbot.urdf.xacro \
   > /tmp/diffbot.urdf
 
@@ -274,7 +274,7 @@ Bash의 `nounset` 옵션(`set -u`)을 켠 상태에서 Humble의 setup script를
 ```bash
 set -eo pipefail
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 set -u
 
 ros2 pkg prefix gazebo_tutorial_description
