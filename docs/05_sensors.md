@@ -104,6 +104,49 @@ source install/setup.bash
 ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all
 ```
 
+### 전체 센서 장착 시 전도 방지
+
+이 로봇의 두 구동 바퀴는 `x=0` 축에서 지면과 접촉하고 후방 caster는 `x=-0.20 m`에서 접촉하므로, 정지 상태의 무게중심을 `-0.20 < x < 0`인 지지영역 안에 두어야 한다. `all` 프로필에서는 센서 장착 링크 일곱 개가 각각 `0.05 kg`이고 여러 카메라가 차체 앞쪽에 있어, 센서가 만드는 x축 모멘트의 합이 약 `+0.0485 kg·m`이다. 기존 `0.20 kg` caster의 후방 모멘트 `-0.0400 kg·m`보다 크므로 전체 무게중심이 구동 바퀴 축보다 조금 앞에 놓이고 로봇이 전방으로 넘어질 수 있다.
+
+예제는 caster를 후방 카운터웨이트 역할까지 포함하는 `1.20 kg` 등가 질량으로 모델링한다. 반지름과 질량을 Xacro property로 공유하고, 구의 관성 모멘트 `I = 2mr²/5`도 같은 값으로 계산한다.
+
+```xml
+<xacro:property name="caster_radius" value="0.05"/>
+<xacro:property name="caster_mass" value="1.20"/>
+<xacro:property name="caster_x" value="-0.20"/>
+
+<link name="caster_link">
+  <visual>
+    <geometry><sphere radius="${caster_radius}"/></geometry>
+  </visual>
+  <collision>
+    <geometry><sphere radius="${caster_radius}"/></geometry>
+  </collision>
+  <inertial>
+    <mass value="${caster_mass}"/>
+    <inertia
+      ixx="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"
+      ixy="0" ixz="0"
+      iyy="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"
+      iyz="0"
+      izz="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"/>
+  </inertial>
+</link>
+<joint name="caster_joint" type="fixed">
+  <parent link="base_link"/>
+  <child link="caster_link"/>
+  <origin xyz="${caster_x} 0 -0.13" rpy="0 0 0"/>
+</joint>
+```
+
+`all` 프로필의 전체 질량은 약 `9.45 kg`이고 x축 무게중심은 다음과 같이 약 `-0.020 m`가 된다. 따라서 무게중심의 지면 투영점이 바퀴 축과 후방 caster 사이에 놓인다.
+
+\[
+x_{COM} = \frac{(-0.20)(1.20) + 0.0485}{9.45} \approx -0.020\,\mathrm{m}
+\]
+
+센서 질량을 0에 가깝게 줄이는 방법은 관성 응답을 왜곡하므로 사용하지 않는다. 실제 로봇으로 확장할 때는 각 부품의 실측 질량과 위치로 전체 무게중심을 다시 계산하고 배터리나 별도 ballast의 위치를 조정해야 한다.
+
 LiDAR만 확인하려면 다음처럼 실행한다.
 
 ```bash
