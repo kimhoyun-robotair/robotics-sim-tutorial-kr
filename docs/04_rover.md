@@ -83,7 +83,7 @@ collision을 가진 실제 차체다. 공통 매크로 안의 fixed joint가 차
 전개된 URDF가 XML과 URDF 규칙을 만족하는지 Gazebo를 켜기 전에 확인한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 
@@ -246,7 +246,7 @@ truth와 encoder 적분 결과가 조금씩 달라질 수 있다. 또한 Humble 
 첫 번째 터미널에서 launch한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 
@@ -264,7 +264,7 @@ ros2 launch gazebo_tutorial_bringup rover_diff.launch.py --show-args
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
@@ -670,7 +670,7 @@ diff rover launch를 실행 중이라면 먼저 `Ctrl-C`로 종료한다. 두 �
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 
 ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py
 ```

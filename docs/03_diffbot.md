@@ -17,7 +17,7 @@
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
@@ -221,7 +221,7 @@ I_{xx}=\frac{m}{12}(y^2+z^2)
 Xacro는 매크로와 수식을 포함한 작성용 형식이고, `robot_state_publisher`와 Gazebo가 최종적으로 받는 것은 펼쳐진 URDF XML이다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 xacro src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro \
   > /tmp/diffbot.urdf
 check_urdf /tmp/diffbot.urdf
@@ -342,7 +342,7 @@ caster_wheel_joint
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py
 ```
 
@@ -438,7 +438,7 @@ ros2 topic echo /odom --once
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```

@@ -1,6 +1,6 @@
 # URDF, Xacro, SDF를 한 번에 이해하기
 
-URDF, Xacro, SDF는 서로 경쟁하는 형식이 아니라 서로 다른 책임을 맡는 형식이다. 이 튜토리얼에서는 **Xacro로 URDF를 생성하고**, ROS 2가 그 URDF로 TF를 구성하며, Gazebo Classic 11이 URDF를 내부 SDF 모델로 변환하여 world에 삽입한다. 조명·지면·물리 엔진과 같은 환경은 SDF world로 작성한다.
+URDF, Xacro, SDF는 서로 경쟁하는 형식이 아니라 서로 다른 역할로 규정된 형식이다. 이 튜토리얼에서는 **Xacro로 URDF를 생성하고**, ROS 2가 그 URDF로 TF를 구성하며, Gazebo Classic 11이 URDF를 내부 SDF 모델로 변환하여 world에 삽입한다. 조명·지면·물리 엔진과 같은 환경은 SDF world로 작성한다.
 
 ```mermaid
 flowchart LR
@@ -132,7 +132,7 @@ I_{xx}=I_{yy}=\frac{m}{12}(3r^2+l^2),\quad
 I_{zz}=\frac{mr^2}{2}
 \]
 
-위 최소 URDF의 숫자는 이 식으로 계산한 값이다. 실제 튜토리얼에서는 숫자를 반복해서 적지 않고 [`common.xacro`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)의 `box_inertial`, `cylinder_inertial` 매크로로 계산한다.
+위 최소 URDF의 숫자는 이 식으로 계산한 값이다. 실제 튜토리얼에서는 숫자를 반복해서 적지 않고 [`common.xacro`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)의 `box_inertial`, `cylinder_inertial` 매크로로 계산한다.
 
 !!! danger "관성에 0을 넣지 않는다"
     대각 원소가 0이거나 음수인 관성 텐서는 실제 강체가 될 수 없다. 경고만 피하려고 형상과 무관한 극단적으로 작은 값을 넣어도 수치 불안정이 생긴다. 실제 크기와 질량으로 계산한 값을 사용한다.
@@ -177,7 +177,7 @@ Xacro는 URDF XML에 변수와 함수 호출에 가까운 기능을 추가한다
 
 ### property와 macro 정의
 
-다음 코드는 [`common.xacro`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)의 구성 방식을 축약한 예이다. 매크로 파일은 자체 로봇을 만들지 않고 재사용할 정의만 제공한다.
+다음 코드는 [`common.xacro`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)의 구성 방식을 축약한 예이다. 매크로 파일은 자체 로봇을 만들지 않고 재사용할 정의만 제공한다.
 
 ```xml
 <?xml version="1.0"?>
@@ -242,7 +242,7 @@ Xacro는 URDF XML에 변수와 함수 호출에 가까운 기능을 추가한다
 
 ### include와 macro 호출
 
-main Xacro에서는 매크로 파일을 include한 뒤 좌우 바퀴에 서로 다른 값을 전달한다. 다음 코드는 [`diffbot.urdf.xacro`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro)에서 실제로 사용하는 패턴이다.
+main Xacro에서는 매크로 파일을 include한 뒤 좌우 바퀴에 서로 다른 값을 전달한다. 다음 코드는 [`diffbot.urdf.xacro`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro)에서 실제로 사용하는 패턴이다.
 
 ```xml
 <?xml version="1.0"?>
@@ -281,7 +281,7 @@ main Xacro에서는 매크로 파일을 include한 뒤 좌우 바퀴에 서로 �
 `$(find gazebo_tutorial_description)`은 설치된 package share 경로를 찾는다. 따라서 다른 package에서 include하더라도 현재 작업 디렉터리에 의존하지 않는다. `left_wheel`과 `right_wheel` 호출은 같은 구조를 재사용하고 y 위치의 부호만 다르게 계산한다. 바퀴 반지름을 바꾸면 geometry, 관성, 위치 계산과 drive plugin 값을 같은 property에서 파생하도록 구성하는 편이 좋다.
 
 !!! note "코드 조각과 실제 파일의 차이"
-    위 main 코드는 include와 호출 관계를 강조하려고 `base_link` 본문을 생략한 조각이다. 실행 가능한 전체 모델은 [`diffbot.urdf.xacro`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro)에 있고, 실제 공통 매크로는 [`common.xacro`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)에 있다.
+    위 main 코드는 include와 호출 관계를 강조하려고 `base_link` 본문을 생략한 조각이다. 실행 가능한 전체 모델은 [`diffbot.urdf.xacro`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro)에 있고, 실제 공통 매크로는 [`common.xacro`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)에 있다.
 
 ### arg와 조건을 활용한 변형 선택
 
@@ -313,15 +313,15 @@ xacro configurable_robot.urdf.xacro use_camera:=false \
   > /tmp/robot_without_camera.urdf
 ```
 
-조건을 과도하게 중첩하면 어떤 profile이 어떤 link와 plugin을 만드는지 파악하기 어려워진다. 공통 본체, 센서 macro, main 조립 파일을 분리하고 지원하는 모든 arg 조합을 CI에서 전개하는 방식이 관리하기 쉽다.
+각 URDF 파일에서 모든 부분을 재작성하고, 중첩해서 작성하게 되면 어떤 profile 파일에서 어떤 link와 어떤 plugin을 만들고 사용하는지에 대해서 파악하기가 어렵다. 이에 따라서 재사용/재활용이 가능한 부분은 macro와 main URDF 파일로 분리하고, property와 arg를 활용해서 CLI에서 쉽게 만들거나, 재활용 하는 것이 관리하기에 유리하다.
 
-### Xacro 전개 결과 검사
+### Xacro 생성 결과 검사
 
 Xacro 원본이 XML parser를 통과해도 매크로 호출 뒤에 중복 이름이나 잘못된 parent가 생길 수 있다. Gazebo를 띄우기 전에 완전한 URDF를 만들고 검사한다.
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source install/setup.bash
 
 xacro \
@@ -331,7 +331,7 @@ xacro \
 check_urdf /tmp/diffbot.urdf
 ```
 
-`xacro`는 `${...}`, include, macro 호출을 모두 해석하여 표준 URDF만 출력한다. `check_urdf`는 그 결과의 XML과 link/joint 트리를 검사한다. 실제 저장소의 전체 모델을 검사하는 명령이므로 문서 조각을 조합할 필요가 없다.
+`xacro`는 `${...}`, include, macro 호출을 모두 해석하여 표준 URDF만 출력한다. `check_urdf`는 그 결과의 XML과 link/joint 트리를 검사한다. 실제 저장소의 전체 모델을 검사하는 명령이므로 쉽게 결과를 확인할 수 있다는 장점이 있다.
 
 ## 4. URDF의 Gazebo Classic 확장
 
@@ -362,11 +362,11 @@ check_urdf /tmp/diffbot.urdf
 | `minDepth` | solver가 유지하려는 최소 접촉 깊이이다 | 작은 penetration을 안정적으로 유지하는 데 사용한다 |
 | `maxVel` | 접촉 오차 보정 속도의 상한이다 | 큰 값은 튀는 현상을 키울 수 있다 |
 
-이 저장소는 같은 구성을 [`common.xacro`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)의 `gazebo_contact`와 `simple_wheel` 매크로에 넣어 모든 바퀴에 일관되게 적용한다.
+이 저장소는 같은 구성을 [`common.xacro`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro)의 `gazebo_contact`와 `simple_wheel` 매크로에 넣어 모든 바퀴에 일관되게 적용한다.
 
 ### 모델 전체에 drive plugin 추가
 
-`reference`가 없는 `<gazebo>` 블록은 모델 전체에 적용할 model plugin을 두는 데 사용한다. 다음 코드는 [`diffbot.urdf.xacro`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro)의 Differential Drive 설정을 축약한 코드이다.
+`reference`가 없는 `<gazebo>` 블록은 로봇 모델 전체에 적용할 model plugin을 두는 데 사용한다. 다음 코드는 [`diffbot.urdf.xacro`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro)의 Differential Drive 설정을 축약한 코드이다.
 
 ```xml
 <gazebo>
@@ -409,9 +409,9 @@ check_urdf /tmp/diffbot.urdf
 | `publish_odom`, `publish_odom_tf` | odometry message와 TF 발행 여부이다 |
 | `publish_wheel_tf` | plugin의 wheel TF 발행 여부이다. `robot_state_publisher`와 중복되지 않도록 `false`로 둔다 |
 
-`filename`은 ROS 2 Humble과 Gazebo Classic 11의 `libgazebo_ros_diff_drive.so`를 사용한다. Gazebo Harmonic의 system plugin 이름과 설정 구조를 그대로 가져오면 로드되지 않는다.
+`filename`은 ROS 2 Humble과 Gazebo Classic 11의 `libgazebo_ros_diff_drive.so`를 사용한다. 만약에 헷갈려서 Gazebo Harmonic의 system plugin 이름과 설정 구조를 가져오게 되면 작동하지 않는다.
 
-fixed joint가 Gazebo의 URDF→SDF 변환 과정에서 parent link로 합쳐지지 않아야 하는 센서가 있다면 해당 joint에 다음 확장을 둘 수 있다.
+fixed joint가 Gazebo의 URDF→SDF 변환 과정에서 parent link로 통합하지 않게 하고 싶다면면 해당 joint에 다음 확장을 둘 수 있다.
 
 ```xml
 <gazebo reference="camera_mount_joint">
@@ -419,7 +419,7 @@ fixed joint가 Gazebo의 URDF→SDF 변환 과정에서 parent link로 합쳐지
 </gazebo>
 ```
 
-보존 여부는 TF 요구와 sensor plugin의 frame 설정을 함께 고려하여 결정한다. 단순 장식 link까지 모두 보존하면 시뮬레이션 모델이 불필요하게 복잡해질 수 있다.
+이 옵션의 사용 여부는 TF 요구와 sensor plugin의 frame 설정을 함께 고려하여 결정해야한다. 단순 장식 link까지 모두 보존하면 시뮬레이션 모델이 불필요하게 복잡해질 수 있다.
 
 ## 5. SDF world와 Gazebo 실행 조건
 
@@ -488,24 +488,24 @@ SDF의 pose는 `x y z roll pitch yaw` 순서이고 단위는 m와 rad이다. `tu
 
 `max_step_size × real_time_update_rate`는 이론적인 최대 real-time factor와 관계가 있다. 위 설정은 0.001 s를 초당 1000번 적분하므로 목표 1.0과 맞는다. 센서와 복잡한 충돌 형상이 많아 계산량이 커지면 실제 `/gazebo/performance_metrics` 또는 GUI의 real-time factor는 목표보다 낮아질 수 있다.
 
-이 저장소의 실제 world는 [`empty.world`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_bringup/worlds/empty.world)와 [`sensor.world`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_bringup/worlds/sensor.world)에서 확인할 수 있다. [`simulation.launch.py`](https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_bringup/launch/simulation.launch.py)는 공식 `gazebo_ros/gazebo.launch.py`를 include하여 server를 실행한다. launch가 같은 ROS system plugin을 명령행으로 로드하는 구성에서는 world에 중복 선언하지 않는다.
+이 저장소의 실제 world는 [`empty.world`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_bringup/worlds/empty.world)와 [`sensor.world`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_bringup/worlds/sensor.world)에서 확인할 수 있다. [`simulation.launch.py`](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/ros2_ws/src/gazebo_tutorial_bringup/launch/simulation.launch.py)는 공식 `gazebo_ros/gazebo.launch.py`를 include하여 server를 실행한다. launch가 같은 ROS system plugin을 명령행으로 로드하는 구성에서는 world에 중복 선언하지 않는다.
 
 SDF 문법은 Gazebo Classic에 포함된 도구로 검사한다.
 
 ```bash
 gz sdf -k \
-  ~/gazebo-sim-tutorial-kr/ros2_ws/src/gazebo_tutorial_bringup/worlds/sensor.world
+  ~/robotics-sim-tutorial-kr/ros2_ws/src/gazebo_tutorial_bringup/worlds/sensor.world
 ```
 
 여기서 `gz sdf`는 Gazebo Classic의 SDF 검사·변환 명령이다. `gz sim`은 Gazebo Harmonic 계열 실행 명령이므로 이 튜토리얼에서 사용하지 않는다.
 
 ## 6. URDF에서 SDF로 변환한 결과 확인
 
-Gazebo가 내부적으로 어떤 모델을 보게 되는지 직접 출력하면 fixed joint 병합, `<gazebo>` 확장 반영, plugin parameter 이름 문제를 찾기 쉽다.
+Gazebo가 내부적으로 어떻게 xacro 및 URDF 파일을 처리하고 있는지 직접 출력하면 fixed joint 병합, `<gazebo>` 확장 반영, plugin parameter 이름 문제를 찾기 쉽다.
 
 ```bash
 source /opt/ros/humble/setup.bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source install/setup.bash
 
 # 1) Xacro를 표준 URDF로 전개한다.

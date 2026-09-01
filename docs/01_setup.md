@@ -2,7 +2,7 @@
 
 이 장은 **Ubuntu 22.04 LTS**의 네이티브 설치를 기준으로 한다. ROS 2 Humble의 Tier 1 바이너리와 Gazebo Classic 11을 함께 설치하면 이 저장소의 예제를 별도 소스 빌드 없이 시작할 수 있다.
 
-## 1. 이름부터 구분하기
+## 1. 혼동할 수 있는 부분 명확하게 구분하기
 
 Gazebo 생태계에는 이름이 비슷한 두 제품군이 있다.
 
@@ -13,7 +13,7 @@ Gazebo 생태계에는 이름이 비슷한 두 제품군이 있다.
 | ROS 패키지 `gazebo_ros_pkgs` | ROS 패키지 `ros_gz` |
 | 플러그인 `libgazebo_ros_diff_drive.so` | Gazebo Sim system plugin |
 
-두 제품은 world 파일에 SDF를 쓴다는 점만 비슷할 뿐, ROS 연결 방식과 플러그인 ABI가 다르다. 인터넷 예제에서 `ros_gz_bridge`, `gz sim`, `GZ_SIM_RESOURCE_PATH`가 보인다면 이 과정의 코드에 그대로 붙이지 않는다.
+두 제품은 world 파일에 SDF를 쓴다는 점만 비슷할 뿐, ROS 연결 방식과 플러그인 API가 다르다. 인터넷 예제에서 `ros_gz_bridge`, `gz sim`, `GZ_SIM_RESOURCE_PATH`가 보인다면 이 과정의 코드에 그대로 붙이지 않는다.
 
 Gazebo Classic은 2025년 1월에 공식 지원이 종료되었다. 자세한 수명 정책은 [Gazebo Classic 공식 문서](https://classic.gazebosim.org/)와 [ROS 2 Humble 문서](https://docs.ros.org/en/humble/)에서 확인할 수 있다. 이 과정은 Humble 기반의 기존 로봇 스택을 학습하고 유지보수하려는 목적에 적합하다.
 
@@ -89,8 +89,8 @@ LIBGL_ALWAYS_SOFTWARE=1 gazebo --verbose
 ```bash
 cd ~
 git clone --branch Humble --single-branch \
-  https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr.git
-cd gazebo-sim-tutorial-kr
+  https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr.git
+cd robotics-sim-tutorial-kr
 git branch --show-current
 ```
 
@@ -99,7 +99,7 @@ git branch --show-current
 ## 5. 의존성 설치와 빌드
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 
 rosdep install \
@@ -138,7 +138,7 @@ ROS 2 실습에서는 Gazebo, teleop, 토픽 진단을 서로 다른 터미널�
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ```
 
 원한다면 정확한 경로를 확인한 뒤 `~/.bashrc`에 추가할 수 있다. 여러 ROS 배포판을 함께 쓰는 컴퓨터라면 자동 source보다 터미널별 수동 source가 안전하다.
@@ -147,7 +147,7 @@ source 순서는 **기본 ROS 환경 → 현재 워크스페이스 overlay**이�
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 
 ros2 pkg prefix gazebo_ros
 ros2 pkg prefix gazebo_tutorial_description
