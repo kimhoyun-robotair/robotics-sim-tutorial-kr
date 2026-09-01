@@ -82,6 +82,26 @@ RViz의 `Path` 표시에는 `/wheel_odom_path`를 사용하고, Gazebo 플러그
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
 ```
 
+## 미니 프로젝트: F1TENTH 시뮬레이션
+
+기본 Gazebo 실습을 마친 뒤에는 `ros2_ws/src/f1_robot_model`과 `ros2_ws/src/velodyne_simulator`를 하나의 미니 프로젝트로 학습하면 좋다. F1TENTH 크기의 Ackermann 차량을 직접 띄우고 제어하면서 URDF/Xacro 모델링, Gazebo 플러그인, ROS 2 메시지 변환, Velodyne 3D LiDAR의 `PointCloud2` 데이터 흐름을 한 번에 연결해 볼 수 있어, 개별 예제를 실제 로봇 시뮬레이션 구조로 확장하는 연습에 적합하다.
+
+이 미니 프로젝트는 [F1TENTH_Simulation](https://github.com/kimhoyun-robotair/F1TENTH_Simulation)의 `f1_robot_model`과 필요한 Velodyne 시뮬레이션 패키지(`velodyne_description`, `velodyne_gazebo_plugins`, `velodyne_simulator`)만 포함한다. `cartographer`, `cartographer_ros`, 관련 launch/config 및 `.pbstream` 파일은 포함하지 않았으므로 SLAM·Cartographer 실습이 필요하면 별도로 구성한다.
+
+```bash
+sudo apt install -y \
+  ros-humble-ackermann-msgs \
+  ros-humble-joy \
+  ros-humble-teleop-twist-joy
+
+cd ros2_ws
+source /opt/ros/humble/setup.bash
+rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
+colcon build --symlink-install --packages-up-to f1_robot_model velodyne_simulator
+source install/setup.bash
+ros2 launch f1_robot_model display.launch.py
+```
+
 ## 학습 순서
 
 1. [환경 구성](docs/01_setup.md)
@@ -102,7 +122,9 @@ ros2_ws/src/
 ├── gazebo_tutorial_description/  # URDF/Xacro 로봇과 센서 모델
 ├── gazebo_tutorial_bringup/      # Gazebo·spawn·RViz 통합 launch/world/config
 ├── gazebo_tutorial_tools/        # Odom → Path, Ackermann wheel odom 노드
-└── gazebo_tutorial_plugins/      # Gazebo Classic C++ ModelPlugin
+├── gazebo_tutorial_plugins/      # Gazebo Classic C++ ModelPlugin
+├── f1_robot_model/               # F1TENTH Ackermann 차량·world·launch
+└── velodyne_simulator/           # Velodyne 모델·Gazebo 센서 플러그인
 ```
 
 문서 사이트를 로컬에서 보려면 저장소 루트에서 다음을 실행한다.
