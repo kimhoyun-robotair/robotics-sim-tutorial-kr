@@ -76,6 +76,7 @@
 | [**gazebo_ros_battery**](https://github.com/nilseuropa/gazebo_ros_battery) | Gazebo Classic에서 배터리의 수학적 모델링에 따라 시뮬레이션 하는 플러그인 |
 | [**gazebo_ros_motor**](https://github.com/nilseuropa/gazebo_ros_motors) | Gazebo Classic에서 모터의 수학적 모델링에 따라 시뮬레이션 하는 플러그인 |
 | [**car_sim**](https://github.com/CihatAltiparmak/car_sim) | Gazebo Classic에서 Ackermann 기반의 차량 시뮬레이션 |
+| [**rmf_demo**](https://github.com/open-rmf/rmf_demos) | Gazebo 기반 Multi-Floor 등 다양한 환경 시뮬레이션을 제공하는 패키지 |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
