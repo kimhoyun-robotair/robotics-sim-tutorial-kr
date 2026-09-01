@@ -86,6 +86,8 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
 
 기본 Gazebo 실습을 마친 뒤에는 `ros2_ws/src/f1_robot_model`과 `ros2_ws/src/velodyne_simulator`를 하나의 미니 프로젝트로 학습하면 좋다. F1TENTH 크기의 Ackermann 차량을 직접 띄우고 제어하면서 URDF/Xacro 모델링, Gazebo 플러그인, ROS 2 메시지 변환, Velodyne 3D LiDAR의 `PointCloud2` 데이터 흐름을 한 번에 연결해 볼 수 있어, 개별 예제를 실제 로봇 시뮬레이션 구조로 확장하는 연습에 적합하다. 또한, 이를 활용한 다른 시뮬레이션을 개발하는데도 유용하게 활용될 수 있다고 생각한다.
 
+관련해서 더 자세한 설명은 `F1TENTH.md`와 `F1TENTH_USERGUIDE.md`를 참고하길 바란다.
+
 ```bash
 sudo apt install -y \
   ros-humble-ackermann-msgs \
@@ -137,11 +139,3 @@ mkdocs serve
 ## 라이선스
 
 코드와 문서는 [Apache License 2.0](LICENSE)을 따른다.
-
-## Acknowledgement
-본 패키지를 개발하는데 있어서, 매우 큰 도움이 되었던 다음 오픈소스 개발진들에게 감사하다는 말씀을 드리고 싶습니다.
-- [Cartographer](https://github.com/cartographer-project/cartographer)
-- [cartographer_ros](https://github.com/ros2/cartographer_ros)
-- [f1tenth_gtc_tutorial](https://github.com/linklab-uva/f1tenth_gtc_tutorial)
-- [f1_robot_model](https://github.com/armando-genis/f1_robot_model)
-- [velodyne_simulator](https://bitbucket.org/DataspeedInc/velodyne_simulator.git/src)
