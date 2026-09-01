@@ -17,8 +17,6 @@
 - **velodyne_simulator** : 3D LiDAR 시뮬레이션을 위한 의존성 패키지
 
 본 패키지를 개발하는데 있어서, 매우 큰 도움이 되었던 다음 오픈소스 개발진들에게 감사하다는 말씀을 드리고 싶습니다.
-- [Cartographer](https://github.com/cartographer-project/cartographer)
-- [cartographer_ros](https://github.com/ros2/cartographer_ros)
 - [f1tenth_gtc_tutorial](https://github.com/linklab-uva/f1tenth_gtc_tutorial)
 - [f1_robot_model](https://github.com/armando-genis/f1_robot_model)
 - [velodyne_simulator](https://bitbucket.org/DataspeedInc/velodyne_simulator.git/src)
