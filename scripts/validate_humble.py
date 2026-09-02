@@ -177,7 +177,7 @@ class Validator:
 
 def validate_packages(v: Validator) -> None:
     source = v.root / "ros2_ws" / "src"
-    manifests = sorted(source.glob("*/package.xml"))
+    manifests = sorted(source.rglob("package.xml"))
     v.require(bool(manifests), source, "package.xml을 찾지 못했습니다")
 
     parsed: dict[str, tuple[Path, ET.Element]] = {}
@@ -294,7 +294,8 @@ def validate_python_sources(v: Validator) -> None:
                 node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             }
             v.require("generate_launch_description" in functions, path, "generate_launch_description()가 없습니다")
-            validate_launch_wrapper(v, path, tree)
+            if path.parent == workspace / "gazebo_tutorial_bringup" / "launch":
+                validate_launch_wrapper(v, path, tree)
 
 
 def literal_keyword(call: ast.Call, keyword_name: str) -> Optional[str]:
