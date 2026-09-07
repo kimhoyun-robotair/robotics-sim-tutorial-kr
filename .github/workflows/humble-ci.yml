@@ -141,8 +141,8 @@ jobs:
             # Each model gets a fresh X server number and its own Qt runtime.
             # Keep GL/Xvfb diagnostics instead of retrying a rendering failure.
             if ! xvfb-run -n "$display_number" -e "$evidence/$model/xvfb.log" \
-              -s '-screen 0 1920x1200x24' bash -c '
-                glxinfo -B > "$2/glxinfo.txt" &&
+              -s '-screen 0 1920x1200x24 -noreset' bash -c '
+                timeout 10s glxinfo -B > "$2/glxinfo.txt" &&
                 exec python3 scripts/check_humble_runtime.py --model "$1" \
                   --rviz --evidence "$2"
               ' bash "$model" "$evidence/$model"; then
