@@ -26,6 +26,20 @@ if [[ ! "$internal_timeout" =~ ^[1-9][0-9]*$ ]] || [[ ! -d "$source_root/example
 fi
 
 mkdir -p "$evidence" /work/source /work/build /work/install /work/log /ccache
+# Keep failures readable in Actions even when downloading artifacts is unavailable.
+report_failure() {
+  local status=$?
+  printf 'ROS/Gazebo validation failed (exit %s). Recent logs:\n' "$status" >&2
+  local log_file
+  for log_file in "$evidence/rosdep-update.log" "$evidence/rosdep.log" "$evidence/build.log" "$evidence/test.log" "$evidence/test-results.log"; do
+    if [[ -f "$log_file" ]]; then
+      printf '\n%s\n' "$log_file" >&2
+      tail -n 60 "$log_file" >&2
+    fi
+  done
+  exit "$status"
+}
+trap report_failure ERR
 if [[ "$scenario" == "timeout" ]]; then
   printf '{"scenario":"timeout","deadline_seconds":%d,"deadline_source":"internal","exit_code":124}\n' \
     "$internal_timeout" > "$evidence/scenario.json"
