@@ -29,6 +29,6 @@ def generate_launch_description():
         launch_arguments={
             'map': LaunchConfiguration('map'), 'params_file': LaunchConfiguration('params_file'),
             'use_sim_time': LaunchConfiguration('use_sim_time'), 'autostart': 'true',
-            'use_composition': 'false',
+            'use_composition': 'False',
         }.items())
     return LaunchDescription(arguments + [simulation, localization])

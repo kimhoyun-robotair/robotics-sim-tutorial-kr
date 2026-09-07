@@ -13,7 +13,7 @@ teleop_twist_joy_node:
     scale_angular:
       yaw: 0.4   # 조이스틱 입력의 0.4배가 조향각(rad)로 전달
     scale_angular_turbo:
-      yaw: 0.6   # 가속 모드의 경우 조이스틱 입력의 0.8배가 조향각(rad)로 전달
+      yaw: 0.6   # 가속 모드의 경우 조이스틱 입력의 0.6배가 조향각(rad)로 전달
 
     enable_button: 0         # 시작 트리거, A 버튼
     enable_turbo_button: 1   # 가속 모드 시작 트리거, B 버튼
