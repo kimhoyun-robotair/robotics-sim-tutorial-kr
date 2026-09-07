@@ -40,6 +40,24 @@ def _number(receipt: str, field: str) -> float:
     return float(matched.group(1))
 
 
+def _checker_diagnostics(evidence: Path) -> str:
+    excerpts = []
+    for name in (
+        "scenario.json", "cleanup.json", "server.log", "bridge.log",
+        "ros-pose.log", "distance.log", "stats.log", "unpause.log",
+        "command.log", "stop-command.log", "reset.log",
+    ):
+        try:
+            with (evidence / name).open("rb") as stream:
+                stream.seek(0, os.SEEK_END)
+                stream.seek(max(0, stream.tell() - 1200))
+                tail = stream.read().decode("utf-8", errors="replace")
+        except OSError as error:
+            tail = f"unavailable: {error.strerror}"
+        excerpts.append(f"{name} (last 1200 bytes):\n{tail}")
+    return "\n\n".join(excerpts)
+
+
 def test_nominal_scenario_uses_runnable_checker_seam(tmp_path: Path) -> None:
     # Given: the installed prerequisite packages and the repository checker seam.
     install_base = Path(os.environ["AMENT_PREFIX_PATH"].split(os.pathsep)[0]).parent
@@ -65,8 +83,9 @@ def test_nominal_scenario_uses_runnable_checker_seam(tmp_path: Path) -> None:
     # Then: live ROS, plugin, reset, and ownership observables pass together.
     assert result.returncode == 0, (
         f"checker exited {result.returncode}\n"
-        f"stdout:\n{result.stdout}\n"
-        f"stderr:\n{result.stderr}"
+        f"stdout:\n{result.stdout[-1200:]}\n"
+        f"stderr:\n{result.stderr[-1200:]}\n"
+        f"checker evidence:\n{_checker_diagnostics(tmp_path)}"
     )
     scenario = (tmp_path / "scenario.json").read_text(encoding="utf-8")
     cleanup = (tmp_path / "cleanup.json").read_text(encoding="utf-8")

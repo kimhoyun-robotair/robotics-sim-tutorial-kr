@@ -202,13 +202,18 @@ local_costmap:
   local_costmap:
     ros__parameters:
       robot_base_frame: base_link
-      footprint: "[[0.32, 0.26], [0.32, -0.26], [-0.32, -0.26], [-0.32, 0.26]]"
+      footprint: "[[0.36, 0.26], [0.36, -0.26], [-0.36, -0.26], [-0.36, 0.26]]"
       footprint_padding: 0.02
 ```
 
-이 rover는 차체 길이 0.6 m, 바퀴를 포함한 폭 약 0.5 m입니다.
-작은 원형 반경만 쓰면 로봇 모서리가 벽을 지나갈 수 있어 사각형 footprint와
-`ObstacleFootprint` critic으로 모서리까지 검사합니다. 차체 크기를 바꿨다면 로컬·전역 costmap의 footprint도 함께 수정하세요.
+차체 상자만 보면 길이 0.6 m, 폭 0.4 m이지만 **바퀴까지 포함한 전체 길이는 0.7 m, 폭은 0.5 m**입니다.
+앞뒤 바퀴 중심이 x=±0.25 m이고 반경이 0.1 m이므로 실제 앞뒤 끝은 x=±0.35 m까지 나옵니다.
+footprint는 이 외곽을 모두 감싸도록 x=±0.36 m, y=±0.26 m의 사각형으로 지정하고,
+`footprint_padding: 0.02`로 추가 여유를 둡니다.
+
+작은 원형 반경이나 차체 상자 크기만 쓰면 바퀴 또는 모서리가 벽과 부딪힐 수 있습니다.
+이 설정은 `ObstacleFootprint` critic으로 실제 사각형 외곽까지 검사합니다.
+차체·바퀴 크기나 관절 위치를 바꿨다면 로컬·전역 costmap의 footprint도 함께 수정하세요.
 
 ## 선택 실습: SLAM 중 Nav2, Cartographer, AMCL 단독
 

@@ -39,6 +39,30 @@ process_ticks() {
   awk '{print $22}' "/proc/$1/stat" 2>/dev/null
 }
 
+ros_planar_displacement() {
+  awk '
+    function finite_number(text, value) {
+      if (text !~ /^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$/) return 0
+      value=text+0
+      return sprintf("%.17g", value) ~ /^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][+-]?[0-9]+)?$/
+    }
+    /^---$/ {pose_index=0; in_position=0}
+    /^- position:/ {pose_index++; in_position=1; valid_x=0; valid_y=0}
+    /^  orientation:/ {in_position=0}
+    in_position && /^    x:/ {valid_x=finite_number($2); x=$2+0}
+    in_position && /^    y:/ {valid_y=finite_number($2); y=$2+0}
+    in_position && /^    z:/ {
+      if (!valid_x || !valid_y || !finite_number($2)) next
+      if (!(pose_index in seen)) {first_x[pose_index]=x; first_y[pose_index]=y; seen[pose_index]=1}
+      dx=x-first_x[pose_index]; dy=y-first_y[pose_index]; distance=sqrt(dx*dx+dy*dy)
+      if (!finite_number(sprintf("%.17g", distance))) next
+      if (distance > maximum) maximum=distance
+      samples++
+    }
+    END {if (samples) print maximum+0; else exit 1}
+  ' "$evidence/ros-pose.log" 2>/dev/null
+}
+
 register_process() {
   local pid=$1
   local ticks
@@ -203,14 +227,6 @@ if [[ "$scenario" == "missing-model" ]]; then
   exit "$exit_code"
 fi
 
-setsid timeout "$sim_timeout" gz topic -e --json-output -t /tutorial_bot/diagnostics/distance \
-  > "$evidence/distance.log" 2>&1 &
-distance_pid=$!
-register_process "$distance_pid" || exit 70
-setsid timeout "$sim_timeout" gz topic -e --json-output -t /world/advanced_diagnostics/stats \
-  > "$evidence/stats.log" 2>&1 &
-stats_pid=$!
-register_process "$stats_pid" || exit 70
 setsid ros2 run ros_gz_bridge parameter_bridge \
   '/world/advanced_diagnostics/pose/info@geometry_msgs/msg/PoseArray[gz.msgs.Pose_V' \
   > "$evidence/bridge.log" 2>&1 &
@@ -228,28 +244,44 @@ for (( elapsed=0; elapsed<readiness_timeout*10; elapsed++ )); do
 done
 gz service -s /world/advanced_diagnostics/control --reqtype gz.msgs.WorldControl \
   --reptype gz.msgs.Boolean --timeout 1000 --req 'pause: false' > "$evidence/unpause.log" 2>&1 || true
+
+# Establish a stationary ROS baseline before the one-shot velocity command.
+# Gazebo transport readiness alone does not guarantee the ROS bridge/echo is ready.
+baseline_ready=false
+for (( elapsed=0; elapsed<readiness_timeout*10; elapsed++ )); do
+  if ros_displacement=$(ros_planar_displacement); then
+    baseline_ready=true
+    break
+  fi
+  sleep 0.1
+done
+if [[ $baseline_ready != true ]]; then
+  printf '{"scenario":"nominal","status":"FAIL","phase":"ros-pose-readiness","deadline_seconds":%d,"exit_code":124}\n' \
+    "$readiness_timeout" > "$evidence/scenario.json"
+  exit_code=124
+  exit "$exit_code"
+fi
+
+# Captures start after readiness and cover the motion deadline plus reset polling.
+capture_timeout=$((sim_timeout + 5))
+setsid timeout "$capture_timeout" gz topic -e --json-output -t /tutorial_bot/diagnostics/distance \
+  > "$evidence/distance.log" 2>&1 &
+distance_pid=$!
+register_process "$distance_pid" || exit 70
+setsid timeout "$capture_timeout" gz topic -e --json-output -t /world/advanced_diagnostics/stats \
+  > "$evidence/stats.log" 2>&1 &
+stats_pid=$!
+register_process "$stats_pid" || exit 70
 gz topic -t /model/tutorial_bot/cmd_vel -m gz.msgs.Twist -p 'linear: {x: 0.5}' \
   > "$evidence/command.log" 2>&1
 
 for (( elapsed=0; elapsed<sim_timeout*10; elapsed++ )); do
   plugin_distance=$(awk -F '[:,}]' '/"data"/ {value=$2+0} END {print value+0}' "$evidence/distance.log" 2>/dev/null)
-  awk -v value="${plugin_distance:-0}" 'BEGIN {exit value >= 0.10 ? 0 : 1}' && break
+  ros_displacement=$(ros_planar_displacement) || ros_displacement=0
+  awk -v plugin="${plugin_distance:-0}" -v ros="$ros_displacement" \
+    'BEGIN {exit plugin >= 0.10 && ros >= 0.10 ? 0 : 1}' && break
   sleep 0.1
 done
-
-ros_displacement=$(awk '
-  /^---$/ {pose_index=0; in_position=0}
-  /^- position:/ {pose_index++; in_position=1}
-  /^  orientation:/ {in_position=0}
-  in_position && /^    x:/ {x=$2+0}
-  in_position && /^    y:/ {
-    y=$2+0
-    if (!(pose_index in seen)) {first_x[pose_index]=x; first_y[pose_index]=y; seen[pose_index]=1}
-    dx=x-first_x[pose_index]; dy=y-first_y[pose_index]; distance=sqrt(dx*dx+dy*dy)
-    if (distance > maximum) maximum=distance
-  }
-  END {print maximum+0}
-' "$evidence/ros-pose.log")
 gz topic -t /model/tutorial_bot/cmd_vel -m gz.msgs.Twist -p 'linear: {x: 0}' \
   > "$evidence/stop-command.log" 2>&1
 distance_lines_before_reset=$(wc -l < "$evidence/distance.log")

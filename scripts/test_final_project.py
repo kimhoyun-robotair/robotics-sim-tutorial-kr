@@ -95,6 +95,80 @@ def test_drive_dimensions_match_actual_wheels():
     assert float(plugin.findtext('min_velocity')) < 0 < float(plugin.findtext('max_velocity'))
 
 
+def _origin_matrix(origin):
+    """URDF origins use fixed-axis roll, pitch, yaw: Rz(yaw) Ry(pitch) Rx(roll)."""
+    values = {} if origin is None else origin.attrib
+    x, y, z = map(float, values.get('xyz', '0 0 0').split())
+    roll, pitch, yaw = map(float, values.get('rpy', '0 0 0').split())
+    cr, sr = math.cos(roll), math.sin(roll)
+    cp, sp = math.cos(pitch), math.sin(pitch)
+    cy, sy = math.cos(yaw), math.sin(yaw)
+    return ((cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr, x),
+            (sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr, y),
+            (-sp, cp * sr, cp * cr, z), (0.0, 0.0, 0.0, 1.0))
+
+
+def _matrix_product(left, right):
+    return tuple(tuple(sum(left[i][k] * right[k][j] for k in range(4))
+                       for j in range(4)) for i in range(4))
+
+
+def _assert_footprint_encloses_collisions(robot, footprint):
+    """Use exact primitive support bounds, including every joint/collision origin."""
+    transforms = {'base_link': _origin_matrix(None)}
+    pending = list(robot.findall('joint'))
+    while pending:
+        ready = [joint for joint in pending
+                 if joint.find('parent').attrib['link'] in transforms]
+        assert ready, 'Cannot resolve collision transforms from base_link'
+        for joint in ready:
+            transforms[joint.find('child').attrib['link']] = _matrix_product(
+                transforms[joint.find('parent').attrib['link']], _origin_matrix(joint.find('origin')))
+            pending.remove(joint)
+    assert len(footprint) >= 3
+    pairs = list(zip(footprint, footprint[1:] + footprint[:1]))
+    area_twice = sum(a[0] * b[1] - b[0] * a[1] for a, b in pairs)
+    assert abs(area_twice) > 1e-9, 'Degenerate footprint'
+    winding = 1 if area_twice > 0 else -1
+    for a, b in pairs:
+        nx, ny = winding * (b[1] - a[1]), winding * (a[0] - b[0])
+        length = math.hypot(nx, ny)
+        assert length > 0
+        normal = (nx / length, ny / length, 0.0)
+        boundary = normal[0] * a[0] + normal[1] * a[1]
+        assert all(normal[0] * x + normal[1] * y <= boundary + 1e-9
+                   for x, y in footprint), 'This regression requires a convex footprint'
+        for link in robot.findall('link'):
+            for collision in link.findall('collision'):
+                transform = _matrix_product(transforms[link.attrib['name']],
+                                            _origin_matrix(collision.find('origin')))
+                direction = [sum(normal[i] * transform[i][j] for i in range(3))
+                             for j in range(3)]
+                shape = list(collision.find('geometry'))[0]
+                if shape.tag == 'box':
+                    halves = [float(size) / 2 for size in shape.attrib['size'].split()]
+                    extent = sum(abs(d) * half for d, half in zip(direction, halves))
+                elif shape.tag == 'cylinder':
+                    extent = (float(shape.attrib['radius']) * math.hypot(*direction[:2])
+                              + float(shape.attrib['length']) / 2 * abs(direction[2]))
+                else:
+                    raise AssertionError(f'Add support bounds for collision type {shape.tag}')
+                furthest = sum(normal[i] * transform[i][3] for i in range(3)) + extent
+                assert furthest <= boundary + 1e-9, (
+                    f"{link.attrib['name']} collision exceeds footprint edge {a} -> {b} "
+                    f'by {furthest - boundary:.4f} m')
+
+
+@pytest.mark.parametrize('configuration', ['nav2_params.yaml', 'simple_rover.yaml', 'amcl.yaml'])
+@pytest.mark.parametrize('costmap', ['local_costmap', 'global_costmap'])
+def test_costmap_footprint_encloses_actual_rover_collisions(configuration, costmap):
+    params = yaml.safe_load((SRC / 'simple_rover' / 'config' / configuration).read_text())
+    footprint = yaml.safe_load(params[costmap][costmap]['ros__parameters']['footprint'])
+    # Collision geometry must fit before adding footprint_padding as extra clearance.
+    # The rover's continuous wheel joints rotate cylinders about their symmetry axes.
+    _assert_footprint_encloses_collisions(expanded('simple_rover'), footprint)
+
+
 @pytest.mark.parametrize('package', ['simple_rover', 'f1tenth_sim'])
 def test_bridge_directions_qos_and_default_world(package):
     bridge = yaml.safe_load((SRC / package / 'config' / 'bridge.yaml').read_text())
