@@ -12,4 +12,3 @@
 # limitations under the License.
 
 """ROS 2 Jazzy Nav2 프로그래밍 실습."""
-

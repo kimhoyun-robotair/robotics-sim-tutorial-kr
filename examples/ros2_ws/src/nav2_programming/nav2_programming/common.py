@@ -163,4 +163,3 @@ def run_demo(mode, args=None):
         if rclpy.ok():
             rclpy.shutdown()
     return exit_code
-

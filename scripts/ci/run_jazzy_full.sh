@@ -8,7 +8,7 @@ report_failure() {
   local status=$? log
   trap - ERR
   printf 'Jazzy validation failed with exit code %s. Recent diagnostic logs follow.\n' "$status" >&2
-  for log in "$evidence"/rosdep-update.log "$evidence"/rosdep.log \
+  for log in "$evidence"/rosdep-update.log "$evidence"/apt-update.log "$evidence"/rosdep.log \
       "$evidence"/build.log "$evidence"/colcon-test.log "$evidence"/colcon-test-result.log \
       "$evidence"/regressions.log "$evidence"/tutorial-sensors/*.log \
       "$evidence"/tutorial-sensors/collection.json "$evidence"/simple_rover/launch.log \
@@ -49,12 +49,15 @@ source install/setup.bash
 set -u
 colcon test --executor sequential --event-handlers console_direct+ > "$evidence/colcon-test.log" 2>&1
 colcon test-result --all --verbose > "$evidence/colcon-test-result.log" 2>&1
+cat "$evidence/colcon-test-result.log"
 cd "$source_root"
 python3 -m pytest -q scripts/test_final_project.py scripts/test_beginner_sensors.py \
   scripts/test_rover_examples.py scripts/test_sensor_rendering_contract.py > "$evidence/regressions.log" 2>&1
 export TUTORIAL_INSTALL_BASE="$source_root/examples/ros2_ws/install"
 bash scripts/check_intermediate_sensors.sh --launch --evidence "$evidence/tutorial-sensors"
+cat "$evidence/tutorial-sensors/collection.json"
 for package in simple_rover f1tenth_sim; do
   xvfb-run -a -s '-screen 0 1440x1000x24' python3 scripts/check_final_project_runtime.py \
     --package "$package" --evidence "$evidence/$package" --rviz
+  cat "$evidence/$package/result.json"
 done

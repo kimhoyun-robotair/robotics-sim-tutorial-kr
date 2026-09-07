@@ -29,20 +29,35 @@ domain_id=$((80 + $$ % 120))
 partition="tutorial_bot_task6_${domain_id}_$$"
 process_groups=()
 
+sensor_group_alive() {
+  ps -eo pgid=,stat= | awk -v pgid="$1" \
+    '$1 == pgid && $2 !~ /^Z/ {found=1} END {exit !found}'
+}
+
 cleanup() {
-  local cleanup_ok=true group
+  local original_status=$? cleanup_ok=true group final_status
+  trap - EXIT
+  trap '' INT TERM
   for group in "${process_groups[@]}"; do
     [[ $group =~ ^[1-9][0-9]*$ ]] || continue
     ps -eo pid=,pgid= | awk -v pgid="$group" '$2 == pgid {print $1}' >> "$evidence_dir/pids.log"
     kill -TERM -- "-$group" 2>/dev/null || true
-    wait "$group" 2>/dev/null || true
     for _ in {1..50}; do
-      ps -eo pgid= | awk -v pgid="$group" '$1 == pgid {found=1} END {exit !found}' || break
+      sensor_group_alive "$group" || break
       sleep 0.1
     done
-    if ps -eo pgid= | awk -v pgid="$group" '$1 == pgid {found=1} END {exit !found}'; then
+    if sensor_group_alive "$group"; then
       kill -KILL -- "-$group" 2>/dev/null || true
+      for _ in {1..20}; do
+        sensor_group_alive "$group" || break
+        sleep 0.1
+      done
+    fi
+    if sensor_group_alive "$group"; then
       cleanup_ok=false
+    else
+      # Reap only after bounded shutdown; wait before KILL could hang forever.
+      wait "$group" 2>/dev/null || true
     fi
   done
   if [[ $temp_root == /tmp/tutorial-bot-sensors.* ]]; then
@@ -58,6 +73,11 @@ cleanup() {
     printf 'gz_partition=%s\n' "$partition"
     printf 'temp_root=%s\n' "$temp_root"
   } > "$evidence_dir/cleanup.log"
+  final_status=$original_status
+  if [[ $cleanup_ok == false && $final_status == 0 ]]; then
+    final_status=70
+  fi
+  exit "$final_status"
 }
 trap cleanup EXIT
 trap 'exit 130' INT
