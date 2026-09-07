@@ -73,6 +73,28 @@ def front_range(scan):
     return statistics.median(values)
 
 
+def check_wheel_path(path):
+    """Validate the Path geometry and simulation stamps consumed by RViz."""
+    assert path.header.frame_id == "odom", path.header.frame_id
+    assert len(path.poses) >= 2, "wheel odometry path has fewer than two poses"
+    stamps = []
+    for stamped in path.poses:
+        assert stamped.header.frame_id == "odom", stamped.header.frame_id
+        position = stamped.pose.position
+        assert all(math.isfinite(value) for value in (position.x, position.y, position.z)), "nonfinite Path position"
+        quaternion_rpy(stamped.pose.orientation)
+        stamps.append(stamped.header.stamp.sec * 1_000_000_000 + stamped.header.stamp.nanosec)
+    assert all(0 <= previous <= current for previous, current in zip(stamps, stamps[1:])), "Path pose stamps went backwards"
+    assert stamps[-1] > stamps[0], "Path pose stamps do not advance"
+    header_stamp = path.header.stamp.sec * 1_000_000_000 + path.header.stamp.nanosec
+    assert header_stamp == stamps[-1], "Path header does not match the final pose stamp"
+    first, last = path.poses[0].pose.position, path.poses[-1].pose.position
+    return {"poses": len(path.poses), "frame": path.header.frame_id,
+            "first_stamp_ns": stamps[0], "last_stamp_ns": stamps[-1],
+            "first_xy_m": [first.x, first.y], "last_xy_m": [last.x, last.y],
+            "endpoint_distance_m": math.hypot(last.x - first.x, last.y - first.y)}
+
+
 def add_state_plugin(source, destination):
     """Preserve the demonstration world and add only an observing world plugin."""
     tree = ET.parse(source)
@@ -88,10 +110,19 @@ def add_state_plugin(source, destination):
 def stop_owned(process):
     """Bounded cleanup of the process group created by this checker only."""
     for sig, seconds in ((signal.SIGINT, 8), (signal.SIGTERM, 5), (signal.SIGKILL, 2)):
-        try:
-            os.killpg(process.pid, sig)
-        except ProcessLookupError:
-            return []
+        if sig == signal.SIGINT:
+            # ros2 launch forwards SIGINT to its children. Sending it to the
+            # whole group as well interrupts their shutdown handlers twice.
+            try:
+                if process.poll() is None:
+                    process.send_signal(sig)
+            except ProcessLookupError:
+                pass  # The launch parent exited; its group may still exist.
+        else:
+            try:
+                os.killpg(process.pid, sig)
+            except ProcessLookupError:
+                return []
         deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:
             process.poll()
@@ -266,6 +297,8 @@ def main():
                 topics[depth_topics[0]], topics[depth_topics[1]], topics[depth_topics[2]] = Image, CameraInfo, PointCloud2
             if args.model == "diffbot":
                 topics["/ground_truth_path"] = RosPath
+            if args.model != "f1":
+                topics["/wheel_odom_path"] = RosPath
             if args.model == "rover_ackermann":
                 topics["/ground_truth/odom"] = Odometry
 
@@ -389,6 +422,8 @@ def main():
                     if topic.endswith("path"):
                         assert message.poses and all(p.header.frame_id == "world" for p in message.poses)
             report["checks"]["stationary_ground_rpy_rad"] = quaternion_rpy(ground_pose().orientation)
+            if args.model != "f1":
+                report["checks"]["wheel_odom_path_initial"] = check_wheel_path(messages["/wheel_odom_path"])
 
             for image_topic, info_topic, encoding in image_pairs:
                 image, info = messages[image_topic], messages[info_topic]
@@ -504,20 +539,14 @@ def main():
                 assert max(abs(v) for v in means[3:]) < 0.1, means
                 report["checks"]["stationary_imu_means"] = means
 
-            if args.rviz:
-                capture = []
-                def capture_when_ready():
-                    result = capture_rviz(output)
-                    if result:
-                        capture.append(result)
-                    return bool(capture)
-                spin_until(capture_when_ready, 25, "full RViz window screenshot")
-                report["checks"]["rviz_capture"] = capture[0]
-
             initial_pose = ground_pose()
             start_xy = initial_pose.position.x, initial_pose.position.y
             start_odom = messages["/odom"].pose.pose.position
             initial_front = front_range(messages[scan_topic]) if scan_topic else None
+            if args.model != "f1":
+                path_start = messages["/wheel_odom_path"].poses[-1].pose.position
+                path_start_xy = path_start.x, path_start.y
+                path_start_stamp = last_stamps["/wheel_odom_path"]
             command = Twist()
             command.linear.x = 0.15
             movement = {"command_linear_m_s": 0.15, "ground_distance_m": 0.0, "odom_distance_m": 0.0}
@@ -533,6 +562,19 @@ def main():
                 spin_until(drive_straight, 55, "commanded straight physical motion and odometry")
             finally:
                 stop_commands()
+            if args.model != "f1":
+                def wheel_path_moved():
+                    path = messages["/wheel_odom_path"]
+                    endpoint = path.poses[-1].pose.position
+                    distance = math.hypot(endpoint.x - path_start_xy[0], endpoint.y - path_start_xy[1])
+                    return last_stamps["/wheel_odom_path"] > path_start_stamp and distance >= 0.15
+                spin_until(wheel_path_moved, 15, "wheel Path endpoint advanced at least 0.15 m")
+                path_check = check_wheel_path(messages["/wheel_odom_path"])
+                path_check["displacement_since_command_m"] = math.hypot(
+                    path_check["last_xy_m"][0] - path_start_xy[0],
+                    path_check["last_xy_m"][1] - path_start_xy[1])
+                assert path_check["endpoint_distance_m"] >= 0.15, path_check
+                report["checks"]["wheel_odom_path_after_straight"] = path_check
             if scan_topic:
                 old_count = counts[scan_topic]
                 spin_until(lambda: counts[scan_topic] >= old_count + 3, 15, "fresh LiDAR after stopping")
@@ -576,6 +618,24 @@ def main():
                     spin_until(drive_arc, 55, "physical Ackermann left turn and steering joints")
                 finally:
                     stop_commands()
+
+            # The screenshot should show the completed path and final vehicle pose.
+            # All camera geometry checks above remain at the initial stationary pose.
+            stopped_clock = last_stamps["/clock"]
+            spin_until(lambda: last_stamps["/clock"] - stopped_clock >= 500_000_000,
+                       15, "half a simulation second for final RViz data to update")
+            if args.model != "f1":
+                report["checks"]["wheel_odom_path_final"] = check_wheel_path(messages["/wheel_odom_path"])
+            assert not timestamp_errors, f"timestamps went backwards during motion: {timestamp_errors}"
+            if args.rviz:
+                capture = []
+                def capture_when_ready():
+                    result = capture_rviz(output)
+                    if result:
+                        capture.append(result)
+                    return bool(capture)
+                spin_until(capture_when_ready, 25, "full RViz window after completed motion")
+                report["checks"]["rviz_capture"] = capture[0]
 
             report["status"] = "passed"
         except Exception as error:

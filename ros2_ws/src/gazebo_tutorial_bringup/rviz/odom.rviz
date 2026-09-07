@@ -37,6 +37,10 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
     - Class: rviz_default_plugins/Odometry
+      # 평면 주행에서 관측하지 않는 축의 큰 공분산이 화면을 가리지 않게 한다.
+      # 오차 분포를 살펴볼 때 Displays > Wheel Odometry > Covariance를 켠다.
+      Covariance:
+        Value: false
       Enabled: true
       Keep: 100
       Name: Wheel Odometry
@@ -97,7 +101,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 8
+      Distance: 4
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1

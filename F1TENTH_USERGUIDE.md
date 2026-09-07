@@ -208,4 +208,6 @@ ros2 run tf2_ros tf2_echo map odom
 | 차가 계속 움직임 | 명령 발행 종료 뒤 속도 0을 따로 보냈는지 |
 | 지도와 라이다가 어긋남 | 실제 월드에 대응하는 지도를 사용하고 초기 위치·방향을 지정했는지 |
 
+`Steering wheel joint [steering_wheel_joint] not found`는 운전자가 돌리는 **운전대 모델의 선택 조인트**가 없다는 뜻입니다. 이 차량은 운전대 장식을 포함하지 않습니다. 네 바퀴와 앞바퀴 조향 힌지 두 개를 제어하는 조인트는 별도로 존재하므로, 이 경고만으로 차량 조향이 실패한 것은 아닙니다. 실제 바퀴 조인트를 찾지 못했다는 오류와 구분하세요. [공식 플러그인](https://github.com/ros-simulation/gazebo_ros_pkgs/blob/3.9.0/gazebo_plugins/src/gazebo_ros_ackermann_drive.cpp)은 운전대가 없으면 여섯 개 주행 조인트로 계속 실행합니다.
+
 끝낼 때는 속도 0을 발행한 뒤 터미널 A에서 `Ctrl+C`를 누릅니다. `tf2_echo`, `topic hz` 같은 관찰 명령도 각각 종료합니다. 실제 검증 결과와 아직 수동 확인이 필요한 범위는 저장소의 Humble 점검 기록을 기준으로 확인하세요.

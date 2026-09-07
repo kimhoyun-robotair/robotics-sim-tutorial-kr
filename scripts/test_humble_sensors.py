@@ -177,16 +177,23 @@ def test_rviz_imu_orientation_and_acceleration_share_the_world_reference(spawn_y
     assert displayed == pytest.approx(world_acceleration, abs=1e-9)
 
 
-def test_rviz_imu_box_does_not_cover_the_robot():
+def test_rviz_imu_markers_do_not_cover_the_robot():
     config = yaml.safe_load((SOURCE / "gazebo_tutorial_bringup/rviz/sensors.rviz").read_text())
     display = next(d for d in config["Visualization Manager"]["Displays"]
                    if d["Class"] == "rviz_imu_plugin/Imu")
-    if not display["Box properties"].get("Enable box", False):
-        return
-    # imu_tools recognizes these three keys; a generic Scale key is ignored.
-    sizes = [display["Box properties"].get(axis + "_scale", 1.) for axis in "xyz"]
     body = expand().find("link[@name='base_link']/visual/geometry/box")
-    assert all(0 < size <= bound for size, bound in zip(sizes, vector(body.get("size"))))
+    dimensions = vector(body.get("size"))
+    if display["Box properties"].get("Enable box", False):
+        # imu_tools recognizes these three keys; a generic Scale key is ignored.
+        sizes = [display["Box properties"].get(axis + "_scale", 1.) for axis in "xyz"]
+        assert all(0 < size <= bound for size, bound in zip(sizes, dimensions))
+    acceleration = display["Acceleration properties"]
+    if acceleration.get("Enable acceleration", False):
+        # imu_tools 2.1.5 draws a |a|*scale shaft plus a 1.0*scale head.
+        # Keep the stationary gravity arrow within two chassis lengths.
+        scale = acceleration.get("Acc. vector scale", 1.)
+        arrow_length = (9.80665 + 1.0) * scale
+        assert 0 < arrow_length <= 2 * dimensions[0]
 
 
 def hull(points):
