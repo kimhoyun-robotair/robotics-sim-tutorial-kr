@@ -2,7 +2,7 @@
 
 Ubuntu 24.04 LTS, ROS 2 Jazzy, Gazebo Harmonic 조합에서 Gazebo Sim을 처음 실행하는 단계부터 ROS 2 연동, 센서, 주행 제어, System Plugin, 자동화 테스트까지 학습하는 실행 중심 튜토리얼이다.
 
-이 저장소의 `Jazzy` 브랜치는 ROS 2 Jazzy와 Gazebo Harmonic 전용 과정이다. 본문에서는 `tutorial_bot`을 한 단계씩 확장한다. 마지막에는 [Gazebo Harmonic Rover 파이널 프로젝트](docs/07_final-project/index.md)에서 4륜 로버와 F1Tenth 차량으로 센서·주행·지도 작성·자율주행을 실습한다.
+이 저장소의 `Jazzy` 브랜치는 ROS 2 Jazzy와 Gazebo Harmonic 전용 과정이다. 본문에서는 가장 기초적인 `tutorial_bot`을 첫 제작 단계부터 시작해서 한 단계씩 확장한다. 마지막에는 [Gazebo Harmonic Rover 파이널 프로젝트](docs/07_final-project/index.md)에서 4륜 로버와 F1Tenth 차량으로 센서·주행·지도 작성·자율주행을 실습한다.
 
 ```text
 SDF world → URDF/Xacro 로봇 → 주행·센서 → ros_gz bridge
@@ -20,7 +20,7 @@ SDF world → URDF/Xacro 로봇 → 주행·센서 → ros_gz bridge
 | 테스트 대상 아키텍처 | amd64 |
 | 렌더링 | 화면 없이 센서 영상을 생성하는 실행 방식과 소프트웨어 렌더링을 지원한다. GUI/RViz 확인 절차도 각 실습에 안내한다. |
 
-환경 조합과 검증 범위는 [지원 환경과 호환성](docs/02_getting-started/00_compatibility.md)에서 확인한다. 테스트를 제공한다는 사실과 해당 코드의 실행이 통과했다는 사실은 구분한다. 최근 점검에서 실제로 확인한 항목은 [Jazzy 점검 기록](docs/06_reference/04_jazzy-audit.md)에 정리한다.
+환경 조합과 검증 범위는 [지원 환경과 호환성](docs/02_getting-started/00_compatibility.md)에서 확인한다. 다만 테스트를 진행했다는 것과, 실제로 해당 코드가 모든 플랫폼에서 작동한다는 말은 다소 다르다. 최근 점검에서 실제로 확인한 항목은 [Jazzy 점검 기록](docs/06_reference/04_jazzy-audit.md)에 정리한다.
 
 ## 첫 시뮬레이션 실행하기
 
@@ -62,6 +62,8 @@ source /opt/ros/jazzy/setup.bash
 cd ~/robotics-sim-tutorial-kr/examples/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
+# 혹시나 catkin_pkg 관련 오류가 발생할 경우 다음과 같이 명령어를 실행한다.
+# colcon build --symlink-install --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3
 source install/setup.bash
 ```
 
@@ -87,8 +89,6 @@ ros2 topic echo /scan --once --field header --qos-reliability best_effort
 
 ## 파이널 프로젝트
 
-[Gazebo_Harmonic_Rover](https://github.com/kimhoyun-robotair/Gazebo_Harmonic_Rover)의 세 패키지를 이 저장소 안에서 빌드하도록 이식했다.
-
 | 패키지 | 실습 |
 | --- | --- |
 | `simple_rover` | 4륜 주행, 2D/3D LiDAR, RGB-D, IMU, GPS, 지도 작성과 Nav2 |
@@ -113,7 +113,7 @@ python3 -m pip install -r requirements-docs.txt
 mkdocs serve
 ```
 
-브라우저에서 터미널에 표시된 주소를 연다. 링크와 코드 블록을 포함한 정적 빌드를 엄격하게 검사하려면 다음 명령을 실행한다.
+브라우저에서 터미널에 표시된 주소를 연다(우클릭을 하면 링크 열기 옵션이 나온다). 링크와 코드 블록을 포함한 정적 빌드를 엄격하게 검사하려면 다음 명령을 실행한다.
 
 ```bash
 mkdocs build --strict

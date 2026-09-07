@@ -300,7 +300,7 @@ ros2 param get /robot_state_publisher robot_description > /tmp/robot_description
 
 RViz의 Fixed Frame이 실제로 존재하는 `odom` 또는 `base_link`인지 확인한다. 프레임 이름에 접두사나 네임스페이스를 적용했다면 브리지, 상태 발행자, RViz 설정에서 같은 이름을 사용해야 한다.
 
-## RViz 점군이 기울거나 로봇과 따로 움직인다
+## RViz Pointcloud가 기울거나 로봇과 따로 움직인다
 
 메시지 수신, 시간, 좌표계를 순서대로 확인한다. Fixed Frame을 `odom`으로 두고 센서 프레임까지 TF가 연결되는지 검사한다.
 
@@ -310,7 +310,7 @@ ros2 topic echo /camera/camera_info --field header --qos-reliability best_effort
 ros2 run tf2_ros tf2_echo odom camera_link
 ```
 
-이 저장소의 Harmonic RGB-D 점군은 `camera_link`, 영상과 CameraInfo는 `camera_optical_frame`이어야 한다. 두 프레임은 축 방향이 다르다. 점군 YAML의 `frame_id: camera_link`가 빠지거나 브리지가 1.0.22보다 오래되었으면 [설치 안내](02_installation-jazzy.md)에 따라 갱신한 뒤 다시 실행한다. 헤더 이름만 바꿔도 되는 이유는 이 예제의 점 좌표가 이미 본체 좌표계로 생성되기 때문이다. 다른 센서에는 그 센서의 실제 좌표계를 확인해 적용한다.
+이 저장소의 Harmonic RGB-D Pointcloud은 `camera_link`, 영상과 CameraInfo는 `camera_optical_frame`이어야 한다. 두 프레임은 축 방향이 다르다. Pointcloud YAML의 `frame_id: camera_link`가 빠지거나 브리지가 1.0.22보다 오래되었으면 [설치 안내](02_installation-jazzy.md)에 따라 갱신한 뒤 다시 실행한다. 헤더 이름만 바꿔도 되는 이유는 이 예제의 점 좌표가 이미 본체 좌표계로 생성되기 때문이다. 다른 센서에는 그 센서의 실제 좌표계를 확인해 적용한다.
 
 RViz의 LaserScan·PointCloud2에서 Reliability Policy를 `Best Effort`로 맞춘다. Camera 디스플레이가 실패하지만 Image는 나온다면 `/camera/camera_info`, 영상의 프레임, TF를 확인한다. 로봇이 주행할 때 장애물 위치가 함께 움직이면 중복된 `odom → base_link` 발행자나 잘못된 센서 장착 변환도 확인한다.
 

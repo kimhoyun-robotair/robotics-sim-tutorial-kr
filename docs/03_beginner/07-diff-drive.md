@@ -9,7 +9,7 @@
 
 - Gazebo DiffDrive 시스템의 실제 플러그인 태그와 주요 파라미터를 설명한다.
 - 좌우 바퀴 각속도에서 로봇 선속도와 각속도를 계산한다.
-- Gazebo Transport와 ROS 2를 브리지해 키보드 조종으로 주행한다.
+- Gazebo Transport와 ROS 2를 bridge해 키보드 조종으로 주행한다.
 - 바퀴 오도메트리를 `/wheel_odom_path`로 누적하고 RViz에서 궤적을 확인한다.
 
 ## 3단계 Xacro와 DiffDrive 시스템
