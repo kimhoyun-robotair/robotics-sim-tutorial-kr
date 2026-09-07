@@ -29,8 +29,9 @@
     <xacro:attribute name="invalid_controller_parameters_file" value="${xacro.fatal('controller_parameters_file must name a non-empty .yaml file when control_backend is gz_ros2_control.')}"/>
   </xacro:if>
 
-  <xacro:macro name="box_inertia" params="mass x y z">
+  <xacro:macro name="box_inertia" params="mass x y z origin_x:=0.0">
     <inertial>
+      <origin xyz="${origin_x} 0 0" rpy="0 0 0"/>
       <mass value="${mass}"/>
       <inertia ixx="${mass * (y * y + z * z) / 12.0}"
                ixy="0.0"
@@ -82,7 +83,8 @@
   </xacro:macro>
 
   <link name="base_link">
-    <xacro:box_inertia mass="5.0" x="0.45" y="0.32" z="0.12"/>
+    <!-- 뒤쪽 배터리의 질량 배치를 근사해 무게중심을 바퀴와 뒤 캐스터 사이에 둔다. -->
+    <xacro:box_inertia mass="5.0" x="0.45" y="0.32" z="0.12" origin_x="-0.04"/>
     <visual>
       <geometry>
         <box size="0.45 0.32 0.12"/>

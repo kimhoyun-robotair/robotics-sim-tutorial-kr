@@ -52,7 +52,7 @@ assets:
     alt_text: world 좌표계에서 로봇의 위치와 yaw로 표현한 spawn pose
     caption: 그림 1. spawn pose는 world 기준 위치와 yaw이며 entity 이름과 ROS namespace는 별도 계약이다.
     captured_at: '2026-08-25'
-    sha256: 267d5106db18a32b35fe6f876f57e19f20f67e570d6348181c675d9df2753db8
+    sha256: 9230ca87a100523419727f90e40f799498edba848dfac56c345e18b3c86ea5d4
     width: 960
     height: 360
   - id: bridge-qos

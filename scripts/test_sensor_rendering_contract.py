@@ -17,12 +17,74 @@ DESCRIPTION = SRC / "tutorial_bot_description/urdf"
 EXPECTATIONS = SRC / "tutorial_bot_gazebo/config/sensor_expectations.yaml"
 
 
-def robot() -> ET.Element:
+def robot(filename: str = "tutorial_bot.urdf.xacro") -> ET.Element:
     result = subprocess.run(
-        ["xacro", str(DESCRIPTION / "tutorial_bot.urdf.xacro")],
+        ["xacro", str(DESCRIPTION / filename)],
         check=True, capture_output=True, text=True,
     )
     return ET.fromstring(result.stdout)
+
+
+def origin_transform(origin: ET.Element | None) -> list[list[float]]:
+    attributes = origin.attrib if origin is not None else {}
+    x, y, z = map(float, attributes.get("xyz", "0 0 0").split())
+    roll, pitch, yaw = map(float, attributes.get("rpy", "0 0 0").split())
+    cr, sr = math.cos(roll), math.sin(roll)
+    cp, sp = math.cos(pitch), math.sin(pitch)
+    cy, sy = math.cos(yaw), math.sin(yaw)
+    return [
+        [cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr, x],
+        [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr, y],
+        [-sp, cp * sr, cp * cr, z],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+
+
+def compose(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
+    return [[sum(a[i][k] * b[k][j] for k in range(4)) for j in range(4)] for i in range(4)]
+
+
+@pytest.mark.parametrize("filename", [
+    "tutorial_bot.urdf.xacro",
+    "stages/02-wheels-and-joints.xacro",
+    "stages/03-diff-drive.xacro",
+    "stages/04-sensors-final.xacro",
+    "stages/05-sensor-gallery.xacro",
+])
+def test_center_of_mass_has_a_margin_inside_the_three_contact_points(filename: str) -> None:
+    model = robot(filename)
+    poses = {"base_link": origin_transform(None)}
+    pending = list(model.findall("joint"))
+    while pending:
+        resolved = [joint for joint in pending if joint.find("parent").attrib["link"] in poses]
+        assert resolved, "Every link must connect to base_link."
+        for joint in resolved:
+            parent, child = joint.find("parent").attrib["link"], joint.find("child").attrib["link"]
+            poses[child] = compose(poses[parent], origin_transform(joint.find("origin")))
+            pending.remove(joint)
+
+    total_mass, moment = 0.0, [0.0, 0.0, 0.0]
+    for link in model.findall("link"):
+        inertial = link.find("inertial")
+        if inertial is None:
+            continue
+        mass = float(inertial.find("mass").attrib["value"])
+        pose = compose(poses[link.attrib["name"]], origin_transform(inertial.find("origin")))
+        total_mass += mass
+        moment = [value + mass * pose[axis][3] for axis, value in enumerate(moment)]
+    center = [value / total_mass for value in moment]
+
+    # At the initial joint angles these round contacts project to their centers.
+    # Traverse left wheel -> rear caster -> right wheel counterclockwise.
+    support = []
+    for name in ("left_wheel_link", "caster_link", "right_wheel_link"):
+        collision = model.find(f"link[@name='{name}']/collision")
+        pose = compose(poses[name], origin_transform(collision.find("origin")))
+        support.append((pose[0][3], pose[1][3]))
+    margins = []
+    for (ax, ay), (bx, by) in zip(support, support[1:] + support[:1]):
+        margins.append(((bx - ax) * (center[1] - ay) - (by - ay) * (center[0] - ax)) / math.hypot(bx - ax, by - ay))
+    assert min(margins) > 0.01, f"{filename}: COM={center}, support edge margins={margins}"
 
 
 @pytest.mark.parametrize("filename", [

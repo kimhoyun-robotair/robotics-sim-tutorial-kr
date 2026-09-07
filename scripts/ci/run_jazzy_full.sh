@@ -54,10 +54,22 @@ cd "$source_root"
 python3 -m pytest -q scripts/test_final_project.py scripts/test_beginner_sensors.py \
   scripts/test_rover_examples.py scripts/test_sensor_rendering_contract.py > "$evidence/regressions.log" 2>&1
 export TUTORIAL_INSTALL_BASE="$source_root/examples/ros2_ws/install"
-bash scripts/check_intermediate_sensors.sh --launch --evidence "$evidence/tutorial-sensors"
-cat "$evidence/tutorial-sensors/collection.json"
+runtime_failed=0
+if bash scripts/check_intermediate_sensors.sh --launch --evidence "$evidence/tutorial-sensors"; then
+  cat "$evidence/tutorial-sensors/collection.json"
+else
+  runtime_failed=1
+fi
 for package in simple_rover f1tenth_sim; do
-  xvfb-run -a -s '-screen 0 1440x1000x24' python3 scripts/check_final_project_runtime.py \
-    --package "$package" --evidence "$evidence/$package" --rviz
-  cat "$evidence/$package/result.json"
+  sensor_args=()
+  if [[ $package == simple_rover ]]; then
+    sensor_args+=(--extra-sensors)
+  fi
+  if xvfb-run -a -s '-screen 0 1440x1000x24' python3 scripts/check_final_project_runtime.py \
+      --package "$package" --evidence "$evidence/$package" --rviz "${sensor_args[@]}"; then
+    cat "$evidence/$package/result.json"
+  else
+    runtime_failed=1
+  fi
 done
+[[ $runtime_failed == 0 ]]

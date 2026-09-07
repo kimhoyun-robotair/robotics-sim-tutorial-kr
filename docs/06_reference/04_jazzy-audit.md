@@ -13,6 +13,7 @@
 | RViz 로봇 모델 | RViz를 늦게 켜면 로봇 설명을 놓칠 수 있는 QoS | `/robot_description` 구독에 `Transient Local` 설정 |
 | 다중 로봇 TF | 제어기가 `robot1/robot1/base_link`처럼 접두사를 중복 추가 | 이미 완성된 프레임명에 `tf_frame_prefix_enable: false` 적용 |
 | 센서 검사 | LiDAR 기준 거리에 센서 위치와 전방 장애물이 반영되지 않음 | 월드의 실제 물체와 센서 장착 위치를 기준으로 거리 계산 수정 |
+| 차체의 물리 모델 | 전방 센서 질량 때문에 무게중심이 바퀴·뒤 캐스터의 지지 영역을 벗어나 약 15도 기울어짐 | 차체 관성 중심을 뒤로 4 cm 옮겨 배터리 배치를 근사하고, 전체 무게중심이 지지 영역 안에 있는지 검사 |
 | 제어·Nav2 | Jazzy에서 제거된 `use_stamped_vel`, 바퀴를 충분히 감싸지 않는 외곽선 | 제거된 설정 삭제, 충돌 외곽선 보정, 시간 포함 주행 명령 설명 수정 |
 | 화면 없는 실행 | 서버 실행만 지정하고 센서 렌더링 경로를 누락 | `--headless-rendering` 적용, 느린 렌더링에서도 시뮬레이션 시간을 기준으로 센서 수집 |
 | 첫 월드 | 1 kg 정육면체 관성 미지정 | 1 m 정육면체의 관성 모멘트 `1/6 kg·m²` 명시 |
@@ -27,7 +28,9 @@ RGB-D 점군 보정은 좌표 값을 돌리지 않는다. Gazebo가 내보내는
 
 수정 전 코드를 별도 폴더에 펼쳐 새 센서 회귀 검사를 실행했을 때 10개 중 9개가 실패했다. 수정 후에는 10개가 모두 통과했다. 점군 축, 다중 로봇 프레임, 충돌 외곽선, LiDAR 기준 거리, RViz QoS에 대한 검사다. 단순히 파일에 특정 문자열이 있는지만 확인하지 않고 Xacro를 펼친 로봇의 치수와 좌표 변환, 실제 월드 물체를 대조한다.
 
-최종 로컬 검사에서는 실행 환경이 필요하지 않은 문서·수식·Xacro·센서·Rover·검증 도구 테스트 **81개가 통과**했다. ROS 설치, 실제 프로세스 정보, 브라우저 실행이 필요한 항목은 이 숫자에 포함하지 않았다. `mkdocs build --strict`, 기존 과정 31개와 파이널 프로젝트 6개 페이지의 연결 검사, Python/XML/셸 문법 검사도 통과했다.
+이후 실제 실행에서 발견한 차체 기울어짐을 재현하기 위해 기본 모델과 단계별 모델 5개의 무게중심 검사도 추가했다. 수정 전에는 모두 실패했고, 관성 중심을 옮긴 뒤 모두 통과했다.
+
+최종 로컬 검사에서는 실행 환경이 필요하지 않은 문서·수식·Xacro·센서·Rover·검증 도구 테스트 **86개가 통과**했다. ROS 설치, 실제 프로세스 정보, 브라우저 실행이 필요한 항목은 이 숫자에 포함하지 않았다. `mkdocs build --strict`, 기존 과정 31개와 파이널 프로젝트 6개 페이지의 연결 검사, Python/XML/셸 문법 검사도 통과했다.
 
 로컬 작업 환경에는 ROS 2, Gazebo, Docker, RViz가 없다. 따라서 로컬 정적 검사 통과를 **실제 시뮬레이터 실행이나 RViz 화면 검수 완료로 해석하면 안 된다.** 기존 프로세스 관리 검사도 이 환경에서 제공하지 않는 `/proc` 정보와 프로세스 제어 기능에 의존하므로 전체 테스트 통과를 주장하지 않는다.
 
@@ -39,6 +42,7 @@ RGB-D 점군 보정은 좌표 값을 돌리지 않는다. Gazebo가 내보내는
 4. RGB-D 중앙 점의 +X 거리와 깊이 영상의 거리 일치, optical 축 방향
 5. 주행 명령 후 odometry 변화와 모든 가동 관절의 상태 수신
 6. RViz 화면 캡처와 실행 로그 저장
+7. Rover의 선택 센서인 3D 라이다 점군과 GNSS의 좌표·프레임·TF 연결
 
 워크플로가 존재한다는 것만으로 통과한 것은 아니다. 해당 커밋의 실행 상태와 `jazzy-rendered-sensor-evidence` 파일을 확인한다. 수치 검사를 통과했더라도 RViz 캡처의 시각 검토와 지도 작성·Nav2의 끝까지 주행하는 실습은 별도 확인 항목이다. 기존 `pages.yml`의 고급 플러그인 검사도 센서 렌더링 검사를 대신하지 않는다.
 
@@ -53,11 +57,19 @@ source examples/ros2_ws/install/setup.bash
 python3 -m pytest -q scripts/test_final_project.py scripts/test_sensor_rendering_contract.py
 bash scripts/check_intermediate_sensors.sh --launch --evidence /tmp/tutorial-sensor-check
 python3 scripts/check_final_project_runtime.py \
-  --package simple_rover --evidence /tmp/simple-rover-check
+  --package simple_rover --extra-sensors --evidence /tmp/simple-rover-check
 python3 scripts/check_final_project_runtime.py \
   --package f1tenth_sim --evidence /tmp/f1tenth-check
 ```
 
-검사 결과는 각 경로의 `result.json` 또는 `collection.json`과 로그로 확인한다. ROS 의존성이 없을 때는 성공 대신 종료 코드 69를 반환한다. 화면이 있는 환경에서는 `--rviz`를 추가하면 RViz를 열고 `rviz.png`를 저장한다. 캡처에는 ImageMagick의 `import` 명령이 필요하다. 화면 없는 CI에서는 `xvfb-run`으로 가상 화면을 준비한다.
+검사 결과는 각 경로의 `result.json` 또는 `collection.json`과 로그로 확인한다. ROS 의존성이 없을 때는 성공 대신 종료 코드 69를 반환한다. 화면이 있는 환경에서는 `--rviz`를 추가하면 RViz를 열고 `rviz.png`를 저장한다. 화면 캡처 도구는 다음과 같이 설치한다.
+
+```bash
+sudo apt install -y imagemagick xdotool
+python3 scripts/check_final_project_runtime.py \
+  --package simple_rover --evidence /tmp/simple-rover-rviz-check --rviz
+```
+
+화면 없는 CI에서는 `xvfb-run`으로 가상 화면을 준비한다. 센서 검사 도구는 종료 시 Gazebo와 bridge를 정리하며, 본래 검사에 성공했더라도 프로세스를 정리하지 못하면 종료 코드 70으로 실패를 보고한다.
 
 원본 Rover 커밋과 이식한 기능의 범위는 [이식 기록](../07_final-project/05_porting-notes.md)을 참고한다.

@@ -46,7 +46,7 @@
 <!-- urdf/macros/stage_components.xacro -->
 <xacro:macro name="stage_base">
   <link name="base_link">
-    <xacro:stage_box_inertia mass="5.0" x="0.45" y="0.32" z="0.12"/>
+    <xacro:stage_box_inertia mass="5.0" x="0.45" y="0.32" z="0.12" origin_x="-0.04"/>
     <visual>
       <geometry><box size="0.45 0.32 0.12"/></geometry>
       <material name="tutorial_blue">
@@ -64,11 +64,12 @@
 
 ## 관성 매크로 읽기
 
-직육면체의 관성 모멘트는 다음 Xacro 수식으로 계산한다.
+차체의 관성 모멘트를 직육면체 공식으로 근사해 다음 Xacro 수식으로 계산한다.
 
 ```xml
-<xacro:macro name="stage_box_inertia" params="mass x y z">
+<xacro:macro name="stage_box_inertia" params="mass x y z origin_x:=0.0">
   <inertial>
+    <origin xyz="${origin_x} 0 0" rpy="0 0 0"/>
     <mass value="${mass}"/>
     <inertia ixx="${mass * (y * y + z * z) / 12.0}"
              ixy="0.0" ixz="0.0"
@@ -97,6 +98,8 @@ I_{zz}=\frac{m(x^2+y^2)}{12}=0.1270\;\mathrm{kg\,m^2}
     예를 들어 $I_{xx}=5.0(0.32^2+0.12^2)/12=0.048666\ldots$이다. Xacro는 같은 식을 계산하고, 본문은 소수 넷째 자리로 반올림한다.
 
 관성이 없거나 실제 형상과 크게 다르면 가속과 충돌 반응이 부자연스러워진다. visual은 보이는 모양, collision은 접촉 형상, inertial은 힘에 대한 반응을 맡는다.
+
+`inertial` 안의 `origin`은 링크 기준 질량중심의 위치이다. 이 예제는 뒤쪽에 배터리가 놓인 차체를 근사해 `origin_x="-0.04"`, 즉 차체 중심보다 4 cm 뒤로 설정한다. 다음 장에서 추가할 두 바퀴와 뒤 캐스터 사이에 무게중심을 두기 위한 값이다. 앞쪽에 카메라와 라이다를 달아도 차체가 앞으로 기울지 않도록 하며, 센서 위치나 차체의 보이는 모양을 옮기는 설정은 아니다. 위 관성 행렬은 이 질량중심을 기준으로 한다.
 
 ## Xacro를 URDF로 전개하기
 

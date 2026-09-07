@@ -43,18 +43,84 @@ def stop_owned(process: subprocess.Popen) -> list[int]:
             if int(g) == process.pid and not state.startswith("Z")]
 
 
+def check_lidar3d_cloud(cloud, minimum: float, maximum: float) -> dict:
+    """Validate organized 3D returns in metres, allowing missing rays and sensor noise."""
+    assert cloud.width > 0 and cloud.height > 1, "3D LiDAR cloud is empty or has only one row"
+    assert cloud.point_step > 0 and cloud.row_step >= cloud.width * cloud.point_step
+    assert len(cloud.data) == cloud.row_step * cloud.height, "truncated 3D LiDAR buffer"
+    fields = {field.name: field for field in cloud.fields}
+    for name in ("x", "y", "z"):
+        assert name in fields and fields[name].datatype == 7, f"LiDAR {name} must be FLOAT32"
+        assert fields[name].count == 1 and 0 <= fields[name].offset <= cloud.point_step - 4
+    assert 0 <= minimum < maximum
+    endian = ">" if cloud.is_bigendian else "<"
+    distances = []
+    sample = None
+    for row in range(cloud.height):
+        for column in range(cloud.width):
+            offset = row * cloud.row_step + column * cloud.point_step
+            xyz = [struct.unpack_from(endian + "f", cloud.data,
+                   offset + fields[name].offset)[0] for name in ("x", "y", "z")]
+            if not all(math.isfinite(value) for value in xyz):
+                continue  # No-return rays may contain infinity or NaN.
+            distance = math.sqrt(sum(value * value for value in xyz))
+            # The supplied sensor has 0.01 m Gaussian noise; allow a 0.05 m margin.
+            assert distance > 0 and minimum - 0.05 <= distance <= maximum + 0.05, xyz
+            distances.append(distance)
+            if sample is None:
+                sample = xyz
+    assert distances, "3D LiDAR has no finite XYZ returns"
+    return {"width": cloud.width, "height": cloud.height,
+            "finite_points": len(distances),
+            "missing_points": cloud.width * cloud.height - len(distances),
+            "example_xyz_m": sample, "sensor_range_m": [minimum, maximum],
+            "observed_range_m": [min(distances), max(distances)]}
+
+
+def check_navsat_fix(fix) -> dict:
+    """Check WGS84 degrees/metres near the default arena origin before driving."""
+    latitude, longitude, altitude = fix.latitude, fix.longitude, fix.altitude
+    assert all(math.isfinite(value) for value in (latitude, longitude, altitude)), "nonfinite GNSS fix"
+    assert -90.0 <= latitude <= 90.0, f"latitude outside [-90, 90] degrees: {latitude}"
+    assert -180.0 <= longitude <= 180.0, f"longitude outside [-180, 180] degrees: {longitude}"
+    assert fix.status.status >= 0, f"GNSS reports no fix: {fix.status.status}"
+    origin_latitude, origin_longitude, origin_altitude = 37.5665, 126.9780, 0.0
+    # Haversine with mean Earth radius is sufficient for this 5 m origin check.
+    # NavSatFix altitude is metres above the WGS84 ellipsoid, not a radian angle.
+    latitude_radians, origin_radians = math.radians(latitude), math.radians(origin_latitude)
+    delta_latitude = latitude_radians - origin_radians
+    delta_longitude = math.radians(longitude - origin_longitude)
+    haversine = (math.sin(delta_latitude / 2) ** 2
+                 + math.cos(latitude_radians) * math.cos(origin_radians)
+                 * math.sin(delta_longitude / 2) ** 2)
+    horizontal_error = 2 * 6_371_008.8 * math.asin(math.sqrt(min(1.0, max(0.0, haversine))))
+    altitude_error = abs(altitude - origin_altitude)
+    assert horizontal_error <= 5.0, f"GNSS is {horizontal_error:.3f} m from the arena origin"
+    assert altitude_error <= 5.0, f"GNSS altitude differs by {altitude_error:.3f} m"
+    return {"latitude_deg": latitude, "longitude_deg": longitude, "altitude_m": altitude,
+            "expected_origin": {"latitude_deg": origin_latitude,
+                                "longitude_deg": origin_longitude, "altitude_m": origin_altitude},
+            "horizontal_error_m": horizontal_error, "altitude_error_m": altitude_error,
+            "status": fix.status.status}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package", choices=["simple_rover", "f1tenth_sim"], required=True)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--rviz", action="store_true")
+    parser.add_argument("--extra-sensors", action="store_true",
+                        help="Enable and verify simple_rover's 3D LiDAR and GNSS as well")
     parser.add_argument("--timeout", type=float, default=120.0)
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error("--timeout must be positive")
+    if args.extra_sensors and args.package != "simple_rover":
+        parser.error("--extra-sensors is supported only with --package simple_rover")
     output = args.evidence.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    report = {"package": args.package, "status": "failed", "checks": {}, "errors": []}
+    report = {"package": args.package, "extra_sensors": args.extra_sensors,
+              "status": "failed", "checks": {}, "errors": []}
     try:
         import rclpy
         from rclpy.duration import Duration
@@ -64,7 +130,7 @@ def main() -> int:
         from geometry_msgs.msg import Twist
         from nav_msgs.msg import Odometry
         from rosgraph_msgs.msg import Clock
-        from sensor_msgs.msg import CameraInfo, Image, Imu, JointState, LaserScan, PointCloud2
+        from sensor_msgs.msg import CameraInfo, Image, Imu, JointState, LaserScan, NavSatFix, PointCloud2
         from std_msgs.msg import String
         from tf2_ros import Buffer, TransformListener
     except ImportError as error:
@@ -85,6 +151,8 @@ def main() -> int:
     os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
     command = ["ros2", "launch", args.package, "spawn_robot.launch.py",
                "gui:=false", "headless:=true", f"rviz:={str(args.rviz).lower()}"]
+    if args.extra_sensors:
+        command += ["lidar_3d:=true", "gps:=true"]
     (output / "command.json").write_text(json.dumps(command) + "\n")
     process = None
     node = None
@@ -117,6 +185,8 @@ def main() -> int:
             if args.package == "simple_rover":
                 topics.update({"/camera/image": Image, "/camera/depth_image": Image,
                                "/camera/camera_info": CameraInfo, "/camera/points": PointCloud2})
+            if args.extra_sensors:
+                topics.update({"/lidar3d/points": PointCloud2, "/navsat": NavSatFix})
 
             def remember(topic, message):
                 messages[topic] = message
@@ -160,6 +230,8 @@ def main() -> int:
                                "/camera/depth_image": "camera_link_optical",
                                "/camera/camera_info": "camera_link_optical",
                                "/camera/points": "depth_link"})
+            if args.extra_sensors:
+                frames.update({"/lidar3d/points": "lidar3d_link", "/navsat": "navsat_link"})
             for topic, frame in frames.items():
                 message = messages[topic]
                 assert message.header.frame_id == frame, (topic, message.header.frame_id, frame)
@@ -183,6 +255,13 @@ def main() -> int:
             assert len(joints.name) == len(joints.position)
             assert all(math.isfinite(v) for v in joints.position)
             report["checks"]["joint_states"] = sorted(movable)
+            if args.extra_sensors:
+                limits = robot.find(".//sensor[@name='gpu_lidar_3d']/lidar/range")
+                assert limits is not None, "3D LiDAR is absent from robot_description"
+                report["checks"]["lidar3d_xyz"] = check_lidar3d_cloud(
+                    messages["/lidar3d/points"], float(limits.findtext("min")),
+                    float(limits.findtext("max")))
+                report["checks"]["gnss_wgs84_fix"] = check_navsat_fix(messages["/navsat"])
             imu = messages["/imu"]
             assert all(math.isfinite(v) for v in [imu.linear_acceleration.x,
                 imu.linear_acceleration.y, imu.linear_acceleration.z,
