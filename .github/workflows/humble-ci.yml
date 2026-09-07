@@ -128,7 +128,8 @@ jobs:
           evidence="$GITHUB_WORKSPACE/ros2_ws/log/humble-evidence"
           mkdir -p "$evidence"
           printf '%s\n' "$GITHUB_SHA" > "$evidence/source-sha.txt"
-          gazebo --version > "$evidence/gazebo-version.txt"
+          # Classic 11.10.2 prints its version but exits 255 for --version.
+          dpkg-query -W gazebo > "$evidence/gazebo-version.txt"
           dpkg-query -W 'ros-humble-gazebo*' 'ros-humble-rviz*' > "$evidence/packages.txt"
           export LIBGL_ALWAYS_SOFTWARE=1 QT_X11_NO_MITSHM=1
           result=0
