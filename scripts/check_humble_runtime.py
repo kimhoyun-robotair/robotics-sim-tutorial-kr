@@ -95,6 +95,84 @@ def check_wheel_path(path):
             "endpoint_distance_m": math.hypot(last.x - first.x, last.y - first.y)}
 
 
+class TimestampedTfGate:
+    """Require consecutive fresh sensor stamps with exact-time TF availability.
+
+    Pending stamps allow TF to arrive after the sensor message. A newer successful
+    stamp can supersede an old cache miss, but starts a new consecutive sequence.
+    The queue is bounded and duplicate stamps never count as additional evidence.
+    """
+
+    def __init__(self, expected_frame, required=3, capacity=32):
+        assert 1 <= required <= capacity
+        self.expected_frame = expected_frame
+        self.required = required
+        self.capacity = capacity
+        self.pending = deque()
+        self.latest_stamp = None
+        self.consecutive = 0
+        self.discarded = 0
+        self.checked_stamp = None
+        self.confirmed_stamp = None
+        self.confirmed_stamps = deque(maxlen=required)
+        self.debug_reason = "waiting for a new sensor message"
+        self.last_failure = None
+
+    def observe(self, frame, stamp_ns):
+        assert frame == self.expected_frame, (frame, self.expected_frame)
+        assert stamp_ns > 0, f"nonpositive sensor stamp: {stamp_ns}"
+        if self.latest_stamp is not None:
+            assert stamp_ns >= self.latest_stamp, "sensor timestamps went backwards"
+            if stamp_ns == self.latest_stamp:
+                return
+        self.latest_stamp = stamp_ns
+        if self.consecutive >= self.required:
+            return
+        if len(self.pending) == self.capacity:
+            self.pending.popleft()
+            self.discarded += 1
+            self.consecutive = 0
+            self.confirmed_stamps.clear()
+        self.pending.append(stamp_ns)
+
+    def check(self, exact_transform):
+        """exact_transform(frame, stamp_ns) returns (available, debug reason)."""
+        while self.pending and self.consecutive < self.required:
+            resolved_index = None
+            for index, stamp_ns in enumerate(self.pending):
+                available, reason = exact_transform(self.expected_frame, stamp_ns)
+                self.checked_stamp = stamp_ns
+                self.debug_reason = str(reason)
+                if available:
+                    resolved_index = index
+                    break
+                self.last_failure = {"sensor_stamp_ns": stamp_ns, "tf_debug_reason": str(reason)}
+            if resolved_index is None:
+                break  # Keep pending future stamps until the corresponding TF arrives.
+            if resolved_index:
+                self.discarded += resolved_index
+                self.consecutive = 0
+                self.confirmed_stamps.clear()
+            for _ in range(resolved_index + 1):
+                self.confirmed_stamp = self.pending.popleft()
+            self.consecutive += 1
+            self.confirmed_stamps.append(self.confirmed_stamp)
+        return self.consecutive >= self.required
+
+    def snapshot(self):
+        return {"expected_frame": self.expected_frame,
+                "latest_sensor_stamp_ns": self.latest_stamp,
+                "last_checked_sensor_stamp_ns": self.checked_stamp,
+                "last_confirmed_sensor_stamp_ns": self.confirmed_stamp,
+                "confirmed_sensor_stamps_ns": list(self.confirmed_stamps),
+                "consecutive_exact_tf": self.consecutive,
+                "required_consecutive_exact_tf": self.required,
+                "pending_stamps_ns": list(self.pending),
+                "discarded_unresolved_samples": self.discarded,
+                "tf_debug_reason": self.debug_reason,
+                "last_failed_exact_tf": self.last_failure}
+
+
 def add_state_plugin(source, destination):
     """Preserve the demonstration world and add only an observing world plugin."""
     tree = ET.parse(source)
@@ -183,6 +261,7 @@ def main():
         import rclpy
         from ament_index_python.packages import get_package_share_directory
         from rclpy.duration import Duration
+        from rclpy.clock import ClockType
         from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
         from rclpy.signals import SignalHandlerOptions
         from rclpy.time import Time
@@ -301,6 +380,8 @@ def main():
                 topics["/wheel_odom_path"] = RosPath
             if args.model == "rover_ackermann":
                 topics["/ground_truth/odom"] = Odometry
+            tf_gates = {topic: TimestampedTfGate(frame) for topic, frame in frames.items()}
+            collecting_tf_samples = False
 
             def remember(topic, message):
                 messages[topic] = message
@@ -312,6 +393,8 @@ def main():
                     if ns < last_stamps.get(topic, ns):
                         timestamp_errors.add(topic)
                     last_stamps[topic] = ns
+                    if collecting_tf_samples and topic in tf_gates:
+                        tf_gates[topic].observe(message.header.frame_id, ns)
                 if topic == imu_topic:
                     a, w = message.linear_acceleration, message.angular_velocity
                     imu_samples.append((a.x, a.y, a.z, w.x, w.y, w.z))
@@ -404,13 +487,43 @@ def main():
             assert all(math.isfinite(value) for value in joint_state.position)
             report["checks"]["connected_tf_links"] = sorted(links)
             report["checks"]["moving_joints"] = sorted(movable)
-            for topic, expected in frames.items():
-                message = messages[topic]
-                assert message.header.frame_id == expected, (topic, message.header.frame_id, expected)
-                stamp = Time.from_msg(message.header.stamp)
-                assert stamp.nanoseconds > 0
-                spin_until(lambda f=expected, t=stamp: buffer.can_transform("odom", f, t),
-                           15, f"timestamped TF {topic}")
+            # Readiness must recover from sensor messages older than the initial
+            # TF cache without accepting a latest-time transform as sensor-time TF.
+            # Start collecting here so all qualifying stamps are newly received.
+            collecting_tf_samples = True
+            tf_diagnostics = {"target_frame": "odom", "topics": {}}
+            report["tf_diagnostics"] = tf_diagnostics
+
+            def exact_transform(frame, stamp_ns):
+                result = buffer.can_transform("odom", frame,
+                    Time(nanoseconds=stamp_ns, clock_type=ClockType.ROS_TIME),
+                    return_debug_tuple=True)
+                return bool(result[0]), str(result[1])
+
+            def fresh_timestamped_tf_ready():
+                ready = True
+                for topic, gate in tf_gates.items():
+                    ready = gate.check(exact_transform) and ready
+                    tf_diagnostics["topics"][topic] = gate.snapshot()
+                tf_diagnostics["latest_odom_message_stamp_ns"] = last_stamps.get("/odom")
+                tf_diagnostics["latest_clock_stamp_ns"] = last_stamps.get("/clock")
+                try:
+                    # Time() is diagnostic only. Every successful gate above uses
+                    # the exact, nonzero timestamp of a freshly received sensor.
+                    base_frame = "base_link" if args.model == "f1" else "base_footprint"
+                    latest_tf = buffer.lookup_transform("odom", base_frame, Time())
+                    stamp = latest_tf.header.stamp
+                    tf_diagnostics["latest_odom_tf_stamp_ns"] = stamp.sec * 1_000_000_000 + stamp.nanosec
+                    tf_diagnostics["latest_odom_tf_error"] = None
+                except Exception as error:
+                    tf_diagnostics["latest_odom_tf_stamp_ns"] = None
+                    tf_diagnostics["latest_odom_tf_error"] = str(error)
+                return ready
+
+            # Software-rendered cameras can publish well below their configured rate.
+            spin_until(fresh_timestamped_tf_ready, 30,
+                       "three fresh consecutive exact-stamp TF samples per sensor")
+            collecting_tf_samples = False
             report["checks"]["sensor_frames_and_timestamped_tf"] = frames
             odom = messages["/odom"]
             assert odom.header.frame_id == "odom"

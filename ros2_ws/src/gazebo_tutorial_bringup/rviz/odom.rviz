@@ -121,7 +121,8 @@ Visualization Manager:
       Near Clip Distance: 0.01
       Pitch: 0.6
       Target Frame: base_link
-      Yaw: 0.8
+      # 뒤쪽에서 보아 차체 뒤로 남는 주행 궤적이 가려지지 않게 한다.
+      Yaw: 3.9
 Window Geometry:
   Height: 900
   Width: 1440
