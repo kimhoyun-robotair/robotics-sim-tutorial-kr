@@ -20,6 +20,7 @@
 | 첫 월드 | 1 kg 정육면체 관성 미지정 | 1 m 정육면체의 관성 모멘트 `1/6 kg·m²` 명시 |
 | C++ 플러그인 빌드 | ROS 설치만으로 해결되지 않는 외부 Gazebo 개발 패키지 의존성 | Jazzy의 `gz_*_vendor` 패키지와 공식 CMake 대상으로 전환 |
 | Rover 이식 | 개인 PC 절대 경로, 빠진 좌표계·의존성, Humble 설정 | 설치된 패키지 경로, 독립 기본 월드, Jazzy 설정과 실행 절차 제공 |
+| Rover의 명령·odometry·TF bridge | 지원하지 않는 `qos_profile: DEFAULT` 때문에 세 연결이 생성되지 않음 | 해당 값은 생략하여 Reliable 기본 QoS를 사용하고, 허용되는 프로필 이름을 검사 |
 
 RGB-D 점군 보정은 좌표 값을 돌리지 않는다. Gazebo가 내보내는 XYZ의 실제 축에 맞는 프레임명을 붙이는 수정이다. 영상에 같은 프레임을 붙이면 Camera 표시가 틀어지므로 두 데이터의 프레임을 구분한다. 근거는 [Gazebo RGB-D 센서 소스](https://github.com/gazebosim/gz-sensors/blob/4b9fdfc05892c38e7a855f63b56737fe5d591a5f/src/RgbdCameraSensor.cc), [점군 변환 소스](https://github.com/gazebosim/gz-sensors/blob/4b9fdfc05892c38e7a855f63b56737fe5d591a5f/src/PointCloudUtil.cc), [깊이 렌더러 소스](https://github.com/gazebosim/gz-rendering/blob/0a299835b2b83ae240a5657dbdde50b7ba476d52/ogre2/src/Ogre2DepthCamera.cc)다.
 
@@ -31,7 +32,7 @@ RGB-D 점군 보정은 좌표 값을 돌리지 않는다. Gazebo가 내보내는
 
 이후 실제 실행에서 발견한 차체 기울어짐을 재현하기 위해 기본 모델과 단계별 모델 5개의 무게중심 검사도 추가했다. 수정 전에는 모두 실패했고, 관성 중심을 옮긴 뒤 모두 통과했다.
 
-최종 로컬 검사에서는 실행 환경이 필요하지 않은 문서·수식·Xacro·센서·Rover·검증 도구 테스트 **92개가 통과**했다. 바퀴를 포함한 실제 충돌 형상이 Nav2 외곽선 안에 들어가는지도 검사한다. ROS 설치, 실제 프로세스 정보, 브라우저 실행이 필요한 항목은 이 숫자에 포함하지 않았다. `mkdocs build --strict`, 기존 과정 31개와 파이널 프로젝트 6개 페이지의 연결 검사, Python/XML/셸 문법 검사도 통과했다.
+최종 로컬 검사에서는 실행 환경이 필요하지 않은 문서·수식·Xacro·센서·Rover·검증 도구 테스트 **98개가 통과**했다. 바퀴를 포함한 실제 충돌 형상이 Nav2 외곽선 안에 들어가는지, 모든 bridge YAML의 QoS 이름이 지원되는 값인지도 검사한다. ROS 설치, 실제 프로세스 정보, 브라우저 실행이 필요한 항목은 이 숫자에 포함하지 않았다. `mkdocs build --strict`, 기존 과정 31개와 파이널 프로젝트 6개 페이지의 연결 검사, Python/XML/셸 문법 검사도 통과했다.
 
 로컬 작업 환경에는 ROS 2, Gazebo, Docker, RViz가 없다. 따라서 로컬 정적 검사 통과를 **실제 시뮬레이터 실행이나 RViz 화면 검수 완료로 해석하면 안 된다.** 기존 프로세스 관리 검사도 이 환경에서 제공하지 않는 `/proc` 정보와 프로세스 제어 기능에 의존하므로 전체 테스트 통과를 주장하지 않는다.
 
@@ -62,6 +63,8 @@ python3 scripts/check_final_project_runtime.py \
   --package simple_rover --extra-sensors --evidence /tmp/simple-rover-check
 python3 scripts/check_final_project_runtime.py \
   --package f1tenth_sim --evidence /tmp/f1tenth-check
+python3 scripts/check_final_project_navigation.py \
+  --evidence /tmp/simple-rover-navigation-check
 ```
 
 검사 결과는 각 경로의 `result.json` 또는 `collection.json`과 로그로 확인한다. ROS 의존성이 없을 때는 성공 대신 종료 코드 69를 반환한다. 화면이 있는 환경에서는 `--rviz`를 추가하면 RViz를 열고 `rviz.png`를 저장한다. 화면 캡처 도구는 다음과 같이 설치한다.
@@ -73,5 +76,7 @@ python3 scripts/check_final_project_runtime.py \
 ```
 
 화면 없는 CI에서는 `xvfb-run`으로 가상 화면을 준비한다. 센서 검사 도구는 종료 시 Gazebo와 bridge를 정리하며, 본래 검사에 성공했더라도 프로세스를 정리하지 못하면 종료 코드 70으로 실패를 보고한다.
+
+내비게이션 검사 도구는 기본 월드의 실제 충돌 형상으로 임시 지도를 만들고, AMCL·Nav2가 활성화된 뒤 `(0.6, 0, 0)` 목표를 보낸다. `nav2_programming`의 성공 종료, ROS action 성공 상태, 실제 이동량과 최종 위치를 함께 검사한다. 이 지도는 검사 조건을 일정하게 만드는 용도다. SLAM으로 지도를 작성하는 실습은 [파이널 프로젝트 3장](../07_final-project/03_mapping-and-navigation.md)의 절차로 별도 확인한다.
 
 원본 Rover 커밋과 이식한 기능의 범위는 [이식 기록](../07_final-project/05_porting-notes.md)을 참고한다.

@@ -104,6 +104,65 @@ def check_navsat_fix(fix) -> dict:
             "status": fix.status.status}
 
 
+def quaternion_yaw(orientation) -> float:
+    """Read a finite odometry quaternion as a heading in radians."""
+    x, y, z, w = (orientation.x, orientation.y, orientation.z, orientation.w)
+    assert all(math.isfinite(value) for value in (x, y, z, w)), "nonfinite odometry quaternion"
+    norm = math.sqrt(x * x + y * y + z * z + w * w)
+    assert abs(norm - 1.0) < 0.05, f"invalid odometry quaternion norm: {norm}"
+    x, y, z, w = (value / norm for value in (x, y, z, w))
+    return math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+
+
+def read_steering_joints(robot) -> dict:
+    """Resolve the Ackermann joints, their base-frame axis signs, and URDF limits."""
+    plugin = robot.find(".//plugin[@name='gz::sim::systems::AckermannSteering']")
+    assert plugin is not None, "AckermannSteering plugin missing from robot_description"
+    joints = {joint.attrib["name"]: joint for joint in robot.findall("joint")}
+    parents = {joint.find("child").attrib["link"]: joint for joint in joints.values()}
+    result = {}
+    for side in ("left", "right"):
+        name = plugin.findtext(side + "_steering_joint")
+        assert name in joints, f"missing {side} steering joint: {name}"
+        joint = joints[name]
+        assert joint.attrib["type"] == "revolute", f"{name} must have bounded revolute motion"
+        axis = joint.find("axis")
+        vector = list(map(float, (axis.attrib.get("xyz", "1 0 0")
+                                 if axis is not None else "1 0 0").split()))
+        norm = math.sqrt(sum(value * value for value in vector))
+        assert math.isfinite(norm) and norm > 0
+        vector = [value / norm for value in vector]
+        current = joint
+        visited = set()
+        while current is not None:
+            assert current.attrib["name"] not in visited, "cycle in steering joint ancestry"
+            visited.add(current.attrib["name"])
+            origin = current.find("origin")
+            roll, pitch, yaw = map(float, (origin.attrib.get("rpy", "0 0 0")
+                                         if origin is not None else "0 0 0").split())
+            # URDF fixed-axis RPY rotates a joint-frame vector into its parent.
+            x, y, z = vector
+            y, z = math.cos(roll) * y - math.sin(roll) * z, math.sin(roll) * y + math.cos(roll) * z
+            x, z = math.cos(pitch) * x + math.sin(pitch) * z, -math.sin(pitch) * x + math.cos(pitch) * z
+            vector = [math.cos(yaw) * x - math.sin(yaw) * y,
+                      math.sin(yaw) * x + math.cos(yaw) * y, z]
+            parent = current.find("parent").attrib["link"]
+            if parent == "base_link":
+                break
+            assert parent in parents, f"{name} has no ancestry to base_link"
+            current = parents[parent]
+            assert current.attrib["type"] == "fixed", "steering parent must be fixed to the base"
+        assert abs(vector[2]) > 0.999, f"{name} does not steer about the base vertical axis: {vector}"
+        limit = joint.find("limit")
+        assert limit is not None
+        lower, upper = float(limit.attrib["lower"]), float(limit.attrib["upper"])
+        assert math.isfinite(lower) and math.isfinite(upper) and lower < 0 < upper
+        result[name] = {"side": side, "axis_in_base": vector,
+                        "limits_rad": [lower, upper], "positive_left_turn_sign": math.copysign(1, vector[2])}
+    assert len(result) == 2, "left and right steering joints must be distinct"
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package", choices=["simple_rover", "f1tenth_sim"], required=True)
@@ -350,6 +409,86 @@ def main() -> int:
             assert front_range_change > 0.05, f"wheel odometry moved but the rendered front wall did not approach: {front_range_change} m"
             report["checks"]["rendered_front_wall_approach_m"] = front_range_change
             report["checks"]["commanded_displacement_m"] = distance
+            if args.package == "f1tenth_sim":
+                steering = read_steering_joints(robot)
+                arc_pose = messages["/odom"].pose.pose
+                arc_x, arc_y = arc_pose.position.x, arc_pose.position.y
+                initial_yaw = previous_yaw = quaternion_yaw(arc_pose.orientation)
+                previous_odom_count = counts["/odom"]
+                initial_joint_count = counts["/joint_states"]
+                initial_positions = dict(zip(messages["/joint_states"].name,
+                                             messages["/joint_states"].position))
+                assert steering.keys() <= initial_positions.keys()
+                assert all(math.isfinite(initial_positions[name]) for name in steering)
+                turn = Twist()
+                turn.linear.x, turn.angular.z = 0.12, 0.12
+                arc = {"command_linear_m_s": turn.linear.x, "command_yaw_rad_s": turn.angular.z,
+                       "initial_yaw_rad": initial_yaw, "yaw_change_rad": 0.0,
+                       "displacement_m": 0.0, "forward_displacement_m": 0.0,
+                       "left_displacement_m": 0.0, "steering_joints": steering,
+                       "stop_command_sent": False}
+                report["checks"]["ackermann_left_arc"] = arc
+                yaw_change = 0.0
+                deadline = time.monotonic() + 45
+                stop_error = None
+                try:
+                    while time.monotonic() < deadline:
+                        if process.poll() is not None:
+                            raise AssertionError(f"launch exited during Ackermann turn: {process.returncode}")
+                        publisher.publish(turn)
+                        rclpy.spin_once(node, timeout_sec=0.1)
+                        pose = messages["/odom"].pose.pose
+                        heading = quaternion_yaw(pose.orientation)
+                        if counts["/odom"] != previous_odom_count:
+                            yaw_change += math.atan2(math.sin(heading - previous_yaw),
+                                                     math.cos(heading - previous_yaw))
+                            previous_yaw = heading
+                            previous_odom_count = counts["/odom"]
+                        dx, dy = pose.position.x - arc_x, pose.position.y - arc_y
+                        assert math.isfinite(dx) and math.isfinite(dy)
+                        arc.update({"yaw_change_rad": yaw_change, "displacement_m": math.hypot(dx, dy),
+                                    "forward_displacement_m": math.cos(initial_yaw) * dx + math.sin(initial_yaw) * dy,
+                                    "left_displacement_m": -math.sin(initial_yaw) * dx + math.cos(initial_yaw) * dy})
+                        state = messages["/joint_states"]
+                        positions = dict(zip(state.name, state.position))
+                        assert steering.keys() <= positions.keys(), "steering joints disappeared from JointState"
+                        correct_signs = True
+                        for name, details in steering.items():
+                            angle = positions[name]
+                            lower, upper = details["limits_rad"]
+                            assert math.isfinite(angle) and lower - 0.02 <= angle <= upper + 0.02, (name, angle)
+                            signed_angle = details["positive_left_turn_sign"] * angle
+                            signed_change = details["positive_left_turn_sign"] * (angle - initial_positions[name])
+                            details.update({"initial_angle_rad": initial_positions[name],
+                                            "angle_rad": angle, "angle_change_rad": angle - initial_positions[name],
+                                            "left_steering_angle_rad": signed_angle,
+                                            "left_steering_change_rad": signed_change})
+                            correct_signs &= signed_angle > 0.03 and signed_change > 0.03
+                        assert yaw_change > -0.05, f"positive yaw command turned right: {yaw_change} rad"
+                        assert yaw_change <= 0.75, "turn exceeded the probe angle before steering checks passed"
+                        if (yaw_change >= 0.15 and arc["forward_displacement_m"] >= 0.12
+                                and arc["left_displacement_m"] > 0.003 and correct_signs
+                                and counts["/joint_states"] >= initial_joint_count + 3):
+                            break
+                    assert arc["yaw_change_rad"] >= 0.15, f"no positive Ackermann yaw response: {arc}"
+                    assert arc["forward_displacement_m"] >= 0.12 and arc["left_displacement_m"] > 0.003, arc
+                    assert all(value["left_steering_angle_rad"] > 0.03
+                               and value["left_steering_change_rad"] > 0.03
+                               for value in steering.values()), steering
+                    assert counts["/joint_states"] >= initial_joint_count + 3, "steering JointState stalled"
+                    arc["observed_radius_m"] = arc["displacement_m"] / (2 * math.sin(yaw_change / 2))
+                finally:
+                    # Keep the original failure if stopping also fails; outer cleanup still runs.
+                    try:
+                        assert rclpy.ok(), "ROS context stopped before the zero command"
+                        for _ in range(5):
+                            publisher.publish(Twist())
+                            rclpy.spin_once(node, timeout_sec=0.1)
+                        arc["stop_command_sent"] = True
+                    except Exception as error:
+                        stop_error = error
+                        report["errors"].append(f"Ackermann stop failed: {error}")
+                assert stop_error is None, "could not send the Ackermann stop command"
             report["checks"]["message_counts"] = counts
             report["status"] = "passed"
         except Exception as error:

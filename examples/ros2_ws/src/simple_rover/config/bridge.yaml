@@ -1,4 +1,5 @@
 # One simulation per ROS_DOMAIN_ID. Sensor headers are defined in the Xacro files.
+# /cmd_vel·/odom·/tf는 qos_profile을 생략해 기본 Reliable QoS를 사용한다.
 - ros_topic_name: /clock
   gz_topic_name: /clock
   ros_type_name: rosgraph_msgs/msg/Clock
@@ -10,19 +11,16 @@
   ros_type_name: geometry_msgs/msg/Twist
   gz_type_name: gz.msgs.Twist
   direction: ROS_TO_GZ
-  qos_profile: DEFAULT
 - ros_topic_name: /odom
   gz_topic_name: /odom
   ros_type_name: nav_msgs/msg/Odometry
   gz_type_name: gz.msgs.Odometry
   direction: GZ_TO_ROS
-  qos_profile: DEFAULT
 - ros_topic_name: /tf
   gz_topic_name: /tf
   ros_type_name: tf2_msgs/msg/TFMessage
   gz_type_name: gz.msgs.Pose_V
   direction: GZ_TO_ROS
-  qos_profile: DEFAULT
 - ros_topic_name: /joint_states
   gz_topic_name: /joint_states
   ros_type_name: sensor_msgs/msg/JointState

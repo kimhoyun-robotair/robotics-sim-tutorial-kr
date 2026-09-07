@@ -58,6 +58,9 @@ fi
 # Preserve nested checker evidence before later pytest runs prune old temp directories.
 if [[ -d /tmp/pytest-of-root ]]; then
   cp -a /tmp/pytest-of-root "$evidence/colcon-pytest"
+  # Pytest's temporary links point outside the exported copy; preserve real files.
+  find "$evidence/colcon-pytest" -type l -delete
+  chmod -R a+rX "$evidence/colcon-pytest"
 fi
 cat "$evidence/colcon-test-result.log"
 cd "$source_root"

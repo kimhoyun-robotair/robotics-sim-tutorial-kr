@@ -16,6 +16,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'examples' / 'ros2_ws' / 'src'
+# ros_gz jazzy/ros_gz_bridge/src/bridge_config.cpp::parseQoS.
+BRIDGE_QOS_PROFILES = {
+    'CLOCK', 'SENSOR_DATA', 'PARAMETERS', 'SERVICES', 'PARAMETER_EVENTS',
+    'ROSOUT', 'SYSTEM_DEFAULT', 'BEST_AVAILABLE',
+}
 
 
 def expanded(package, **mappings):
@@ -175,6 +180,8 @@ def test_bridge_directions_qos_and_default_world(package):
     topics = {entry['ros_topic_name']: entry for entry in bridge}
     assert len(topics) == len(bridge)
     for topic, entry in topics.items():
+        if 'qos_profile' in entry:
+            assert entry['qos_profile'] in BRIDGE_QOS_PROFILES, (topic, entry['qos_profile'])
         assert entry['direction'] == ('ROS_TO_GZ' if topic == '/cmd_vel' else 'GZ_TO_ROS')
         if entry['ros_type_name'].startswith('sensor_msgs/'):
             assert entry['qos_profile'] == 'SENSOR_DATA'
@@ -192,6 +199,15 @@ def test_bridge_directions_qos_and_default_world(package):
     for display in rviz['Visualization Manager']['Displays']:
         if display['Class'].endswith(('LaserScan', 'PointCloud2', '/Image')):
             assert display['Topic']['Reliability Policy'] == 'Best Effort'
+
+
+@pytest.mark.parametrize('filename', sorted(SRC.glob('*/config/bridge*.yaml')),
+                         ids=lambda path: str(path.relative_to(SRC)))
+def test_all_bridge_qos_profiles_are_accepted_by_jazzy(filename):
+    for entry in yaml.safe_load(filename.read_text()):
+        if 'qos_profile' in entry:
+            assert entry['qos_profile'] in BRIDGE_QOS_PROFILES, (
+                filename, entry['ros_topic_name'], entry['qos_profile'])
 
 
 def test_no_personal_paths_or_legacy_ros_interfaces_in_launch():
