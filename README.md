@@ -4,6 +4,8 @@ Ubuntu 22.04에서 ROS 2 Humble과 Gazebo Classic 11로 모바일 로봇을 만�
 
 > 이 문서와 실행 명령은 **`Humble` 브랜치 전용**이다. 다른 브랜치의 모델·플러그인·명령을 섞어 사용하지 않는다.
 
+문서·센서·TF를 재점검하면서 수정한 내용과 실제 Gazebo·RViz 검증 결과는 [재점검 기록](docs/11_review.md)에 정리했다.
+
 ## 실습 환경
 
 | 항목 | 사용 환경 |
@@ -130,4 +132,4 @@ mkdocs serve
 
 ## 라이선스
 
-코드와 문서는 [Apache License 2.0](LICENSE)을 따른다.
+이 튜토리얼에서 작성한 코드와 문서는 [Apache License 2.0](LICENSE)을 따른다. 포함된 Velodyne 코드는 해당 디렉터리의 BSD 라이선스를 따르며, F1 차량 모델·메시의 출처와 권리 표시는 [원본과 수정 범위](ros2_ws/src/f1_robot_model/UPSTREAM.md)에 정리했다.

@@ -1,0 +1,1610 @@
+{
+  "source_commit": "06966b4cfcda53f46f7ccf8255fe3414b4fa537b",
+  "run_url": "https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/actions/runs/34117481381",
+  "artifact_name": "humble-classic-validation",
+  "artifact_zip_sha256": "c6b81f6b7a1b691f25fdfbe293fb0bfefa5e8e2122ec399674d07e7e01a4d396",
+  "environment": {
+    "container": "osrf/ros:humble-desktop-full-jammy",
+    "gazebo_package": "gazebo\t11.10.2+dfsg-1",
+    "ros_packages": [
+      "ros-humble-gazebo-dev\t3.9.0-1jammy.20260304.090426",
+      "ros-humble-gazebo-msgs\t3.9.0-1jammy.20260718.015750",
+      "ros-humble-gazebo-plugins\t3.9.0-1jammy.20260804.195543",
+      "ros-humble-gazebo-ros\t3.9.0-1jammy.20260726.134039",
+      "ros-humble-rviz-assimp-vendor\t11.2.28-1jammy.20260714.150848",
+      "ros-humble-rviz-common\t11.2.28-1jammy.20260804.200122",
+      "ros-humble-rviz-default-plugins\t11.2.28-1jammy.20260804.212519",
+      "ros-humble-rviz-imu-plugin\t2.1.5-1jammy.20260804.202811",
+      "ros-humble-rviz-ogre-vendor\t11.2.28-1jammy.20260714.150851",
+      "ros-humble-rviz-rendering\t11.2.28-1jammy.20260715.012257",
+      "ros-humble-rviz2\t11.2.28-1jammy.20260804.222726"
+    ],
+    "glxinfo": "name of display: :100\ndisplay: :100  screen: 0\ndirect rendering: Yes\nExtended renderer info (GLX_MESA_query_renderer):\n    Vendor: Mesa (0xffffffff)\n    Device: llvmpipe (LLVM 15.0.7, 256 bits) (0xffffffff)\n    Version: 23.2.1\n    Accelerated: no\n    Video memory: 15988MB\n    Unified memory: yes\n    Preferred profile: core (0x1)\n    Max core profile version: 4.5\n    Max compat profile version: 4.5\n    Max GLES1 profile version: 1.1\n    Max GLES[23] profile version: 3.2\nMemory info (GL_ATI_meminfo):\n    VBO free memory - total: 31 MB, largest block: 31 MB\n    VBO free aux. memory - total: 14750 MB, largest block: 14750 MB\n    Texture free memory - total: 31 MB, largest block: 31 MB\n    Texture free aux. memory - total: 14750 MB, largest block: 14750 MB\n    Renderbuffer free memory - total: 31 MB, largest block: 31 MB\n    Renderbuffer free aux. memory - total: 14750 MB, largest block: 14750 MB\nMemory info (GL_NVX_gpu_memory_info):\n    Dedicated video memory: 214995 MB\n    Total available memory: 230984 MB\n    Currently available dedicated video memory: 31 MB\nOpenGL vendor string: Mesa\nOpenGL renderer string: llvmpipe (LLVM 15.0.7, 256 bits)\nOpenGL core profile version string: 4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.4\nOpenGL core profile shading language version string: 4.50\nOpenGL core profile context flags: (none)\nOpenGL core profile profile mask: core profile\n\nOpenGL version string: 4.5 (Compatibility Profile) Mesa 23.2.1-1ubuntu3.1~22.04.4\nOpenGL shading language version string: 4.50\nOpenGL context flags: (none)\nOpenGL profile mask: compatibility profile\n\nOpenGL ES profile version string: OpenGL ES 3.2 Mesa 23.2.1-1ubuntu3.1~22.04.4\nOpenGL ES profile shading language version string: OpenGL ES GLSL ES 3.20\n\n"
+  },
+  "models": {
+    "diffbot": {
+      "model": "diffbot",
+      "status": "passed",
+      "checks": {
+        "advancing_streams": [
+          "/clock",
+          "/ground_truth_path",
+          "/joint_states",
+          "/odom",
+          "/probe/model_states",
+          "/wheel_odom_path"
+        ],
+        "connected_tf_links": [
+          "base_footprint",
+          "base_link",
+          "caster_swivel_link",
+          "caster_wheel_link",
+          "left_wheel_link",
+          "right_wheel_link"
+        ],
+        "moving_joints": [
+          "caster_swivel_joint",
+          "caster_wheel_joint",
+          "left_wheel_joint",
+          "right_wheel_joint"
+        ],
+        "sensor_frames_and_timestamped_tf": {},
+        "stationary_ground_rpy_rad": [
+          -1.0634378163315242e-07,
+          -2.981897750468356e-05,
+          0.00012311296170864562
+        ],
+        "wheel_odom_path_initial": {
+          "poses": 202,
+          "frame": "odom",
+          "first_stamp_ns": 165000000,
+          "last_stamp_ns": 4185000000,
+          "first_xy_m": [
+            2.1646703665642526e-28,
+            2.7893156977237645e-58
+          ],
+          "last_xy_m": [
+            -0.001164662061381259,
+            -7.290559295267674e-08
+          ],
+          "endpoint_distance_m": 0.0011646620636631335
+        },
+        "straight_motion": {
+          "command_linear_m_s": 0.15,
+          "ground_distance_m": 0.8020784215701791,
+          "odom_distance_m": 0.7980373887871609,
+          "required_ground_distance_m": 0.8,
+          "required_odom_distance_m": 0.75
+        },
+        "wheel_odom_path_after_straight": {
+          "poses": 471,
+          "frame": "odom",
+          "first_stamp_ns": 165000000,
+          "last_stamp_ns": 9565000000,
+          "first_xy_m": [
+            2.1646703665642526e-28,
+            2.7893156977237645e-58
+          ],
+          "last_xy_m": [
+            0.7968726704833271,
+            0.0002995387711539338
+          ],
+          "endpoint_distance_m": 0.7968727267805723,
+          "displacement_since_command_m": 0.7980373887871609
+        },
+        "wheel_odom_path_final": {
+          "poses": 493,
+          "frame": "odom",
+          "first_stamp_ns": 165000000,
+          "last_stamp_ns": 10005000000,
+          "first_xy_m": [
+            2.1646703665642526e-28,
+            2.7893156977237645e-58
+          ],
+          "last_xy_m": [
+            0.8067816366578372,
+            0.0003051803871780178
+          ],
+          "endpoint_distance_m": 0.806781694377957
+        },
+        "rviz_capture": {
+          "file": "rviz.png",
+          "width": 1440,
+          "height": 900,
+          "review": "full window captured; human visual review is required"
+        }
+      },
+      "errors": [],
+      "isolation": {
+        "GAZEBO_MASTER_URI": "http://127.0.0.1:33731",
+        "ROS_DOMAIN_ID": "160",
+        "ROS_LOCALHOST_ONLY": "1"
+      },
+      "command": [
+        "ros2",
+        "launch",
+        "gazebo_tutorial_bringup",
+        "diffbot.launch.py",
+        "gui:=false",
+        "rviz:=true",
+        "world:=/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/log/humble-evidence/diffbot/probe.world",
+        "use_sim_time:=true"
+      ],
+      "world_source": "/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/install/gazebo_tutorial_bringup/share/gazebo_tutorial_bringup/worlds/empty.world",
+      "tf_diagnostics": {
+        "target_frame": "odom",
+        "topics": {},
+        "latest_odom_message_stamp_ns": 4185000000,
+        "latest_clock_stamp_ns": 4200000000,
+        "latest_odom_tf_stamp_ns": 4205000000,
+        "latest_odom_tf_error": null
+      },
+      "stop_command_sent": true,
+      "survivors": [],
+      "message_counts": {
+        "description": 1,
+        "/wheel_odom_path": 492,
+        "/odom": 414,
+        "/joint_states": 413,
+        "/clock": 85,
+        "/probe/model_states": 166,
+        "/ground_truth_path": 83
+      },
+      "elapsed_wall_seconds": 12.480639944000018
+    },
+    "rover_diff": {
+      "model": "rover_diff",
+      "status": "passed",
+      "checks": {
+        "advancing_streams": [
+          "/clock",
+          "/joint_states",
+          "/odom",
+          "/probe/model_states",
+          "/wheel_odom_path"
+        ],
+        "connected_tf_links": [
+          "base_footprint",
+          "base_link",
+          "front_left_wheel_link",
+          "front_marker_link",
+          "front_right_wheel_link",
+          "rear_left_wheel_link",
+          "rear_right_wheel_link"
+        ],
+        "moving_joints": [
+          "front_left_wheel_joint",
+          "front_right_wheel_joint",
+          "rear_left_wheel_joint",
+          "rear_right_wheel_joint"
+        ],
+        "sensor_frames_and_timestamped_tf": {},
+        "stationary_ground_rpy_rad": [
+          -3.4761419202247004e-08,
+          1.064327375068724e-06,
+          -8.822994692951892e-09
+        ],
+        "wheel_odom_path_initial": {
+          "poses": 390,
+          "frame": "odom",
+          "first_stamp_ns": 348000000,
+          "last_stamp_ns": 4238000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            1.1075135968464347e-05,
+            8.953419243684447e-13
+          ],
+          "endpoint_distance_m": 1.1075135968464383e-05
+        },
+        "straight_motion": {
+          "command_linear_m_s": 0.15,
+          "ground_distance_m": 0.8051412121235942,
+          "odom_distance_m": 0.8049224188025685,
+          "required_ground_distance_m": 0.8,
+          "required_odom_distance_m": 0.75
+        },
+        "wheel_odom_path_after_straight": {
+          "poses": 934,
+          "frame": "odom",
+          "first_stamp_ns": 348000000,
+          "last_stamp_ns": 9678000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            0.8019334905504741,
+            5.46472937877141e-07
+          ],
+          "endpoint_distance_m": 0.8019334905506603,
+          "displacement_since_command_m": 0.8019224154146919
+        },
+        "wheel_odom_path_final": {
+          "poses": 980,
+          "frame": "odom",
+          "first_stamp_ns": 348000000,
+          "last_stamp_ns": 10138000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            0.8145534902684883,
+            5.58107107753678e-07
+          ],
+          "endpoint_distance_m": 0.8145534902686795
+        },
+        "rviz_capture": {
+          "file": "rviz.png",
+          "width": 1440,
+          "height": 900,
+          "review": "full window captured; human visual review is required"
+        }
+      },
+      "errors": [],
+      "isolation": {
+        "GAZEBO_MASTER_URI": "http://127.0.0.1:43639",
+        "ROS_DOMAIN_ID": "144",
+        "ROS_LOCALHOST_ONLY": "1"
+      },
+      "command": [
+        "ros2",
+        "launch",
+        "gazebo_tutorial_bringup",
+        "rover_diff.launch.py",
+        "gui:=false",
+        "rviz:=true",
+        "world:=/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/log/humble-evidence/rover_diff/probe.world",
+        "use_sim_time:=true"
+      ],
+      "world_source": "/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/install/gazebo_tutorial_bringup/share/gazebo_tutorial_bringup/worlds/empty.world",
+      "tf_diagnostics": {
+        "target_frame": "odom",
+        "topics": {},
+        "latest_odom_message_stamp_ns": 4258000000,
+        "latest_clock_stamp_ns": 4300000000,
+        "latest_odom_tf_stamp_ns": 3598000000,
+        "latest_odom_tf_error": null
+      },
+      "stop_command_sent": true,
+      "survivors": [],
+      "message_counts": {
+        "description": 1,
+        "/wheel_odom_path": 548,
+        "/odom": 403,
+        "/joint_states": 318,
+        "/probe/model_states": 166,
+        "/clock": 85
+      },
+      "elapsed_wall_seconds": 12.67005182999992
+    },
+    "rover_ackermann": {
+      "model": "rover_ackermann",
+      "status": "passed",
+      "checks": {
+        "advancing_streams": [
+          "/clock",
+          "/ground_truth/odom",
+          "/joint_states",
+          "/odom",
+          "/probe/model_states",
+          "/wheel_odom_path"
+        ],
+        "connected_tf_links": [
+          "base_footprint",
+          "base_link",
+          "front_left_steering_link",
+          "front_left_wheel_link",
+          "front_marker_link",
+          "front_right_steering_link",
+          "front_right_wheel_link",
+          "rear_left_wheel_link",
+          "rear_right_wheel_link",
+          "steering_wheel_link"
+        ],
+        "moving_joints": [
+          "front_left_steering_joint",
+          "front_left_wheel_joint",
+          "front_right_steering_joint",
+          "front_right_wheel_joint",
+          "rear_left_wheel_joint",
+          "rear_right_wheel_joint",
+          "steering_wheel_joint"
+        ],
+        "sensor_frames_and_timestamped_tf": {},
+        "stationary_ground_rpy_rad": [
+          6.699187375176107e-09,
+          5.177285271986226e-06,
+          -1.3767969689733426e-05
+        ],
+        "wheel_odom_path_initial": {
+          "poses": 118,
+          "frame": "odom",
+          "first_stamp_ns": 155000000,
+          "last_stamp_ns": 2495000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            -0.0005183994966924975,
+            5.036798057687326e-08
+          ],
+          "endpoint_distance_m": 0.0005183994991393878
+        },
+        "straight_motion": {
+          "command_linear_m_s": 0.15,
+          "ground_distance_m": 0.8038804970392515,
+          "odom_distance_m": 0.7953282921289252,
+          "required_ground_distance_m": 0.8,
+          "required_odom_distance_m": 0.75
+        },
+        "wheel_odom_path_after_straight": {
+          "poses": 410,
+          "frame": "odom",
+          "first_stamp_ns": 155000000,
+          "last_stamp_ns": 8335000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            0.7948098915462485,
+            -4.1511968640567464e-05
+          ],
+          "endpoint_distance_m": 0.7948098926303087,
+          "displacement_since_command_m": 0.7953282921289252
+        },
+        "ackermann_left_arc": {
+          "command_speed_m_s": 0.15,
+          "command_steering_angle_rad": 0.2,
+          "ground_yaw_change_rad": 0.12047840227392456,
+          "forward_m": 0.39084220602731995,
+          "left_m": 0.054834156857553405,
+          "steering_angles_rad": {
+            "front_left_steering_joint": 0.21928256278090608,
+            "front_right_steering_joint": 0.17508428918486008
+          }
+        },
+        "wheel_odom_path_final": {
+          "poses": 588,
+          "frame": "odom",
+          "first_stamp_ns": 155000000,
+          "last_stamp_ns": 11895000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            1.20386351672093,
+            0.05792397313012184
+          ],
+          "endpoint_distance_m": 1.205256219048408
+        },
+        "rviz_capture": {
+          "file": "rviz.png",
+          "width": 1440,
+          "height": 900,
+          "review": "full window captured; human visual review is required"
+        }
+      },
+      "errors": [],
+      "isolation": {
+        "GAZEBO_MASTER_URI": "http://127.0.0.1:33513",
+        "ROS_DOMAIN_ID": "127",
+        "ROS_LOCALHOST_ONLY": "1"
+      },
+      "command": [
+        "ros2",
+        "launch",
+        "gazebo_tutorial_bringup",
+        "rover_ackermann.launch.py",
+        "gui:=false",
+        "rviz:=true",
+        "world:=/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/log/humble-evidence/rover_ackermann/probe.world",
+        "use_sim_time:=true"
+      ],
+      "world_source": "/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/install/gazebo_tutorial_bringup/share/gazebo_tutorial_bringup/worlds/empty.world",
+      "tf_diagnostics": {
+        "target_frame": "odom",
+        "topics": {},
+        "latest_odom_message_stamp_ns": 2495000000,
+        "latest_clock_stamp_ns": 2500000000,
+        "latest_odom_tf_stamp_ns": 2495000000,
+        "latest_odom_tf_error": null
+      },
+      "stop_command_sent": true,
+      "survivors": [],
+      "message_counts": {
+        "description": 1,
+        "/probe/model_states": 239,
+        "/clock": 121,
+        "/ground_truth/odom": 892,
+        "/joint_states": 534,
+        "/odom": 535,
+        "/wheel_odom_path": 531
+      },
+      "elapsed_wall_seconds": 15.140137436000032
+    },
+    "sensor_bot": {
+      "model": "sensor_bot",
+      "status": "passed",
+      "checks": {
+        "advancing_streams": [
+          "/camera/camera_info",
+          "/camera/image_raw",
+          "/clock",
+          "/fisheye/camera_info",
+          "/fisheye/image_raw",
+          "/imu/data",
+          "/joint_states",
+          "/odom",
+          "/points",
+          "/probe/model_states",
+          "/rgbd/camera_info",
+          "/rgbd/depth/camera_info",
+          "/rgbd/depth/image_raw",
+          "/rgbd/image_raw",
+          "/rgbd/points",
+          "/scan",
+          "/stereo/left/camera_info",
+          "/stereo/left/image_raw",
+          "/stereo/right/camera_info",
+          "/stereo/right/image_raw",
+          "/wheel_odom_path"
+        ],
+        "connected_tf_links": [
+          "base_footprint",
+          "base_link",
+          "camera_link",
+          "camera_optical_frame",
+          "caster_link",
+          "fisheye_camera_link",
+          "fisheye_camera_optical_frame",
+          "imu_link",
+          "left_wheel_link",
+          "lidar_2d_link",
+          "lidar_3d_link",
+          "rgbd_camera_link",
+          "rgbd_camera_optical_frame",
+          "right_wheel_link",
+          "stereo_camera_left_optical_frame",
+          "stereo_camera_link",
+          "stereo_camera_right_optical_frame"
+        ],
+        "moving_joints": [
+          "left_wheel_joint",
+          "right_wheel_joint"
+        ],
+        "sensor_frames_and_timestamped_tf": {
+          "/scan": "lidar_2d_link",
+          "/imu/data": "imu_link",
+          "/points": "lidar_3d_link",
+          "/camera/image_raw": "camera_optical_frame",
+          "/camera/camera_info": "camera_optical_frame",
+          "/rgbd/image_raw": "rgbd_camera_optical_frame",
+          "/rgbd/camera_info": "rgbd_camera_optical_frame",
+          "/stereo/left/image_raw": "stereo_camera_left_optical_frame",
+          "/stereo/left/camera_info": "stereo_camera_left_optical_frame",
+          "/stereo/right/image_raw": "stereo_camera_right_optical_frame",
+          "/stereo/right/camera_info": "stereo_camera_right_optical_frame",
+          "/fisheye/image_raw": "fisheye_camera_optical_frame",
+          "/fisheye/camera_info": "fisheye_camera_optical_frame",
+          "/rgbd/depth/image_raw": "rgbd_camera_optical_frame",
+          "/rgbd/depth/camera_info": "rgbd_camera_optical_frame",
+          "/rgbd/points": "rgbd_camera_optical_frame"
+        },
+        "stationary_ground_rpy_rad": [
+          2.5347471714805746e-07,
+          0.005100289550135992,
+          1.9049762875831516e-05
+        ],
+        "wheel_odom_path_initial": {
+          "poses": 557,
+          "frame": "odom",
+          "first_stamp_ns": 342000000,
+          "last_stamp_ns": 11462000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            -0.0006040225398862809,
+            2.036888995486317e-08
+          ],
+          "endpoint_distance_m": 0.0006040225402297215
+        },
+        "/camera/image_raw": {
+          "encoding": "mono8",
+          "width": 320,
+          "height": 240,
+          "calibration": "pinhole"
+        },
+        "/rgbd/image_raw": {
+          "encoding": "rgb8",
+          "width": 320,
+          "height": 240,
+          "calibration": "pinhole"
+        },
+        "/stereo/left/image_raw": {
+          "encoding": "rgb8",
+          "width": 320,
+          "height": 240,
+          "calibration": "pinhole"
+        },
+        "/stereo/right/image_raw": {
+          "encoding": "rgb8",
+          "width": 320,
+          "height": 240,
+          "calibration": "pinhole"
+        },
+        "/fisheye/image_raw": {
+          "encoding": "rgb8",
+          "width": 320,
+          "height": 240,
+          "calibration": "placeholder; equidistant image"
+        },
+        "rgbd_optical_xyz": {
+          "center_xyz_m": [
+            0.01016002893447876,
+            0.01016002893447876,
+            5.631243705749512
+          ],
+          "center_depth_m": 5.631216526031494,
+          "calibrated_projection_xyz_m": [
+            0.01015997990730409,
+            0.01015997990730409,
+            5.631216526031494
+          ],
+          "off_center_projection_errors_m": [
+            2.7179718017578125e-05,
+            2.765655517578125e-05,
+            2.7179718017578125e-05,
+            9.5367431640625e-07
+          ],
+          "optical_forward_in_base": [
+            1.0,
+            2.220446049250313e-16,
+            2.220446049250313e-16
+          ]
+        },
+        "stereo_baseline_m": 0.08,
+        "lidar": {
+          "rays": 720,
+          "finite_rays": 289,
+          "forward_range_m": 5.795637607574463
+        },
+        "lidar3d": {
+          "width": 3783,
+          "height": 1,
+          "finite_points": 3783,
+          "vertical_angle_span_rad": 0.5235980342830634,
+          "forward_wall_x_m": 6.062117338180542
+        },
+        "stationary_imu_means": [
+          -0.04996246736045585,
+          -0.002150182139350273,
+          9.803723527531444,
+          2.8577131809735976e-06,
+          -0.00015537490151115377,
+          -7.596181467963205e-06
+        ],
+        "straight_motion": {
+          "command_linear_m_s": 0.15,
+          "ground_distance_m": 0.20519531420267295,
+          "odom_distance_m": 0.19269383452293962,
+          "required_ground_distance_m": 0.2,
+          "required_odom_distance_m": 0.15,
+          "front_wall_approach_m": 0.21515560150146484
+        },
+        "wheel_odom_path_after_straight": {
+          "poses": 629,
+          "frame": "odom",
+          "first_stamp_ns": 342000000,
+          "last_stamp_ns": 12902000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            0.18308537551326426,
+            1.12546902628094e-05
+          ],
+          "endpoint_distance_m": 0.18308537585919044,
+          "displacement_since_command_m": 0.18368939839669235
+        },
+        "wheel_odom_path_final": {
+          "poses": 663,
+          "frame": "odom",
+          "first_stamp_ns": 342000000,
+          "last_stamp_ns": 13582000000,
+          "first_xy_m": [
+            0.0,
+            0.0
+          ],
+          "last_xy_m": [
+            0.20954680412323634,
+            1.33824598776671e-05
+          ],
+          "endpoint_distance_m": 0.20954680455056385
+        },
+        "rviz_capture": {
+          "file": "rviz.png",
+          "width": 1440,
+          "height": 900,
+          "review": "full window captured; human visual review is required"
+        }
+      },
+      "errors": [],
+      "isolation": {
+        "GAZEBO_MASTER_URI": "http://127.0.0.1:55519",
+        "ROS_DOMAIN_ID": "136",
+        "ROS_LOCALHOST_ONLY": "1"
+      },
+      "command": [
+        "ros2",
+        "launch",
+        "gazebo_tutorial_bringup",
+        "sensors.launch.py",
+        "gui:=false",
+        "rviz:=true",
+        "world:=/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/log/humble-evidence/sensor_bot/probe.world",
+        "use_sim_time:=true",
+        "sensor_profile:=all"
+      ],
+      "world_source": "/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/install/gazebo_tutorial_bringup/share/gazebo_tutorial_bringup/worlds/sensor.world",
+      "tf_diagnostics": {
+        "target_frame": "odom",
+        "topics": {
+          "/scan": {
+            "expected_frame": "lidar_2d_link",
+            "latest_sensor_stamp_ns": 11522000000,
+            "last_checked_sensor_stamp_ns": 9144000000,
+            "last_confirmed_sensor_stamp_ns": 9144000000,
+            "confirmed_sensor_stamps_ns": [
+              9010000000,
+              9077000000,
+              9144000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              9211000000,
+              9279000000,
+              9347000000,
+              9414000000,
+              9483000000,
+              9551000000,
+              9618000000,
+              9686000000,
+              9752000000,
+              9819000000,
+              9886000000,
+              9958000000,
+              10027000000,
+              10094000000,
+              10162000000,
+              10230000000,
+              10298000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10298000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.298000 but the latest data is at time 9.082000, when looking up transform from frame [lidar_2d_link] to frame [odom]"
+            }
+          },
+          "/imu/data": {
+            "expected_frame": "imu_link",
+            "latest_sensor_stamp_ns": 11501000000,
+            "last_checked_sensor_stamp_ns": 9133000000,
+            "last_confirmed_sensor_stamp_ns": 9133000000,
+            "confirmed_sensor_stamps_ns": [
+              9043000000,
+              9093000000,
+              9133000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              9144000000,
+              9174000000,
+              9195000000,
+              9215000000,
+              9266000000,
+              9311000000,
+              9363000000,
+              9383000000,
+              9413000000,
+              9443000000,
+              9463000000,
+              9483000000,
+              9523000000,
+              9553000000,
+              9604000000,
+              9624000000,
+              9675000000,
+              9725000000,
+              9775000000,
+              9805000000,
+              9837000000,
+              9909000000,
+              9950000000,
+              9990000000,
+              10021000000,
+              10072000000,
+              10103000000,
+              10146000000,
+              10222000000,
+              10293000000
+            ],
+            "discarded_unresolved_samples": 3,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10293000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.293000 but the latest data is at time 9.082000, when looking up transform from frame [imu_link] to frame [odom]"
+            }
+          },
+          "/points": {
+            "expected_frame": "lidar_3d_link",
+            "latest_sensor_stamp_ns": 11524000000,
+            "last_checked_sensor_stamp_ns": 9293000000,
+            "last_confirmed_sensor_stamp_ns": 9293000000,
+            "confirmed_sensor_stamps_ns": [
+              9079000000,
+              9151000000,
+              9293000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              9354000000,
+              9490000000,
+              9562000000,
+              9693000000,
+              9756000000,
+              9887000000,
+              9965000000,
+              10029000000,
+              10162000000,
+              10232000000,
+              10367000000,
+              10437000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10437000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.437000 but the latest data is at time 9.282000, when looking up transform from frame [lidar_3d_link] to frame [odom]"
+            }
+          },
+          "/camera/image_raw": {
+            "expected_frame": "camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 10309000000,
+            "last_confirmed_sensor_stamp_ns": 10309000000,
+            "confirmed_sensor_stamps_ns": [
+              9407000000,
+              9863000000,
+              10309000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10765000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10765000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.765000 but the latest data is at time 10.302000, when looking up transform from frame [camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/camera/camera_info": {
+            "expected_frame": "camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 10309000000,
+            "last_confirmed_sensor_stamp_ns": 10309000000,
+            "confirmed_sensor_stamps_ns": [
+              9407000000,
+              9863000000,
+              10309000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10765000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10765000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.765000 but the latest data is at time 10.302000, when looking up transform from frame [camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/rgbd/image_raw": {
+            "expected_frame": "rgbd_camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [rgbd_camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/rgbd/camera_info": {
+            "expected_frame": "rgbd_camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [rgbd_camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/stereo/left/image_raw": {
+            "expected_frame": "stereo_camera_left_optical_frame",
+            "latest_sensor_stamp_ns": 10309000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [stereo_camera_left_optical_frame] to frame [odom]"
+            }
+          },
+          "/stereo/left/camera_info": {
+            "expected_frame": "stereo_camera_left_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [stereo_camera_left_optical_frame] to frame [odom]"
+            }
+          },
+          "/stereo/right/image_raw": {
+            "expected_frame": "stereo_camera_right_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [stereo_camera_right_optical_frame] to frame [odom]"
+            }
+          },
+          "/stereo/right/camera_info": {
+            "expected_frame": "stereo_camera_right_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [stereo_camera_right_optical_frame] to frame [odom]"
+            }
+          },
+          "/fisheye/image_raw": {
+            "expected_frame": "fisheye_camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 10309000000,
+            "last_confirmed_sensor_stamp_ns": 10309000000,
+            "confirmed_sensor_stamps_ns": [
+              9407000000,
+              9863000000,
+              10309000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10765000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10765000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.765000 but the latest data is at time 10.302000, when looking up transform from frame [fisheye_camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/fisheye/camera_info": {
+            "expected_frame": "fisheye_camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 10309000000,
+            "last_confirmed_sensor_stamp_ns": 10309000000,
+            "confirmed_sensor_stamps_ns": [
+              9407000000,
+              9863000000,
+              10309000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10765000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10765000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.765000 but the latest data is at time 10.302000, when looking up transform from frame [fisheye_camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/rgbd/depth/image_raw": {
+            "expected_frame": "rgbd_camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [rgbd_camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/rgbd/depth/camera_info": {
+            "expected_frame": "rgbd_camera_optical_frame",
+            "latest_sensor_stamp_ns": 10765000000,
+            "last_checked_sensor_stamp_ns": 9863000000,
+            "last_confirmed_sensor_stamp_ns": 9863000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              9863000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [
+              10309000000
+            ],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 9.862000, when looking up transform from frame [rgbd_camera_optical_frame] to frame [odom]"
+            }
+          },
+          "/rgbd/points": {
+            "expected_frame": "rgbd_camera_optical_frame",
+            "latest_sensor_stamp_ns": 10309000000,
+            "last_checked_sensor_stamp_ns": 10309000000,
+            "last_confirmed_sensor_stamp_ns": 10309000000,
+            "confirmed_sensor_stamps_ns": [
+              8931000000,
+              9407000000,
+              10309000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 10309000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 10.309000 but the latest data is at time 10.302000, when looking up transform from frame [rgbd_camera_optical_frame] to frame [odom]"
+            }
+          }
+        },
+        "latest_odom_message_stamp_ns": 11462000000,
+        "latest_clock_stamp_ns": 11500000000,
+        "latest_odom_tf_stamp_ns": 10362000000,
+        "latest_odom_tf_error": null
+      },
+      "stop_command_sent": true,
+      "survivors": [],
+      "message_counts": {
+        "description": 1,
+        "/points": 134,
+        "/imu/data": 799,
+        "/odom": 531,
+        "/joint_states": 528,
+        "/wheel_odom_path": 527,
+        "/probe/model_states": 266,
+        "/scan": 196,
+        "/clock": 134,
+        "/camera/camera_info": 25,
+        "/camera/image_raw": 23,
+        "/fisheye/camera_info": 23,
+        "/fisheye/image_raw": 22,
+        "/rgbd/depth/image_raw": 26,
+        "/rgbd/depth/camera_info": 27,
+        "/stereo/left/image_raw": 26,
+        "/stereo/left/camera_info": 27,
+        "/stereo/right/camera_info": 27,
+        "/rgbd/camera_info": 26,
+        "/stereo/right/image_raw": 26,
+        "/rgbd/image_raw": 23,
+        "/rgbd/points": 14
+      },
+      "elapsed_wall_seconds": 26.449031974000036
+    },
+    "f1": {
+      "model": "f1",
+      "status": "passed",
+      "checks": {
+        "ackermann_adapter": {
+          "input": "/drive (AckermannDriveStamped)",
+          "output": "/cmd_vel (Twist)",
+          "straight_output_verified": true,
+          "turn_output_verified": true,
+          "straight_last_output": {
+            "linear_x": 0.15000000596046448,
+            "angular_z": 0.0
+          },
+          "turn_last_output": {
+            "linear_x": 0.15000000596046448,
+            "angular_z": 0.20000000298023224
+          }
+        },
+        "advancing_streams": [
+          "/camera/camera_info",
+          "/camera/depth/camera_info",
+          "/camera/depth/image_raw",
+          "/camera/image_raw",
+          "/camera/points",
+          "/clock",
+          "/gps/data",
+          "/imu/data",
+          "/joint_states",
+          "/left_camera/camera_info",
+          "/left_camera/image_raw",
+          "/lidar_3d/points",
+          "/odom",
+          "/probe/model_states",
+          "/right_camera/camera_info",
+          "/right_camera/image_raw",
+          "/scan"
+        ],
+        "connected_tf_links": [
+          "base_footprint",
+          "base_link",
+          "camera_link",
+          "camera_link_optical",
+          "chassis",
+          "gps",
+          "imu",
+          "laser",
+          "left_camera_link",
+          "left_camera_link_optical",
+          "left_front_wheel",
+          "left_rear_wheel",
+          "left_steering_hinge",
+          "lidar_3d_base",
+          "lidar_3d_link",
+          "right_camera_link",
+          "right_camera_link_optical",
+          "right_front_wheel",
+          "right_rear_wheel",
+          "right_steering_hinge"
+        ],
+        "moving_joints": [
+          "left_front_wheel_joint",
+          "left_rear_wheel_joint",
+          "left_steering_hinge_joint",
+          "right_front_wheel_joint",
+          "right_rear_wheel_joint",
+          "right_steering_hinge_joint"
+        ],
+        "sensor_frames_and_timestamped_tf": {
+          "/scan": "laser",
+          "/imu/data": "imu",
+          "/lidar_3d/points": "lidar_3d_link",
+          "/left_camera/image_raw": "left_camera_link_optical",
+          "/left_camera/camera_info": "left_camera_link_optical",
+          "/right_camera/image_raw": "right_camera_link_optical",
+          "/right_camera/camera_info": "right_camera_link_optical",
+          "/camera/image_raw": "camera_link_optical",
+          "/camera/camera_info": "camera_link_optical",
+          "/camera/depth/image_raw": "camera_link_optical",
+          "/camera/depth/camera_info": "camera_link_optical",
+          "/camera/points": "camera_link_optical",
+          "/gps/data": "gps"
+        },
+        "stationary_ground_rpy_rad": [
+          -8.652779184064127e-07,
+          1.7626584035006042e-06,
+          3.379575567014186e-05
+        ],
+        "/camera/image_raw": {
+          "encoding": "bgr8",
+          "width": 320,
+          "height": 240,
+          "calibration": "pinhole"
+        },
+        "/left_camera/image_raw": {
+          "encoding": "bgr8",
+          "width": 320,
+          "height": 240,
+          "calibration": "pinhole"
+        },
+        "/right_camera/image_raw": {
+          "encoding": "bgr8",
+          "width": 320,
+          "height": 240,
+          "calibration": "pinhole"
+        },
+        "rgbd_optical_xyz": {
+          "center_xyz_m": [
+            0.005298702046275139,
+            0.005298702046275139,
+            2.8000130653381348
+          ],
+          "center_depth_m": 2.8000130653381348,
+          "calibrated_projection_xyz_m": [
+            0.005298702118450063,
+            0.005298702118450063,
+            2.8000130653381348
+          ],
+          "off_center_projection_errors_m": [
+            3.889884525598575e-10,
+            6.437008648330078e-09,
+            9.865334937853021e-09,
+            9.5367431640625e-07
+          ],
+          "optical_forward_in_base": [
+            1.0,
+            2.220446049250313e-16,
+            2.220446049250313e-16
+          ]
+        },
+        "stereo_baseline_m": 0.2,
+        "gnss": {
+          "latitude_deg": 37.56649999991895,
+          "longitude_deg": 126.97799886824502,
+          "altitude_m": 0.07999884895980358,
+          "status": 0
+        },
+        "lidar": {
+          "rays": 1081,
+          "finite_rays": 1081,
+          "forward_range_m": 2.887158155441284
+        },
+        "lidar3d": {
+          "width": 7040,
+          "height": 1,
+          "finite_points": 7040,
+          "vertical_angle_span_rad": 0.721000052271369,
+          "forward_wall_x_m": 3.0032613277435303
+        },
+        "stationary_imu_means": [
+          -0.002305011854893082,
+          0.0008176171732324071,
+          9.809285318173014,
+          -1.2497121130698444e-05,
+          6.002589736465927e-06,
+          -3.5172703761246566e-05
+        ],
+        "straight_motion": {
+          "command_linear_m_s": 0.15,
+          "ground_distance_m": 0.2075889232824264,
+          "odom_distance_m": 0.20612123037223248,
+          "required_ground_distance_m": 0.2,
+          "required_odom_distance_m": 0.15,
+          "front_wall_approach_m": 0.21775293350219727
+        },
+        "ackermann_left_arc": {
+          "command_speed_m_s": 0.15,
+          "command_steering_angle_rad": 0.2,
+          "ground_yaw_change_rad": 0.12592397125948546,
+          "forward_m": 0.18948615799557206,
+          "left_m": 0.03047486547274482,
+          "steering_angles_rad": {
+            "left_steering_hinge_joint": 0.2051774156362729,
+            "right_steering_hinge_joint": 0.1826138136212423
+          }
+        },
+        "rviz_capture": {
+          "file": "rviz.png",
+          "width": 1280,
+          "height": 800,
+          "review": "full window captured; human visual review is required"
+        }
+      },
+      "errors": [],
+      "isolation": {
+        "GAZEBO_MASTER_URI": "http://127.0.0.1:49995",
+        "ROS_DOMAIN_ID": "131",
+        "ROS_LOCALHOST_ONLY": "1"
+      },
+      "command": [
+        "ros2",
+        "launch",
+        "f1_robot_model",
+        "robot_spawn.launch.py",
+        "gui:=false",
+        "rviz:=true",
+        "world:=/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/log/humble-evidence/f1/probe.world",
+        "use_sim_time:=true",
+        "depth_camera:=true",
+        "stereo_camera:=true",
+        "lidar_3d:=true",
+        "gps:=true",
+        "joystick:=false",
+        "ackermann_adapter:=true"
+      ],
+      "world_source": "/__w/robotics-sim-tutorial-kr/robotics-sim-tutorial-kr/ros2_ws/install/f1_robot_model/share/f1_robot_model/world/sensor_arena.world",
+      "tf_diagnostics": {
+        "target_frame": "odom",
+        "topics": {
+          "/scan": {
+            "expected_frame": "laser",
+            "latest_sensor_stamp_ns": 8714000000,
+            "last_checked_sensor_stamp_ns": 8261000000,
+            "last_confirmed_sensor_stamp_ns": 8261000000,
+            "confirmed_sensor_stamps_ns": [
+              8210000000,
+              8235000000,
+              8261000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 8261000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 8.261000 but the latest data is at time 8.253000, when looking up transform from frame [laser] to frame [odom]"
+            }
+          },
+          "/imu/data": {
+            "expected_frame": "imu",
+            "latest_sensor_stamp_ns": 8726000000,
+            "last_checked_sensor_stamp_ns": 8223000000,
+            "last_confirmed_sensor_stamp_ns": 8223000000,
+            "confirmed_sensor_stamps_ns": [
+              8203000000,
+              8213000000,
+              8223000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/lidar_3d/points": {
+            "expected_frame": "lidar_3d_link",
+            "latest_sensor_stamp_ns": 8715000000,
+            "last_checked_sensor_stamp_ns": 8416000000,
+            "last_confirmed_sensor_stamp_ns": 8416000000,
+            "confirmed_sensor_stamps_ns": [
+              8214000000,
+              8315000000,
+              8416000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 8416000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 8.416000 but the latest data is at time 8.413000, when looking up transform from frame [lidar_3d_link] to frame [odom]"
+            }
+          },
+          "/left_camera/image_raw": {
+            "expected_frame": "left_camera_link_optical",
+            "latest_sensor_stamp_ns": 8696000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/left_camera/camera_info": {
+            "expected_frame": "left_camera_link_optical",
+            "latest_sensor_stamp_ns": 8696000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/right_camera/image_raw": {
+            "expected_frame": "right_camera_link_optical",
+            "latest_sensor_stamp_ns": 8696000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/right_camera/camera_info": {
+            "expected_frame": "right_camera_link_optical",
+            "latest_sensor_stamp_ns": 8696000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/camera/image_raw": {
+            "expected_frame": "camera_link_optical",
+            "latest_sensor_stamp_ns": 8599000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/camera/camera_info": {
+            "expected_frame": "camera_link_optical",
+            "latest_sensor_stamp_ns": 8696000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/camera/depth/image_raw": {
+            "expected_frame": "camera_link_optical",
+            "latest_sensor_stamp_ns": 8696000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/camera/depth/camera_info": {
+            "expected_frame": "camera_link_optical",
+            "latest_sensor_stamp_ns": 8696000000,
+            "last_checked_sensor_stamp_ns": 8262000000,
+            "last_confirmed_sensor_stamp_ns": 8262000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8230000000,
+              8262000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          },
+          "/camera/points": {
+            "expected_frame": "camera_link_optical",
+            "latest_sensor_stamp_ns": 8599000000,
+            "last_checked_sensor_stamp_ns": 8599000000,
+            "last_confirmed_sensor_stamp_ns": 8599000000,
+            "confirmed_sensor_stamps_ns": [
+              8197000000,
+              8330000000,
+              8599000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": {
+              "sensor_stamp_ns": 8599000000,
+              "tf_debug_reason": "Lookup would require extrapolation into the future.  Requested time 8.599000 but the latest data is at time 8.593000, when looking up transform from frame [camera_link_optical] to frame [odom]"
+            }
+          },
+          "/gps/data": {
+            "expected_frame": "gps",
+            "latest_sensor_stamp_ns": 8706000000,
+            "last_checked_sensor_stamp_ns": 8403000000,
+            "last_confirmed_sensor_stamp_ns": 8403000000,
+            "confirmed_sensor_stamps_ns": [
+              8203000000,
+              8303000000,
+              8403000000
+            ],
+            "consecutive_exact_tf": 3,
+            "required_consecutive_exact_tf": 3,
+            "pending_stamps_ns": [],
+            "discarded_unresolved_samples": 0,
+            "tf_debug_reason": "",
+            "last_failed_exact_tf": null
+          }
+        },
+        "latest_odom_message_stamp_ns": 8723000000,
+        "latest_clock_stamp_ns": 8700000000,
+        "latest_odom_tf_stamp_ns": 8603000000,
+        "latest_odom_tf_error": null
+      },
+      "stop_command_sent": true,
+      "survivors": [],
+      "message_counts": {
+        "description": 1,
+        "/probe/model_states": 231,
+        "/imu/data": 1136,
+        "/odom": 1149,
+        "/scan": 453,
+        "/joint_states": 339,
+        "/clock": 117,
+        "/gps/data": 115,
+        "/lidar_3d/points": 112,
+        "/camera/depth/image_raw": 179,
+        "/camera/depth/camera_info": 179,
+        "/camera/image_raw": 143,
+        "/camera/camera_info": 156,
+        "/left_camera/camera_info": 174,
+        "/right_camera/image_raw": 170,
+        "/right_camera/camera_info": 179,
+        "/left_camera/image_raw": 146,
+        "/camera/points": 60,
+        "/cmd_vel": 2138
+      },
+      "elapsed_wall_seconds": 18.833618473000115
+    }
+  },
+  "visual_review": {
+    "date": "2026-09-07",
+    "method": "Assistant visual inspection of all five original full-window screenshots, separate from automated checks.",
+    "screenshots": {
+      "diffbot": {
+        "file": "diffbot.png",
+        "sha256": "c66d6b7dc31090e58d10bac723a4f9db03e16e56ab85bfbe4a31cf24bcb7a891",
+        "observation": "Global Status: Ok; robot and the wheel/ground-truth traces visible; covariance shapes no longer obscure the scene."
+      },
+      "rover_diff": {
+        "file": "rover_diff.png",
+        "sha256": "c102561fdba807379a0f6446dd39baa2ea3c7f296f91dee207345c40b2ab24f6",
+        "observation": "Global Status: Ok; four-wheel robot and odometry trace visible."
+      },
+      "rover_ackermann": {
+        "file": "rover_ackermann.png",
+        "sha256": "0903e0138bb87cea3dd285614ce0b12b9f339c992fe441b829a70d3405ce65d6",
+        "observation": "Global Status: Ok; robot, steering geometry and traces after straight motion and left turn visible."
+      },
+      "sensor_bot": {
+        "file": "sensor_bot.png",
+        "sha256": "070e39686afc83d318636caa881d9843c843bb37befed479f159ea8892ca17d7",
+        "observation": "Global Status: Ok; left stereo, RGB-D color, mono and fisheye images visible; robot, point clouds and scaled IMU arrow visible."
+      },
+      "f1": {
+        "file": "f1.png",
+        "sha256": "d0ee663fb7aff93d81f0fee6edec3a6bc09df1b0a7187cbfbc384f2ffb0bd1a1",
+        "observation": "Global Status: Ok; robot, RGB image, 2D scan and depth points visible. Optional 3D LiDAR display is disabled in this capture; the stream was verified by runtime checks."
+      }
+    }
+  },
+  "scope_exclusions": [
+    "AMCL localization accuracy",
+    "Autonomous course completion",
+    "Physical joystick and robot hardware",
+    "Other operating systems and graphics drivers",
+    "Precision fisheye intrinsic calibration"
+  ]
+}
