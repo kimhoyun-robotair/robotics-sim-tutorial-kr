@@ -122,7 +122,7 @@ def test_beginner_sensor_routes_explain_the_parsed_runtime_contract() -> None:
     requirements = {
         "08-sensors.md": ("360 - 1", "`inf`", "100 Hz", "30 Hz"),
         "09-gazebo-fuel.md": ("GZ_FUEL_CACHE_PATH", "GZ_SIM_RESOURCE_PATH"),
-        "10-ros-gz-bridge.md": ("ros_gz_bridge", "image_bridge", "dependency"),
+        "10-ros-gz-bridge.md": ("ros_gz_bridge", "image_bridge", "의존성"),
         "11_project-tutorial-bot.md": ("/scan", "/imu", "/clock"),
     }
 

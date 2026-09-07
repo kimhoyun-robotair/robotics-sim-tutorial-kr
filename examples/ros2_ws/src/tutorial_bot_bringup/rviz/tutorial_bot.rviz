@@ -19,6 +19,8 @@ Visualization Manager:
       Enabled: true
       Description Source: Topic
       Description Topic:
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
         Value: /robot_description
     - Class: rviz_default_plugins/LaserScan
       Name: 2D LiDAR

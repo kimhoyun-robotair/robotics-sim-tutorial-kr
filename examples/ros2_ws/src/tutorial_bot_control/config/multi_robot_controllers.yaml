@@ -17,9 +17,10 @@
     wheel_radius: 0.06
     base_frame_id: robot1/base_link
     odom_frame_id: robot1/odom
+    # frame_id에 이미 namespace가 있으므로 자동 접두사를 끈다.
+    tf_frame_prefix_enable: false
     enable_odom_tf: true
     publish_rate: 30.0
-    use_stamped_vel: true
 
 /robot2/controller_manager:
   ros__parameters:
@@ -40,6 +41,7 @@
     wheel_radius: 0.06
     base_frame_id: robot2/base_link
     odom_frame_id: robot2/odom
+    # frame_id에 이미 namespace가 있으므로 자동 접두사를 끈다.
+    tf_frame_prefix_enable: false
     enable_odom_tf: true
     publish_rate: 30.0
-    use_stamped_vel: true

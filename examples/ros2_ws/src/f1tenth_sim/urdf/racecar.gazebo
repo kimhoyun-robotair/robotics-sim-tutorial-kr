@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<robot name="racecar" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<!-- Gazebo references -->
+
+<gazebo reference="chassis">
+  <mu1>0.0</mu1>
+  <mu2>0.0</mu2>
+  <kp>10000000.0</kp>
+  <kd>1.0</kd>
+</gazebo>
+
+<gazebo reference="left_rear_wheel">
+  <mu1>1.0</mu1>
+  <mu2>1.0</mu2>
+  <kp>10000000.0</kp>
+  <kd>1.0</kd>
+  <fdir1>1 0 0</fdir1>
+</gazebo>
+
+<gazebo reference="right_rear_wheel">
+  <mu1>1.0</mu1>
+  <mu2>1.0</mu2>
+  <kp>10000000.0</kp>
+  <kd>1.0</kd>
+  <fdir1>1 0 0</fdir1>
+</gazebo>
+
+<gazebo reference="left_front_wheel">
+  <mu1>1.0</mu1>
+  <mu2>1.0</mu2>
+  <kp>10000000.0</kp>
+  <kd>1.0</kd>
+  <fdir1>0 0 1</fdir1>
+</gazebo>
+
+<gazebo reference="right_front_wheel">
+  <mu1>1.0</mu1>
+  <mu2>1.0</mu2>
+  <kp>10000000.0</kp>
+  <kd>1.0</kd>
+  <fdir1>0 0 1</fdir1>
+</gazebo>
+
+  <gazebo>
+    <plugin
+      filename="gz-sim-ackermann-steering-system"
+      name="gz::sim::systems::AckermannSteering">
+      <left_joint>left_front_wheel_joint</left_joint>
+      <left_joint>left_rear_wheel_joint</left_joint>
+      <right_joint>right_front_wheel_joint</right_joint>
+      <right_joint>right_rear_wheel_joint</right_joint>
+      <left_steering_joint>left_steering_hinge_joint</left_steering_joint>
+      <right_steering_joint>right_steering_hinge_joint</right_steering_joint>
+      <kingpin_width>0.2</kingpin_width>
+      <steering_limit>0.4</steering_limit>
+      <wheel_base>0.325</wheel_base>
+      <wheel_separation>0.245</wheel_separation>
+      <wheel_radius>0.05</wheel_radius>
+      <min_velocity>-1.0</min_velocity>
+      <max_velocity>1.0</max_velocity>
+      <min_acceleration>-1.0</min_acceleration>
+      <max_acceleration>1.0</max_acceleration>
+      <topic>/cmd_vel</topic>
+      <odom_topic>odom</odom_topic>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <tf_topic>tf</tf_topic>
+    </plugin>
+
+    <plugin
+        filename="gz-sim-joint-state-publisher-system"
+        name="gz::sim::systems::JointStatePublisher">
+        <topic>joint_states</topic> <!--from <ros><remapping> -->
+        <joint_name>left_front_wheel_joint</joint_name>
+        <joint_name>right_front_wheel_joint</joint_name>
+        <joint_name>left_rear_wheel_joint</joint_name>
+        <joint_name>right_rear_wheel_joint</joint_name>
+        <joint_name>left_steering_hinge_joint</joint_name>
+        <joint_name>right_steering_hinge_joint</joint_name>
+    </plugin>
+  </gazebo>
+
+</robot>

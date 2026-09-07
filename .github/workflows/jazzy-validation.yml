@@ -1,0 +1,30 @@
+name: Jazzy full workspace and rendered sensors
+on:
+  push:
+    branches: [Jazzy]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rendered-sensors:
+    if: github.ref == 'refs/heads/Jazzy'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Jazzy and Harmonic validation image
+        run: docker build -t tutorial-jazzy-full -f scripts/ci/Dockerfile.jazzy-full .
+      - name: Build all packages and verify sensor frames, geometry, TF, and motion
+        run: |
+          mkdir -p "$RUNNER_TEMP/jazzy-evidence"
+          docker run --rm --shm-size=1g \
+            -v "$GITHUB_WORKSPACE:/source" \
+            -v "$RUNNER_TEMP/jazzy-evidence:/evidence" \
+            tutorial-jazzy-full bash scripts/ci/run_jazzy_full.sh /source /evidence
+      - name: Save logs, measured values, and RViz captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jazzy-rendered-sensor-evidence
+          path: ${{ runner.temp }}/jazzy-evidence
+          if-no-files-found: warn

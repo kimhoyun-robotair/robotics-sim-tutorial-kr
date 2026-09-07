@@ -70,7 +70,7 @@ FROZEN_ROUTES: tuple[RouteSpec, ...] = (
     ),
     RouteSpec(
         "/04_intermediate/04-spawn-model/",
-        "Robot Spawn과 위치",
+        "로봇 생성과 위치",
         "docs/04_intermediate/04-spawn-model.md",
     ),
     RouteSpec(
@@ -85,7 +85,7 @@ FROZEN_ROUTES: tuple[RouteSpec, ...] = (
     ),
     RouteSpec(
         "/04_intermediate/07-gz-ros2-control/",
-        "gz_ros2_control과 controller",
+        "gz_ros2_control과 컨트롤러",
         "docs/04_intermediate/07-gz-ros2-control.md",
     ),
     RouteSpec(
@@ -95,7 +95,7 @@ FROZEN_ROUTES: tuple[RouteSpec, ...] = (
     ),
     RouteSpec(
         "/04_intermediate/09-multi-robot/",
-        "다중 로봇 namespace와 TF",
+        "다중 로봇 네임스페이스와 TF",
         "docs/04_intermediate/09-multi-robot.md",
     ),
     RouteSpec(

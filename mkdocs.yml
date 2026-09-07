@@ -1,7 +1,7 @@
 site_name: ROS 2 Jazzy × Gazebo Harmonic 튜토리얼
 site_description: Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic을 위한 실행 중심 한국어 튜토리얼
-repo_url: https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr
-repo_name: kimhoyun-robotair/gazebo-sim-tutorial-kr
+repo_url: https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr
+repo_name: kimhoyun-robotair/robotics-sim-tutorial-kr
 edit_uri: edit/Jazzy/docs/
 
 theme:
@@ -98,7 +98,15 @@ nav:
       - Headless 통합 테스트: 05_advanced/04-headless-integration.md
       - CI 재현성: 05_advanced/05-ci-reproducibility.md
       - 프로젝트: 05_advanced/06_project-production-stack.md
+  - 파이널 프로젝트:
+      - 프로젝트 개요: 07_final-project/index.md
+      - 빌드와 첫 주행: 07_final-project/01_build-and-drive.md
+      - 센서와 RViz: 07_final-project/02_sensors-and-rviz.md
+      - 지도 작성과 자율주행: 07_final-project/03_mapping-and-navigation.md
+      - F1Tenth 차량: 07_final-project/04_f1tenth.md
+      - 이식 기록: 07_final-project/05_porting-notes.md
   - 참고:
       - 명령어: 06_reference/01_commands.md
       - 용어: 06_reference/02_terminology.md
       - 렌더링 Fixture: 06_reference/03_visual-fixture.md
+      - Jazzy 점검 기록: 06_reference/04_jazzy-audit.md

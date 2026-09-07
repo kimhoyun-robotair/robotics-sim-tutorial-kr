@@ -2,10 +2,14 @@ cmake_minimum_required(VERSION 3.8)
 project(tutorial_bot_plugins)
 
 find_package(ament_cmake REQUIRED)
-find_package(gz-msgs10 REQUIRED)
-find_package(gz-plugin2 REQUIRED COMPONENTS register)
-find_package(gz-sim8 REQUIRED)
-find_package(gz-transport13 REQUIRED)
+find_package(gz_msgs_vendor REQUIRED)
+find_package(gz-msgs REQUIRED)
+find_package(gz_plugin_vendor REQUIRED)
+find_package(gz-plugin REQUIRED COMPONENTS register)
+find_package(gz_sim_vendor REQUIRED)
+find_package(gz-sim REQUIRED)
+find_package(gz_transport_vendor REQUIRED)
+find_package(gz-transport REQUIRED)
 
 add_library(TutorialBotDiagnosticsSystem SHARED
   src/tutorial_bot_diagnostics.cpp
@@ -16,10 +20,10 @@ target_include_directories(TutorialBotDiagnosticsSystem PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(TutorialBotDiagnosticsSystem
-  gz-msgs10::gz-msgs10
-  gz-plugin2::gz-plugin2-register
-  gz-sim8::gz-sim8
-  gz-transport13::gz-transport13
+  gz-msgs::gz-msgs
+  gz-plugin::register
+  gz-sim::gz-sim
+  gz-transport::gz-transport
 )
 
 install(TARGETS TutorialBotDiagnosticsSystem
@@ -43,9 +47,6 @@ ament_environment_hooks(
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  find_package(gz-msgs10 REQUIRED)
-  find_package(gz-sim8 REQUIRED)
-  find_package(gz-transport13 REQUIRED)
 
   foreach(test_name IN ITEMS
       diagnostics_distance
@@ -54,9 +55,9 @@ if(BUILD_TESTING)
       diagnostics_physics_cadence)
     ament_add_gtest(${test_name} test/test_${test_name}.cpp TIMEOUT 30)
     target_link_libraries(${test_name}
-      gz-msgs10::gz-msgs10
-      gz-sim8::gz-sim8
-      gz-transport13::gz-transport13
+      gz-msgs::gz-msgs
+      gz-sim::gz-sim
+      gz-transport::gz-transport
     )
     set_tests_properties(${test_name} PROPERTIES
       ENVIRONMENT "GZ_SIM_SYSTEM_PLUGIN_PATH=${CMAKE_CURRENT_BINARY_DIR}"
@@ -86,9 +87,9 @@ if(BUILD_TESTING)
       ament_add_gtest(${test_name} test/test_diagnostics_enable_reset.cpp TIMEOUT 30)
     endif()
     target_link_libraries(${test_name}
-      gz-msgs10::gz-msgs10
-      gz-sim8::gz-sim8
-      gz-transport13::gz-transport13
+      gz-msgs::gz-msgs
+      gz-sim::gz-sim
+      gz-transport::gz-transport
     )
     string(TOUPPER ${test_name} test_definition)
     target_compile_definitions(${test_name} PRIVATE ${test_definition})
@@ -103,6 +104,11 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-ament_export_dependencies(gz-msgs10 gz-plugin2 gz-sim8 gz-transport13)
+ament_export_dependencies(
+  gz_msgs_vendor gz-msgs
+  gz_plugin_vendor gz-plugin
+  gz_sim_vendor gz-sim
+  gz_transport_vendor gz-transport
+)
 ament_export_libraries(TutorialBotDiagnosticsSystem)
 ament_package()

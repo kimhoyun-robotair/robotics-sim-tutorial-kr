@@ -1,26 +1,27 @@
 # 학습 로드맵
 
-이 과정은 미니 프로젝트로, `tutorial_bot`을 구성하고 이를 계속 확장하는 방식으로 진행한다. 먼저 ROS를 사용하지 않고 Gazebo만으로 world와 model을 이해하고, 그다음 ROS 2 통신과 시각화를 연결하며, 마지막에 제어·자율주행·커스텀 plugin·테스트를 추가한다. 이 순서를 따라서 학습을 진행하게 되면 오류가 생겼을 때 SDF, Gazebo Transport, ROS 2 bridge, TF 가운데 어느 계층이 원인인지 분리할 수 있다.
+이 과정은 작은 로봇 `tutorial_bot`을 만들고 기능을 하나씩 붙이는 방식으로 진행한다. 먼저 Gazebo에서 물체와 로봇을 다루고, 센서 데이터를 ROS 2로 전달한 뒤 RViz·제어·자율주행을 연결한다. 고급에서는 플러그인과 자동 검사를 작성하고, 마지막에는 외부 Rover 패키지를 Jazzy/Harmonic으로 옮긴 파이널 프로젝트를 완성한다.
 
-## 각 장에서 반복하는 학습 방식
+Gazebo를 처음 접한다면 아래 순서대로 진행한다. 이 페이지의 코드는 앞으로 다룰 내용의 예고이며, 실제 실행 준비와 전체 코드는 연결된 장에서 설명한다.
 
-각 장은 `완성 목표 → 핵심 개념 → 저장소의 실제 파일 → 실행 명령 → 관찰 결과 → 실패 진단` 순서를 반복한다. 새 기능을 추가할 때마다 직전 단계의 observable을 다시 확인하므로, 마지막에 여러 기능을 한꺼번에 연결하고도 어느 경계에서 문제가 생겼는지 추적할 수 있다.
+## 각 장의 진행 방식
 
-예를 들어 DiffDrive 장은 단순히 plugin 이름을 설명하는 것 뿐만 아니라 실제 Xacro의 joint와 plugin parameter를 읽고, world를 실행하고, `cmd_vel`을 발행하고, Gazebo odometry와 ROS 2 `/odom`을 차례대로 확인하는 것을 목표로 한다.
+각 실습은 **목표 → 준비 → 개념과 코드 → 실행 → 결과 확인 → 문제 해결** 순서로 읽는다. 기능을 하나 추가할 때마다 바로 이전 단계도 다시 확인한다. 예를 들어 센서가 RViz에 보이지 않으면 Gazebo 센서 발행, 브리지 전달, ROS 2 메시지, TF 순서로 원인을 좁힌다.
 
-## 전체 학습 흐름
+| 구간 | 만드는 것 | 완료 기준 |
+| --- | --- | --- |
+| 시작하기 | Ubuntu 24.04·Jazzy·Harmonic 실행 환경 | Gazebo 실행과 ROS 패키지 경로 확인 |
+| 초급 전반 | 월드와 두 바퀴 로봇 | 물체 표시·충돌·관절·주행 확인 |
+| 초급 후반 | LiDAR·카메라·IMU와 ROS 2 연결 | 센서 메시지 수신과 키보드 주행 |
+| 중급 | Xacro·TF·RViz·제어·Nav2 통합 | 센서가 올바른 위치에 표시되고 목표까지 주행 |
+| 고급 | C++ 시스템 플러그인과 자동 검사 | 정상 동작·오류 처리·프로세스 종료 확인 |
+| 파이널 프로젝트 | 이식한 Rover와 F1Tenth 차량 | 빌드·주행·센서·지도·자율주행을 단계별로 확인 |
 
-| 구간 | 완성 상태 | 핵심 산출물 | 대표 검증 |
-| --- | --- | --- | --- |
-| 시작하기 | Jazzy/Harmonic 설치와 환경 진단 | 재현 가능한 개발 환경 | `gz sim --versions`, `ros2 pkg prefix ros_gz_sim` |
-| 초급 전반 | SDF world와 두 바퀴 로봇 | 물리·collision·joint·DiffDrive | `gz sdf -k`, `gz topic -l` |
-| 초급 후반 | 센서와 ROS 2 bridge | LiDAR·camera·IMU, bridge YAML | `ros2 topic echo /scan --once` |
-| 중급 | URDF/Xacro, TF, RViz, control, Nav2 | 통합 launch와 controller 설정 | `ros2 launch ...`, `tf2_echo` |
-| 고급 | C++ System Plugin과 자동화 | plugin library, headless test, CI | `colcon test`, Runtime matrix |
+## 0단계: 실행 환경 맞추기
 
-## 0단계: 튜토리얼과 동일하게 실행 환경을 세팅하기
+운영체제나 ROS·Gazebo 버전이 다르면 같은 파일도 의존 패키지와 API 차이로 실행되지 않을 수 있다. [지원 환경](02_getting-started/00_compatibility.md), [Harmonic 소개](02_getting-started/01_gazebo-harmonic.md), [Jazzy 설치](02_getting-started/02_installation-jazzy.md)를 먼저 진행한다.
 
-Ubuntu, ROS 2, Gazebo 조합이 맞지 않으면 같은 SDF와 plugin 이름이라도 패키지나 API가 달라질 수 있다. 첫 실습 전에 환경을 확인한다.
+설치를 마친 터미널에서 확인한다.
 
 ```bash
 source /opt/ros/jazzy/setup.bash
@@ -30,26 +31,32 @@ ros2 pkg prefix ros_gz_bridge
 ros2 pkg prefix ros_gz_sim
 ```
 
-이 단계에서는 [지원 환경과 호환성](02_getting-started/00_compatibility.md), [Harmonic 소개](02_getting-started/01_gazebo-harmonic.md), [Jazzy 환경 설치](02_getting-started/02_installation-jazzy.md), [문제 해결](02_getting-started/03_troubleshooting.md)을 순서대로 진행한다.
+`ROS_DISTRO`는 `jazzy`, Gazebo Sim의 주 버전은 `8`이어야 하며 두 패키지 경로가 출력돼야 한다. 명령을 찾지 못하면 [문제 해결](02_getting-started/03_troubleshooting.md)로 돌아간다. 새 터미널에서도 `source` 명령으로 환경을 불러온다.
 
-## 1단계: ROS 2 없이 Gazebo 학습을 진행하기
+## 1단계: Gazebo의 월드와 GUI 익히기
 
-SDF world를 먼저 실행해 물리 server (물리엔진), GUI, system plugin, Gazebo Transport를 확인한다. 이때는 ROS2를 연결해서 사용하는 경우가 없으므로, ROS2 관련 문제가 생기지 않는다는 점을 명심하고 있어야 한다.
+[초급 과정](03_beginner/index.md)의 `Gazebo Sim 개요 → GUI 기초 → SDF 기초 → 첫 월드`를 진행한다. 월드(world)는 물리 설정, 조명, 물체가 들어 있는 가상 환경이다. 이 단계에서는 ROS 노드를 연결하지 않고 Gazebo 자체의 실행과 통신을 확인한다.
+
+저장소 최상위에서 실행한다.
 
 ```bash
 gz sdf -k examples/gazebo/worlds/first-world.sdf
 gz sim -r examples/gazebo/worlds/first-world.sdf
 ```
 
-초급의 `Gazebo Sim 개요 → GUI 기초 → SDF 기초 → 첫 World` 순서가 이 구간에 해당한다. 완료 기준은 바닥과 물체를 GUI에서 확인하고, 별도 터미널에서 Gazebo 토픽을 찾는 것이다.
+첫 명령의 검사가 성공하고, 두 번째 명령에서 바닥과 물체가 보여야 한다. GUI를 켜 둔 채 다른 터미널에서 토픽 목록을 확인한다.
 
 ```bash
-gz topic -l | sort
+gz topic -l
 ```
 
-## 2단계: 실제 로봇을 만들고 구조와 관성항을 추가하기
+실습을 마치면 서버를 실행한 터미널에서 `Ctrl+C`로 종료한다.
 
-링크에 관성·collision·visual을 추가하고 joint로 바퀴를 연결한다. 이후 DiffDrive system에 joint 이름과 실제 로봇의 각종 치수를 전달한다.
+## 2단계: 로봇 구조와 바퀴 구동 만들기
+
+`첫 로봇 → 바퀴와 관절 → DiffDrive` 순서로 진행한다. 링크는 질량과 형상을 갖는 로봇의 부품이고, 관절은 링크 사이의 연결이다. 바퀴의 회전축과 치수를 정의한 뒤 DiffDrive 플러그인에 같은 값을 전달한다.
+
+다음은 실제 `tutorial_bot`에서 사용하는 설정의 일부다. 두 바퀴 중심 간 거리는 0.38 m, 반지름은 0.06 m다.
 
 ```xml
 <plugin filename="gz-sim-diff-drive-system"
@@ -62,18 +69,21 @@ gz topic -l | sort
 </plugin>
 ```
 
-`첫 Robot → 바퀴와 Joint → DiffDrive` 순서로 진행한다. 완료 기준은 Gazebo Transport의 velocity 명령으로 로봇이 이동하고 odometry가 발행되는 것이다.
+[DiffDrive 장](03_beginner/07-diff-drive.md)의 빌드·생성 절차를 마친 뒤 속도 명령을 보내 로봇이 움직이고 위치 추정 토픽이 발행되는지 확인한다. 주행 확인 후에는 속도 0 명령을 보내 정지시킨다.
 
 ```bash
 gz topic -t /model/tutorial_bot/cmd_vel \
-  -m gz.msgs.Twist \
-  -p 'linear: {x: 0.4}, angular: {z: 0.3}'
-gz topic -e -t /model/tutorial_bot/odometry
+  -m gz.msgs.Twist -p 'linear: {x: 0.2}, angular: {z: 0}'
 ```
 
-## 3단계: 센서를 추가하고 ROS 2로 연결하기
+```bash
+gz topic -t /model/tutorial_bot/cmd_vel \
+  -m gz.msgs.Twist -p 'linear: {x: 0}, angular: {z: 0}'
+```
 
-LiDAR, camera, IMU를 Gazebo sensor로 먼저 실행하고 Gazebo Transport 토픽을 확인한다. 그다음 필요한 토픽만 `ros_gz_bridge` YAML에 선언한다.
+## 3단계: 센서와 ROS 2 연결하기
+
+`센서 → Gazebo Fuel → ROS 2와 연결 → 초급 프로젝트` 순서로 진행한다. 센서를 Gazebo에서 먼저 실행한 뒤 필요한 토픽을 `ros_gz_bridge`로 ROS 2에 전달한다. 아래는 LiDAR의 브리지 설정이다.
 
 ```yaml
 - ros_topic_name: "/scan"
@@ -84,53 +94,42 @@ LiDAR, camera, IMU를 Gazebo sensor로 먼저 실행하고 Gazebo Transport 토�
   qos_profile: SENSOR_DATA
 ```
 
-`센서 → Gazebo Fuel → ROS 2와 연결 → 초급 프로젝트` 순서로 진행한다. 완료 기준은 ROS 2 쪽에서 센서 메시지를 한 번 이상 받고, keyboard teleop으로 주행 명령을 보내는 것이다.
+Gazebo의 `/tutorial_bot/lidar` 메시지를 ROS 2의 `/scan`으로 보낸다는 뜻이다. 통합 실행 후 별도 터미널에서 확인한다.
 
 ```bash
-ros2 topic echo /scan --once
-ros2 run teleop_twist_keyboard teleop_twist_keyboard \
-  --ros-args -r cmd_vel:=/cmd_vel
+source /opt/ros/jazzy/setup.bash
+ros2 topic echo /scan --once --qos-reliability best_effort
 ```
 
-## 4단계: URDF/Xacro와 ROS 2 도구를 통합한다
+메시지를 한 번 받으면 명령이 끝난다. `header.frame_id`와 거리 배열을 확인한다. 카메라·IMU도 같은 순서로 확인한 뒤 [초급 프로젝트](03_beginner/11_project-tutorial-bot.md)에서 키보드 주행을 연결한다.
 
-중급에서는 로봇 구조의 원본을 URDF/Xacro로 관리한다. 반복되는 바퀴와 센서는 macro로 만들고, `robot_state_publisher`가 같은 robot description file에서 TF를 생성하게 한다. Gazebo 전용 system과 sensor는 `<gazebo>` 확장 태그에 둔다.
+## 4단계: TF·RViz·제어·자율주행 통합하기
 
-```xml
-<xacro:macro name="wheel" params="side y_position">
-  <link name="${side}_wheel_link"> ... </link>
-  <joint name="${side}_wheel_joint" type="continuous">
-    <parent link="base_link"/>
-    <child link="${side}_wheel_link"/>
-    <origin xyz="0 ${y_position} -0.06"/>
-    <axis xyz="0 1 0"/>
-  </joint>
-</xacro:macro>
+[중급 과정](04_intermediate/index.md)에서는 URDF/Xacro를 로봇 구조의 원본으로 관리한다. 반복되는 바퀴·센서 정의는 매크로로 만들고, `robot_state_publisher`가 그 구조에서 TF를 발행하게 한다. TF는 로봇 본체와 센서 좌표계 사이의 위치·회전 관계다.
 
-<xacro:wheel side="left" y_position="0.19"/>
-<xacro:wheel side="right" y_position="-0.19"/>
-```
+`고급 SDF → URDF·Xacro·SDF → ROS 2 Launch → 로봇 생성 → 브리지 YAML → TF·RViz → gz_ros2_control → 센서 심화 → 다중 로봇 → Nav2 → 중급 프로젝트` 순서로 진행한다.
 
-`고급 SDF → URDF·Xacro·SDF → ROS 2 Launch → Robot Spawn → bridge YAML → TF·RViz → gz_ros2_control → 센서 심화 → 다중 로봇 → Nav2 → 중급 프로젝트` 순서로 진행한다.
-
-통합 stack은 한 명령으로 시작한다.
+중급에서 빌드를 마치면 저장소 최상위에서 통합 실행을 시작한다.
 
 ```bash
+source /opt/ros/jazzy/setup.bash
 source examples/ros2_ws/install/setup.bash
 ros2 launch tutorial_bot_bringup simulation.launch.py \
   world:=training gui:=true rviz:=true nav2:=false
 ```
 
-완료 기준은 `odom → base_link → sensor frame` TF를 조회하고, RViz에서 robot model, LaserScan, odometry trajectory를 같은 좌표계에 표시하는 것이다.
+별도 터미널에서 본체 TF를 확인한다. 이 명령은 계속 출력되므로 확인 후 `Ctrl+C`로 끝낸다.
 
 ```bash
+source /opt/ros/jazzy/setup.bash
 ros2 run tf2_ros tf2_echo odom base_link
-ros2 topic echo /odom --once
 ```
 
-## 5단계: plugin 만들기와 검증하는 법을 배우기
+완료하려면 로봇 모델, LiDAR, 카메라 점군이 RViz의 같은 기준 좌표계에서 실제 장애물과 맞아야 한다. 토픽 수신뿐 아니라 센서 장착 위치·광학 좌표축·메시지 프레임·QoS를 확인한다. 이후 Nav2를 연결하고 목표 위치까지 이동하는지 검증한다.
 
-고급에서는 Gazebo Entity-Component-System의 update 단계에 참여하는 C++ System Plugin을 작성한다. plugin 설정은 SDF에서 import 하고, 정상 동작과 잘못된 설정을 모두 headless 테스트로 검증한다.
+## 5단계: 플러그인과 자동 검사 작성하기
+
+[고급 과정](05_advanced/index.md)에서는 로봇의 평면 이동 거리를 누적하는 C++ 시스템 플러그인을 만든다. 플러그인은 SDF에서 설정을 읽고 Gazebo의 갱신 단계마다 로봇 상태를 관찰한다.
 
 ```xml
 <plugin filename="libTutorialBotDiagnosticsSystem.so"
@@ -140,28 +139,35 @@ ros2 topic echo /odom --once
 </plugin>
 ```
 
-`ECS System Plugin → Transport 인터페이스 → 물리와 주기 디버깅 → Headless 통합 테스트 → CI 재현성 → 고급 프로젝트` 순서로 진행한다. 완료 기준은 GUI 없이 같은 입력에서 같은 observable과 cleanup receipt를 얻는 것이다.
+`ECS 시스템 플러그인 → Transport 인터페이스 → 물리와 주기 디버깅 → GUI 없는 통합 테스트 → CI 재현성 → 고급 프로젝트` 순서로 진행한다. 정상 입력에서 거리·초기화가 동작하고, 잘못된 설정에는 의도한 오류가 나와야 한다. 각 검사가 실행한 프로세스가 모두 끝났는지도 기록한다.
 
-## 파일별 담당하는 범위
+## 6단계: Rover 파이널 프로젝트 완성하기
 
-| 파일 종류 | 책임 | 중복하지 않는 내용 |
-| --- | --- | --- |
-| URDF/Xacro | 링크·joint tree, 관성, 재사용 macro | 별도의 동일 로봇 SDF 원본 |
-| SDF world | 물리, 조명, 환경 model, world system | ROS 2 노드 orchestration |
-| `<gazebo>` 확장 | Gazebo sensor·system과 URDF-SDF 보완 | ROS 2 bridge 방향 |
-| bridge YAML | Gazebo↔ROS 토픽·타입·방향 | 센서 자체의 해상도와 noise |
-| controller YAML | controller type, joint, 주기·제한 | 로봇 기하 구조 |
-| launch | 파일 경로, process 순서, 인자 | 링크·sensor XML 본문 |
+[파이널 프로젝트](07_final-project/index.md)는 `Gazebo_Harmonic_Rover`의 Rover와 F1Tenth 차량을 ROS 2 Jazzy + Gazebo Harmonic에서 실행하도록 통합한 과정이다. 프로젝트의 파일 구조와 이식 기록을 읽고 **빌드 → 첫 주행 → 센서와 RViz → 지도 작성·자율주행** 순서로 진행한다.
 
-이 경계를 지키면 센서를 다른 로봇에 재사용하거나 world를 바꿀 때 수정 범위를 줄일 수 있다.
+`tutorial_bot`에서 익힌 메시지·TF·제어 원칙을 다른 차량 구조에 적용하는 단계다. 각 차량의 실제 토픽과 프레임 이름은 해당 프로젝트 문서를 따른다.
 
-## 과정 완료 조건
+## 파일별 역할
 
-초급 12개, 중급 12개, 고급 7개 경로와 선행 조건은 `docs/course-manifest.yaml`에 고정한다. 문서를 읽는 것만으로 완료하지 않고 다음 세 종류의 증거를 함께 남긴다.
+| 파일 종류 | 담당하는 내용 |
+| --- | --- |
+| URDF/Xacro | 링크·관절 구조, 관성, 재사용 매크로 |
+| SDF 월드 | 물리 설정, 조명, 환경 모델, 월드 플러그인 |
+| URDF의 `<gazebo>` 확장 | Gazebo 전용 센서·플러그인과 변환 설정 |
+| 브리지 YAML | Gazebo ↔ ROS 2 토픽 이름·메시지 타입·방향·QoS |
+| 제어기 YAML | 제어기 종류, 관절 이름, 갱신 주기, 속도 제한 |
+| 실행 파일(launch) | 프로세스 시작, 경로와 인자 전달, 실행 순서 |
 
-1. XML, YAML, launch 파일이 정적 검사와 빌드를 통과해야 한다.
-2. nominal과 fault scenario에서 의도한 observable을 확인해야 한다.
-3. 실행이 끝난 뒤 이 과정이 시작한 process가 남지 않았다는 cleanup receipt를 확인해야 한다.
+## 과정 완료 기준
+
+문서를 읽거나 명령이 종료된 것만으로 완료를 판단하지 않는다. 다음 결과를 함께 확인한다.
+
+1. XML·YAML·실행 파일 검사와 빌드가 성공한다.
+2. 정상 입력과 의도적으로 잘못된 입력에서 기대한 결과가 나온다.
+3. 센서·주행 실습은 실제 메시지와 RViz 화면의 좌표·형상을 확인한다.
+4. 검사에서 시작한 프로세스가 종료되고 결과를 다시 확인할 수 있는 로그가 남는다.
+
+문서 작성자는 저장소 최상위에서 다음 명령으로 문서 빌드와 자동 검사 도구의 사용법을 확인한다.
 
 ```bash
 python3 -m mkdocs build --strict

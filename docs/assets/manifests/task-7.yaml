@@ -8,7 +8,7 @@ assets:
     alt_text: 로봇에서 퍼지는 라이다 광선과 RGB-D 카메라 화면 및 IMU 축
     caption: 그림 4. 센서마다 관측량과 갱신률이 다르므로 topic 형식과 timestamp를 함께 확인한다.
     captured_at: '2026-08-25'
-    sha256: 50bad17d789bef664f3381e88f4613742809e84169112b3445b7c7e28f2677c6
+    sha256: 37f2916163633c77af8fc5b0f3cc0d0adb1f6e02a09715f4094e63135250313b
   - id: beginner-09-fuel-resource-flow
     path: assets/beginner/fuel-resource-flow.svg
     route: 03_beginner/09-gazebo-fuel/
@@ -17,7 +17,7 @@ assets:
     alt_text: Fuel HTTPS URI와 cache 및 로컬 resource path가 월드 모델로 해석되는 흐름
     caption: 그림 5. Fuel HTTPS URI는 download cache를 거치고, <code>model://</code> URI는 resource path를 검색한다.
     captured_at: '2026-08-25'
-    sha256: 6a209dead75de3c0d005a67de5b108336d042aaa2a444a954713e397aa9ed7ec
+    sha256: 0aa0d3232d01771ed1d8610f0b09ecfac0beef9ad78d151654755667496f0fd1
   - id: beginner-10-bridge-dataflow
     path: assets/beginner/bridge-dataflow.svg
     route: 03_beginner/10-ros-gz-bridge/
@@ -26,7 +26,7 @@ assets:
     alt_text: Gazebo Transport 센서 토픽이 parameter bridge와 image bridge를 거쳐 ROS 2 토픽으로 변환되는 흐름
     caption: 그림 6. 명령은 ROS에서 Gazebo로, 관측값은 Gazebo에서 ROS로 흐른다.
     captured_at: '2026-08-25'
-    sha256: 5d86c96914f7d28c7e6a62ed418920c0e16e5946e99e6651c7b71b098a072a9d
+    sha256: cf0880c55c03b1c84122517e919283a45379f138e20b2cbfefcd07a8a661a501
   - id: beginner-project-final-observable
     path: assets/beginner/final-project-observable.svg
     route: 03_beginner/11_project-tutorial-bot/
@@ -35,4 +35,4 @@ assets:
     alt_text: 이동하는 tutorial bot과 ROS 2에서 확인하는 오도메트리 라이다 카메라 IMU 시계 결과
     caption: 그림 7. 완료 기준은 process 실행 여부가 아니라 이동량, sensor message, TF, trajectory를 실제로 확인하는 것이다.
     captured_at: '2026-08-25'
-    sha256: 1af319aa7ff5f222acc41f5b4058e2bcccb67435f0314eb47170356176747826
+    sha256: 19e5fc6cb903c73e8dc26a6538ef2180bc8cd94db7572e5ab068be8a54c85a0f

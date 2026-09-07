@@ -1,5 +1,6 @@
 """4륜 skid-steer 또는 Ackermann rover를 실행하는 launch 파일이다."""
 
+import re
 from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
@@ -19,6 +20,8 @@ def _launch_rover(context: LaunchContext):
 
     default_model_name = f"rover_{drive_mode}"
     model_name = LaunchConfiguration("model_name").perform(context)
+    if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", model_name) is None:
+        raise RuntimeError("model_name must start with a letter and contain only letters, digits, and underscores")
     gui = LaunchConfiguration("gui").perform(context).casefold() in {"true", "1", "yes"}
 
     description_share = Path(get_package_share_directory("tutorial_bot_description"))
@@ -37,7 +40,7 @@ def _launch_rover(context: LaunchContext):
             str(Path(get_package_share_directory("ros_gz_sim")) / "launch" / "gz_sim.launch.py")
         ),
         launch_arguments={
-            "gz_args": f"{'-r' if gui else '-s -r'} {world_file}",
+            "gz_args": f"{'-r' if gui else '-s -r --headless-rendering'} {world_file}",
             "on_exit_shutdown": "true",
         }.items(),
     )

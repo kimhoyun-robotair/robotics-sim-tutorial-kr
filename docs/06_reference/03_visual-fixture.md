@@ -1,6 +1,6 @@
-# 수학·도식·이미지 렌더링 Fixture
+# 수학·도식·이미지 표시 확인용 페이지
 
-이 페이지는 문서 렌더링 파이프라인을 반복해서 검사하기 위한 저장소 소유 fixture이다. 튜토리얼 본문이 아니라 수식, Mermaid, 반응형 이미지가 strict MkDocs와 실제 브라우저에서 계속 렌더링되는지 확인하는 회귀 검사 페이지이다.
+이 페이지는 문서 표시 기능을 검사하는 고정 예제(fixture)다. 문서를 수정한 뒤에도 수식·Mermaid 도식·이미지가 제대로 보이는지 확인한다. `mkdocs build --strict`로 빌드 오류를 검사하고, 실제 브라우저에서 화면 크기를 바꿔 표시 결과를 확인한다.
 
 ## 번호가 있는 수식
 
@@ -25,4 +25,4 @@ flowchart LR
   <figcaption>그림 1. 로봇, x축, 진행 방향을 구분해 확인하는 재현 가능한 시각 자료이다.</figcaption>
 </figure>
 
-검증기는 수식의 MathJax glyph, Mermaid 안의 세 label, 이미지 대체 텍스트, caption, 화면 너비 초과 여부를 확인한다. 이 요소를 바꿀 때에는 `docs/assets/manifest.yaml`의 fixture metadata와 browser route 검증도 함께 갱신해야 한다.
+자동 검사는 MathJax가 그린 수식, 도식 안의 세 문구, 이미지 대체 텍스트와 설명, 화면 너비를 넘는 요소가 있는지 확인한다. 이 예제를 바꿀 때에는 `docs/assets/manifest.yaml`의 관련 항목과 브라우저 검사 조건도 함께 갱신한다.

@@ -8,7 +8,7 @@ assets:
     alt_text: Xacro 원본이 URDF를 거쳐 Gazebo의 SDF 모델로 변환되는 흐름
     caption: 그림 1. Xacro 하나를 원본으로 유지하고 도구가 URDF와 SDF를 차례로 생성한다.
     captured_at: '2026-08-25'
-    sha256: 3eed643975241408f14f78068d13c7734a3d00c2e9975a173385b75715911e2e
+    sha256: e395bb1d0802a2efbb7b699c30f835e641cb8e9e6b6b5e475a3a6eb51f3fc801
   - id: beginner-06-joint-axis
     path: assets/beginner/joint-axis.svg
     route: 03_beginner/06-joints/
@@ -17,7 +17,7 @@ assets:
     alt_text: 로봇의 전진 x축, 좌우 y축과 바퀴 joint 회전축 관계
     caption: 그림 2. 두 바퀴의 joint axis는 y축과 나란하고, 바퀴는 그 축을 중심으로 굴러 x방향으로 이동한다.
     captured_at: '2026-08-25'
-    sha256: a5b6b57befc67524e75d253505faf0335db8cd5a8151c663f12901415ef9bf57
+    sha256: 9dfaa2d8e824b68b30bcbb422b8d9f3ff1433d23ad2bda44b511560c842395c8
   - id: beginner-07-diff-drive-trajectories
     path: assets/beginner/diff-drive-trajectories.svg
     route: 03_beginner/07-diff-drive/

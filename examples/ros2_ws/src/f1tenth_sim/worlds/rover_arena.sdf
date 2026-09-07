@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <world name="rover_arena">
+    <physics name="1ms" type="ignored"><max_step_size>0.001</max_step_size><real_time_factor>1.0</real_time_factor></physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"><render_engine>ogre2</render_engine></plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat"/>
+    <spherical_coordinates><surface_model>EARTH_WGS84</surface_model><world_frame_orientation>ENU</world_frame_orientation><latitude_deg>37.5665</latitude_deg><longitude_deg>126.9780</longitude_deg><elevation>0</elevation><heading_deg>0</heading_deg></spherical_coordinates>
+    <gravity>0 0 -9.81</gravity>
+    <scene><ambient>0.5 0.5 0.5 1</ambient><background>0.75 0.8 0.9 1</background><shadows>true</shadows></scene>
+    <light name="sun" type="directional"><pose>0 0 10 0 0 0</pose><diffuse>0.8 0.8 0.8 1</diffuse><specular>0.2 0.2 0.2 1</specular><direction>-0.4 0.2 -0.9</direction><cast_shadows>true</cast_shadows></light>
+    <model name="floor"><static>true</static><pose>0 0 -0.1 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>12 10 0.2</size></box></geometry></collision><visual name="visual"><geometry><box><size>12 10 0.2</size></box></geometry><material><ambient>0.65 0.68 0.7 1</ambient><diffuse>0.65 0.68 0.7 1</diffuse></material></visual></link></model>
+    <model name="north"><static>true</static><pose>0 4 0.75 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>10 0.2 1.5</size></box></geometry></collision><visual name="visual"><geometry><box><size>10 0.2 1.5</size></box></geometry><material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material></visual></link></model>
+    <model name="south"><static>true</static><pose>0 -4 0.75 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>10 0.2 1.5</size></box></geometry></collision><visual name="visual"><geometry><box><size>10 0.2 1.5</size></box></geometry><material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material></visual></link></model>
+    <model name="east"><static>true</static><pose>5 0 0.75 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>0.2 8 1.5</size></box></geometry></collision><visual name="visual"><geometry><box><size>0.2 8 1.5</size></box></geometry><material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material></visual></link></model>
+    <model name="west"><static>true</static><pose>-5 0 0.75 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>0.2 8 1.5</size></box></geometry></collision><visual name="visual"><geometry><box><size>0.2 8 1.5</size></box></geometry><material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material></visual></link></model>
+    <model name="red_box"><static>true</static><pose>2 1 0.5 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>0.8 0.8 1</size></box></geometry></collision><visual name="visual"><geometry><box><size>0.8 0.8 1</size></box></geometry><material><ambient>0.8 0.15 0.12 1</ambient><diffuse>0.8 0.15 0.12 1</diffuse></material></visual></link></model>
+    <model name="blue_box"><static>true</static><pose>-2 -1 0.4 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>1 0.8 0.8</size></box></geometry></collision><visual name="visual"><geometry><box><size>1 0.8 0.8</size></box></geometry><material><ambient>0.15 0.3 0.8 1</ambient><diffuse>0.15 0.3 0.8 1</diffuse></material></visual></link></model>
+    <model name="divider"><static>true</static><pose>-1 2 0.6 0 0 0</pose><link name="link"><collision name="collision"><geometry><box><size>2 0.2 1.2</size></box></geometry></collision><visual name="visual"><geometry><box><size>2 0.2 1.2</size></box></geometry><material><ambient>0.9 0.65 0.12 1</ambient><diffuse>0.9 0.65 0.12 1</diffuse></material></visual></link></model>
+  </world>
+</sdf>

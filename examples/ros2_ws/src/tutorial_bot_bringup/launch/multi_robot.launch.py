@@ -258,7 +258,7 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
         PythonLaunchDescriptionSource(
             str(Path(get_package_share_directory("ros_gz_sim")) / "launch" / "gz_sim.launch.py")
         ),
-        launch_arguments={"gz_args": f"-s -r {world_path}", "on_exit_shutdown": "true"}.items(),
+        launch_arguments={"gz_args": f"-s -r --headless-rendering {world_path}", "on_exit_shutdown": "true"}.items(),
     )
     parameter_bridge = Node(
         package="ros_gz_bridge",

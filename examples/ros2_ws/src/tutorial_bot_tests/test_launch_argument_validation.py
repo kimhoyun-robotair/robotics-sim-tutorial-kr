@@ -124,9 +124,7 @@ def test_multi_robot_rejects_unsafe_world_names(world_name: str) -> None:
     [
         ("model_name", "tutorial_bot"),
         ("namespace", "/"),
-        ("namespace", "/robot1"),
         ("tf_prefix", ""),
-        ("tf_prefix", "robot1_"),
     ],
 )
 def test_simulation_accepts_documented_xacro_values(
@@ -137,3 +135,10 @@ def test_simulation_accepts_documented_xacro_values(
     actions = launch_module._launch_stack(_simulation_context(**{argument_name: value}))
 
     assert actions
+
+
+@pytest.mark.parametrize("overrides", [{"namespace": "/robot1"}, {"tf_prefix": "robot1_"}])
+def test_simulation_rejects_unconfigured_namespaced_graph(overrides: dict[str, str]) -> None:
+    launch_module = _load_launch_module("simulation.launch.py")
+    with pytest.raises(launch_module._LaunchContractError, match="multi_robot.launch.py"):
+        launch_module._launch_stack(_simulation_context(**overrides))

@@ -134,6 +134,26 @@ def audit(args: argparse.Namespace) -> tuple[dict[str, object], int]:
         *asset_errors,
         *classic_errors(manifest),
     ]
+    final_project = manifest.get("final_project")
+    if final_project is not None:
+        if not isinstance(final_project, dict):
+            errors.append("final_project must be a mapping")
+        else:
+            final_pages = final_project.get("pages", [])
+            if not isinstance(final_pages, list) or not final_pages:
+                errors.append("final_project.pages must be a non-empty list")
+            else:
+                for page in final_pages:
+                    if not isinstance(page, str) or not (ROOT / "docs" / page).is_file():
+                        errors.append(f"unresolved final-project page: {page}")
+                    elif nav_counts[page] != 1:
+                        errors.append(f"final-project page must occur exactly once in nav: {page}")
+            for package in final_project.get("packages", []):
+                if not (ROOT / "examples/ros2_ws/src" / str(package) / "package.xml").is_file():
+                    errors.append(f"unresolved final-project package: {package}")
+            for prerequisite in final_project.get("prerequisites", []):
+                if prerequisite not in declared:
+                    errors.append(f"unresolved final-project prerequisite: {prerequisite}")
     if args.expect_routes is not None and len(routes) != args.expect_routes:
         errors.append(f"expected {args.expect_routes} routes, found {len(routes)}")
     expected_counts = manifest.get("route_counts")

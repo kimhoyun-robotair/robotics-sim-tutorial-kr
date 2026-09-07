@@ -8,7 +8,7 @@ assets:
     alt_text: Gazebo 개요에서 첫 world 실행까지 이어지는 초급 학습 경로 도식
     caption: 그림 1. 개념을 읽은 뒤 같은 요소를 코드에서 찾고, 실행 결과를 관찰하는 순서로 진행한다.
     captured_at: '2026-08-25'
-    sha256: b66c09333b298a4c31757f5de70f7e4dc5c3c94048d77f0ca3cdf6986b3bd12d
+    sha256: abf9161abc79a50d826e04bdd587e734ae2002469c5f60c7b13a48f8b229a2a8
     width: 960
     height: 540
   - id: beginner-01
@@ -19,7 +19,7 @@ assets:
     alt_text: Gazebo Server와 GUI의 상태 및 명령 흐름과 RTF 표시를 설명한 도식
     caption: 그림 1. Server가 물리와 simulation time을 계산하고, GUI가 상태를 표시하며 조작 명령을 전달한다.
     captured_at: '2026-08-25'
-    sha256: 955b1b808b41e221f183177fbfb8dd7c85010968ec3add685e80567ab006517e
+    sha256: 2754d14188ec1c65a1b7a656e736b7dbd0349da6d1f700747311a41a11000770
     width: 960
     height: 540
   - id: beginner-02

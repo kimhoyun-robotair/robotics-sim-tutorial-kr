@@ -9,22 +9,33 @@
 
 - URDF, Xacro, SDF가 실제 코드에서 맡는 책임을 구분한다.
 - Xacro `include`와 `macro`로 바퀴·센서 구성을 재사용한다.
-- 하나의 robot description 원본을 유지한다.
+- 하나의 로봇 설명 원본을 유지한다.
 - Xacro를 URDF로 펼치고 SDF 변환 결과까지 검사한다.
+
+## 실습 전 준비
+
+[중급 실행 준비](index.md#intermediate-setup)를 마쳐야 한다. 새 터미널마다 저장소 루트에서 다음 명령을 실행한다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source examples/ros2_ws/install/setup.bash
+```
+
+아래 XML·Python·YAML은 설명에 필요한 부분을 발췌한 코드이다. 실행에는 본문에 표시한 저장소 파일을 사용한다. 이전 실습의 Gazebo와 launch는 `Ctrl+C`로 종료한 뒤 새 실습을 시작한다. `ros2 topic hz`와 `tf2_echo`는 계속 실행되므로, 값을 확인한 뒤 `Ctrl+C`로 멈추고 다음 명령을 입력한다.
 
 ## 같은 로봇을 세 관점으로 읽기
 
 | 형식 | 잘 표현하는 것 | 이 저장소의 사용 위치 | 직접 실행하는가 |
 |---|---|---|---|
-| URDF | ROS link·joint 트리, visual, collision, inertial | Xacro를 펼친 생성물 | `robot_state_publisher`가 읽는다 |
-| Xacro | 변수, 수식, 조건, 반복 가능한 macro | 로봇 description의 원본 | 먼저 URDF로 확장한다 |
-| SDF | world, physics, sensor, Gazebo System, 상대 frame | world 원본과 Gazebo 내부 모델 | `gz sim`이 읽는다 |
+| URDF | ROS 링크·조인트 트리, 시각 형상, 충돌 형상, 질량·관성 | Xacro를 펼친 생성물 | `robot_state_publisher`가 읽는다 |
+| Xacro | 변수, 수식, 조건, 반복 가능한 매크로 | 로봇 설명의 원본 | 먼저 URDF로 확장한다 |
+| SDF | 월드, 물리 설정, 센서, Gazebo 시스템 플러그인, 상대 좌표계 | 월드 원본과 Gazebo 내부 모델 | `gz sim`이 읽는다 |
 
-URDF와 SDF 모두 XML이지만 목적이 다르다. 세 파일에 같은 link와 치수를 복사하면 한쪽만 수정되는 순간 모델이 갈라진다. 따라서 이 저장소는 `tutorial_bot.urdf.xacro` 하나를 로봇 원본으로 사용하고, Gazebo 전용 항목은 그 안의 `<gazebo>` 확장으로 연결한다.
+URDF와 SDF 모두 XML이지만 목적이 다르다. 세 파일에 같은 링크와 치수를 복사하면 한쪽만 수정되는 순간 모델이 갈라진다. 따라서 이 저장소는 `tutorial_bot.urdf.xacro` 하나를 로봇 원본으로 사용하고, Gazebo 전용 항목은 그 안의 `<gazebo>` 확장으로 연결한다.
 
 ## 1. URDF 코드 조각 읽기
 
-URDF의 핵심은 link와 joint로 이루어진 트리이다. 다음 코드는 몸체와 왼쪽 바퀴를 잇는다.
+URDF의 핵심은 링크와 조인트로 이루어진 트리이다. 다음 코드는 몸체와 왼쪽 바퀴를 잇는다.
 
 ```xml
 <link name="base_link">
@@ -48,9 +59,9 @@ URDF의 핵심은 link와 joint로 이루어진 트리이다. 다음 코드는 �
 </joint>
 ```
 
-`parent`와 `child`는 TF 트리의 방향을 정하고 `origin`은 parent에서 child joint까지의 고정 변환을 정한다. `continuous` joint의 현재 회전각은 `/joint_states`로 들어오며 `robot_state_publisher`가 바퀴 link TF를 갱신한다.
+`parent`와 `child`는 연결할 부모·자식 링크를 정한다. `origin`은 부모 링크를 기준으로 한 조인트의 위치와 방향이며, 자식 링크는 여기에 조인트 회전이 적용된 위치에 놓인다. `continuous` 조인트의 현재 회전각은 `/joint_states`로 들어오며 `robot_state_publisher`가 바퀴 링크 TF를 갱신한다.
 
-두 구동 바퀴만으로는 몸체의 세 번째 접촉점이 없으므로 실제 Xacro는 뒤쪽 caster를 추가한다. 이 튜토리얼은 회전 joint가 없는 낮은 마찰의 구형 caster로 단순화한다.
+두 구동 바퀴만으로는 몸체의 세 번째 접촉점이 없으므로 실제 Xacro는 뒤쪽 캐스터를 추가한다. 이 튜토리얼은 회전 조인트가 없는 낮은 마찰의 구형 캐스터로 단순화한다.
 
 ```xml
 <link name="caster_link">
@@ -70,16 +81,21 @@ URDF의 핵심은 link와 joint로 이루어진 트리이다. 다음 코드는 �
 <gazebo reference="caster_link"><mu1>0.05</mu1><mu2>0.05</mu2></gazebo>
 ```
 
-caster는 구동 joint 목록에 넣지 않는다. `mu1`, `mu2`를 낮게 두어 차체 회전을 방해하는 횡마찰을 줄인다.
+캐스터는 구동 조인트 목록에 넣지 않는다. `mu1`, `mu2`를 낮게 두어 차체 회전을 방해하는 횡마찰을 줄인다.
 
 ## 2. Xacro로 반복 제거하기
 
-좌우 바퀴를 복사하지 않고 `side`와 `y_position`을 받는 macro로 만든다. 저장소의 `stage_components.xacro`가 사용하는 방식이다.
+좌우 바퀴를 복사하지 않고 `side`와 `y_position`을 받는 매크로로 만든다. 저장소의 `stage_components.xacro`가 사용하는 방식이다.
 
 ```xml
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:macro name="stage_wheel" params="side y_position">
     <link name="${side}_wheel_link">
+      <inertial>
+        <mass value="0.3"/>
+        <inertia ixx="0.00031" ixy="0" ixz="0"
+                 iyy="0.00054" iyz="0" izz="0.00031"/>
+      </inertial>
       <visual>
         <origin rpy="1.57079632679 0 0"/>
         <geometry><cylinder radius="0.06" length="0.04"/></geometry>
@@ -94,12 +110,13 @@ caster는 구동 joint 목록에 넣지 않는다. `mu1`, `mu2`를 낮게 두어
       <child link="${side}_wheel_link"/>
       <origin xyz="0 ${y_position} -0.06"/>
       <axis xyz="0 1 0"/>
+      <limit effort="5.0" velocity="20.0"/>
     </joint>
   </xacro:macro>
 </robot>
 ```
 
-main Xacro에서는 macro 파일을 include한 뒤 두 번 호출한다.
+최상위 Xacro에서는 매크로 파일을 포함한 뒤 두 번 호출한다.
 
 ```xml
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tutorial_bot">
@@ -111,11 +128,11 @@ main Xacro에서는 macro 파일을 include한 뒤 두 번 호출한다.
 </robot>
 ```
 
-이 방식은 이름 규칙과 형상을 한 곳에서 고친다. Xacro include 경로는 include하는 파일을 기준으로 해석하므로 package 설치 시 `urdf/` 하위 파일도 함께 설치해야 한다.
+이렇게 묶으면 바퀴 치수를 한 곳에서 바꿀 수 있다. Xacro include 경로는 포함하는 파일을 기준으로 해석하므로 패키지 설치 시 `urdf/` 하위 파일도 함께 설치해야 한다.
 
 ## 3. 센서 Xacro를 별도 파일로 분리하기
 
-센서 link·joint와 `<gazebo reference="...">` 설정을 별도 macro로 만들면 여러 로봇에서 같은 센서를 재사용할 수 있다. 실제 mount는 `examples/ros2_ws/src/tutorial_bot_description/urdf/sensors/sensor_mounts.xacro`, 2D·3D LiDAR macro는 `examples/ros2_ws/src/tutorial_bot_description/urdf/sensors/lidar.xacro`에 있다. 다음은 실제 macro 구조의 핵심이다.
+센서 링크·조인트와 `<gazebo reference="...">` 설정을 별도 매크로로 만들면 여러 로봇에서 같은 센서를 재사용할 수 있다. 실제 장착부는 `examples/ros2_ws/src/tutorial_bot_description/urdf/sensors/sensor_mounts.xacro`, 2D·3D LiDAR 매크로는 `examples/ros2_ws/src/tutorial_bot_description/urdf/sensors/lidar.xacro`에 있다. 다음은 실제 매크로 구조의 핵심이다.
 
 ```xml
 <!-- sensor_mounts.xacro: 물리 link와 joint를 담당한다. -->
@@ -156,7 +173,7 @@ main Xacro에서는 macro 파일을 include한 뒤 두 번 호출한다.
 </xacro:macro>
 ```
 
-main Xacro에서는 실제 상대 경로로 include하고 mount와 sensor macro 호출만 남긴다.
+최상위 Xacro에서는 실제 상대 경로로 포함하고 장착부와 센서 매크로 호출만 남긴다.
 
 ```xml
 <xacro:include filename="sensors/sensor_mounts.xacro"/>
@@ -176,11 +193,11 @@ main Xacro에서는 실제 상대 경로로 include하고 mount와 sensor macro 
                   frame_id="$(arg tf_prefix)imu_link"/>
 ```
 
-`tutorial_bot.urdf.xacro`가 위 구조를 실제로 사용한다. mount macro와 sensor macro를 분리하되 main에서 같은 link 이름을 `reference`로 연결한다. 이 구조에서는 mount 위치를 바꾸는 작업과 센서 rate·noise를 바꾸는 작업의 책임이 섞이지 않는다.
+`tutorial_bot.urdf.xacro`가 위 구조를 실제로 사용한다. 장착부 매크로와 센서 매크로를 분리하되 최상위 파일에서 같은 링크 이름을 `reference`로 연결한다. 이 구조에서는 장착부 위치를 바꾸는 작업과 센서 발행 빈도·노이즈를 바꾸는 작업의 책임이 섞이지 않는다.
 
 ## 4. Gazebo 확장을 조건부로 선택하기
 
-현재 Xacro는 `control_backend` 인자에 따라 Gazebo DiffDrive System과 `gz_ros2_control` 중 하나만 생성한다.
+현재 Xacro는 `control_backend` 인자에 따라 Gazebo DiffDrive 시스템 플러그인과 `gz_ros2_control` 중 하나만 생성한다.
 
 ```xml
 <xacro:arg name="control_backend" default="gazebo_diff_drive"/>
@@ -200,11 +217,11 @@ main Xacro에서는 실제 상대 경로로 include하고 mount와 sensor macro 
 </xacro:if>
 ```
 
-초급에서는 직접 Gazebo System과 `ros_gz_bridge`를 사용하고, 중급 launch는 `control_backend:=gz_ros2_control`을 전달해 ROS controller를 사용한다. 두 backend를 동시에 넣으면 같은 joint에 서로 다른 제어기가 명령하므로 피해야 한다.
+초급에서는 직접 Gazebo 시스템 플러그인과 `ros_gz_bridge`를 사용하고, 중급 launch는 `control_backend:=gz_ros2_control`을 전달해 ROS 컨트롤러를 사용한다. 두 제어 방식을 동시에 넣으면 같은 조인트에 서로 다른 제어기가 명령하므로 피해야 한다.
 
 ## 5. SDF 변환 결과 읽기
 
-Gazebo는 spawn된 URDF를 내부적으로 SDF entity로 변환한다. 변환 결과의 일부는 다음 형태가 된다.
+Gazebo는 생성된 URDF를 내부적으로 SDF 엔티티로 변환한다. 변환 결과의 일부는 다음 형태가 된다.
 
 ```xml
 <sdf version="1.11">
@@ -228,7 +245,7 @@ Gazebo는 spawn된 URDF를 내부적으로 SDF entity로 변환한다. 변환 �
 
 ## 실행과 결과 확인
 
-저장소 루트에서 두 backend를 각각 펼쳐 검사한다.
+저장소 루트에서 두 제어 방식을 각각 펼쳐 검사한다.
 
 ```bash
 robot=examples/ros2_ws/src/tutorial_bot_description/urdf/tutorial_bot.urdf.xacro
@@ -244,7 +261,7 @@ check_urdf /tmp/tutorial_bot-control.urdf
 gz sdf -p /tmp/tutorial_bot-control.urdf > /tmp/tutorial_bot-control.sdf
 ```
 
-생성물이 서로 다른 backend를 정확히 하나씩 포함하는지 확인한다.
+생성물이 서로 다른 제어 방식을 정확히 하나씩 포함하는지 확인한다.
 
 ```bash
 grep -c 'gz::sim::systems::DiffDrive' /tmp/tutorial_bot-direct.sdf
@@ -252,24 +269,30 @@ grep -c 'GazeboSimROS2ControlPlugin' /tmp/tutorial_bot-control.sdf
 grep -E 'left_wheel_joint|right_wheel_joint|lidar_link' /tmp/tutorial_bot-control.urdf
 ```
 
-앞의 두 명령이 각각 `1`을 출력하고 필수 joint·link가 보이면 변환 경로가 정상이다.
+앞의 두 명령이 각각 `1`을 출력하고 필수 조인트·링크가 보이면 변환 경로가 정상이다.
 
-## 계산 예제: 변환 불변 조건
+## 변환 뒤 반드시 확인할 것
 
-<div class="course-worked" data-worked-example="model-conversion">
-변환 전후 joint 집합을 \(J_X\), \(J_U\), \(J_S\)라 하면 핵심 구조의 합격 조건은 \(\{left\_wheel,right\_wheel,lidar\}\subseteq J_X\cap J_U\cap J_S\)이다. 이름만 같은지 확인하는 것으로 끝내지 않고 SDF 결과에서 sensor와 선택한 control plugin이 정확히 하나만 남았는지도 확인한다.
+<div class="course-worked" data-worked-example="model-conversion" markdown="1">
+URDF와 SDF의 조인트 수가 반드시 같지는 않다. 변환 과정에서 고정 조인트로 연결된 링크가 부모 링크에 합쳐질 수 있기 때문이다. 따라서 바퀴처럼 **움직이는 조인트**가 남았는지, 센서와 선택한 구동 플러그인이 존재하는지 확인한다. ROS의 고정 센서 TF는 원본 URDF를 읽는 `robot_state_publisher`가 계속 제공한다. SDF에서 `lidar_joint`가 사라졌다는 이유만으로 센서까지 삭제됐다고 판단하지 않는다.
 </div>
+
+```bash
+grep -E '<joint |<sensor |<plugin |gz_frame_id' /tmp/tutorial_bot-control.sdf
+```
+
+바퀴 조인트 2개, LiDAR·RGB-D·IMU 센서, `GazeboSimROS2ControlPlugin`이 있는지 확인한다. URDF 고정 조인트 처리 옵션은 [SDFormat 공식 변경 기록](https://gazebosim.org/libs/sdformat/)에서도 확인할 수 있다.
 
 ## 문제 해결
 
-- `unknown macro name` 오류가 나면 include가 macro 호출보다 앞에 있는지 확인한다.
-- `No such file or directory`가 나오면 상대 include 경로와 package 설치 규칙을 확인한다.
+- `unknown macro name` 오류가 나면 `<xacro:include>`가 매크로 호출보다 앞에 있는지 확인한다.
+- `No such file or directory`가 나오면 상대 include 경로와 패키지 설치 규칙을 확인한다.
 - Xacro 인자 오류가 나면 파일 상단의 `xacro:arg` 이름과 전달 형식을 확인한다.
-- 변환 결과에 두 control plugin이 모두 있으면 조건문과 `control_backend` 값을 확인한다.
+- 변환 결과에 두 제어 플러그인이 모두 있으면 조건문과 `control_backend` 값을 확인한다.
 - Gazebo Classic용 `gazebo_ros` 또는 `gazebo_ros2_control` 예제를 섞지 않는다. Harmonic에서는 `ros_gz`와 `gz_ros2_control`을 사용한다.
 
 ## 정리
 
-URDF는 ROS 로봇 트리, Xacro는 그 트리를 재사용 가능하게 생성하는 원본, SDF는 world와 Gazebo 고유 실행 기능을 맡는다. link·joint·센서 이름을 macro 인자로 연결하고 변환 결과까지 검사하면 세 표현 사이의 불일치를 줄일 수 있다.
+URDF는 ROS 로봇 트리, Xacro는 그 트리를 재사용 가능하게 생성하는 원본, SDF는 월드와 Gazebo 고유 실행 기능을 맡는다. 링크·조인트·센서 이름을 매크로 인자로 연결하고 변환 결과까지 검사하면 세 표현 사이의 불일치를 줄일 수 있다.
 
 [이전: 고급 SDF](01-advanced-sdf.md) · [다음: ROS 2 Launch](03-ros2-launch.md)

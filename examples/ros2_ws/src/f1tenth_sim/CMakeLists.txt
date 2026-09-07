@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.8)
+project(f1tenth_sim)
+find_package(ament_cmake REQUIRED)
+install(DIRECTORY launch urdf config rviz worlds meshes DESTINATION share/${PROJECT_NAME})
+install(FILES LICENSE UPSTREAM.md DESTINATION share/${PROJECT_NAME})
+ament_package()

@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" role="img" aria-labelledby="title desc">
   <title id="title">Gazebo와 ROS 2 브리지 데이터 흐름</title>
-  <desc id="desc">Gazebo Transport 센서 토픽이 parameter bridge와 image bridge를 통해 ROS 2 토픽으로 변환되는 방향</desc>
+  <desc id="desc">Gazebo Transport 센서 토픽이 브리지를 거쳐 ROS 2 토픽으로 전달되는 방향</desc>
   <rect width="960" height="430" rx="24" fill="#eef4f8"/>
   <g font-family="sans-serif" fill="#17324d" text-anchor="middle">
-    <text x="480" y="48" font-size="30" font-weight="700">메시지는 다리를 건널 때 형식이 바뀝니다</text>
+    <text x="480" y="48" font-size="30" font-weight="700">브리지는 메시지 형식을 변환한다</text>
     <g transform="translate(50 88)">
       <rect width="250" height="286" rx="20" fill="#fff" stroke="#e65100" stroke-width="3"/>
       <text x="125" y="42" font-size="23" font-weight="700">Gazebo Transport</text>
@@ -28,7 +28,7 @@
       <text x="125" y="42" font-size="23" font-weight="700">ROS 2</text>
       <text x="125" y="92" font-size="18">/scan · LaserScan</text>
       <text x="125" y="132" font-size="18">/imu · Imu</text>
-      <text x="125" y="172" font-size="18">/tutorial_bot/.../image</text>
+      <text x="125" y="172" font-size="18">/camera/image</text>
       <text x="125" y="212" font-size="18">/odom · Odometry</text>
       <text x="125" y="252" font-size="18">/clock · Clock</text>
     </g>

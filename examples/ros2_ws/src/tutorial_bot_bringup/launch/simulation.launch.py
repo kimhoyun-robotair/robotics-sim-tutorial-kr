@@ -108,6 +108,11 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
         "tf_prefix",
         TF_PREFIX_PATTERN,
     )
+    if namespace != "/" or tf_prefix:
+        raise _LaunchContractError(
+            "simulation.launch.py requires namespace:=/ and an empty tf_prefix; "
+            "use multi_robot.launch.py for namespaced robots."
+        )
     gazebo_share = Path(get_package_share_directory("tutorial_bot_gazebo"))
     bringup_share = Path(get_package_share_directory("tutorial_bot_bringup"))
     description_share = Path(get_package_share_directory("tutorial_bot_description"))
@@ -156,7 +161,7 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
             str(Path(get_package_share_directory("ros_gz_sim")) / "launch" / "gz_sim.launch.py")
         ),
         launch_arguments={
-            "gz_args": f"{'-r' if gui_enabled else '-s -r'} {world_path}",
+            "gz_args": f"{'-r' if gui_enabled else '-s -r --headless-rendering'} {world_path}",
             "on_exit_shutdown": "true",
         }.items(),
     )

@@ -8,7 +8,7 @@ assets:
     alt_text: 중급 과정의 모델 실행 관측 제어 자율주행 데이터 흐름도
     caption: 그림 1. 모델, 실행, 관측, 제어, 자율주행이 앞 단계의 출력을 다음 단계의 입력으로 사용한다.
     captured_at: '2026-08-25'
-    sha256: aea5bdb7e25bf5df5d075a452061b771a06d07035c26f30028c62caef48d16cb
+    sha256: c715c0619c42a9f859f244fec5d0fcb13f0480f12a692b6b3dc40aee1c0dbb23
     width: 960
     height: 360
   - id: inertia-contact
@@ -19,7 +19,7 @@ assets:
     alt_text: 직육면체 관성과 접촉 수직력 마찰력의 관계도
     caption: 그림 1. 질량과 관성 텐서가 가속을, collision과 마찰이 접촉력을 결정한다.
     captured_at: '2026-08-25'
-    sha256: 44c7c3a7a64a1fe02f6b0497ea0aaaac6cfde19af2ec1dac3ecaea15c6ff27d8
+    sha256: 5ba99aa1885946cd653d3cc34d948ccd5d11e1297eb11b501c451c267d832316
     width: 960
     height: 360
   - id: model-conversion
@@ -30,7 +30,7 @@ assets:
     alt_text: Xacro에서 URDF와 SDF로 변환되는 모델 책임 흐름도
     caption: 그림 1. Xacro 원본을 URDF로 펼친 뒤 ROS 구조와 Gazebo SDF 확장으로 전달한다.
     captured_at: '2026-08-25'
-    sha256: ed53e3cc2064c8b3c6f654863631ccaf68d024d8058faac2b89f6ee2f2f7a109
+    sha256: d0c4eed3fc0708a7a7b7a4c2cb28d5207832e4abd1860d345f66ddb234bb795c
     width: 960
     height: 360
   - id: launch-readiness
@@ -41,7 +41,7 @@ assets:
     alt_text: Gazebo 준비부터 Nav2 활성까지의 launch readiness 의존 그래프
     caption: 그림 1. launch는 고정 sleep이 아니라 실제 준비 사건으로 다음 process를 시작한다.
     captured_at: '2026-08-25'
-    sha256: 35d2716066454dbf4c1052d330a1d81d3a1178bc5344aad251a28e85d417031e
+    sha256: 24485c2e8b5fa2638aab526b9759a721b411a2f7dff01f3ed296e386d8200af0
     width: 960
     height: 360
   - id: spawn-pose
@@ -52,7 +52,7 @@ assets:
     alt_text: world 좌표계에서 로봇의 위치와 yaw로 표현한 spawn pose
     caption: 그림 1. spawn pose는 world 기준 위치와 yaw이며 entity 이름과 ROS namespace는 별도 계약이다.
     captured_at: '2026-08-25'
-    sha256: 9d9cce3a6ad0343015ac52314f45b29733aa515976abefb75cbd0d2e576cc209
+    sha256: 267d5106db18a32b35fe6f876f57e19f20f67e570d6348181c675d9df2753db8
     width: 960
     height: 360
   - id: bridge-qos
@@ -63,7 +63,7 @@ assets:
     alt_text: ROS 2와 Gazebo Transport 사이 bridge 방향과 QoS 선택도
     caption: 그림 1. 명령은 ROS에서 Gazebo로, 센서와 clock은 Gazebo에서 ROS로 흐른다.
     captured_at: '2026-08-25'
-    sha256: 4bd8a8a0ba58e38efb954bcaa6f1983086031763ef78276a7ddc3fa10b1c646b
+    sha256: fac482c0a2d14a347c7fa932659977a645b17946ca4a8acb621c5f0f14dcff90
     width: 960
     height: 360
   - id: tf-composition
@@ -74,7 +74,7 @@ assets:
     alt_text: odom base_link sensor_link TF 변환 합성과 소유자 구조도
     caption: 그림 1. controller와 robot_state_publisher가 서로 다른 TF 경계를 한 번씩 소유한다.
     captured_at: '2026-08-25'
-    sha256: 5303b2c49bfe078b3be117789fdea7110808f3a493f34080d87a5752023172c9
+    sha256: 371e1e159180dae82e6614c0519f4feaafaa6376bf3bb43a11765ba751f3bb9d
     width: 960
     height: 360
   - id: controller-kinematics
@@ -85,7 +85,7 @@ assets:
     alt_text: 차동구동 바퀴 운동학과 controller lifecycle 상태도
     caption: 그림 1. 바퀴 속도는 차체의 선속도와 각속도로 변환되고 lifecycle이 interface 소유권을 제한한다.
     captured_at: '2026-08-25'
-    sha256: d43ae89b2799e76dd5c670637c9fc0e33dd659606e2ae0a5ff1063dc5c81f619
+    sha256: 604c022195e34752ed04f27b1f727888c9e724ab7dda1c2379d1bd179a46f917
     width: 960
     height: 360
   - id: sensor-statistics
@@ -96,7 +96,7 @@ assets:
     alt_text: 센서의 가우시안 노이즈 분포와 메시지 수신률 계산도
     caption: 그림 1. 센서 품질은 설정값이 아니라 실제 표본의 rate, 평균, 표준편차로 판정한다.
     captured_at: '2026-08-25'
-    sha256: 82b70d3063ab13552a8dea5bf5b89db0f3d995c9cbe75655852bd3da70441f9b
+    sha256: 3d24e987d9fa7f26998cf35dac53f5ad9d11843695581e1b0cd4ffa8fe28ba1a
     width: 960
     height: 360
   - id: namespace-isolation
@@ -107,7 +107,7 @@ assets:
     alt_text: robot1과 robot2의 entity topic controller TF frame 격리도
     caption: 그림 1. 두 로봇은 clock만 공유하고 entity, topic, controller, TF frame을 분리한다.
     captured_at: '2026-08-25'
-    sha256: e644f7ffb9ca153f9608f0907f3ef1e11c510bdfde1e074b4c700af1fbf304f0
+    sha256: a245c56302d2effc9e24309331852dccfcbc85394d94bd639a716899eec4f7bf
     width: 960
     height: 360
   - id: nav2-tolerance
@@ -118,7 +118,7 @@ assets:
     alt_text: Nav2 map server AMCL planner costmap controller 계층과 허용오차
     caption: 그림 1. 지도와 위치추정, 전역 경로, local costmap, controller가 goal까지 이어진다.
     captured_at: '2026-08-25'
-    sha256: 78bb4422170a219ee0f56349125e0366a424a8a5a95d445b897922751491152b
+    sha256: a0ac51b6be36b922c3790b566ebb0f4725bdba6bc4490f1a2bf0661f5b8c5811
     width: 960
     height: 360
   - id: project-runtime
@@ -129,6 +129,6 @@ assets:
     alt_text: 시뮬레이션 Nav2 action checker로 이어지는 프로젝트 runtime 증거 흐름
     caption: 그림 1. 프로젝트 완료는 성공 문구가 아니라 action, TF, sensor, controller, pose 관찰값의 결합이다.
     captured_at: '2026-08-25'
-    sha256: 2590ef915779851b0c9086166981e23e3bc2d0097cf7b823b6cae7a67a127c5e
+    sha256: e78d1f88b9638d3a10a52db03806e8e5d1fb2c8ebade58ad386ac7f34da77c3a
     width: 960
     height: 360

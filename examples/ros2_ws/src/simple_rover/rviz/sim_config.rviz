@@ -1,0 +1,77 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Fixed Frame: odom
+    Frame Rate: 30
+    Background Color: 48; 48; 48
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Plane Cell Count: 20
+    - Class: rviz_default_plugins/RobotModel
+      Name: Robot
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Depth: 1
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+    - Class: rviz_default_plugins/LaserScan
+      Name: LiDAR
+      Enabled: true
+      Topic:
+        Value: /scan
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Size (m): 0.025
+      Style: Points
+      Color Transformer: FlatColor
+      Color: 255; 40; 40
+    - Class: rviz_default_plugins/PointCloud2
+      Name: RGB-D points
+      Enabled: true
+      Topic:
+        Value: /camera/points
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: RGB8
+    - Class: rviz_default_plugins/Image
+      Name: RGB camera
+      Enabled: true
+      Topic:
+        Value: /camera/image
+        Reliability Policy: Best Effort
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 5
+      Transport Hint: raw
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/SetInitialPose
+    - Class: rviz_default_plugins/SetGoal
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 7
+      Pitch: 0.6
+      Yaw: 0.8
+Window Geometry:
+  Width: 1280
+  Height: 800

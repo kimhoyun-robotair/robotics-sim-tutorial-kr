@@ -1,4 +1,4 @@
-# Fuel model 추가하기
+# Fuel 모델 추가하기
 
 > **난이도:** 초급  
 > **Gazebo:** Harmonic  
@@ -7,30 +7,32 @@
 
 ## 학습 목표
 
-- Gazebo Fuel URI의 owner, resource 종류, model 이름을 읽는다.
-- Fuel model을 SDF world의 `<include>`로 배치한다.
-- Fuel download cache와 로컬 `GZ_SIM_RESOURCE_PATH`의 책임을 구분한다.
-- 외부 model을 사용하기 전에 라이선스와 재현 조건을 기록한다.
+- Gazebo Fuel URI의 제작자, 리소스 종류, 모델 이름을 읽는다.
+- Fuel 모델을 SDF 월드의 `<include>`로 배치한다.
+- Fuel 다운로드 캐시와 로컬 `GZ_SIM_RESOURCE_PATH`의 책임을 구분한다.
+- 외부 모델을 사용하기 전에 라이선스와 재현 조건을 기록한다.
 
 ## Fuel URI 읽기
 
-Gazebo Fuel은 Gazebo용 model과 world를 제공하는 온라인 자산 저장소이다. 이 장은 OpenRobotics의 `Coke` model을 사용한다.
+Gazebo Fuel은 Gazebo용 모델과 월드를 제공하는 온라인 자산 저장소이다. 이 장은 OpenRobotics의 `Coke` 모델을 사용한다.
 
-```text
-https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coke
-                                └ owner ┘ └종류┘ └이름┘
-```
+| 주소의 부분 | 뜻 |
+|---|---|
+| `https://fuel.gazebosim.org/1.0` | Fuel API 주소 |
+| `OpenRobotics` | 제작자 |
+| `models` | 모델 리소스 |
+| `Coke` | 모델 이름 |
 
-Gazebo가 이 URI를 읽으면 필요한 파일을 내려받아 Fuel cache에 보관하고 다음 실행에서 재사용한다. 처음 실행할 때는 네트워크 연결이 필요하다. 저장소에는 다운로드 cache를 commit하지 않고 URI와 사용 조건만 기록한다.
+Gazebo가 이 URI를 읽으면 필요한 파일을 내려받아 Fuel 캐시에 보관하고 다음 실행에서 재사용한다. 처음 실행할 때는 네트워크 연결이 필요하다. 저장소에는 다운로드 캐시를 commit하지 않고 URI와 사용 조건만 기록한다.
 
 <figure class="course-figure" markdown="span">
-  ![Fuel HTTPS URI와 cache 및 로컬 resource path가 월드 모델로 해석되는 흐름](../assets/beginner/fuel-resource-flow.svg)
-  <figcaption>그림 5. Fuel HTTPS URI는 download cache를 거치고, <code>model://</code> URI는 resource path를 검색한다.</figcaption>
+  ![Fuel HTTPS URI와 캐시 및 로컬 리소스 검색 경로가 월드 모델로 해석되는 흐름](../assets/beginner/fuel-resource-flow.svg)
+  <figcaption>그림 5. Fuel HTTPS URI는 다운로드 캐시를 거치고, <code>model://</code> URI는 리소스 검색 경로를 검색한다.</figcaption>
 </figure>
 
-## 실제 world의 `<include>`
+## 실제 월드의 `<include>`
 
-`examples/gazebo/worlds/fuel-world.sdf`는 Fuel model을 다음처럼 포함한다.
+`examples/gazebo/worlds/fuel-world.sdf`는 Fuel 모델을 다음처럼 포함한다.
 
 ```xml
 <include>
@@ -45,12 +47,12 @@ Gazebo가 이 URI를 읽으면 필요한 파일을 내려받아 Fuel cache에 �
 
 | 태그 | 이 예제 값 | 역할 |
 |---|---|---|
-| `uri` | Fuel HTTPS 주소 | 어떤 원본 model을 가져올지 정한다. |
-| `name` | `fuel_coke` | 현재 world 안에서 사용할 instance 이름을 정한다. |
-| `pose` | `0 0 0 0 0 0` | world frame 기준 배치를 정한다. |
-| `static` | `true` | 이 instance를 물리적으로 고정한다. |
+| `uri` | Fuel HTTPS 주소 | 어떤 원본 모델을 가져올지 정한다. |
+| `name` | `fuel_coke` | 현재 월드 안에서 사용할 인스턴스 이름을 정한다. |
+| `pose` | `0 0 0 0 0 0` | 월드 프레임 기준 배치를 정한다. |
+| `static` | `true` | 이 인스턴스를 물리적으로 고정한다. |
 
-같은 원본 model도 이름과 pose를 바꿔 여러 번 배치할 수 있다.
+같은 원본 모델도 이름과 위치와 자세를 바꿔 여러 번 배치할 수 있다.
 
 ```xml
 <include>
@@ -65,18 +67,20 @@ Gazebo가 이 URI를 읽으면 필요한 파일을 내려받아 Fuel cache에 �
 </include>
 ```
 
-두 instance는 cache의 같은 자산을 재사용하지만 world 안에서는 서로 다른 entity이다.
+두 인스턴스는 캐시의 같은 자산을 재사용하지만 월드 안에서는 서로 다른 개체이다.
 
-## 실습 1: 다운로드와 cache 확인하기
+## 실습 1: 다운로드와 캐시 확인하기
 
-world 실행과 다운로드 문제를 분리하려면 model을 먼저 내려받는다.
+먼저 이전 장의 Gazebo를 종료한다. 새 터미널에서 저장소 루트로 이동하고 ROS 환경을 불러온 뒤, 모델을 먼저 내려받아 다운로드와 시뮬레이터 오류를 구분한다.
 
 ```bash
+cd ~/robotics-sim-tutorial-kr
+source /opt/ros/jazzy/setup.bash
 gz fuel download \
   -u 'https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coke'
 ```
 
-기본 cache는 보통 `~/.gz/fuel`이다. 실습 cache를 저장소 작업 파일과 분리하려면 환경 변수를 명시한다.
+기본 캐시는 보통 `~/.gz/fuel`이다. 실습 캐시를 저장소 작업 파일과 분리하려면 환경 변수를 명시한다.
 
 ```bash
 mkdir -p .fuel-cache/
@@ -89,7 +93,7 @@ find "$GZ_FUEL_CACHE_PATH" -type f \
 
 성공 문구만 확인하지 않고 실제 `model.config`와 `model.sdf`가 생겼는지 검사한다. `.fuel-cache`는 실행 환경에서 다시 만들 수 있는 파일이므로 Git에 추가하지 않는다.
 
-## 실습 2: world 검사와 실행
+## 실습 2: 월드 검사와 실행
 
 온라인 include가 있는 SDF도 실행 전에 구조를 검사한다.
 
@@ -97,7 +101,7 @@ find "$GZ_FUEL_CACHE_PATH" -type f \
 gz sdf -k examples/gazebo/worlds/fuel-world.sdf
 ```
 
-headless 검증 스크립트는 임시 cache를 만들고, model을 다운로드하고, 실행 중인 world의 entity까지 확인한다.
+화면 없는 환경 검증 스크립트는 임시 캐시를 만들고, 모델을 다운로드하고, 실행 중인 월드의 개체까지 확인한다.
 
 ```bash
 ./scripts/check_fuel_world.sh
@@ -120,26 +124,30 @@ GUI에서 직접 관찰하려면 다음 명령을 실행한다. 최초 실행은
 gz sim -r examples/gazebo/worlds/fuel-world.sdf
 ```
 
-다른 terminal에서 instance 이름을 확인한다.
+다른 터미널에서 인스턴스 이름을 확인한다.
 
 ```bash
 gz model --list | grep -Eq '^[[:space:]]*-[[:space:]]+fuel_coke$'
 ```
 
-URI가 cache 자산으로 해석되고, 그 자산이 `fuel_coke` entity로 만들어져야 이 명령이 성공한다.
+아무 출력 없이 명령이 끝나면 바로 `echo $?`를 실행한다. `0`이면 실행 중인 모델 목록에 `fuel_coke`가 있다는 뜻이다. 화면에서는 원점 부근의 작은 캔을 확대해 확인한다.
 
-## 로컬 model의 두 필수 파일
+## 로컬 모델의 두 필수 파일
 
-Fuel 자산을 직접 관리하거나 사내 model을 사용할 때는 보통 model 디렉터리에 `model.config`와 `model.sdf`를 둔다.
+Fuel 자산을 직접 관리하거나 사내 모델을 사용할 때는 보통 모델 디렉터리에 `model.config`와 `model.sdf`를 둔다.
 
-```text
-local_models/
-└── SimpleMarker/
-    ├── model.config
-    └── model.sdf
+먼저 저장할 디렉터리를 만든다.
+
+```bash
+mkdir -p /tmp/tutorial-fuel-models/SimpleMarker
 ```
 
-`model.config`는 이름과 실제 SDF 파일을 연결한다.
+| 만들 파일 | 내용 |
+|---|---|
+| `/tmp/tutorial-fuel-models/SimpleMarker/model.config` | 모델 이름과 SDF 파일 정보 |
+| `/tmp/tutorial-fuel-models/SimpleMarker/model.sdf` | 실제 모델 형상 |
+
+편집기로 `/tmp/tutorial-fuel-models/SimpleMarker/model.config`를 만들고 아래 XML 전체를 저장한다. 이름과 실제 SDF 파일을 연결하는 파일이다.
 
 ```xml
 <?xml version="1.0"?>
@@ -155,7 +163,7 @@ local_models/
 </model>
 ```
 
-`model.sdf`는 실제 geometry를 정의한다.
+`/tmp/tutorial-fuel-models/SimpleMarker/model.sdf`를 만들고 다음 XML 전체를 저장한다. 이 표식은 `visual`만 있으므로 눈에는 보이지만 물리적인 충돌체는 없다.
 
 ```xml
 <?xml version="1.0"?>
@@ -174,13 +182,17 @@ local_models/
 </sdf>
 ```
 
-Gazebo가 `model://SimpleMarker`를 찾도록 model 디렉터리의 부모를 resource path에 추가한다.
+Gazebo가 `model://SimpleMarker`를 찾도록 모델 디렉터리의 부모를 리소스 검색 경로에 추가한다.
 
 ```bash
-export GZ_SIM_RESOURCE_PATH="$PWD/local_models${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
+export GZ_SIM_RESOURCE_PATH="/tmp/tutorial-fuel-models${GZ_SIM_RESOURCE_PATH:+:${GZ_SIM_RESOURCE_PATH}}"
 ```
 
-world에서는 HTTPS URI 대신 다음처럼 쓴다.
+첫 월드를 복사해 `/tmp/local-marker-world.sdf`를 만든다. 편집기에서 이 파일의 `</world>` 바로 앞에 다음 `<include>`를 추가한다. 다른 XML 태그 안에 넣지 않는다.
+
+```bash
+cp examples/gazebo/worlds/first-world.sdf /tmp/local-marker-world.sdf
+```
 
 ```xml
 <include>
@@ -190,44 +202,53 @@ world에서는 HTTPS URI 대신 다음처럼 쓴다.
 </include>
 ```
 
-`GZ_FUEL_CACHE_PATH`는 Fuel downloader가 온라인 자산을 보관할 위치이다. `GZ_SIM_RESOURCE_PATH`는 `model://`과 mesh URI를 로컬에서 검색할 디렉터리 목록이다. 둘을 같은 용도로 사용하지 않는다.
+저장 후 같은 터미널에서 검사하고 실행한다. 새 터미널을 사용하면 위의 `GZ_SIM_RESOURCE_PATH` 설정도 다시 실행해야 한다.
+
+```bash
+gz sdf -k /tmp/local-marker-world.sdf
+gz sim -r /tmp/local-marker-world.sdf
+```
+
+GUI에서 x=2 m 위치의 주황색 원통을 확인한다. 이 로컬 실습은 네트워크 없이 실행할 수 있다.
+
+`GZ_FUEL_CACHE_PATH`는 Fuel 다운로드 도구가 온라인 자산을 보관할 위치이다. `GZ_SIM_RESOURCE_PATH`는 `model://`과 메시 URI를 로컬에서 검색할 디렉터리 목록이다. 둘을 같은 용도로 사용하지 않는다.
 
 ## 재현성과 라이선스 확인
 
-외부 model을 tutorial이나 프로젝트에 넣기 전에는 다음 항목을 기록한다.
+외부 모델을 실습이나 프로젝트에 넣기 전에는 다음 항목을 기록한다.
 
-- 정확한 Fuel URI와 가능하면 사용한 resource version
-- model 작성자와 라이선스
+- 정확한 Fuel URI와 가능하면 사용한 리소스 버전
+- 모델 작성자와 라이선스
 - 원본을 수정했는지 여부와 수정 파일의 라이선스 고지
 - 최초 실행에 네트워크가 필요한지 여부
-- offline 환경에서 사용할 대체 경로
+- 오프라인 환경에서 사용할 대체 경로
 
-Fuel page에 보인다는 사실만으로 임의 재배포가 허용되는 것은 아니다. 자산 파일을 저장소에 복사하기 전에는 해당 model의 라이선스를 확인해야 한다.
+Fuel 페이지에 보인다는 사실만으로 임의 재배포가 허용되는 것은 아니다. 자산 파일을 저장소에 복사하기 전에는 해당 모델의 라이선스를 확인해야 한다.
 
 ## 자주 발생하는 문제
 
 ### 다운로드가 실패한다
 
-네트워크 연결과 Fuel URI의 owner·model 이름을 확인한다. `gz fuel download -u <URI>`를 먼저 실행하면 URI·인증·cache 문제를 world 실행과 분리할 수 있다.
+네트워크 연결과 Fuel URI의 제작자·모델 이름을 확인한다. `gz fuel download -u <URI>`를 먼저 실행하면 URI·인증·캐시 문제를 월드 실행과 분리할 수 있다.
 
 ### `model://` URI를 찾지 못한다
 
-`GZ_SIM_RESOURCE_PATH`가 `SimpleMarker` 자체가 아니라 그 부모인 `local_models`를 가리키는지 확인한다. 다음 명령으로 현재 값을 확인한다.
+`GZ_SIM_RESOURCE_PATH`가 `SimpleMarker` 자체가 아니라 그 부모인 `/tmp/tutorial-fuel-models`를 가리키는지 확인한다. 다음 명령으로 현재 값을 확인한다.
 
 ```bash
 printf '%s\n' "$GZ_SIM_RESOURCE_PATH" | tr ':' '\n'
 ```
 
-### 이전 model이 계속 보인다
+### 이전 모델이 계속 보인다
 
-같은 URI의 cache를 재사용하고 있을 수 있다. 먼저 사용 중인 `GZ_FUEL_CACHE_PATH`를 확인하고, 삭제가 필요하면 실행 중인 Gazebo를 종료한 뒤 정확한 model cache 경로만 정리한다. 프로젝트 전체나 홈 디렉터리를 재귀 삭제하지 않는다.
+같은 URI의 캐시를 재사용하고 있을 수 있다. 먼저 사용 중인 `GZ_FUEL_CACHE_PATH`를 확인하고, 삭제가 필요하면 실행 중인 Gazebo를 종료한 뒤 정확한 모델 캐시 경로만 정리한다. 프로젝트 전체나 홈 디렉터리를 재귀 삭제하지 않는다.
 
-### cache를 Git에 넣어도 되는가
+### 캐시를 Git에 넣어도 되는가
 
-넣지 않는다. cache는 사용자 환경에 속하고 URI에서 다시 만들 수 있어야 한다. offline 배포가 필요하다면 라이선스를 확인한 뒤 별도의 명시적 자산 디렉터리와 manifest를 사용한다.
+넣지 않는다. 캐시는 사용자 환경에 속하고 URI에서 다시 만들 수 있어야 한다. 오프라인 배포가 필요하다면 라이선스를 확인한 뒤 별도의 명시적 자산 디렉터리와 자산 목록을 사용한다.
 
 ## 정리
 
-Fuel HTTPS URI는 온라인 model을 cache로 가져오고, `<include>`는 그 model의 world instance를 만든다. 로컬 `model://` URI는 `GZ_SIM_RESOURCE_PATH`에서 model을 찾는다. 다음 장에서는 Gazebo Transport와 ROS 2 DDS 사이의 메시지 bridge를 구성한다.
+Fuel HTTPS URI는 온라인 모델을 캐시로 가져오고, `<include>`는 그 모델의 월드 인스턴스를 만든다. 로컬 `model://` URI는 `GZ_SIM_RESOURCE_PATH`에서 모델을 찾는다. 다음 장에서는 Gazebo Transport와 ROS 2 DDS 사이의 메시지 브리지를 구성한다.
 
 [이전: 센서](08-sensors.md) · [다음: ROS 2와 연결](10-ros-gz-bridge.md)

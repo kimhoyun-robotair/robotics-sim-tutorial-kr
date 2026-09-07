@@ -12,13 +12,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr.git"
+    "url": "git+https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr.git"
   },
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/issues"
+    "url": "https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/issues"
   },
-  "homepage": "https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr#readme"
+  "homepage": "https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr#readme"
 }

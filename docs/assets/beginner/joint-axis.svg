@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" role="img" aria-labelledby="title desc">
-  <title id="title">바퀴 joint의 회전축</title>
+  <title id="title">바퀴 조인트의 회전축</title>
   <desc id="desc">위에서 본 로봇 몸체와 좌우 바퀴, 전진 x축, 좌우 y축, 바퀴 회전축</desc>
   <rect width="960" height="480" rx="24" fill="#eef4f8"/>
   <rect x="330" y="145" width="300" height="190" rx="28" fill="#1565c0"/>

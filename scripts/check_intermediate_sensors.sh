@@ -117,7 +117,7 @@ for installed in "$expectations" "$world" "$xacro_file" "$bridge"; do
 done
 xacro "$xacro_file" control_backend:=gazebo_diff_drive > "$temp_root/tutorial_bot.urdf"
 
-setsid gz sim -s -r --seed 42 "$world" > "$evidence_dir/gazebo.log" 2>&1 &
+setsid gz sim -s -r --headless-rendering --seed 42 "$world" > "$evidence_dir/gazebo.log" 2>&1 &
 process_groups+=("$!")
 setsid ros2 run robot_state_publisher robot_state_publisher "$temp_root/tutorial_bot.urdf" \
   --ros-args -p use_sim_time:=true > "$evidence_dir/state-publisher.log" 2>&1 &
@@ -193,6 +193,7 @@ edge_indices = {
 imu_values: list[list[float]] = [[] for _ in range(6)]
 point_finite = 0
 point_total = 0
+center_points: list[tuple[float, float, float]] = []
 laser_finite = 0
 laser_edge_samples = 0
 laser_edge_violations = 0
@@ -265,9 +266,14 @@ def points_callback(message: PointCloud2) -> None:
         return
     dimensions["points"] = [message.width, message.height]
     offsets = {field.name: field.offset for field in message.fields}
+    endian = ">" if message.is_bigendian else "<"
+    def xyz_at(row: int, column: int) -> tuple[float, float, float]:
+        base = row * message.row_step + column * message.point_step
+        return tuple(struct.unpack_from(endian + "f", message.data, base + offsets[axis])[0]
+                     for axis in ("x", "y", "z"))
+    center_points.append(xyz_at(message.height // 2, message.width // 2))
     for index in range(0, message.width * message.height, 100):
-        base = index * message.point_step
-        xyz = struct.unpack_from("<fff", message.data, base + offsets["x"])
+        xyz = xyz_at(*divmod(index, message.width))
         point_total += 1
         point_finite += int(all(math.isfinite(value) for value in xyz))
 
@@ -282,7 +288,7 @@ node.create_subscription(CameraInfo, "/camera/depth/camera_info", info_callback(
 node.create_subscription(PointCloud2, "/camera/points", points_callback, qos_profile_sensor_data)
 
 warmup_started = time.monotonic()
-warmup_deadline = warmup_started + 20.0
+warmup_deadline = warmup_started + 90.0
 warmup_counts = {"scan": 20, "imu": 200, "rgb": 60, "rgb_info": 60,
                  "depth": 60, "depth_info": 60, "points": 60}
 warmup_ready = False
@@ -304,15 +310,18 @@ if not warmup_ready:
     )
 collecting = True
 collection_started = time.monotonic()
-minimum_collection_end = collection_started + 10.0
-collection_deadline = collection_started + 12.0
+# 렌더링이 실시간보다 느린 CI에서도 시뮬레이션 시간 10초를 수집한다.
+collection_deadline = collection_started + 180.0
 minimum_counts = {"scan": 95, "imu": 950, "rgb": 285, "rgb_info": 285,
                   "depth": 285, "depth_info": 285, "points": 285}
-while time.monotonic() < minimum_collection_end or (
-    time.monotonic() < collection_deadline
-    and any(len(stamps[name]) < count for name, count in minimum_counts.items())
-):
+while time.monotonic() < collection_deadline:
     rclpy.spin_once(node, timeout_sec=0.02)
+    if all(len(stamps[name]) >= minimum_counts[name]
+           and stamps[name][-1] - stamps[name][0] >= 10_000_000_000
+           for name in stamps):
+        break
+else:
+    errors.append("collection: not every stream supplied 10 seconds of simulation data within 180 wall seconds")
 collection_seconds = time.monotonic() - collection_started
 node.destroy_node()
 rclpy.shutdown()
@@ -336,7 +345,8 @@ for name, expected_rate in rates.items():
             errors.append(f"{name}: median_rate={measured:.3f} expected={expected_rate:.3f}")
 
 expected_frames = {"scan": config["lidar"]["frame_id"], "imu": config["imu"]["frame_id"]}
-expected_frames.update({name: config["camera"]["message_frame_id"] for name in ("rgb", "rgb_info", "depth", "depth_info", "points")})
+expected_frames.update({name: config["camera"]["message_frame_id"] for name in ("rgb", "rgb_info", "depth", "depth_info")})
+expected_frames["points"] = config["camera"]["points_frame_id"]
 for name, expected_frame in expected_frames.items():
     if frames[name] != {expected_frame}:
         errors.append(f"{name}: frame expected={expected_frame} actual={sorted(frames[name])}")
@@ -376,6 +386,12 @@ for name in ("rgb_info", "depth_info"):
 if point_finite / max(1, point_total) < 0.95:
     errors.append(f"points: finite_ratio={point_finite / max(1, point_total):.3f} expected>=0.950")
 
+finite_centers = [point for point in center_points if all(math.isfinite(value) for value in point)]
+center_xyz = [statistics.median(point[axis] for point in finite_centers) for axis in range(3)] if finite_centers else []
+expected_distance = config["camera"]["center_target_distance_m"]
+if not center_xyz or abs(center_xyz[0] - expected_distance) > 0.05 or any(abs(value) > 0.03 for value in center_xyz[1:]):
+    errors.append(f"points: center XYZ expected=[{expected_distance}, 0, 0] actual={center_xyz}")
+
 noise_results: dict[str, dict[str, float | int]] = {}
 def check_noise(name: str, values: list[float], truth: float, sigma: float, bias: float, tolerance: float) -> None:
     residuals = [value - truth - bias for value in values]
@@ -401,11 +417,11 @@ result = {"passed": not errors, "warmup_seconds": warmup_seconds, "collection_se
           "finite": {"scan_ratio": finite_ratio, "point_ratio": point_finite / max(1, point_total), "point_samples": point_total,
                      "edge_indices": len(edge_indices), "edge_samples": laser_edge_samples,
                      "edge_geometry_violations": laser_edge_violations},
-          "noise": noise_results, "laser_extreme": laser_extreme, "errors": errors}
+          "noise": noise_results, "laser_extreme": laser_extreme, "center_point_xyz": center_xyz, "errors": errors}
 output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 for error in errors:
     print(error, file=sys.stderr)
 raise SystemExit(0 if not errors else 1)
 PY
 
-printf '%s\n' 'Advanced sensor checks passed.' | tee "$evidence_dir/nominal-observable.log"
+printf '%s\n' 'Intermediate sensor checks passed.' | tee "$evidence_dir/nominal-observable.log"

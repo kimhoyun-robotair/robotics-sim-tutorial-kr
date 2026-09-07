@@ -12,14 +12,14 @@
     <g transform="translate(370 80)">
       <rect width="220" height="170" rx="18" fill="#00796b"/>
       <text x="110" y="65" fill="white" font-size="34" font-weight="700">URDF</text>
-      <text x="110" y="108" fill="white" font-size="22">link · joint 트리</text>
+      <text x="110" y="108" fill="white" font-size="22">링크 · 조인트 트리</text>
       <text x="110" y="140" fill="white" font-size="18">xacro 명령의 출력</text>
     </g>
     <g transform="translate(670 80)">
       <rect width="220" height="170" rx="18" fill="#6a1b9a"/>
       <text x="110" y="65" fill="white" font-size="34" font-weight="700">SDF</text>
       <text x="110" y="108" fill="white" font-size="22">Gazebo 실행 모델</text>
-      <text x="110" y="140" fill="white" font-size="18">physics · system</text>
+      <text x="110" y="140" fill="white" font-size="18">물리 · 시스템</text>
     </g>
     <g fill="#263238" font-size="20" font-weight="700">
       <text x="330" y="145">xacro</text>

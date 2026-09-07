@@ -14,6 +14,8 @@ Visualization Manager:
       Enabled: true
       Description Source: Topic
       Description Topic:
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
         Value: /robot_description
     - Class: rviz_default_plugins/TF
       Name: TF

@@ -60,5 +60,7 @@
   gz_topic_name: "/tutorial_bot/camera/points"
   ros_type_name: "sensor_msgs/msg/PointCloud2"
   gz_type_name: "gz.msgs.PointCloudPacked"
+  # Harmonic RGB-D의 XYZ는 +X 전방이다. 이미지의 optical frame과 구분한다.
+  frame_id: camera_link
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
