@@ -16,8 +16,8 @@ assets:
     route: 03_beginner/01-gazebo-overview/
     source_command: python3 scripts/render_fixture_visual.py --output docs/assets/diagrams/beginner-gazebo-overview.svg --scene beginner-01
     semantic_observable: Server와 GUI 사이의 상태·시간 및 사용자 명령 흐름과 RTF 표시가 구분된다.
-    alt_text: Gazebo Server와 GUI의 상태 및 명령 흐름과 RTF 표시를 설명한 도식
-    caption: 그림 1. Server가 물리와 simulation time을 계산하고, GUI가 상태를 표시하며 조작 명령을 전달한다.
+    alt_text: "Gazebo 서버와 GUI의 상태 및 명령 흐름과 RTF 표시를 설명한 도식"
+    caption: "그림 1. Server가 물리와 시뮬레이션 시간을 계산하고, GUI가 상태를 표시하며 조작 명령을 전달한다."
     captured_at: '2026-08-25'
     sha256: 2754d14188ec1c65a1b7a656e736b7dbd0349da6d1f700747311a41a11000770
     width: 960

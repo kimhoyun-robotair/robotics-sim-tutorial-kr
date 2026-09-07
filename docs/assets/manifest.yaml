@@ -5,7 +5,7 @@ consolidated_fragments:
   - docs/assets/manifests/task-7.yaml
   - docs/assets/manifests/task-8.yaml
   - docs/assets/manifests/task-13.yaml
-consolidated_asset_count: 32
+consolidated_asset_count: 34
 assets:
   - id: fixture
     path: assets/diagrams/rendering-fixture.svg
@@ -18,3 +18,25 @@ assets:
     sha256: 11942af2d8549d773409a2c4cf25341d0cff71dfed813fd839c3f9f176a98f32
     width: 960
     height: 480
+  - id: final-simple_rover-rviz
+    path: assets/final-project/simple-rover-rviz.png
+    route: 07_final-project/02_sensors-and-rviz/
+    source_command: xvfb-run -a python3 scripts/check_final_project_runtime.py --package simple_rover --extra-sensors --rviz --evidence /tmp/simple_rover-check
+    semantic_observable: Global Status가 Ok이며 로봇 모델, 수평 라이다 단면, RGB-D 상자 점군과 RGB 영상이 함께 보인다.
+    alt_text: Rover의 로봇 모델, 라이다, RGB-D 점군과 카메라 영상이 함께 표시된 실제 RViz 화면
+    caption: 그림 1. 실제 Jazzy 실행에서 확인한 Rover의 센서 화면이다. 빨간 상자의 점군과 라이다 단면이 같은 위치에 있고, 카메라 영상에서도 같은 상자가 보인다.
+    captured_at: '2026-09-07'
+    sha256: 04691df7bb3d62fc389e8ed79b6bec5d80e3bccbc423e0851af55e9a251e5d94
+    width: 1280
+    height: 800
+  - id: final-f1tenth_sim-rviz
+    path: assets/final-project/f1tenth-rviz.png
+    route: 07_final-project/04_f1tenth/
+    source_command: xvfb-run -a python3 scripts/check_final_project_runtime.py --package f1tenth_sim --rviz --evidence /tmp/f1tenth_sim-check
+    semantic_observable: Global Status가 Ok이며 파란 차체와 네 바퀴, 주변 벽과 상자의 빨간 라이다 단면이 보인다.
+    alt_text: F1Tenth의 파란 차체와 네 바퀴, 빨간 라이다 단면이 보이는 실제 RViz 화면
+    caption: 그림 1. 실제 Jazzy 실행에서 확인한 F1Tenth의 정지 화면이다. 차량 모델과 주변 장애물의 라이다 단면이 표시된다.
+    captured_at: '2026-09-07'
+    sha256: 35a2b7de5e048d279d6be0e47327c2b486299835675999ff869ba0ee8a86500d
+    width: 1280
+    height: 800

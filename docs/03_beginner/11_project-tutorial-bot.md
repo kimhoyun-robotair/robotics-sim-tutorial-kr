@@ -13,7 +13,7 @@
 
 <figure class="course-figure" markdown="span">
   ![이동하는 실습 bot과 ROS 2에서 확인하는 오도메트리 라이다 카메라 IMU 시계 결과](../assets/beginner/final-project-observable.svg)
-  <figcaption>그림 7. 완료 기준은 process 실행 여부가 아니라 이동량, 센서 메시지, TF, trajectory를 실제로 확인하는 것이다.</figcaption>
+  <figcaption>그림 7. 이동량, 센서 메시지, TF와 이동 경로를 직접 확인하는 것이 이 실습의 완료 조건이다.</figcaption>
 </figure>
 
 ## 1. 소스와 실행 환경 역할을 연결한다

@@ -14,7 +14,7 @@ assets:
     route: 03_beginner/06-joints/
     source_command: repository-authored SVG derived from stage 02 joint origins and axes
     semantic_observable: parent base와 두 child wheel, +x 전진 방향, y축 회전축이 구분된다.
-    alt_text: 로봇의 전진 x축, 좌우 y축과 바퀴 joint 회전축 관계
+    alt_text: "로봇의 전진 x축, 좌우 y축과 바퀴 조인트 회전축 관계"
     caption: 그림 2. 두 바퀴의 joint axis는 y축과 나란하고, 바퀴는 그 축을 중심으로 굴러 x방향으로 이동한다.
     captured_at: '2026-08-25'
     sha256: 9dfaa2d8e824b68b30bcbb422b8d9f3ff1433d23ad2bda44b511560c842395c8

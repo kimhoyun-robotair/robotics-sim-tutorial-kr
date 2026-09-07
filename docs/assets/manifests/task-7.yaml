@@ -6,7 +6,7 @@ assets:
     source_command: repository-authored SVG derived from the parsed final-stage sensor contract
     semantic_observable: LiDAR 광선과 360 sample, RGB-D 화면 geometry, IMU 축과 세 update rate가 구분된다.
     alt_text: 로봇에서 퍼지는 라이다 광선과 RGB-D 카메라 화면 및 IMU 축
-    caption: 그림 4. 센서마다 관측량과 갱신률이 다르므로 topic 형식과 timestamp를 함께 확인한다.
+    caption: "그림 4. 센서마다 측정하는 값과 갱신률이 다르므로 토픽 형식과 측정 시각을 함께 확인한다."
     captured_at: '2026-08-25'
     sha256: 37f2916163633c77af8fc5b0f3cc0d0adb1f6e02a09715f4094e63135250313b
   - id: beginner-09-fuel-resource-flow
@@ -14,8 +14,8 @@ assets:
     route: 03_beginner/09-gazebo-fuel/
     source_command: repository-authored SVG derived from the Fuel world URI and checker cache flow
     semantic_observable: Fuel HTTPS URI와 cache 경로, model URI와 resource path 경로가 분리되어 보인다.
-    alt_text: Fuel HTTPS URI와 cache 및 로컬 resource path가 월드 모델로 해석되는 흐름
-    caption: 그림 5. Fuel HTTPS URI는 download cache를 거치고, <code>model://</code> URI는 resource path를 검색한다.
+    alt_text: "Fuel HTTPS URI와 캐시 및 로컬 리소스 검색 경로가 월드 모델로 해석되는 흐름"
+    caption: "그림 5. Fuel HTTPS URI는 다운로드 캐시를 거치고, <code>model://</code> URI는 리소스 검색 경로를 검색한다."
     captured_at: '2026-08-25'
     sha256: 0aa0d3232d01771ed1d8610f0b09ecfac0beef9ad78d151654755667496f0fd1
   - id: beginner-10-bridge-dataflow
@@ -23,7 +23,7 @@ assets:
     route: 03_beginner/10-ros-gz-bridge/
     source_command: repository-authored SVG derived from bridge.yaml and image_bridge invocation
     semantic_observable: Gazebo Transport와 ROS 2 사이에서 parameter bridge와 image bridge가 맡는 경로가 구분된다.
-    alt_text: Gazebo Transport 센서 토픽이 parameter bridge와 image bridge를 거쳐 ROS 2 토픽으로 변환되는 흐름
+    alt_text: "Gazebo Transport 센서 토픽이 파라미터 브리지와 영상 브리지를 거쳐 ROS 2 토픽으로 변환되는 흐름"
     caption: 그림 6. 명령은 ROS에서 Gazebo로, 관측값은 Gazebo에서 ROS로 흐른다.
     captured_at: '2026-08-25'
     sha256: cf0880c55c03b1c84122517e919283a45379f138e20b2cbfefcd07a8a661a501
@@ -32,7 +32,7 @@ assets:
     route: 03_beginner/11_project-tutorial-bot/
     source_command: repository-authored SVG derived from the final bridge checker observables
     semantic_observable: Gazebo의 로봇 이동과 ROS 2의 odom, scan, image, IMU, clock 결과가 한 흐름으로 보인다.
-    alt_text: 이동하는 tutorial bot과 ROS 2에서 확인하는 오도메트리 라이다 카메라 IMU 시계 결과
-    caption: 그림 7. 완료 기준은 process 실행 여부가 아니라 이동량, sensor message, TF, trajectory를 실제로 확인하는 것이다.
+    alt_text: "이동하는 실습 bot과 ROS 2에서 확인하는 오도메트리 라이다 카메라 IMU 시계 결과"
+    caption: "그림 7. 이동량, 센서 메시지, TF와 이동 경로를 직접 확인하는 것이 이 실습의 완료 조건이다."
     captured_at: '2026-08-25'
     sha256: 19e5fc6cb903c73e8dc26a6538ef2180bc8cd94db7572e5ab068be8a54c85a0f

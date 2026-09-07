@@ -21,33 +21,69 @@
 | C++ 플러그인 빌드 | ROS 설치만으로 해결되지 않는 외부 Gazebo 개발 패키지 의존성 | Jazzy의 `gz_*_vendor` 패키지와 공식 CMake 대상으로 전환 |
 | Rover 이식 | 개인 PC 절대 경로, 빠진 좌표계·의존성, Humble 설정 | 설치된 패키지 경로, 독립 기본 월드, Jazzy 설정과 실행 절차 제공 |
 | Rover의 명령·odometry·TF bridge | 지원하지 않는 `qos_profile: DEFAULT` 때문에 세 연결이 생성되지 않음 | 해당 값은 생략하여 Reliable 기본 QoS를 사용하고, 허용되는 프로필 이름을 검사 |
+| 저장 지도 주행 | 지도 서버의 노드별 빈 설정이 전달한 지도 경로를 가림 | 검증한 절대 경로를 최종 `map_server.ros__parameters.yaml_filename`에도 기록하고, 실제 지도 로드와 Nav2 목표 도달 확인 |
 
 RGB-D 점군 보정은 좌표 값을 돌리지 않는다. Gazebo가 내보내는 XYZ의 실제 축에 맞는 프레임명을 붙이는 수정이다. 영상에 같은 프레임을 붙이면 Camera 표시가 틀어지므로 두 데이터의 프레임을 구분한다. 근거는 [Gazebo RGB-D 센서 소스](https://github.com/gazebosim/gz-sensors/blob/4b9fdfc05892c38e7a855f63b56737fe5d591a5f/src/RgbdCameraSensor.cc), [점군 변환 소스](https://github.com/gazebosim/gz-sensors/blob/4b9fdfc05892c38e7a855f63b56737fe5d591a5f/src/PointCloudUtil.cc), [깊이 렌더러 소스](https://github.com/gazebosim/gz-rendering/blob/0a299835b2b83ae240a5657dbdde50b7ba476d52/ogre2/src/Ogre2DepthCamera.cc)다.
 
 현재 YAML의 `frame_id`와 `qos_profile` 기능을 사용하려면 `ros_gz_bridge >= 1.0.22`가 필요하다. [Jazzy 변경 기록](https://github.com/gazebosim/ros_gz/blob/0fa70cb7c15f7500c495190020dd6292188c8e54/ros_gz_bridge/CHANGELOG.rst)과 패키지 의존성에 이 기준을 명시했다.
 
-## 검증 범위
+## 검증 범위와 실제 실행 결과
 
-수정 전 코드를 별도 폴더에 펼쳐 새 센서 회귀 검사를 실행했을 때 10개 중 9개가 실패했다. 수정 후에는 10개가 모두 통과했다. 점군 축, 다중 로봇 프레임, 충돌 외곽선, LiDAR 기준 거리, RViz QoS에 대한 검사다. 단순히 파일에 특정 문자열이 있는지만 확인하지 않고 Xacro를 펼친 로봇의 치수와 좌표 변환, 실제 월드 물체를 대조한다.
+### 로컬 정적 검사
 
-이후 실제 실행에서 발견한 차체 기울어짐을 재현하기 위해 기본 모델과 단계별 모델 5개의 무게중심 검사도 추가했다. 수정 전에는 모두 실패했고, 관성 중심을 옮긴 뒤 모두 통과했다.
+초기 센서 회귀 검사는 수정 전 코드에서 10개 중 9개가 실패했고, 수정 후 10개가 모두 통과했다. 점군 축, 다중 로봇 프레임, 충돌 외곽선, LiDAR 기준 거리, RViz QoS를 확인한다. 파일의 문자열만 검색하지 않고 Xacro를 펼친 로봇의 치수·좌표 변환과 실제 월드 물체를 대조했다. 이후 차체 기울어짐을 재현하는 무게중심 검사도 추가해 수정 전 실패와 수정 후 통과를 확인했다.
 
-최종 로컬 검사에서는 실행 환경이 필요하지 않은 문서·수식·Xacro·센서·Rover·검증 도구 테스트 **98개가 통과**했다. 바퀴를 포함한 실제 충돌 형상이 Nav2 외곽선 안에 들어가는지, 모든 bridge YAML의 QoS 이름이 지원되는 값인지도 검사한다. ROS 설치, 실제 프로세스 정보, 브라우저 실행이 필요한 항목은 이 숫자에 포함하지 않았다. `mkdocs build --strict`, 기존 과정 31개와 파이널 프로젝트 6개 페이지의 연결 검사, Python/XML/셸 문법 검사도 통과했다.
+최종 로컬 검사에서는 문서·수식·Xacro·센서·Rover·검증 도구 테스트 **98개가 통과**했다. 이 숫자는 실제 Gazebo 실행과 RViz 화면 검수를 포함하지 않는다. `mkdocs build --strict`, 기존 과정 31개와 파이널 프로젝트 6개 페이지의 연결 검사, Python/XML/셸 문법 검사도 통과했다.
 
-로컬 작업 환경에는 ROS 2, Gazebo, Docker, RViz가 없다. 따라서 로컬 정적 검사 통과를 **실제 시뮬레이터 실행이나 RViz 화면 검수 완료로 해석하면 안 된다.** 기존 프로세스 관리 검사도 이 환경에서 제공하지 않는 `/proc` 정보와 프로세스 제어 기능에 의존하므로 전체 테스트 통과를 주장하지 않는다.
+### Jazzy/Harmonic 실제 실행
 
-실제 실행 검사는 `Jazzy` 전용 [전체 작업 공간·센서 워크플로](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/actions/workflows/jazzy-validation.yml)에서 다음 항목을 확인하도록 구성했다.
+[GitHub Actions 실행 34077737389](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/actions/runs/34077737389)은 커밋 `cbb56b5e962a251f7c4d30d8c70854c17ea7ea2b`에서 **성공**했다. 전체 패키지 빌드, 센서·TF·직진·F1Tenth 좌회전, Rover의 지도 로드·AMCL·Nav2 목표 도달을 실제 실행으로 확인했다.
 
-1. 작업 공간 전체의 의존성 설치와 빌드
-2. 기존 센서 예제의 영상·깊이·점군·LiDAR·IMU 측정값
-3. 이식한 두 차량의 센서 프레임과 해당 측정 시각의 TF 연결
-4. RGB-D 중앙 점의 +X 거리와 깊이 영상의 거리 일치, optical 축 방향
-5. 주행 명령 후 odometry 변화와 모든 가동 관절의 상태 수신
-6. RViz 화면 캡처와 실행 로그 저장
-7. Rover의 선택 센서인 3D 라이다 점군과 GNSS의 좌표·프레임·TF 연결
-8. 기본 월드의 충돌 형상으로 만든 검사 지도에서 AMCL·Nav2를 실행하고, 실제 `navigate_to_pose` 프로그램의 목표 도달과 이동량 확인
+실행 환경은 Ubuntu 24.04·ROS 2 Jazzy·Gazebo Sim 8.11.0이며, 설치된 주요 패키지는 `ros_gz_bridge 1.0.22`, `rviz2 14.1.22`, `nav2_bringup 1.3.12`다.
 
-워크플로가 존재한다는 것만으로 통과한 것은 아니다. 해당 커밋의 실행 상태와 `jazzy-rendered-sensor-evidence` 파일을 확인한다. 수치 검사를 통과했더라도 RViz 캡처의 시각 검토와 지도 작성·Nav2의 끝까지 주행하는 실습은 별도 확인 항목이다. 기존 `pages.yml`의 고급 플러그인 검사도 센서 렌더링 검사를 대신하지 않는다.
+| 확인 항목 | 실제 결과 | 판정 |
+| --- | --- | --- |
+| 전체 작업 공간 빌드 | 9개 패키지 빌드 완료 | 통과 |
+| `colcon test-result` | 57개 결과, 오류 0·실패 0·건너뜀 1 | 실패 없음, 1개 미실행 |
+| 별도 회귀 검사 | 44개 통과 | 통과 |
+| `tutorial_bot` 센서 | RGB·깊이·점군 320 × 240, 스캔 360개. 영상 약 30.30 Hz·LiDAR 10 Hz·IMU 100 Hz. LiDAR 가장자리 조건 위반 5,080개 중 0개 | 통과 |
+| `simple_rover` 센서·TF | 선택 센서를 포함한 8개 센서 토픽의 프레임과 측정 시각 TF, 링크 14개와 가동 관절 4개 확인 | 통과 |
+| `simple_rover` 직진 | odometry 이동량 0.12090 m, 센서로 관측한 전방 벽 거리 감소 0.13146 m | 통과 |
+| Rover RGB-D·3D LiDAR·GNSS | 중앙 깊이와 점군 x가 모두 4.65000 m. 3D 점군 23,040개 중 유한값 22,904개. GNSS 수평 오차 0 m | 통과 |
+| `f1tenth_sim` 센서·TF·직진 | LiDAR·IMU의 측정 시각 TF, 링크 11개·가동 관절 6개 확인. 직진 0.12090 m, 전방 벽 거리 감소 0.12097 m | 통과 |
+| F1Tenth 좌회전 | 방향 변화 +0.151990 rad, 왼쪽 변위 +0.01502 m. 좌·우 조향각 +0.306737 / +0.254286 rad | 통과 |
+| Nav2 준비·목표 주행 | 지도 로드와 노드 12개 활성화. Action 상태 실행 중(2) → 성공(4), 주행 프로그램 종료 코드 0 | 통과 |
+| Nav2 도착 오차 | 위치 0.190580 m ≤ 설정값 0.2 m, 방향 0.005343 rad ≤ 설정값 0.2 rad | 통과 |
+| 실행 종료 | 두 차량과 내비게이션 검사 모두 오류 없음, 남은 프로세스 없음 | 통과 |
+| RViz 화면 검수 | 두 차량의 1280 × 800 전체 화면 확인. `Global Status: Ok`, 로봇과 센서 표시 확인 | 확인 완료 |
+
+센서 주파수는 메시지의 시뮬레이션 시간을 기준으로 계산한 값이다. 위 수치는 이 실행에서 수집한 결과이며 매번 같은 마지막 자리까지 재현된다는 뜻은 아니다. 근거 파일은 실행에 첨부된 `jazzy-rendered-sensor-evidence`의 `packages.txt`, `colcon-test-result.log`, `regressions.log`, `tutorial-sensors/collection.json`, 두 차량의 `result.json`, `navigation/result.json`과 RViz 캡처다.
+
+Nav2 검사는 기본 월드에서 목표 `(x, y, yaw) = (0.6 m, 0 m, 0 rad)`를 보내고 18.364초에 검사를 마쳤다. 실제 odometry 이동량은 0.414360 m, 최종 map 좌표는 `(0.409504 m, −0.005635 m, −0.005343 rad)`였다. 목표 좌표와 정확히 일치한 것은 아니며, 설정된 위치·방향 허용 오차 안에 들어와 성공했다. 이전 [실행 34076990223](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/actions/runs/34076990223)의 빈 `yaml_filename` 문제를 수정한 뒤 지도 경로와 목표 도달을 함께 확인한 결과다.
+
+### RViz 화면 확인
+
+Rover의 전체 화면에서 로봇 모델, LiDAR, RGB-D 점군, RGB 카메라 영상이 표시되며 붉은 상자의 점군과 LiDAR 위치가 맞는지 확인했다. 캡처는 [센서와 RViz](../07_final-project/02_sensors-and-rviz.md)에 있다. F1Tenth 화면에서는 파란 차체, 바퀴 4개, 붉은 스캔이 표시된다. 캡처는 [F1Tenth 차량](../07_final-project/04_f1tenth.md)에서 확인할 수 있다.
+
+두 화면 모두 정지 상태의 표시 결과다. F1Tenth 조향 동작은 정지 화면만으로 판단하지 않고 위 표의 실제 조향각·방향 변화·왼쪽 이동량으로 확인했다.
+
+### 차체 기울어짐 수정 전후
+
+차체의 관성 중심을 뒤로 4 cm 옮긴 뒤, 기존에 잘못 나오던 카메라·IMU·LiDAR 값이 함께 정상 범위로 돌아왔다. [수정 전 실행](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/actions/runs/34074482188)과 수정 후 커밋 `6bd8ccb`의 [실행 34076990223](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/actions/runs/34076990223)을 비교하면 다음과 같다. 아래 표는 수정 효과를 확인한 당시의 기록이다.
+
+| 측정값 | 수정 전 | 수정 후 (`6bd8ccb`) |
+| --- | ---: | ---: |
+| 카메라 중앙 점의 전방 거리 | 약 0.27236 m | 1.5600003 m |
+| 정지 상태 IMU x축 가속도의 평균 오차 | 약 −2.615 m/s² | 약 −0.000002786 m/s² |
+| LiDAR 가장자리 거리의 기하 조건 위반 | 4,800개 중 3,360개 | 4,920개 중 0개 |
+
+수정 후 카메라 중앙 점의 거리는 전방 물체까지의 예상 거리 1.56 m와 일치했다. LiDAR 비교는 수집 시간이 달라 표본 수가 다르므로 전체 개수와 위반 개수를 함께 표시했다.
+
+### 별도로 확인할 범위
+
+이번 실행으로 확인하지 않은 범위는 직접 주행하며 SLAM으로 전체 지도를 작성하는 과정, 외부 자료에 의존하는 추가 월드, 선택 기능인 Cartographer, F1Tenth의 자율주행이다. Rover의 Nav2 검사는 기본 월드의 충돌 형상으로 만든 검사 지도를 사용했다. 직접 작성한 지도와 다른 환경에서는 해당 실습을 다시 확인한다.
+
+재검사는 `Jazzy` 전용 [전체 작업 공간·센서 워크플로](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/actions/workflows/jazzy-validation.yml) 또는 아래 명령으로 실행할 수 있다. 결과를 비교할 때는 소스 커밋과 실제 설치된 패키지 버전을 함께 확인한다.
 
 ## 직접 재검사하기
 

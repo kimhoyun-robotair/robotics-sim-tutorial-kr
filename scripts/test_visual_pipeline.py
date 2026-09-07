@@ -233,6 +233,8 @@ def test_asset_checker_merges_task_fragment_with_base_manifest(tmp_path: Path) -
     report = json.loads(evidence.read_text(encoding="utf-8"))
     assert {asset["id"] for asset in report["assets"]} == {
         "fixture",
+        "final-simple_rover-rviz",
+        "final-f1tenth_sim-rviz",
         "beginner-index",
         "beginner-01",
         "beginner-02",

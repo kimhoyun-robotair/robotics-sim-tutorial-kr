@@ -5,8 +5,8 @@ assets:
     route: 05_advanced/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: ECS System, Transport, simulation time, headless gate와 CI evidence가 순서대로 이어진다.
-    alt_text: ECS System Transport simulation time headless 검사 CI 증거가 이어지는 고급 과정 구조도
-    caption: 그림 1. ECS 관측은 Transport와 simulation time 검증을 거쳐 headless·CI 증거로 전달된다.
+    alt_text: "ECS 상태 관측, 통신, 가상 시간, 서버 검사, CI 결과가 이어지는 과정 구조도"
+    caption: "그림 1. ECS에서 읽은 상태를 통신·시간 검사로 확인하고 서버 검사와 CI 결과로 남긴다."
     captured_at: '2026-08-26'
     sha256: 1ee0e3ba7a85675a468437a1ba87979d8e60ebc0502d0ed382b034a67099afb5
     width: 960
@@ -17,7 +17,7 @@ assets:
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: WAITING_FOR_MODEL, READY, DISABLED, MODEL_REMOVED와 fresh baseline 전이가 구분된다.
     alt_text: WAITING FOR MODEL READY DISABLED MODEL REMOVED와 재결합 기준점을 보여 주는 ECS 생명주기 상태도
-    caption: 그림 1. 모델이 제거되면 거리를 동결하고, 재등장한 entity는 거리 0의 새 기준점으로 결합한다.
+    caption: "그림 1. 모델이 제거되면 누적을 멈추고, 다시 생성된 모델은 거리 0부터 새로 기록한다."
     captured_at: '2026-08-26'
     sha256: bc6a9cef068feb9fa3b994e95e77fd5c3a9e0baf0ae72ddf6474661d6309b792
     width: 960
@@ -27,8 +27,8 @@ assets:
     route: 05_advanced/02-transport-interfaces/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: Transport callback, mailbox, simulation update의 thread 소유권 경계가 보인다.
-    alt_text: Transport callback이 mailbox를 거쳐 simulation update에서 ECS 상태에 적용되는 thread 경계도
-    caption: 그림 1. Transport callback은 명령만 mailbox에 기록하고 ECS 상태 전이는 simulation update가 소유한다.
+    alt_text: "통신 콜백이 명령을 임시 저장하고 시뮬레이션 갱신 코드가 상태에 적용하는 도식"
+    caption: "그림 1. Transport 콜백은 명령을 임시 저장하고, 시뮬레이션 갱신 코드가 실제 상태에 적용한다."
     captured_at: '2026-08-26'
     sha256: df980b2f042e401b8bfd13bd56a2899975886f78d24f99d7ef1543c7217cb63e
     width: 960
@@ -38,8 +38,8 @@ assets:
     route: 05_advanced/03-physics-debugging/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 같은 2초 simulation에서 0.05초와 0.2초 publish period의 표본 수 차이가 보인다.
-    alt_text: 같은 2초 simulation에서 0점05초와 0점2초 publish 주기의 메시지 수를 비교하는 막대 도식
-    caption: 그림 1. 같은 simulation time에서 발행 주기가 네 배 차이면 실제 메시지 수도 약 네 배 차이가 난다.
+    alt_text: "가상 시간 2초 동안 발행 주기 0.05초와 0.2초의 메시지 수를 비교하는 막대 도식"
+    caption: "그림 1. 같은 시뮬레이션 시간 동안 발행 주기가 네 배 차이 나면 메시지 수도 약 네 배 차이 난다."
     captured_at: '2026-08-26'
     sha256: 08a42574cee759e51e577ec0b6517060459ae94008ea8b4c863b00e4da7bbc90
     width: 960
@@ -49,8 +49,8 @@ assets:
     route: 05_advanced/04-headless-integration/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: nominal, usage, missing model, missing plugin, timeout, cleanup 종료 코드가 구분된다.
-    alt_text: headless checker의 nominal usage missing model missing plugin timeout cleanup 종료 코드를 구분한 도식
-    caption: 그림 1. 종료 코드는 원인을 분류하고, scenario·표본·cleanup 파일이 실제 관측을 증명한다.
+    alt_text: "서버 검사에서 정상, 설정 오류, 모델과 플러그인 누락, 시간 초과, 종료 실패의 코드를 구분한 도식"
+    caption: "그림 1. 종료 코드는 원인을 분류하고, 시나리오 결과·메시지 표본·종료 기록이 실제 관측을 보여 준다."
     captured_at: '2026-08-26'
     sha256: 277b07a3430f59a9953aafea9fe43f6d7b405b2ddd14accc03222d685563f961
     width: 960
@@ -60,8 +60,8 @@ assets:
     route: 05_advanced/05-ci-reproducibility/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: 같은 source SHA에서 Pages와 ROS Gazebo runtime gate가 독립 evidence를 만든다.
-    alt_text: 같은 source SHA에서 strict MkDocs Pages와 ROS Gazebo headless 검증이 독립적으로 evidence를 만드는 CI 구조도
-    caption: 그림 1. 문서와 runtime gate는 독립적으로 실패하지만 같은 source SHA와 artifact 보존 계약을 공유한다.
+    alt_text: "같은 커밋에서 문서 빌드와 ROS·Gazebo 검사가 각각 결과를 남기는 CI 구조도"
+    caption: "그림 1. 문서 빌드와 시뮬레이션 검사는 같은 커밋에서 시작하고 각자 결과를 남긴다."
     captured_at: '2026-08-26'
     sha256: 6a26c723c9fe21c7faa1f3c1fe2376588d42fa24ee2b7c6a5c44993acd6ca72e
     width: 960
@@ -71,8 +71,8 @@ assets:
     route: 05_advanced/06_project-production-stack/
     source_command: repository-authored SVG; verify with scripts/check_course_assets.py
     semantic_observable: fresh install을 중심으로 distance, Transport, physics, headless cleanup 검사가 결합된다.
-    alt_text: fresh install을 중심으로 lifecycle Transport physics headless cleanup checker가 결합되는 production stack 구조도
-    caption: 그림 1. 전체 checker는 네 runtime 축을 같은 fresh install과 source SHA에 묶어 검증한다.
+    alt_text: "새 설치 파일을 중심으로 모델 상태, 통신, 물리 주기, 서버 종료 검사를 묶는 구조도"
+    caption: "그림 1. 네 가지 실행 검사는 같은 커밋에서 새로 빌드한 설치 파일을 사용한다."
     captured_at: '2026-08-26'
     sha256: 1d32ccb66dd57cfdc776cc972bc699a6437bd3f83341c5bf15498eb8d4fe6455
     width: 960

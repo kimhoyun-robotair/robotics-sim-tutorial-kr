@@ -43,7 +43,7 @@
 
 <figure class="course-figure" markdown="span">
   ![로봇에서 퍼지는 라이다 광선과 RGB-D 카메라 화면 및 IMU 축](../assets/beginner/sensor-observables.svg)
-  <figcaption>그림 4. 센서마다 관측량과 갱신률이 다르므로 topic 형식과 timestamp를 함께 확인한다.</figcaption>
+  <figcaption>그림 4. 센서마다 측정하는 값과 갱신률이 다르므로 토픽 형식과 측정 시각을 함께 확인한다.</figcaption>
 </figure>
 
 ## 2. 센서 Xacro를 include하고 호출한다
