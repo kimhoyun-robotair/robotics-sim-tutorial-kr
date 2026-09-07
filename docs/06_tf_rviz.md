@@ -123,7 +123,7 @@ x축으로 90도 회전하지만 관절 회전축은 관절 좌표계의 좌우 
     <origin xyz="${xyz}" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
     <limit effort="20.0" velocity="30.0"/>
-    <dynamics damping="0.05" 마찰="0.0"/>
+    <dynamics damping="0.05" friction="0.0"/>
   </joint>
 
   <gazebo reference="${name}_link">
@@ -286,7 +286,7 @@ TF 소유권을 표로 정리하면 다음과 같다.
 | `world → odom` | `static_transform_publisher` | 실행의 생성 `x`, `y`, `yaw` | `publish_world_odom_tf:=true` |
 | `odom → base_footprint` | 구동 플러그인 또는 휠 오도메트리 노드 | 바퀴 회전량과 구동 기하 | `publish_odom_tf` 또는 `ackermann_publish_tf` |
 | `base_footprint → base_link` | `robot_state_publisher` | URDF 고정 관절 | `/tf_static` |
-| `base_link → *_wheel_link` | `robot_state_publisher` | URDF 관절와 `/joint_states` | 구동 플러그인의 `publish_wheel_tf=false` |
+| `base_link → *_wheel_link` | `robot_state_publisher` | URDF 관절과 `/joint_states` | 구동 플러그인의 `publish_wheel_tf=false` |
 
 Humble의 `gazebo_ros_ackermann_drive`는 이름과 달리 바퀴 엔코더를 적분하지 않고
 Gazebo 월드 기준 위치와 자세를 Odometry로 내보낸다. 이를 휠 오도메트리로 오해하지 않도록
@@ -323,7 +323,7 @@ timeout 10s ros2 run tf2_ros tf2_echo odom base_footprint
 
 ## 5. TF를 눈으로 확인하기
 
-먼저 작업 공간를 빌드하고 한 로봇을 실행한다.
+먼저 작업 공간을 빌드하고 한 로봇을 실행한다.
 
 ```bash
 cd ~/robotics-sim-tutorial-kr/ros2_ws
@@ -354,6 +354,8 @@ RViz의 `TF` 디스플레이에서 이름과 축을 켜면 부모-자식 관계�
 고정되어 주행 궤적이 움직이는 것처럼 보여 오도메트리 검증에 적합하지 않다.
 
 ## 6. 바퀴 주행 궤적 실습
+
+기본 RViz 설정은 **Displays → Wheel Odometry → Covariance**를 끈다. 평면 주행에서 관측하지 않는 Z 위치와 roll·pitch의 큰 불확실성을 3차원 도형으로 표시하면 화면을 덮을 수 있기 때문이다. 공분산의 의미를 살펴볼 때 이 항목을 켜고 Position·Orientation 표시와 배율을 조절한다. 주행 궤적은 별도의 **Wheel Odom Trajectory**에서 확인한다.
 
 각 bringup 실행은 `gazebo_tutorial_tools/odom_to_path`를 함께 실행한다. 이 노드는
 `/odom`의 위치와 자세를 누적해 `/wheel_odom_path`라는 `nav_msgs/msg/Path`를 발행한다. 기본
@@ -496,7 +498,7 @@ ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all
 ```
 
 `sensors.rviz`에는 IMU, 흑백·스테레오·RGBD·어안 영상, 2D LaserScan, 3D PointCloud2,
-RGBD 점군가 준비되어 있다. 센서 데이터가 발행되는데 보이지 않는다면 먼저
+RGBD 점군이 준비되어 있다. 센서 데이터가 발행되는데 보이지 않는다면 먼저
 메시지의 프레임을 확인한다.
 
 ```bash

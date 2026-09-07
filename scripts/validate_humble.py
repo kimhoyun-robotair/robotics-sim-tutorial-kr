@@ -945,6 +945,22 @@ def markdown_target_exists(path: Path) -> bool:
     return False
 
 
+def translated_xml_identifiers(text: str) -> Iterable[tuple[int, str]]:
+    """Find translated ROS XML tag/attribute names, preserving Korean prose and values."""
+    fences = re.finditer(r"(?ms)^[ \t]*```xml[^\n]*\n(.*?)^[ \t]*```[ \t]*$", text)
+    tag_pattern = r'''<([^\s!?/>]+)((?:[^>"']|"[^"]*"|'[^']*')*)>'''
+    for fence in fences:
+        code = re.sub(r"<!--.*?-->", lambda m: "\n" * m.group().count("\n"),
+                      fence.group(1), flags=re.S)
+        for tag in re.finditer(tag_pattern, code):
+            attributes = re.sub(r"""("[^"]*"|'[^']*')""", '""', tag.group(2))
+            names = [tag.group(1)] + re.findall(r"([^\s=<>/]+)\s*=", attributes)
+            for name in names:
+                if not name.isascii():
+                    line = text.count("\n", 0, fence.start(1)) + code.count("\n", 0, tag.start()) + 1
+                    yield line, name
+
+
 def validate_docs(v: Validator) -> None:
     chapters = select_humble_chapters(v)
     entrypoints = [v.root / "README.md", v.root / "docs" / "index.md"]
@@ -962,6 +978,13 @@ def validate_docs(v: Validator) -> None:
             if resolved is None:
                 continue
             v.require(markdown_target_exists(resolved), path, f"깨진 local 문서 링크: {target}")
+
+    example_docs = set(docs) | set(v.root.glob("F1TENTH*.md")) | set(v.root.glob("docs/*.md"))
+    example_docs |= set(v.root.glob("ros2_ws/src/**/README.md"))
+    for path in sorted(example_docs):
+        for line, name in translated_xml_identifiers(v.read_text(path)):
+            v.require(False, f"{v.display_path(path)}:{line}",
+                      f"XML 태그·속성 이름을 번역하면 실행할 수 없습니다: {name}")
 
     # The user-facing Humble course uses the plain declarative ``~하다`` style.
     # Keep code examples out of this check because command output and copied API

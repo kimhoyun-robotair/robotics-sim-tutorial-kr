@@ -42,10 +42,16 @@ Visualization Manager:
       Covariance:
         Value: false
       Enabled: true
-      Keep: 100
+      Keep: 10
       Name: Wheel Odometry
       Position Tolerance: 0.1
       Angle Tolerance: 0.1
+      Shape:
+        Value: Arrow
+        Shaft Length: 0.2
+        Shaft Radius: 0.01
+        Head Length: 0.08
+        Head Radius: 0.03
       Topic:
         Depth: 20
         Durability Policy: Volatile

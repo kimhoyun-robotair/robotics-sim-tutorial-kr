@@ -549,7 +549,11 @@ def main():
                 path_start_stamp = last_stamps["/wheel_odom_path"]
             command = Twist()
             command.linear.x = 0.15
-            movement = {"command_linear_m_s": 0.15, "ground_distance_m": 0.0, "odom_distance_m": 0.0}
+            # A longer path remains visible behind the larger tutorial bodies.
+            long_path = args.model in ("diffbot", "rover_diff", "rover_ackermann")
+            ground_target, odom_target = (0.80, 0.75) if long_path else (0.20, 0.15)
+            movement = {"command_linear_m_s": 0.15, "ground_distance_m": 0.0, "odom_distance_m": 0.0,
+                        "required_ground_distance_m": ground_target, "required_odom_distance_m": odom_target}
             report["checks"]["straight_motion"] = movement
             def drive_straight():
                 publish_command(command)
@@ -557,7 +561,7 @@ def main():
                 movement["ground_distance_m"] = math.hypot(pose.position.x - start_xy[0], pose.position.y - start_xy[1])
                 movement["odom_distance_m"] = math.hypot(odom_position.x - start_odom.x, odom_position.y - start_odom.y)
                 converted = adapter_output_matches(0.15, 0.0, "straight")
-                return movement["ground_distance_m"] >= 0.20 and movement["odom_distance_m"] >= 0.15 and converted
+                return movement["ground_distance_m"] >= ground_target and movement["odom_distance_m"] >= odom_target and converted
             try:
                 spin_until(drive_straight, 55, "commanded straight physical motion and odometry")
             finally:
@@ -567,13 +571,13 @@ def main():
                     path = messages["/wheel_odom_path"]
                     endpoint = path.poses[-1].pose.position
                     distance = math.hypot(endpoint.x - path_start_xy[0], endpoint.y - path_start_xy[1])
-                    return last_stamps["/wheel_odom_path"] > path_start_stamp and distance >= 0.15
-                spin_until(wheel_path_moved, 15, "wheel Path endpoint advanced at least 0.15 m")
+                    return last_stamps["/wheel_odom_path"] > path_start_stamp and distance >= odom_target
+                spin_until(wheel_path_moved, 15, f"wheel Path endpoint advanced at least {odom_target} m")
                 path_check = check_wheel_path(messages["/wheel_odom_path"])
                 path_check["displacement_since_command_m"] = math.hypot(
                     path_check["last_xy_m"][0] - path_start_xy[0],
                     path_check["last_xy_m"][1] - path_start_xy[1])
-                assert path_check["endpoint_distance_m"] >= 0.15, path_check
+                assert path_check["endpoint_distance_m"] >= odom_target, path_check
                 report["checks"]["wheel_odom_path_after_straight"] = path_check
             if scan_topic:
                 old_count = counts[scan_topic]

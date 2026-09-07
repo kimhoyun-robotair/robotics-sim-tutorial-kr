@@ -13,6 +13,7 @@ from scripts.validate_humble import (
     polite_tone_violations,
     remapping_target,
     resolve_markdown_target,
+    translated_xml_identifiers,
     validate_rendered_urdf,
 )
 
@@ -77,6 +78,16 @@ class RenderedUrdfTests(unittest.TestCase):
 
 
 class MarkdownTests(unittest.TestCase):
+    def test_translated_xml_attributes_and_tags_are_rejected(self):
+        text = '```xml\n<dynamics damping="0.05" 마찰="0.0"/>\n<질량 value="1"/>\n```\n'
+        self.assertEqual([(2, '마찰'), (3, '질량')], list(translated_xml_identifiers(text)))
+
+    def test_korean_xml_comments_and_values_remain_valid(self):
+        text = ('```xml\n<!-- 마찰="설명" -->\n'
+                '<dynamics damping="0.05" friction="0.0"/>\n'
+                '<xacro:property name="설명" value="마찰=0.0"/>\n```\n')
+        self.assertEqual([], list(translated_xml_identifiers(text)))
+
     def test_code_fence_links_are_not_audited(self):
         text = """
 [real](chapter.md#section)

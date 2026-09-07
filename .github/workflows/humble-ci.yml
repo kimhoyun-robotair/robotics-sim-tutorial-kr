@@ -131,14 +131,24 @@ jobs:
           # Classic 11.10.2 prints its version but exits 255 for --version.
           dpkg-query -W gazebo > "$evidence/gazebo-version.txt"
           dpkg-query -W 'ros-humble-gazebo*' 'ros-humble-rviz*' > "$evidence/packages.txt"
-          export LIBGL_ALWAYS_SOFTWARE=1 QT_X11_NO_MITSHM=1
+          export LIBGL_ALWAYS_SOFTWARE=1 QT_XCB_NO_MITSHM=1
           result=0
+          display_number=100
           for model in diffbot rover_diff rover_ackermann sensor_bot f1; do
-            if ! xvfb-run -a -s '-screen 0 1920x1200x24' \
-              python3 scripts/check_humble_runtime.py --model "$model" \
-              --rviz --evidence "$evidence/$model"; then
+            export XDG_RUNTIME_DIR="$evidence/$model/qt-runtime"
+            mkdir -p "$XDG_RUNTIME_DIR"
+            chmod 700 "$XDG_RUNTIME_DIR"
+            # Each model gets a fresh X server number and its own Qt runtime.
+            # Keep GL/Xvfb diagnostics instead of retrying a rendering failure.
+            if ! xvfb-run -n "$display_number" -e "$evidence/$model/xvfb.log" \
+              -s '-screen 0 1920x1200x24' bash -c '
+                glxinfo -B > "$2/glxinfo.txt" &&
+                exec python3 scripts/check_humble_runtime.py --model "$1" \
+                  --rviz --evidence "$2"
+              ' bash "$model" "$evidence/$model"; then
               result=1
             fi
+            display_number=$((display_number + 1))
             if [[ -f "$evidence/$model/result.json" ]]; then
               cat "$evidence/$model/result.json"
             fi

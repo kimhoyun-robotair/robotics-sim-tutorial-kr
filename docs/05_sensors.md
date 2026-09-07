@@ -278,7 +278,7 @@ check_urdf /tmp/sensor_bot.urdf
 
 `size_x`, `size_y`, `size_z`는 시각 형상 box와 직육면체 관성식에 동시에 사용한다. 외형 치수만 바꾸고 관성을 고정 상수로 남기면 모델의 회전 응답이 외형과 맞지 않으므로 두 계산의 입력을 반드시 공유해야 한다.
 
-카메라에는 일반 장착 프레임과 ROS 광학 좌표계이 모두 필요하다. REP-103 카메라 광학 좌표계는 `+Z` 전방, `+X` 오른쪽, `+Y` 아래쪽을 사용한다. 로봇의 일반 프레임은 보통 `+X` 전방이므로 다음 고정 회전을 추가한다.
+카메라에는 일반 장착 프레임과 ROS 광학 좌표계가 모두 필요하다. REP-103 카메라 광학 좌표계는 `+Z` 전방, `+X` 오른쪽, `+Y` 아래쪽을 사용한다. 로봇의 일반 프레임은 보통 `+X` 전방이므로 다음 고정 회전을 추가한다.
 
 ```xml
 <xacro:macro name="sensor_optical_frame" params="frame_name parent xyz:='0 0 0'">
@@ -291,7 +291,7 @@ check_urdf /tmp/sensor_bot.urdf
 </xacro:macro>
 ```
 
-이 회전을 생략하면 영상 자체는 보일 수 있지만 RGBD 점군가 로봇의 옆이나 뒤를 향해 나타난다.
+이 회전을 생략하면 영상 자체는 보일 수 있지만 RGBD 점군이 로봇의 옆이나 뒤를 향해 나타난다.
 
 ## 5.6 토픽·타입·프레임 빠른 확인
 
@@ -388,7 +388,7 @@ timeout 10s ros2 run tf2_ros tf2_echo odom base_footprint
 
 RViz에서 다음 순서로 경로를 확인한다.
 
-1. **Global Options → Fixed Frame**을 `world`으로 설정한다.
+1. **Global Options → Fixed Frame**을 `world`로 설정한다.
 2. **Add → Path**를 추가하고 Topic을 `/wheel_odom_path`로 설정한다.
 3. **Add → Odometry**를 추가하고 Topic을 `/odom`으로 설정한다.
 4. `u`, `o`, `m`, `.` 키로 원호를 주행해 경로 선과 오도메트리 화살표가 함께 쌓이는지 확인한다.
@@ -464,6 +464,8 @@ sudo apt install ros-humble-rviz-imu-plugin
 RViz에서 **Add → rviz_imu_plugin → Imu**를 추가하고 Topic을 `/imu/data`로 설정한다. 센서용 설정은 Fixed Frame을 `world`로 두고 IMU의 `fixed_frame_orientation`과 **Derotate acceleration**을 켠다. IMU 자세가 월드 기준이므로 자세를 중복 회전하지 않고 표시하기 위한 설정이다. **Box properties**의 `x_scale`, `y_scale`, `z_scale`은 각각 0.12, 0.08, 0.04 m다. 이 플러그인은 단일 `Scale` 키로 상자 크기를 설정하지 않는다. **TF** 디스플레이의 `imu_link` 축은 센서의 장착 자세만 보여 주며 IMU 메시지를 구독하지 않으므로 데이터 검증을 대신하지 못한다.
 
 확인했다면 `angular_stddev`를 `0.02`로 높여 정지 상태 각속도의 흔들림을 비교한다. 매크로 인자 하나만 바꾸면 세 축에 같은 잡음 설정을 재사용할 수 있다.
+
+**Acceleration properties → Acc. vector scale**은 가속도 화살표의 표시 배율이다. 기본값은 `0.1`이며 정지 시 중력에 해당하는 화살표 몸통은 약 0.98 m, 화살촉까지 포함하면 약 1.08 m다. 화살표가 로봇을 가리면 이 배율을 줄인다. 토픽에서 측정한 가속도 단위는 그대로 m/s²다.
 
 ## 5.9 흑백/RGB 카메라
 
@@ -946,7 +948,7 @@ ros2 param get /rviz2 use_sim_time
 
 카메라는 해상도와 발행 주기가 높을수록, 라이다는 측정 광선 수와 발행 주기가 많을수록 계산량이 늘어난다. 한 번에 모든 값을 낮추기보다 다음 순서로 병목을 분리한다.
 
-1. `sensor_profile:=minimal`에서 물리와 휠 오도메트리이 정상 속도로 동작하는지 확인한다.
+1. `sensor_profile:=minimal`에서 물리와 휠 오도메트리가 정상 속도로 동작하는지 확인한다.
 2. `lidars`를 켜고 3D 라이다의 수평·수직 샘플 수와 발행 주기를 조정한다.
 3. `cameras`를 켜고 영상 너비, 높이, 발행 주기를 조정한다.
 4. Gazebo GUI에서 센서 표시가 필요하지 않으면 `<visualize>false>`로 설정한다.
@@ -1013,8 +1015,8 @@ Fixed Frame을 임시로 센서 프레임으로 바꾸는 것은 원인을 가�
 
 - `/points`와 `/rgbd/points`를 혼동하지 않았는지 확인한다.
 - RGBD는 `Color Transformer=RGB8`, 3D 라이다는 `AxisColor`로 먼저 확인한다.
-- RGBD 광학 프레임와 라이다 프레임 TF를 각각 확인한다.
-- RViz Fixed Frame을 `world`으로 두고 `use_sim_time=true`인지 확인한다.
+- RGBD 광학 프레임과 라이다 프레임 TF를 각각 확인한다.
+- RViz Fixed Frame을 `world`로 두고 `use_sim_time=true`인지 확인한다.
 
 ## 5.19 센서 모듈을 다른 로봇에 재사용하기
 
