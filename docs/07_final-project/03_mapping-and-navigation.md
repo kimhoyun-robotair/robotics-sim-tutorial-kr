@@ -56,6 +56,8 @@ ros2 topic echo /map --once --qos-durability transient_local --field info
 ros2 run tf2_ros tf2_echo map base_link
 ```
 
+`tf2_echo`는 계속 출력하므로 값을 확인한 뒤 `Ctrl+C`로 종료합니다.
+
 ## 3-3. 지도 저장
 
 키보드 조종에서 `k`로 멈춘 뒤 다음을 실행합니다. SLAM은 계속 실행해 둡니다.
@@ -112,6 +114,14 @@ RViz의 지도에서 시작 위치를 찾습니다. 시뮬레이션은 `(0, 0)`�
 지도 좌표 원점은 지도를 만든 과정에 따라 달라질 수 있습니다.
 지도 저장 당시의 구조와 현재 라이다 모양을 대조하세요.
 
+초기 위치를 지정하기 전에 AMCL이 입력을 받을 준비가 되었는지 확인합니다.
+
+```bash
+ros2 lifecycle get /amcl
+```
+
+`active`가 나온 뒤 아래 순서로 위치를 지정하세요. 아직 시작 중이면 터미널 2의 실행 로그를 확인하고 기다립니다.
+
 1. RViz 상단의 **2D Pose Estimate**를 선택합니다.
 2. 지도에서 로봇이 있는 위치를 클릭하고 로봇 정면 방향으로 드래그합니다.
 3. 화살표 방향을 확인한 뒤 마우스를 놓습니다.
@@ -120,23 +130,31 @@ RViz의 지도에서 시작 위치를 찾습니다. 시뮬레이션은 `(0, 0)`�
 터미널에서 위치 추정 결과와 서버 상태를 확인합니다.
 
 ```bash
-ros2 topic echo /amcl_pose --once
+ros2 topic echo /amcl_pose geometry_msgs/msg/PoseWithCovarianceStamped \
+  --once --qos-reliability reliable --qos-durability transient_local --timeout 10
 ros2 lifecycle get /amcl
 ros2 lifecycle get /controller_server
 ros2 lifecycle get /bt_navigator
 ros2 run tf2_ros tf2_echo map base_link
 ```
 
+AMCL은 최근 위치 추정 메시지 하나를 `Transient Local` 방식으로 보관합니다.
+위 명령은 로봇이 정지해 새 위치 메시지가 나오지 않아도 보관된 값을 받을 수 있도록 QoS를 명시합니다.
+10초 안에 받지 못하면 초기 위치가 전달되었는지와 `/scan` 입력을 확인하세요.
+[Jazzy AMCL의 발행 설정](https://github.com/ros-navigation/navigation2/blob/jazzy/nav2_amcl/src/amcl_node.cpp)을 참고하세요.
+
 lifecycle 상태는 `active`, TF는 최신 값이 나와야 합니다.
+`tf2_echo` 확인을 마치면 `Ctrl+C`로 종료하고 다음 단계로 넘어갑니다.
 `map → base_link`를 찾지 못하는 상태에서 목표를 계속 보내지 말고 먼저 초기 위치를 확인합니다.
 
 ## 3-6. 가까운 목표 보내기
 
-먼저 RViz의 **Nav2 Goal** 또는 **2D Goal Pose** 도구로 가까운 빈 공간을 클릭하고
+제공된 `nav2.rviz`에는 **Nav2 Goal** 도구가 포함되어 있습니다.
+이 도구로 가까운 빈 공간을 클릭하고
 도착 시 바라볼 방향으로 드래그합니다. 장애물이나 미지 영역에는 목표를 놓지 마세요.
 경로가 나타나고 로봇이 이동한 뒤 정지하는지 확인합니다.
 
-RViz 도구 구성에 Nav2 Goal이 없다면 아래 단일 목표 프로그램을 사용할 수 있습니다.
+터미널에서 목표를 보내려면 아래 단일 목표 프로그램을 사용할 수 있습니다.
 이 경우에도 초기 위치 지정과 `map → base_link` 확인은 먼저 완료해야 합니다.
 
 ```bash
@@ -238,6 +256,7 @@ ros2 launch simple_rover cartographer.launch.py
 Cartographer도 `odom → base_link`를 중복 발행하지 않도록 `provide_odom_frame = false`,
 `published_frame = "odom"`, `use_odometry = true`로 설정했습니다.
 저장된 지도에서 위치 추정만 따로 확인하려면 아래 명령을 사용합니다.
+시뮬레이션은 유지하고, 실행 중인 Cartographer·SLAM Toolbox·기존 Nav2 launch를 먼저 `Ctrl+C`로 종료하세요.
 
 ```bash
 ros2 launch simple_rover amcl.launch.py map:="$HOME/maps/rover_arena.yaml"

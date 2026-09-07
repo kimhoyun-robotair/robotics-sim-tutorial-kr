@@ -37,6 +37,11 @@ def _launch_nav2(context):
         params = yaml.safe_load(file)
     with open(params_path, encoding='utf-8') as file:
         _merge(params, yaml.safe_load(file))
+    if map_path:
+        # map_server의 노드별 빈 값이 launch의 일반 파라미터보다 우선하지 않게 한다.
+        # 검증한 CLI 경로를 실제로 읽는 YAML에도 기록하여 두 입력을 일치시킨다.
+        params.setdefault('map_server', {}).setdefault('ros__parameters', {})[
+            'yaml_filename'] = map_path
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as file:
         yaml.safe_dump(params, file, sort_keys=False)
         merged_path = file.name

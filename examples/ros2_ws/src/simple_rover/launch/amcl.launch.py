@@ -7,18 +7,25 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from nav2_common.launch import RewrittenYaml
 
 
 def _launch_localization(context):
     map_path = LaunchConfiguration('map').perform(context)
     if not os.path.isabs(map_path) or not os.path.isfile(map_path):
         raise RuntimeError('map:=/절대/경로/지도.yaml 형식으로 저장한 지도를 지정하세요.')
+    configured_params = RewrittenYaml(
+        source_file=LaunchConfiguration('params_file').perform(context),
+        root_key='',
+        param_rewrites={'map_server.ros__parameters.yaml_filename': map_path},
+        convert_types=True,
+    )
     return [IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
             get_package_share_directory('nav2_bringup'), 'launch', 'localization_launch.py')),
         launch_arguments={
             'map': map_path,
-            'params_file': LaunchConfiguration('params_file'),
+            'params_file': configured_params,
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'autostart': 'true',
             'use_composition': 'False',

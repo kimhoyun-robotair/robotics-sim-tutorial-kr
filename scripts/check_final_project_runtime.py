@@ -366,13 +366,30 @@ def main() -> int:
                 def rviz_window_ready():
                     found = subprocess.run(["xdotool", "search", "--onlyvisible", "--class", "rviz"],
                                            capture_output=True, text=True, timeout=5)
-                    windows[:] = found.stdout.split()
-                    return found.returncode == 0 and bool(windows)
+                    candidates = []
+                    for window_id in found.stdout.split():
+                        geometry = subprocess.run(
+                            ["xdotool", "getwindowgeometry", "--shell", window_id],
+                            capture_output=True, text=True, timeout=5)
+                        if geometry.returncode:
+                            continue  # A splash or child window may have closed.
+                        values = dict(line.split("=", 1) for line in geometry.stdout.splitlines()
+                                      if "=" in line)
+                        width = int(values.get("WIDTH", 0))
+                        height = int(values.get("HEIGHT", 0))
+                        candidates.append((width * height, window_id, width, height))
+                    # The search also returns Ogre viewports and Image panels. The
+                    # main window is largest; the last match may be only the camera.
+                    windows[:] = sorted(candidates, reverse=True)
+                    return bool(windows) and windows[0][2] >= 1000 and windows[0][3] >= 700
 
                 spin_until(rviz_window_ready, 30)
-                subprocess.run(["import", "-window", windows[-1], str(output / "rviz.png")],
+                _, window_id, width, height = windows[0]
+                subprocess.run(["import", "-window", window_id, str(output / "rviz.png")],
                                check=True, timeout=15)
-                report["checks"]["rviz_capture"] = "rviz.png (requires visual review)"
+                report["checks"]["rviz_capture"] = {
+                    "file": "rviz.png", "width": width, "height": height,
+                    "review": "requires visual review of the full window"}
 
             odom = messages["/odom"]
             assert odom.header.frame_id == "odom" and odom.child_frame_id == "base_link"

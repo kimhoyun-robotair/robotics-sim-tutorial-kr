@@ -26,6 +26,7 @@
 | 개인 홈 디렉터리와 Fuel 캐시 경로 사용 | 패키지 share 경로, `models_path` 인자, `model://` URI로 변경 | 다른 사용자 환경에서 빌드/실행 |
 | 기본 월드가 외부 모델에 의존 | 도형만 사용하는 `rover_arena.sdf` 추가 | 모델 다운로드 없이 기본 launch |
 | 센서와 TF가 양방향 bridge | 명령은 ROS→Gazebo, 상태와 센서는 Gazebo→ROS로 고정 | bridge YAML 검사, `/tf` 발행자 확인 |
+| `qos_profile: DEFAULT`를 Jazzy bridge가 인식하지 못함 | 명령·odometry·TF 항목에서 이 값을 생략해 기본 Reliable QoS 사용 | 실제 메시지 수신, 주행, 지원 프로필 이름 검사 |
 | RGB-D optical frame에 존재하지 않거나 잘못된 링크 지정 | 실제 `camera_link_optical` TF와 정확한 회전 사용 | Xacro 전개, `tf2_echo`, CameraInfo |
 | Harmonic RGB-D 점군 XYZ와 optical 헤더 축 불일치 | `/camera/points`에만 `frame_id: depth_link` 적용 | 정면 벽 점군 방향/거리, XYZ·depth 대조 |
 | 카메라 정보 relay가 원본 토픽 없이 실행됨 | CameraInfo를 직접 bridge; 불필요한 relay 제거 | `/camera/camera_info` 수신 |
@@ -117,6 +118,9 @@ gz sdf -k /tmp/simple_rover.sdf
 ```
 
 ## 실행 결과 기록 {#runtime-results}
+
+이 저장소에서 수행한 검사 결과와 재실행 명령은 [Jazzy 점검 기록](../06_reference/04_jazzy-audit.md)에 정리했습니다.
+자신의 환경에서 실습할 때는 아래 항목을 함께 기록하세요.
 
 | 항목 | 확인 방법 | 결과에 적을 내용 |
 |---|---|---|

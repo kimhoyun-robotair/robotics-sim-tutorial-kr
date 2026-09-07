@@ -197,6 +197,7 @@ def main() -> int:
         from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
         from lifecycle_msgs.msg import State
         from lifecycle_msgs.srv import GetState
+        from rcl_interfaces.srv import GetParameters
         from nav_msgs.msg import OccupancyGrid, Odometry
         from rosgraph_msgs.msg import Clock
         from sensor_msgs.msg import LaserScan
@@ -335,12 +336,14 @@ def main() -> int:
             clients = {name: node.create_client(GetState, "/" + name + "/get_state")
                        for name in managed}
             pending, last_queries = {}, {}
+            map_parameter_client = node.create_client(GetParameters, '/map_server/get_parameters')
+            map_parameter_future = None
             initial_pub = node.create_publisher(PoseWithCovarianceStamped, "/initialpose", 10)
             last_initial = 0.0
             initial_count = 0
 
             def tick_readiness():
-                nonlocal last_initial, initial_count
+                nonlocal last_initial, initial_count, map_parameter_future
                 now = time.monotonic()
                 for name, client in clients.items():
                     if name in pending:
@@ -357,6 +360,20 @@ def main() -> int:
                             and now - last_queries.get(name, 0) >= 0.5):
                         pending[name] = (client.call_async(GetState.Request()), now)
                         last_queries[name] = now
+                if (map_parameter_future is None
+                        and lifecycle_states.get('map_server') == State.PRIMARY_STATE_ACTIVE
+                        and map_parameter_client.service_is_ready()):
+                    request = GetParameters.Request()
+                    request.names = ['yaml_filename']
+                    map_parameter_future = map_parameter_client.call_async(request)
+                if map_parameter_future is not None and map_parameter_future.done():
+                    response = map_parameter_future.result()
+                    assert response is not None and len(response.values) == 1
+                    actual_path = response.values[0].string_value
+                    report['checks']['map_server_yaml_filename'] = actual_path
+                    assert actual_path == map_info['yaml'], (
+                        f'map_server loaded wrong yaml_filename: {actual_path!r}; '
+                        f'expected {map_info["yaml"]!r}')
                 # Stop resetting AMCL as soon as it has localized; never reset during movement.
                 if (lifecycle_states.get("amcl") == State.PRIMARY_STATE_ACTIVE
                         and "/amcl_pose" not in messages and now - last_initial >= 1.0
@@ -374,6 +391,7 @@ def main() -> int:
 
             spin_until(lambda: all(lifecycle_states.get(n) == State.PRIMARY_STATE_ACTIVE for n in managed)
                        and "/map" in messages and "/amcl_pose" in messages
+                       and "map_server_yaml_filename" in report["checks"]
                        and buffer.can_transform("map", "base_link", Time()),
                        "AMCL/Nav2 readiness", 75, tick_readiness)
             assert initial_count > 0, "no initial pose was sent"
