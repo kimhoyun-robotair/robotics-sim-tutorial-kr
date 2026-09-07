@@ -29,6 +29,9 @@
           <ros><namespace>${ros_namespace}</namespace></ros>
           <camera_name>${camera_name}</camera_name>
           <frame_name>${prefix}_optical_frame</frame_name>
+          <!-- 픽셀 인덱스 0..width-1, 0..height-1의 중앙을 사용한다. -->
+          <cx>${(width - 1) / 2.0}</cx>
+          <cy>${(height - 1) / 2.0}</cy>
         </plugin>
       </sensor>
     </gazebo>

@@ -37,7 +37,7 @@ struct PathRecorderConfig
   [[nodiscard]] bool IsValid() const noexcept
   {
     return std::isfinite(update_rate) && update_rate > 0.0 &&
-           !topic.empty() && !frame.empty() && max_points > 0U;
+           !topic.empty() && frame == "world" && max_points > 0U;
   }
 
   /// 유효한 설정에서 호출한다. 극단적으로 큰 주파수도 최소 1 ns로 제한한다.

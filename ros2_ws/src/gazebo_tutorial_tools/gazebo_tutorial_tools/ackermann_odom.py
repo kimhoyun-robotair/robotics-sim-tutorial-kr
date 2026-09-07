@@ -20,6 +20,7 @@ from gazebo_tutorial_tools.ackermann_math import (
     bicycle_increment,
     equivalent_center_steering_angle,
     normalized_angle,
+    reference_point_increment,
     shortest_angular_delta,
 )
 
@@ -44,6 +45,7 @@ class AckermannOdom(Node):
         self.declare_parameter('front_right_steering_joint', 'front_right_steering_joint')
         self.declare_parameter('wheel_radius', 0.16)
         self.declare_parameter('wheelbase', 0.56)
+        self.declare_parameter('rear_axle_offset', 0.28)
         self.declare_parameter('max_wheel_delta', 2.0)
         self.declare_parameter('publish_tf', True)
         self.declare_parameter('covariance_x', 0.002)
@@ -66,6 +68,7 @@ class AckermannOdom(Node):
         )
         self._wheel_radius = float(self.get_parameter('wheel_radius').value)
         self._wheelbase = float(self.get_parameter('wheelbase').value)
+        self._rear_axle_offset = float(self.get_parameter('rear_axle_offset').value)
         self._max_wheel_delta = float(
             self.get_parameter('max_wheel_delta').value
         )
@@ -76,12 +79,18 @@ class AckermannOdom(Node):
             self.get_parameter('covariance_yaw').value
         )
 
-        if self._wheel_radius <= 0.0:
+        if not math.isfinite(self._wheel_radius) or self._wheel_radius <= 0.0:
             raise ValueError('wheel_radius must be greater than zero')
-        if self._wheelbase <= 0.0:
+        if not math.isfinite(self._wheelbase) or self._wheelbase <= 0.0:
             raise ValueError('wheelbase must be greater than zero')
         if not 0.0 < self._max_wheel_delta <= math.pi:
             raise ValueError('max_wheel_delta must be in (0, pi]')
+        if not math.isfinite(self._rear_axle_offset):
+            raise ValueError('rear_axle_offset must be finite')
+        if any(not math.isfinite(value) or value < 0.0 for value in (
+            self._covariance_x, self._covariance_y, self._covariance_yaw
+        )):
+            raise ValueError('odometry covariance values must be finite and nonnegative')
 
         self._x = 0.0
         self._y = 0.0
@@ -152,6 +161,10 @@ class AckermannOdom(Node):
             return
         self._reported_missing_joints = False
 
+        if not all(math.isfinite(positions[name]) for name in self._required_joints):
+            self.get_logger().warning('nonfinite joint position; sample ignored', once=True)
+            return
+
         left = positions[self._rear_left_joint]
         right = positions[self._rear_right_joint]
         steering = equivalent_center_steering_angle(
@@ -195,9 +208,10 @@ class AckermannOdom(Node):
 
         distance = 0.5 * (delta_left + delta_right) * self._wheel_radius
         yaw_delta = bicycle_increment(distance, steering, self._wheelbase)
-        heading_midpoint = self._yaw + 0.5 * yaw_delta
-        self._x += distance * math.cos(heading_midpoint)
-        self._y += distance * math.sin(heading_midpoint)
+        local_x, local_y = reference_point_increment(
+            distance, yaw_delta, self._rear_axle_offset)
+        self._x += local_x * math.cos(self._yaw) - local_y * math.sin(self._yaw)
+        self._y += local_x * math.sin(self._yaw) + local_y * math.cos(self._yaw)
         self._yaw = normalized_angle(self._yaw + yaw_delta)
 
         dt = (stamp_ns - self._last_stamp_ns) / 1_000_000_000.0
@@ -223,6 +237,7 @@ class AckermannOdom(Node):
         odometry.pose.pose.orientation.z = quaternion_z
         odometry.pose.pose.orientation.w = quaternion_w
         odometry.twist.twist.linear.x = linear_velocity
+        odometry.twist.twist.linear.y = self._rear_axle_offset * angular_velocity
         odometry.twist.twist.angular.z = angular_velocity
         odometry.pose.covariance[0] = self._covariance_x
         odometry.pose.covariance[7] = self._covariance_y

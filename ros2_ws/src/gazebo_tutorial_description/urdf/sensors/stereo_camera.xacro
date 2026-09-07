@@ -7,31 +7,56 @@
     <xacro:sensor_mount_box
       link_name="${prefix}_link" parent="${parent}" xyz="${xyz}" rpy="${rpy}"
       size_x="0.06" size_y="0.12" size_z="0.04" color="sensor_gray"/>
-    <xacro:sensor_optical_frame frame_name="${prefix}_optical_frame" parent="${prefix}_link"/>
+    <!-- 두 광학 프레임의 위치를 실제 렌즈 중심과 맞춘다. +Y가 로봇의 왼쪽이다. -->
+    <xacro:sensor_optical_frame
+      frame_name="${prefix}_left_optical_frame" parent="${prefix}_link"
+      xyz="0 ${baseline / 2.0} 0"/>
+    <xacro:sensor_optical_frame
+      frame_name="${prefix}_right_optical_frame" parent="${prefix}_link"
+      xyz="0 ${-baseline / 2.0} 0"/>
 
+    <!-- Classic multicamera 플러그인은 frame_name과 투영행렬 설정을 공유한다.
+         좌우 위치와 오른쪽 P[3]를 정확하게 표현하기 위해 센서를 둘로 나눈다. -->
     <gazebo reference="${prefix}_link">
-      <sensor name="${prefix}_sensor" type="multicamera">
+      <sensor name="${prefix}_left_sensor" type="camera">
+        <pose>0 ${baseline / 2.0} 0 0 0 0</pose>
         <always_on>true</always_on>
         <visualize>${visualize}</visualize>
         <update_rate>${update_rate}</update_rate>
         <camera name="left">
-          <pose>0 ${baseline / 2.0} 0 0 0 0</pose>
           <horizontal_fov>${horizontal_fov}</horizontal_fov>
           <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
           <clip><near>${near}</near><far>${far}</far></clip>
           <noise><type>gaussian</type><mean>0</mean><stddev>${image_noise_stddev}</stddev></noise>
         </camera>
-        <camera name="right">
-          <pose>0 ${-baseline / 2.0} 0 0 0 0</pose>
-          <horizontal_fov>${horizontal_fov}</horizontal_fov>
-          <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
-          <clip><near>${near}</near><far>${far}</far></clip>
-          <noise><type>gaussian</type><mean>0</mean><stddev>${image_noise_stddev}</stddev></noise>
-        </camera>
-        <plugin name="${prefix}_ros" filename="libgazebo_ros_camera.so">
+        <plugin name="${prefix}_left_ros" filename="libgazebo_ros_camera.so">
           <ros><namespace>${ros_namespace}</namespace></ros>
-          <camera_name>${camera_name}</camera_name>
-          <frame_name>${prefix}_optical_frame</frame_name>
+          <camera_name>${camera_name}/left</camera_name>
+          <frame_name>${prefix}_left_optical_frame</frame_name>
+          <cx>${(width - 1) / 2.0}</cx>
+          <cy>${(height - 1) / 2.0}</cy>
+          <hack_baseline>0.0</hack_baseline>
+        </plugin>
+      </sensor>
+      <sensor name="${prefix}_right_sensor" type="camera">
+        <pose>0 ${-baseline / 2.0} 0 0 0 0</pose>
+        <always_on>true</always_on>
+        <visualize>${visualize}</visualize>
+        <update_rate>${update_rate}</update_rate>
+        <camera name="right">
+          <horizontal_fov>${horizontal_fov}</horizontal_fov>
+          <image><width>${width}</width><height>${height}</height><format>R8G8B8</format></image>
+          <clip><near>${near}</near><far>${far}</far></clip>
+          <noise><type>gaussian</type><mean>0</mean><stddev>${image_noise_stddev}</stddev></noise>
+        </camera>
+        <plugin name="${prefix}_right_ros" filename="libgazebo_ros_camera.so">
+          <ros><namespace>${ros_namespace}</namespace></ros>
+          <camera_name>${camera_name}/right</camera_name>
+          <frame_name>${prefix}_right_optical_frame</frame_name>
+          <cx>${(width - 1) / 2.0}</cx>
+          <cy>${(height - 1) / 2.0}</cy>
+          <!-- CameraInfo 오른쪽 투영행렬: P[3] = -fx * baseline [pixel*m]. -->
+          <hack_baseline>${baseline}</hack_baseline>
         </plugin>
       </sensor>
     </gazebo>

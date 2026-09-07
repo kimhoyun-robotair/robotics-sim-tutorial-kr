@@ -25,6 +25,9 @@
           <ros><namespace>${ros_namespace}</namespace></ros>
           <camera_name>${camera_name}</camera_name>
           <frame_name>${prefix}_optical_frame</frame_name>
+          <!-- gazebo_ros_camera의 점군 생성식과 CameraInfo의 광학 중심을 맞춘다. -->
+          <cx>${(width - 1) / 2.0}</cx>
+          <cy>${(height - 1) / 2.0}</cy>
           <min_depth>${min_depth}</min_depth>
           <max_depth>${max_depth}</max_depth>
         </plugin>

@@ -27,16 +27,16 @@
     <!--Add Multi Camera Plugin-->
     <gazebo reference="left_camera_link">
         <material>Gazebo/Blue</material>
-        <sensor name="camera" type="camera">
+        <sensor name="left_camera_sensor" type="camera">
             <pose> 0 0 0 0 0 0 </pose>
-            <visualize>true</visualize>
+            <visualize>false</visualize>
             <update_rate>30</update_rate>
             <camera>
                 <horizontal_fov>1.089</horizontal_fov>
                 <image>
                     <format>B8G8R8</format>
-                    <width>640</width>
-                    <height>480</height>
+                    <width>320</width>
+                    <height>240</height>
                 </image>
                 <distortion>
                     <k1>0.0</k1>
@@ -53,13 +53,12 @@
                 </noise>
             </camera>
             <plugin name="left_camera_controller" filename="libgazebo_ros_camera.so">
-                <ros>
-                    <namespace>left_camera</namespace>
-                    <remapping>camera_info:=left_camera/camera_info</remapping>
-                    <remapping>image_raw:=left_camera/image_raw</remapping>
-                </ros>
+
+                <camera_name>left_camera</camera_name>
+                <cx>159.5</cx>
+                <cy>119.5</cy>
                 <frame_name>left_camera_link_optical</frame_name>
-                <updateRate>30.0</updateRate>
+
             </plugin>
         </sensor>
     </gazebo>

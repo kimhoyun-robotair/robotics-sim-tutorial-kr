@@ -32,6 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
+#include <cstring>
 #include <velodyne_gazebo_plugins/GazeboRosVelodyneLaser.hpp>
 #include <gazebo_ros/utils.hpp>
 
@@ -144,7 +145,7 @@ void GazeboRosVelodyneLaser::ConnectCb()
   }
 }
 
-void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
+void GazeboRosVelodyneLaser::OnScan(const ConstLaserScanStampedPtr & _msg)
 {
   const ignition::math::Angle maxAngle = _msg->scan().angle_max();
   const ignition::math::Angle minAngle = _msg->scan().angle_min();
@@ -166,6 +167,13 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
   const double MIN_RANGE = std::max(min_range_, minRange);
   const double MAX_RANGE = std::min(max_range_, maxRange);
   const double MIN_INTENSITY = min_intensity_;
+
+  // A malformed/empty transport scan must not index absent ranges or divide by zero.
+  if (rangeCount <= 0 || verticalRangeCount <= 0 ||
+      _msg->scan().ranges_size() < rangeCount * verticalRangeCount ||
+      _msg->scan().intensities_size() < rangeCount * verticalRangeCount) {
+    return;
+  }
 
   // Populate message fields
   const uint32_t POINT_STEP = 22;
@@ -202,6 +210,14 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
 
   int i, j;
   uint8_t *ptr = msg.data.data();
+  // The packed layout has 22-byte points and a float at offset 18. Neither
+  // address is guaranteed to be float-aligned; memcpy avoids undefined behavior.
+  const auto write_float = [](uint8_t * destination, float value) {
+    std::memcpy(destination, &value, sizeof(value));
+  };
+  const auto write_ring = [](uint8_t * destination, uint16_t value) {
+    std::memcpy(destination, &value, sizeof(value));
+  };
   for (i = 0; i < rangeCount; i++) {
     for (j = 0; j < verticalRangeCount; j++) {
 
@@ -239,21 +255,21 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr& _msg)
       }
 
       // pAngle is rotated by yAngle:
-      if ((MIN_RANGE < r) && (r < MAX_RANGE)) {
-        *((float*)(ptr + 0)) = r * cos(pAngle) * cos(yAngle); // x
-        *((float*)(ptr + 4)) = r * cos(pAngle) * sin(yAngle); // y
-        *((float*)(ptr + 8)) = r * sin(pAngle); // z
-        *((float*)(ptr + 12)) = intensity; // intensity
-        *((uint16_t*)(ptr + 16)) = j; // ring
-        *((float*)(ptr + 18)) = 0.0; // time
+      if ((MIN_RANGE < r) && (r < MAX_RANGE) && (intensity >= MIN_INTENSITY)) {
+        write_float(ptr + 0, r * cos(pAngle) * cos(yAngle)); // x
+        write_float(ptr + 4, r * cos(pAngle) * sin(yAngle)); // y
+        write_float(ptr + 8, r * sin(pAngle)); // z
+        write_float(ptr + 12, intensity); // intensity
+        write_ring(ptr + 16, j); // ring
+        write_float(ptr + 18, 0.0); // time
         ptr += POINT_STEP;
       } else if (organize_cloud_) {
-        *((float*)(ptr + 0)) = nanf(""); // x
-        *((float*)(ptr + 4)) = nanf(""); // y
-        *((float*)(ptr + 8)) = nanf(""); // x
-        *((float*)(ptr + 12)) = nanf(""); // intensity
-        *((uint16_t*)(ptr + 16)) = j; // ring
-        *((float*)(ptr + 18)) = 0.0; // time
+        write_float(ptr + 0, nanf("")); // x
+        write_float(ptr + 4, nanf("")); // y
+        write_float(ptr + 8, nanf("")); // x
+        write_float(ptr + 12, nanf("")); // intensity
+        write_ring(ptr + 16, j); // ring
+        write_float(ptr + 18, 0.0); // time
         ptr += POINT_STEP;
       }
     }

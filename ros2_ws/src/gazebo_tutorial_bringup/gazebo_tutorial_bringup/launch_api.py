@@ -151,6 +151,7 @@ def generate_robot_launch(
                     'odom_topic': odom_topic,
                     'wheel_radius': 0.16,
                     'wheelbase': 0.56,
+                    'rear_axle_offset': 0.28,
                     'publish_tf': ParameterValue(
                         ackermann_publish_tf,
                         value_type=bool,

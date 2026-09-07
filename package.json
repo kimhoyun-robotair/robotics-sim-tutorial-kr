@@ -1,5 +1,5 @@
 {
-  "name": "gazebo-sim-tutorial-kr",
+  "name": "robotics-sim-tutorial-kr",
   "version": "2.0.0-humble",
   "description": "Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11 환경의 한국어 모바일 로봇 시뮬레이션 튜토리얼입니다.",
   "main": "index.js",
@@ -12,13 +12,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr.git"
+    "url": "git+https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr.git"
   },
   "keywords": ["ros2", "humble", "gazebo-classic", "urdf", "xacro", "robotics", "korean"],
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr/issues"
+    "url": "https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/issues"
   },
-  "homepage": "https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr#readme"
+  "homepage": "https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr#readme"
 }

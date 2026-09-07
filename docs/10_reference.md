@@ -1,25 +1,25 @@
 # 빠른 참고표
 
-이 장은 실습 중 명령, 토픽, frame 이름을 빠르게 찾기 위한 요약이다. 처음 학습할 때는 앞 장의 설명과 완료 기준을 먼저 읽는다.
+실습 중 필요한 명령·토픽·프레임을 찾기 위한 요약이다. 처음 시작한다면 [설치 안내](01_setup.md), 센서 화면이 이상하다면 [센서 실습](05_sensors.md)과 [문제 해결](08_debugging.md)을 먼저 확인한다.
 
-## 기준 환경
+## 기준 환경과 터미널 설정
 
 | 항목 | 값 |
 | --- | --- |
-| Ubuntu | 22.04 LTS (Jammy) |
+| Ubuntu | 22.04 LTS |
 | ROS | ROS 2 Humble |
 | Gazebo | Gazebo Classic 11 |
-| 저장소 브랜치 | `Humble` |
-| workspace | `robotics-sim-tutorial-kr/ros2_ws` |
+| 브랜치 | `Humble` |
+| 작업 공간 | `~/robotics-sim-tutorial-kr/ros2_ws` |
 
-## 매 터미널에서 실행
+새 터미널마다 실행한다.
 
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ```
 
-환경이 섞였는지 확인한다.
+환경이 맞는지 확인한다.
 
 ```bash
 echo "ROS_DISTRO=$ROS_DISTRO"
@@ -27,23 +27,13 @@ gazebo --version
 git -C ~/robotics-sim-tutorial-kr branch --show-current
 ```
 
-예상값은 각각 `humble`, `Gazebo ... version 11.x`, `Humble`이다.
+예상값은 각각 `humble`, Gazebo 버전 `11.x`, `Humble`이다.
 
-## 설치와 빌드
+## 빌드
+
+ROS와 Gazebo 설치는 [1장](01_setup.md)의 순서대로 진행한다. 설치와 `rosdep` 초기화를 마쳤다면 다음 명령으로 의존성을 설치하고 빌드한다.
 
 ```bash
-sudo apt update
-sudo apt install -y \
-  build-essential cmake git ripgrep \
-  liburdfdom-tools python3-venv \
-  ros-humble-desktop \
-  ros-humble-gazebo-ros-pkgs \
-  ros-humble-xacro \
-  ros-humble-teleop-twist-keyboard \
-  ros-humble-rviz-imu-plugin \
-  python3-colcon-common-extensions \
-  python3-rosdep
-
 cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
@@ -51,63 +41,65 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-C++ plugin만 다시 빌드할 때는 다음 명령을 사용한다.
+직접 만든 C++ 플러그인만 다시 빌드할 때는 다음 명령을 쓴다. 빌드한 라이브러리를 반영하려면 Gazebo도 종료한 뒤 다시 실행한다.
 
 ```bash
-colcon build \
-  --symlink-install \
-  --packages-select gazebo_tutorial_plugins
+cd ~/robotics-sim-tutorial-kr/ros2_ws
+colcon build --symlink-install --packages-select gazebo_tutorial_plugins
 source install/setup.bash
 ```
 
 ## 실행 명령
 
+다음 중 **하나만** 실행한다. 기본 설정은 토픽·TF를 공유하므로 동시에 여러 로봇을 실행하면 충돌한다.
+
 | 대상 | 명령 |
 | --- | --- |
-| 2륜 + caster | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` |
-| 4륜 skid/diff | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` |
+| 2륜 차동 구동 | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` |
+| 4륜 스키드·차동 구동 | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` |
 | 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` |
 | 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` |
-| 카메라 묶음 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` |
-| LiDAR 묶음 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` |
-| IMU + 구동만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=minimal` |
-| headless | 위 명령 뒤에 `gui:=false rviz:=false` 추가 |
-| pause 시작 | 위 명령 뒤에 `pause:=true` 추가 |
+| 카메라와 IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` |
+| 라이다와 IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` |
+| 구동계와 IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=minimal` |
 
-두 로봇 launch를 기본 설정으로 동시에 실행하면 `/cmd_vel`, `/odom`, TF frame과 node 이름이 충돌한다. 한 실습을 `Ctrl-C`로 완전히 종료한 뒤 다음 실습을 시작한다.
+`Successfully spawned entity` 로그가 나온 뒤 다른 터미널에서 조회·조종 명령을 실행한다. 다음 실습으로 바꾸려면 기존 실행을 `Ctrl+C`로 끝내고 종료 로그를 기다린다.
 
-## 공통 launch 인자
+## 공통 실행 인자
 
-정확한 목록과 현재 기본값은 `--show-args`가 최종 기준이다.
+현재 기본값과 전체 목록은 다음 명령이 기준이다.
 
 ```bash
-ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
+ros2 launch gazebo_tutorial_bringup sensors.launch.py --show-args
 ```
 
 | 인자 | 기본값 | 의미 |
 | --- | --- | --- |
-| `world` | 패키지의 world | 다른 SDF world 선택 |
-| `description_package` | `gazebo_tutorial_description` | Xacro를 제공하는 package |
-| `xacro_file` | 모델별 파일 | description package의 `urdf/` 아래 파일 |
-| `gui` | `true` | `gzclient` 실행 여부 |
-| `pause` | `false` | physics 정지 상태로 시작 |
-| `verbose` | `false` | Gazebo 상세 로그 |
+| `world` | 모델별 월드 | 사용할 `.world` 파일의 절대 경로 |
+| `description_package` | `gazebo_tutorial_description` | Xacro를 제공하는 패키지 |
+| `xacro_file` | 모델별 파일 | 패키지 `urdf/` 아래의 Xacro 파일명 |
+| `gui` | `true` | Gazebo 화면인 `gzclient` 실행 여부 |
 | `rviz` | `true` | RViz 자동 실행 |
 | `rviz_config` | 모델별 `.rviz` | 불러올 RViz 설정 |
-| `use_sim_time` | `true` | ROS node가 `/clock` 사용 |
-| `entity_name` | 모델별 이름 | Gazebo entity 이름 |
-| `x`, `y`, `z`, `yaw` | `0, 0, 0.10, 0` | spawn pose |
-| `odom_topic` | `/odom` | Path 변환 입력 |
-| `path_topic` | `/wheel_odom_path` | Path 출력 |
-| `path_frame` | 빈 문자열 | 비어 있으면 Odometry frame 사용; 변환 기능은 아님 |
-| `max_points` | `2000` | 저장할 최대 pose 수 |
-| `sensor_profile` | 모델별 기본 | sensor launch: `all`, `cameras`, `lidars`, `minimal` |
-| `ground_truth_odom_topic` | `/ground_truth/odom` | Ackermann built-in world-pose 입력 |
-| `ground_truth_path_topic` | `/ground_truth_path` | Ackermann 비교용 Path 출력 |
-| `publish_world_odom_tf` | `true` | spawn pose를 반영한 `world → odom` static TF |
-| `ackermann_publish_tf` | `true` | Ackermann wheel-odom 노드의 `odom → base_footprint` TF |
+| `pause` | `false` | 물리 계산을 일시 정지한 상태로 시작 |
+| `verbose` | `false` | Gazebo 상세 로그 출력 |
+| `use_sim_time` | `true` | ROS 노드가 `/clock` 사용 |
+| `entity_name` | 모델별 이름 | Gazebo 모델 이름 |
+| `x`, `y`, `z`, `yaw` | `0, 0, 0.10, 0` | 생성 위치(m)와 방향(rad) |
+| `odom_topic` / `path_topic` | `/odom` / `/wheel_odom_path` | 궤적 변환의 입력·출력 |
+| `path_frame` | 빈 문자열 | 입력 프레임을 그대로 사용. TF 변환 기능은 없음 |
+| `max_points` | `2000` | 누적 궤적의 최대 점 수 |
+| `sensor_profile` | 센서 실행은 `all` | `all`, `cameras`, `lidars`, `minimal` |
+| `ground_truth_odom_topic` | `/ground_truth/odom` | Ackermann의 기준 위치 입력 |
+| `ground_truth_path_topic` | `/ground_truth_path` | Ackermann의 비교용 궤적 출력 |
+| `publish_world_odom_tf` | `true` | 생성 위치를 반영한 `world → odom` 고정 TF |
+| `ackermann_publish_tf` | `true` | Ackermann 오도메트리 TF 발행 |
 
-## 키보드 teleop
+GUI 없이 실행하려면 명령 뒤에 `gui:=false rviz:=false`를 추가한다. 카메라는 GUI를 꺼도 렌더링 환경이 필요하다.
+
+## 키보드 조종
+
+별도 터미널에서 환경을 읽고 실행한다.
 
 ```bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
@@ -117,212 +109,133 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 | 키 | 동작 |
 | --- | --- |
 | `i` / `,` | 전진 / 후진 |
-| `j` / `l` | 좌 / 우 회전 |
-| `u` / `o` | 전진 좌 / 우 곡선 |
-| `m` / `.` | 후진 좌 / 우 곡선 |
-| `k` 또는 space | 정지 |
-| `q` / `z` | 전체 속도 배율 증가 / 감소 |
-| `w` / `x` | 선속도 배율 증가 / 감소 |
-| `e` / `c` | 각속도 배율 증가 / 감소 |
+| `j` / `l` | 좌 / 우 제자리 회전. 차동 구동 차량에서 사용 |
+| `u` / `o` | 전진하며 좌 / 우 회전 |
+| `m` / `.` | 후진하며 좌 / 우 회전 |
+| `k` 또는 스페이스 | 정지 |
+| `q` / `z` | 선속도·회전 명령 크기 함께 증가 / 감소 |
+| `w` / `x` | 선속도 증가 / 감소 |
+| `e` / `c` | 회전 명령 크기 증가 / 감소 |
 
-Ackermann은 제자리 회전할 수 없다. 선속도가 있는 곡선 키를 사용한다. Humble의 내장 Ackermann plugin은 `Twist.angular.z`를 중앙 타이어 조향 목표각처럼 사용한다는 점도 [4륜 rover 장](04_rover.md)에서 확인한다.
+Ackermann은 제자리 회전할 수 없다. Humble의 내장 플러그인은 `Twist.angular.z`를 중앙 바퀴의 조향 목표각(rad)으로 사용하므로, 일반적인 차동 구동의 각속도 명령(rad/s)과 구분한다. 종료할 때는 `k`로 멈춘 뒤 `Ctrl+C`를 누른다.
 
-## 공통 토픽
+## 공통 토픽과 오도메트리
 
-| 토픽 | 타입 | 발행/구독 주체 | 설명 |
-| --- | --- | --- | --- |
-| `/clock` | `rosgraph_msgs/Clock` | Gazebo | simulation time |
-| `/cmd_vel` | `geometry_msgs/Twist` | teleop → drive plugin | 주행 명령 |
-| `/joint_states` | `sensor_msgs/JointState` | Gazebo joint-state plugin | 실제 joint 위치/속도 |
-| `/odom` | `nav_msgs/Odometry` | drive 또는 wheel odom node | 로봇 odometry |
-| `/wheel_odom_path` | `nav_msgs/Path` | `odom_to_path` | RViz 누적 궤적 |
-| `/robot_description` | `std_msgs/String` | `robot_state_publisher` | 전개된 URDF |
-| `/tf` | `tf2_msgs/TFMessage` | drive/RSP | 동적 transform |
-| `/tf_static` | `tf2_msgs/TFMessage` | RSP/static publisher | 고정 transform |
-| `/ground_truth_path` | `nav_msgs/Path` | custom plugin 또는 odom-to-path 노드 | diffbot/Ackermann의 Gazebo world pose |
-
-### 모델별 odometry 차이
-
-| 모델 | `/odom`의 계산 근거 | 비교용 값 |
+| 토픽 | 메시지 타입 | 역할 |
 | --- | --- | --- |
-| `diffbot` | 좌·우 wheel encoder 적분 | `/ground_truth_path` |
-| `rover_diff` | Humble diff plugin의 첫 wheel pair 적분 | Gazebo 화면/world pose |
-| `rover_ackermann` | rear wheel 회전 + front steering joint 적분 node | `/ground_truth/odom` → `/ground_truth_path` |
-| `sensor_bot` | 좌·우 wheel encoder 적분 | Gazebo 화면/world pose |
+| `/clock` | `rosgraph_msgs/msg/Clock` | 시뮬레이션 시간 |
+| `/cmd_vel` | `geometry_msgs/msg/Twist` | 주행 명령 |
+| `/joint_states` | `sensor_msgs/msg/JointState` | 실제 관절 위치·속도 |
+| `/odom` | `nav_msgs/msg/Odometry` | 바퀴로 계산한 로봇 위치·속도 |
+| `/wheel_odom_path` | `nav_msgs/msg/Path` | 오도메트리 누적 궤적 |
+| `/robot_description` | `std_msgs/msg/String` | 전개한 URDF |
+| `/tf`, `/tf_static` | `tf2_msgs/msg/TFMessage` | 동적·고정 좌표 변환 |
+| `/ground_truth_path` | `nav_msgs/msg/Path` | diffbot·Ackermann의 월드 기준 궤적 |
 
-## TF tree
+| 모델 | `/odom`의 계산 근거 |
+| --- | --- |
+| `diffbot`, `sensor_bot` | 좌우 바퀴 회전량 적분 |
+| `rover_diff` | Humble 차동 구동 플러그인의 첫 번째 좌우 바퀴 쌍 적분 |
+| `rover_ackermann` | 뒷바퀴 회전량·앞바퀴 조향각 적분 후 뒤 차축에서 차체 중심으로 좌표 변환 |
 
-기본 연결은 다음과 같다.
+Ackermann 내장 플러그인의 출력은 `/ground_truth/odom`으로 분리한다. 이것은 바퀴 엔코더가 아닌 Gazebo의 위치를 사용한다. 별도 노드의 `rear_axle_offset=0.28`은 뒤 차축과 `base_footprint` 사이의 거리를 반영한다.
 
-```text
-world → odom → base_footprint → base_link → wheel/sensor frames
-```
+## TF와 RViz
 
-| edge | 소유자 | 성격 |
-| --- | --- | --- |
-| `world → odom` | bringup static publisher | spawn 원점과 encoder odom 원점 연결 |
-| `odom → base_footprint` | drive plugin 또는 Ackermann wheel odom node | 주행에 따라 변함 |
-| `base_footprint → base_link` | URDF + RSP | fixed |
-| `base_link → sensor_*` | URDF + RSP | fixed |
-| `base_link → wheel/steering` | URDF + `/joint_states` + RSP | joint에 따라 변함 |
+| 연결 | 발행자 |
+| --- | --- |
+| `world → odom` | 실행 파일의 고정 TF 노드 |
+| `odom → base_footprint` | 구동 플러그인 또는 Ackermann 오도메트리 노드 |
+| `base_footprint → base_link` | URDF를 읽는 `robot_state_publisher` |
+| 차체 → 센서 | 고정 관절을 읽는 `robot_state_publisher` |
+| 차체 → 바퀴·조향부 | `/joint_states`를 읽는 `robot_state_publisher` |
+
+주행용 `odom.rviz`의 Fixed Frame은 `odom`, 센서용 `sensors.rviz`는 `world`다. 센서 설정은 IMU의 월드 기준 자세까지 같은 좌표계에서 표시한다. RobotModel의 Description Topic은 `/robot_description`, Durability는 `Transient Local`로 둔다. 센서는 `Best Effort` + `Volatile`로 시작한다.
 
 ```bash
-ros2 run tf2_ros tf2_echo odom base_footprint
-ros2 run tf2_ros tf2_echo base_link lidar_2d_link
+timeout 10s ros2 run tf2_ros tf2_echo odom base_footprint
+timeout 10s ros2 run tf2_ros tf2_echo world rgbd_camera_optical_frame
 ros2 run tf2_tools view_frames
 ```
 
-## 센서 토픽과 RViz Display
+`view_frames`는 현재 디렉터리에 TF 트리 PDF를 만들고 종료한다. `/tf` 발행자가 여러 개인 것만으로 중복 TF라고 판정하지 않는다. 같은 **자식 프레임**을 두 곳에서 발행하는지 확인한다.
 
-| 센서 | 토픽 | 타입 | RViz Display |
+## 센서 토픽
+
+| 센서 | 토픽 | RViz 디스플레이 | 메시지 프레임 |
 | --- | --- | --- | --- |
-| wheel odom | `/odom` | `nav_msgs/Odometry` | Odometry |
-| wheel 궤적 | `/wheel_odom_path` | `nav_msgs/Path` | Path |
-| IMU | `/imu/data` | `sensor_msgs/Imu` | `rviz_imu_plugin/Imu` |
-| mono | `/camera/image_raw` | `sensor_msgs/Image` | Image |
-| stereo left/right | `/stereo/{left,right}/image_raw` | `sensor_msgs/Image` | Image 2개 |
-| RGB | `/rgbd/image_raw` | `sensor_msgs/Image` | Image |
-| depth | `/rgbd/depth/image_raw` | `sensor_msgs/Image` | Image |
-| RGBD cloud | `/rgbd/points` | `sensor_msgs/PointCloud2` | PointCloud2 |
-| fisheye | `/fisheye/image_raw` | `sensor_msgs/Image` | Image |
-| 2D LiDAR | `/scan` | `sensor_msgs/LaserScan` | LaserScan |
-| 3D LiDAR | `/points` | `sensor_msgs/PointCloud2` | PointCloud2 |
+| IMU | `/imu/data` | `rviz_imu_plugin/Imu` | `imu_link` |
+| 흑백 | `/camera/image_raw` | Image | `camera_optical_frame` |
+| 스테레오 왼쪽 | `/stereo/left/image_raw` | Image | `stereo_camera_left_optical_frame` |
+| 스테레오 오른쪽 | `/stereo/right/image_raw` | Image | `stereo_camera_right_optical_frame` |
+| RGBD 색상·깊이 | `/rgbd/image_raw`, `/rgbd/depth/image_raw` | Image | `rgbd_camera_optical_frame` |
+| RGBD 점군 | `/rgbd/points` | PointCloud2, RGB8 색상 | `rgbd_camera_optical_frame` |
+| 어안 | `/fisheye/image_raw` | Image | `fisheye_camera_optical_frame` |
+| 2D 라이다 | `/scan` | LaserScan | `lidar_2d_link` |
+| 3D 라이다 | `/points` | PointCloud2, AxisColor 색상 | `lidar_3d_link` |
 
-CameraInfo는 이미지와 같은 namespace의 `/camera_info`에 있다. RGBD depth 정보는 `/rgbd/depth/camera_info`에 있다. fisheye 영상은 Gazebo의 `equidistant` 렌즈로 렌더링되지만 Humble camera plugin의 CameraInfo는 `plumb_bob`/pinhole 형식이므로 정밀 보정값으로 사용하지 않는다. stereo 출력은 동기화된 left/right raw 영상과 물리 baseline을 제공하지만, 정확한 disparity 계산에는 별도 calibration·rectification 단계가 필요하다.
+영상과 같은 접두사의 `/camera_info`에서 보정값을 받는다. RGBD 깊이 보정은 `/rgbd/depth/camera_info`다. Classic RGBD 점군은 광학 좌표계의 **+Z 전방**이며, 라이다는 센서 링크의 **+X 전방**이다.
+
+스테레오 좌우 간격은 0.08 m다. 기본 오른쪽 `CameraInfo.p[3]`은 약 −22.170, 왼쪽은 0이다. 독립 카메라이므로 시차 계산 전에는 영상 타임스탬프를 확인한다. 어안 영상은 `equidistant` 렌즈지만 기본 CameraInfo는 핀홀 모델이므로 정밀 역투영에 사용하지 않는다.
 
 ```bash
-ros2 topic hz /imu/data
-ros2 topic hz /camera/image_raw
-ros2 topic hz /scan
-ros2 topic bw /points
-ros2 topic echo /scan --once --qos-reliability best_effort
+timeout 10s ros2 topic echo /scan --field header --once \
+  --qos-reliability best_effort
+timeout 10s ros2 topic echo /rgbd/depth/image_raw --field encoding --once \
+  --qos-reliability best_effort
+timeout 10s ros2 topic hz /imu/data
+timeout 10s ros2 topic bw /points
 ```
 
-## Gazebo Classic plugin 파일
+깊이 영상의 encoding은 `32FC1`, 단위는 m다. 계속 출력하는 명령은 10초 뒤 종료된다. `timeout`의 코드 124는 관찰 시간 종료를 뜻한다. `echo --once`가 아무 값도 받지 못했다면 토픽·프로필·일시 정지·QoS를 확인한다.
 
-| 기능 | library |
+## Gazebo Classic 플러그인
+
+| 기능 | 라이브러리 |
 | --- | --- |
-| differential drive | `libgazebo_ros_diff_drive.so` |
-| Ackermann drive | `libgazebo_ros_ackermann_drive.so` |
-| joint states | `libgazebo_ros_joint_state_publisher.so` |
+| 차동 구동 | `libgazebo_ros_diff_drive.so` |
+| Ackermann 구동 | `libgazebo_ros_ackermann_drive.so` |
+| 관절 상태 | `libgazebo_ros_joint_state_publisher.so` |
 | IMU | `libgazebo_ros_imu_sensor.so` |
-| mono/stereo/RGBD/fisheye | `libgazebo_ros_camera.so` |
-| 2D/3D ray sensor | `libgazebo_ros_ray_sensor.so` |
-| 이 과정의 custom path | `libground_truth_path_plugin.so` |
-
-### 센서 Xacro include와 재사용 형식
-
-센서 구현은 `urdf/sensors/` 아래에서 종류별 macro로 분리하고, 최상위 로봇 Xacro는 필요한
-파일을 include한 뒤 장착 위치와 출력 설정만 전달한다. 다음 코드는 실제
-`sensor_bot.urdf.xacro`와 같은 조합 형식을 축약한 예이다.
-
-```xml
-<robot name="my_sensor_robot"
-       xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <!-- 각 센서 macro가 사용하는 장착 link와 optical frame helper를 먼저 읽는다. -->
-  <xacro:include filename="$(find gazebo_tutorial_description)/urdf/sensors/sensor_common.xacro"/>
-  <xacro:include filename="$(find gazebo_tutorial_description)/urdf/sensors/imu_sensor.xacro"/>
-  <xacro:include filename="$(find gazebo_tutorial_description)/urdf/sensors/mono_rgb_camera.xacro"/>
-  <xacro:include filename="$(find gazebo_tutorial_description)/urdf/sensors/lidar_2d.xacro"/>
-
-  <!-- base_link는 이 파일 앞부분에서 이미 정의했다고 가정한다. -->
-  <xacro:gazebo_imu_sensor
-    prefix="imu" parent="base_link" xyz="0 0 0.10"
-    topic="imu/data" update_rate="100.0"
-    angular_stddev="0.0002" linear_stddev="0.017"/>
-
-  <xacro:gazebo_mono_rgb_camera
-    prefix="front_camera" parent="base_link" xyz="0.30 0 0.08"
-    camera_name="front" format="R8G8B8"
-    width="640" height="480" update_rate="15.0"/>
-
-  <xacro:gazebo_lidar_2d
-    prefix="lidar" parent="base_link" xyz="0.10 0 0.22"
-    topic="scan" samples="720" min_range="0.12" max_range="15.0"/>
-</robot>
-```
-
-같은 macro를 다시 호출할 때는 `prefix`를 반드시 다르게 정한다. `prefix`에서 sensor link,
-joint, Gazebo sensor/plugin 이름이 파생되므로 중복되면 Xacro는 전개되어도 URDF 이름과
-Gazebo entity가 충돌한다.
-
-| macro | 위치·이름 parameter | 핵심 동작 parameter |
-| --- | --- | --- |
-| `gazebo_imu_sensor` | `prefix`, `parent`, `xyz`, `rpy`, `topic` | `update_rate`, `angular_stddev`, `linear_stddev` |
-| `gazebo_mono_rgb_camera` | `prefix`, `parent`, `xyz`, `camera_name` | `format`, `width`, `height`, `horizontal_fov`, `near`, `far`, `image_noise_stddev` |
-| `gazebo_stereo_camera` | `prefix`, `parent`, `xyz`, `camera_name` | `baseline`, `width`, `height`, `update_rate`, `image_noise_stddev` |
-| `gazebo_rgbd_camera` | `prefix`, `parent`, `xyz`, `camera_name` | `min_depth`, `max_depth`, `width`, `height`, `image_noise_stddev`(색상 채널 잡음) |
-| `gazebo_fisheye_camera` | `prefix`, `parent`, `xyz`, `camera_name` | `horizontal_fov`, `lens_type`, `cutoff_angle`, `env_texture_size` |
-| `gazebo_lidar_2d` | `prefix`, `parent`, `xyz`, `topic` | `samples`, 각도·거리 범위, `range_resolution`, `noise_stddev` |
-| `gazebo_lidar_3d` | `prefix`, `parent`, `xyz`, `topic` | 수평·수직 sample/각도, 거리 범위, `update_rate` |
-
-macro의 기본값과 전체 parameter는 `ros2_ws/src/gazebo_tutorial_description/urdf/sensors/`
-아래 해당 파일의 `params="..."` 선언을 최종 기준으로 확인한다.
-
-플러그인 탐색 상태는 다음 명령으로 확인한다.
+| 카메라 | `libgazebo_ros_camera.so` |
+| 2D/3D 라이다 | `libgazebo_ros_ray_sensor.so` |
+| 직접 만든 기준 궤적 | `libground_truth_path_plugin.so` |
 
 ```bash
-echo "$GAZEBO_PLUGIN_PATH" | tr ':' '\n'
-find $(ros2 pkg prefix gazebo_plugins) -name 'libgazebo_ros_*.so' | sort
-find $(ros2 pkg prefix gazebo_tutorial_plugins) \
+find "$(ros2 pkg prefix gazebo_plugins)/lib" -name 'libgazebo_ros_*.so'
+find "$(ros2 pkg prefix gazebo_tutorial_plugins)/lib" \
   -name 'libground_truth_path_plugin.so'
 ```
 
-## 모델·world 정적 검사
+직접 만든 플러그인은 `package.xml`의 `<gazebo_ros plugin_path="${prefix}/../../lib"/>`로 탐색 경로를 등록한다. `${prefix}`는 이 설정에서 패키지의 share 디렉터리다. 자세한 빌드·오류 확인은 [플러그인 장](07_custom_plugin.md)을 참고한다.
+
+## 모델·월드 정적 검사
 
 ```bash
 cd ~/robotics-sim-tutorial-kr/ros2_ws
-
 for model in diffbot rover_diff rover_ackermann sensor_bot; do
-  xacro src/gazebo_tutorial_description/urdf/${model}.urdf.xacro \
-    > /tmp/${model}.urdf
-  check_urdf /tmp/${model}.urdf
+  xacro "src/gazebo_tutorial_description/urdf/${model}.urdf.xacro" \
+    > "/tmp/${model}.urdf"
+  check_urdf "/tmp/${model}.urdf"
 done
-
+for profile in all cameras lidars minimal; do
+  xacro src/gazebo_tutorial_description/urdf/sensor_bot.urdf.xacro \
+    "sensor_profile:=${profile}" > "/tmp/sensor_bot_${profile}.urdf"
+  check_urdf "/tmp/sensor_bot_${profile}.urdf"
+done
 gz sdf -k src/gazebo_tutorial_bringup/worlds/empty.world
 gz sdf -k src/gazebo_tutorial_bringup/worlds/sensor.world
 ```
 
-센서 profile도 각각 전개한다.
-
-```bash
-for profile in all cameras lidars minimal; do
-  xacro \
-    src/gazebo_tutorial_description/urdf/sensor_bot.urdf.xacro \
-    sensor_profile:=${profile} \
-    > /tmp/sensor_bot_${profile}.urdf
-  check_urdf /tmp/sensor_bot_${profile}.urdf
-done
-```
-
-## ROS graph 진단
-
-```bash
-ros2 node list
-ros2 topic list -t
-ros2 topic info /odom --verbose
-ros2 topic info /points --verbose
-ros2 param get /robot_state_publisher use_sim_time
-ros2 param get /odom_to_path use_sim_time
-```
-
-한 메시지만 기다릴 때 무한정 멈추지 않도록 `timeout`을 함께 사용할 수 있다.
-
-```bash
-timeout 5s ros2 topic echo /odom --once
-timeout 5s ros2 topic echo /scan --once \
-  --qos-reliability best_effort
-```
+URDF에서는 파싱 성공과 링크 트리, SDF에서는 검사 성공을 확인한다. 이는 문법 검사이며 실제 주행·센서 측정·RViz 표시는 별도로 검증해야 한다.
 
 ## 종료와 재실행
 
-launch를 실행한 터미널에서 `Ctrl-C`를 한 번 누르고 종료 로그를 기다린다. 그래도 이전 프로세스가 의심되면 먼저 읽기 전용으로 확인한다.
+키보드 조종에서 `k`로 정지한 뒤 키보드 노드를 종료하고, Gazebo를 실행한 터미널에서도 `Ctrl+C`를 누른다. 종료 로그를 기다린 뒤 필요하면 남은 프로세스를 조회한다.
 
 ```bash
 pgrep -af 'gzserver|gzclient|robot_state_publisher|rviz2'
 ros2 node list
 ```
 
-Gazebo GUI의 **Reset Model Poses**는 pose만 되돌리고, **Reset World** 또는 simulation reset은 시간과 상태를 더 넓게 되돌린다. 시간 stamp가 뒤로 가면 이 저장소의 Path node/plugin은 이전 궤적을 비운다.
-
-빌드 산출물을 완전히 새로 만들 필요가 있을 때만 workspace의 정확한 경로를 확인한 후 `build/`, `install/`, `log/`를 지우고 다시 빌드한다. 일상적인 URDF/launch 변경은 `--symlink-install` 덕분에 전체 삭제가 필요하지 않다.
+Xacro와 실행 파일을 바꿨다면 다시 실행한다. C++ 소스나 설치 설정을 바꿨다면 먼저 다시 빌드한다. 매번 `build/`, `install/`, `log/`를 삭제할 필요는 없다. Gazebo 초기화로 메시지 시각이 뒤로 가면 이 저장소의 Path 노드·플러그인은 이전 궤적을 비운다.

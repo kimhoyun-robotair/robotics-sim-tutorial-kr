@@ -54,6 +54,17 @@ TEST(PathRecorderConfig, ClampsExtremeValidRatesWithoutOverflow)
   EXPECT_EQ(config.PublishPeriod(), std::chrono::nanoseconds::max());
 }
 
+TEST(PathRecorderConfig, CannotRelabelWorldPosesWithoutTransformingThem)
+{
+  PathRecorderConfig config;
+  config.frame = "odom";
+  EXPECT_FALSE(config.IsValid());
+  config.frame = "map";
+  EXPECT_FALSE(config.IsValid());
+  config.frame = "world";
+  EXPECT_TRUE(config.IsValid());
+}
+
 TEST(SimulationRateGate, UsesSimulationTimeInsteadOfCallbackCount)
 {
   SimulationRateGate gate(std::chrono::milliseconds{100});

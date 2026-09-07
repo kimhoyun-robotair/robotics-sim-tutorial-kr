@@ -1,103 +1,88 @@
 # gazebo_tutorial_bringup
 
-Gazebo Classic 서버, Xacro 변환, `robot_state_publisher`, model spawn,
-wheel odometry Path 변환, RViz를 한 번에 시작하는 launch 패키지다.
+Gazebo Classic 11 서버, 로봇 생성, TF, 주행 궤적, RViz를 함께 실행하는 ROS 2 Humble 패키지다.
 
-## 빌드
+## 1. 빌드
+
+[설치 안내](../../../docs/01_setup.md)를 마친 뒤 **터미널 A**에서 실행한다.
 
 ```bash
-cd ~/gazebo-sim-tutorial-kr/ros2_ws
-rosdep install --from-paths src --ignore-src -r -y
+source /opt/ros/humble/setup.bash
+cd ~/robotics-sim-tutorial-kr/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
 colcon build --symlink-install
 source install/setup.bash
 ```
 
-## 실행
+## 2. 로봇 하나 실행
+
+다음 표에서 **하나만** 골라 실행한다. 기본 토픽과 TF를 공유하므로 여러 모델을 동시에 실행하면 충돌한다.
+
+| 모델 | 명령 |
+| --- | --- |
+| 바퀴 두 개와 보조 바퀴 | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` |
+| 4륜 스키드·차동 구동 | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` |
+| 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` |
+| 센서 로봇 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` |
+
+`Successfully spawned entity` 로그와 Gazebo·RViz 창을 확인한다. 다른 모델로 바꾸려면 실행 중인 터미널에서 `Ctrl+C`를 누르고 종료를 기다린다.
+
+실행 파일은 Xacro를 전개해 `robot_description`으로 전달하고, `robot_state_publisher`와 `spawn_entity.py`를 시작한다. `odom_to_path` 노드가 `/odom`의 위치를 누적해 `/wheel_odom_path`를 발행한다.
+
+## 3. 별도 터미널에서 조종·확인
+
+**터미널 B**에서 환경을 읽고 키보드 조종을 시작한다.
 
 ```bash
-# 2륜 + caster
-ros2 launch gazebo_tutorial_bringup diffbot.launch.py
-
-# 4륜 differential/skid steering
-ros2 launch gazebo_tutorial_bringup rover_diff.launch.py
-
-# 4륜 Ackermann steering
-ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py
-
-# 센서 로봇. 기본 sensor_profile은 all, 기본 world는 sensor.world
-ros2 launch gazebo_tutorial_bringup sensors.launch.py
-
-# 새 Xacro를 같은 파이프라인으로 빠르게 실행
-ros2 launch gazebo_tutorial_bringup simulation.launch.py \
-  xacro_file:=my_robot.urdf.xacro entity_name:=my_robot
-```
-
-각 launch는 `gazebo_ros`의 `gazebo.launch.py`로 Gazebo 11을 띄운다. 이어서 Xacro를
-`robot_description`으로 변환하고, `robot_state_publisher`와 `spawn_entity.py`를 실행한다.
-`gazebo_tutorial_tools/odom_to_path`가 `/odom`을 `/wheel_odom_path`로 누적하며 RViz는
-각 로봇에 맞는 설정을 자동으로 불러온다.
-
-custom ground-truth 플러그인의 `world` frame Path도 같은 RViz에서 비교할 수 있도록
-기본 launch는 `world → odom` static TF를 발행한다. encoder odometry가 0에서 시작하므로
-모든 로봇의 spawn `x`, `y`, `yaw`를 변환에 반영하며, offset spawn에서도 두 궤적의
-원점이 맞는다. 기존 TF가 이 변환을 소유한다면 `publish_world_odom_tf:=false`로 끈다.
-
-Gazebo Classic의 built-in Ackermann 플러그인은 wheel encoder가 아니라 world pose를
-Odometry로 계산한다. `rover_ackermann.launch.py`는 이 출력을 `/ground_truth/odom`으로
-분리하고 `ackermann_odom` 노드가 rear wheel position과 front steering angle을 적분해
-실제 wheel odometry `/odom`과 `odom → base_footprint` TF를 발행한다. 동시에 built-in
-world pose를 `/ground_truth_path`로 바꿔 빨간 선으로 비교한다.
-
-키보드 제어는 입력을 받아야 하므로 별도 터미널에서 실행한다.
-
-```bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source /opt/ros/humble/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
 
-## 자주 쓰는 launch 인자
+`i`는 전진, `u`는 전진하며 왼쪽 회전, `k`는 정지다. Ackermann은 제자리 회전할 수 없으므로 곡선 주행 키를 쓴다. 종료할 때는 `k`로 정지한 뒤 `Ctrl+C`를 누른다.
+
+**터미널 C**에서도 같은 환경 두 줄을 읽고 데이터를 확인한다.
 
 ```bash
-# GUI 없이 실행하고 RViz도 끄기
-ros2 launch gazebo_tutorial_bringup diffbot.launch.py gui:=false rviz:=false
-
-# 정지 상태로 시작하기
-ros2 launch gazebo_tutorial_bringup rover_diff.launch.py pause:=true
-
-# 카메라 센서만 생성하기
-ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras
-
-# 다른 world와 spawn pose 사용하기
-ros2 launch gazebo_tutorial_bringup diffbot.launch.py \
-  world:=/absolute/path/to/my.world x:=1.0 y:=-0.5 yaw:=1.57
+timeout 10s ros2 topic echo /odom --field header --once
+timeout 10s ros2 run tf2_ros tf2_echo odom base_footprint
 ```
 
-전체 인자는 다음 명령으로 확인한다.
+`frame_id: odom`과 연결된 TF가 나와야 한다. 계속 출력하는 명령은 `timeout`이 10초 뒤 끝낸다.
 
-```bash
-ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
-```
+## 자주 쓰는 실행 인자
 
 | 인자 | 기본값 | 설명 |
-|---|---:|---|
-| `gui` | `true` | Gazebo client 실행 여부. `false`면 headless |
-| `pause` | `false` | physics 정지 상태로 시작 |
-| `use_sim_time` | `true` | ROS 노드가 `/clock`을 사용 |
-| `rviz` | `true` | RViz 자동 실행 여부 |
-| `entity_name` | 로봇별 이름 | Gazebo 안에서 중복되지 않을 model 이름 |
-| `x`, `y`, `z`, `yaw` | `0, 0, 0.1, 0` | spawn pose |
-| `odom_topic` | `/odom` | Path 변환 입력 |
-| `path_topic` | `/wheel_odom_path` | RViz Path 출력 |
-| `ground_truth_odom_topic` | `/ground_truth/odom` | Ackermann world-pose 입력 |
-| `ground_truth_path_topic` | `/ground_truth_path` | Ackermann 비교 Path 출력 |
-| `path_frame` | 빈 값 | 비어 있으면 Odometry frame 사용 |
-| `max_points` | `2000` | Path가 유지할 최대 pose 수 |
-| `publish_world_odom_tf` | `true` | ground truth 비교용 `world → odom` static TF |
-| `ackermann_publish_tf` | `true` | Ackermann wheel odometry의 `odom → base_footprint` TF |
-| `sensor_profile` | 로봇별 값 | `all`, `cameras`, `lidars`, `minimal` |
+| --- | --- | --- |
+| `gui` | `true` | Gazebo 화면인 `gzclient` 실행 여부 |
+| `rviz` | `true` | RViz 실행 여부 |
+| `pause` | `false` | 물리 계산을 일시 정지한 상태로 시작 |
+| `use_sim_time` | `true` | ROS 노드가 Gazebo의 `/clock`을 사용 |
+| `entity_name` | 모델별 이름 | Gazebo 모델 이름 |
+| `x`, `y`, `z`, `yaw` | `0, 0, 0.1, 0` | 모델 생성 위치와 방향 |
+| `world` | 모델별 기본 월드 | 다른 `.world` 파일의 절대 경로 |
+| `odom_topic` / `path_topic` | `/odom` / `/wheel_odom_path` | 궤적 노드의 입력·출력 |
+| `path_frame` | 빈 문자열 | 비어 있으면 입력 프레임 사용. 좌표 변환 기능은 없음 |
+| `max_points` | `2000` | 누적 궤적의 최대 점 수 |
+| `sensor_profile` | 센서 실행은 `all` | `all`, `cameras`, `lidars`, `minimal` |
+| `publish_world_odom_tf` | `true` | 생성 위치를 반영한 `world → odom` 고정 TF |
+| `ackermann_publish_tf` | `true` | Ackermann 오도메트리의 TF 발행 |
+| `ground_truth_odom_topic` | `/ground_truth/odom` | Ackermann의 월드 기준 위치 입력 |
+| `ground_truth_path_topic` | `/ground_truth_path` | Ackermann의 기준 궤적 출력 |
 
-센서 전용 `sensor.world`에는 서로 다른 거리와 색의 box, cylinder, wall이 있어 Camera와
-LiDAR를 시작하자마자 확인할 수 있다. 센서 설정은 `/imu/data`, `/camera/image_raw`, stereo/RGBD/fisheye 이미지,
-`/scan`, `/points`, `/rgbd/points`를 한 화면에서 확인하도록 준비되어 있다. RViz가 늦게
-시작되어도 궤적이 바로 보이도록 Path 출력은 Reliable + Transient Local QoS를 쓴다.
+예를 들어 카메라 없이 거리 센서를 실습하려면 다음 명령을 쓴다.
+
+```bash
+ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars
+```
+
+GUI 없이 실행하려면 `gui:=false rviz:=false`를 추가한다. 카메라는 GUI를 꺼도 OpenGL 렌더링 환경이 필요하다. 전체 인자와 현재 기본값은 다음 명령으로 확인한다.
+
+```bash
+ros2 launch gazebo_tutorial_bringup sensors.launch.py --show-args
+```
+
+`empty.world`와 `sensor.world`는 지면·조명을 파일 안에 정의하므로 외부 모델 다운로드가 필요 없다. 센서 월드에는 색상과 거리가 다른 상자·원통·벽이 있다. 센서 RViz는 `world`, 기본 주행 RViz는 `odom`을 고정 프레임으로 사용한다.
+
+Ackermann 내장 플러그인의 `/ground_truth/odom`은 바퀴 엔코더가 아닌 Gazebo의 실제 위치다. 별도 `ackermann_odom` 노드가 뒷바퀴 회전량과 앞바퀴 조향각으로 `/odom`을 계산하고, 뒤 차축에서 차체 중심까지 0.28 m의 차이도 반영한다. 자세한 비교는 [TF·RViz 실습](../../../docs/06_tf_rviz.md)을 참고한다.

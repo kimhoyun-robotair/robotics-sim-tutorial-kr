@@ -33,12 +33,12 @@
   </xacro:macro>
 
   <!-- REP-103 optical frame은 +Z 전방, +X 오른쪽, +Y 아래쪽을 사용한다. -->
-  <xacro:macro name="sensor_optical_frame" params="frame_name parent">
+  <xacro:macro name="sensor_optical_frame" params="frame_name parent xyz:='0 0 0'">
     <link name="${frame_name}"/>
     <joint name="${frame_name}_joint" type="fixed">
       <parent link="${parent}"/>
       <child link="${frame_name}"/>
-      <origin xyz="0 0 0" rpy="${-pi / 2.0} 0 ${-pi / 2.0}"/>
+      <origin xyz="${xyz}" rpy="${-pi / 2.0} 0 ${-pi / 2.0}"/>
     </joint>
   </xacro:macro>
 </robot>

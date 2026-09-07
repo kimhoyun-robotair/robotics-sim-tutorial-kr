@@ -53,7 +53,7 @@
     <gazebo reference="laser">
       <material>Gazebo/Grey</material>
       <sensor type="ray" name="hokuyo_sensor">
-        <pose>0 0 0.0124 0 0 0</pose>
+        <pose>0 0 0 0 0 0</pose>
         <visualize>false</visualize>
         <update_rate>40</update_rate>
         <ray>
@@ -70,7 +70,7 @@
             <max>10.0</max>
             <resolution>0.01</resolution>
           </range>
-          <noise>
+          <noise type="gaussian">
             <mean>0.0</mean>
             <stddev>0.01</stddev>
           </noise>
@@ -80,6 +80,7 @@
             <remapping>~/out:=scan</remapping>
           </ros>
           <output_type>sensor_msgs/LaserScan</output_type>
+          <frame_name>laser</frame_name>
         </plugin>
       </sensor>
     </gazebo>
@@ -99,12 +100,6 @@
           <joint_name>left_steering_hinge_joint</joint_name>
           <joint_name>right_steering_hinge_joint</joint_name>
 
-      </plugin>
-      <plugin name="gazebo_ros_joint_pose_trajectory"
-              filename="libgazebo_ros_joint_pose_trajectory.so">
-          <ros>
-          </ros>
-          <update_rate>2</update_rate>
       </plugin>
   </gazebo>
 
@@ -136,13 +131,13 @@
 
       <!-- Max absolute steer angle for tyre in radians-->
       <!-- Any cmd_vel angular z greater than this would be capped -->
-      <max_steer>1.01</max_steer>
+      <max_steer>0.6</max_steer>
 
       <!-- Max absolute steering angle of steering wheel -->
       <max_steering_angle>6.85</max_steering_angle>
 
       <!-- Max absolute linear speed in m/s -->
-      <max_speed>20</max_speed>
+      <max_speed>2.0</max_speed>
 
       <!-- PID tuning -->
       <left_steering_pid_gain>10 0 0</left_steering_pid_gain>
@@ -153,9 +148,10 @@
       <linear_velocity_i_range>0 0</linear_velocity_i_range>
 
       <!-- output -->
-      <publish_odom>false</publish_odom>
-      <publish_odom_tf>false</publish_odom_tf>
-      <publish_wheel_tf>true</publish_wheel_tf>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <!-- robot_state_publisher owns joint TF, from simulated joint_states. -->
+      <publish_wheel_tf>false</publish_wheel_tf>
       <publish_distance>true</publish_distance>
 
       <odometry_frame>odom</odometry_frame>

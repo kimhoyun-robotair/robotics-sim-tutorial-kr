@@ -1,12 +1,12 @@
-# 2륜 차동구동 로봇: 모델링부터 wheel odom 궤적까지
+# 2륜 차동구동 로봇: 만들고 움직여 궤적 확인하기
 
-이번 장에서는 두 개의 구동 바퀴와 수동 caster로 이루어진 `diffbot`을 직접 살펴보고 Gazebo Classic 11에서 움직인다. 키보드로 `/cmd_vel`을 보내고, 바퀴 회전량을 적분한 `/odom`과 TF를 검증한 뒤 RViz에서 이동 궤적을 확인하는 것이 목표다.
+이번 장에서는 두 개의 구동 바퀴와 자유롭게 방향을 바꾸는 보조 바퀴(캐스터)로 이루어진 `diffbot`을 직접 살펴보고 Gazebo Classic 11에서 움직인다. 키보드로 `/cmd_vel`을 보내고, 바퀴 회전량을 적분한 `/odom`과 TF를 검증한 뒤 RViz에서 이동 궤적을 확인하는 것이 목표다.
 
 이 장을 마치면 다음을 할 수 있다.
 
 - 링크의 `visual`, `collision`, `inertial`이 각각 왜 필요한지 설명한다.
 - 바퀴의 크기와 간격을 `libgazebo_ros_diff_drive.so` 설정에 일치시킨다.
-- `/cmd_vel` → 바퀴 조인트 → `/odom` → TF/Path로 이어지는 데이터 흐름을 진단한다.
+- `/cmd_vel` → 바퀴 조인트 → `/odom` → TF·Path로 이어지는 데이터 흐름을 진단한다.
 - Gazebo에서 측정한 실제 조인트 각도를 `/joint_states`와 RViz에서 확인한다.
 
 > 이 저장소의 `Humble` 브랜치는 Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11을 대상으로 한다. Gazebo Classic은 지원이 종료된 소프트웨어이므로 새 프로젝트에는 최신 Gazebo도 검토하되, 이 장에서는 Humble의 검증 가능한 기준 환경을 그대로 사용한다.
@@ -18,10 +18,12 @@
 ```bash
 source /opt/ros/humble/setup.bash
 cd ~/robotics-sim-tutorial-kr/ros2_ws
-rosdep install --from-paths src --ignore-src -r -y
+rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
 colcon build --symlink-install
 source install/setup.bash
 ```
+
+빌드 요약에 실패한 패키지가 없어야 한다. 이 장의 XML·Python 코드는 구조를 설명하는 **발췌 예제**이며, 파일에 붙여 넣지 않아도 저장소의 전체 모델을 그대로 실행할 수 있다.
 
 필요한 핵심 패키지는 `gazebo_ros_pkgs`, `xacro`, `robot_state_publisher`, `teleop_twist_keyboard`, `rviz2`다. 패키지를 찾지 못한다면 다음과 같이 설치한다.
 
@@ -43,7 +45,7 @@ sudo apt install \
 모델 원본은 다음 두 파일이다.
 
 - `ros2_ws/src/gazebo_tutorial_description/urdf/common.xacro`: 재사용할 색상, 관성, 접촉, 바퀴 매크로
-- `ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro`: 차체, 바퀴, caster, Gazebo 플러그인
+- `ros2_ws/src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro`: 차체, 바퀴, 보조 바퀴(캐스터), Gazebo 플러그인
 
 메인 Xacro는 공통 매크로를 먼저 불러오고, 형상과 플러그인이 함께 사용할 치수를 한곳에 선언한다. 실제 파일의 시작 부분은 다음과 같다.
 
@@ -72,7 +74,7 @@ sudo apt install \
 </robot>
 ```
 
-`xacro:include`는 다른 파일에 정의한 매크로를 현재 모델에서 사용할 수 있게 한다. `xacro:property`는 단순 문자열 복사를 넘어 `${2.0 * wheel_radius}`와 같은 산술식에도 사용할 수 있다. 바퀴 반지름이나 간격을 수정할 때 geometry와 플러그인 값을 따로 고치지 않도록 같은 property를 재사용하는 것이 핵심이다.
+`xacro:include`는 다른 파일에 정의한 매크로를 현재 모델에서 사용할 수 있게 한다. `xacro:property`는 단순 문자열 복사를 넘어 `${2.0 * wheel_radius}`와 같은 산술식에도 사용할 수 있다. 바퀴 반지름이나 간격을 수정할 때 형상과 플러그인 값을 따로 고치지 않도록 같은 속성를 재사용하는 것이 핵심이다.
 
 좌표축은 REP-103을 따른다. `+x`는 전방, `+y`는 좌측, `+z`는 위쪽이며 길이는 m, 질량은 kg, 각도는 rad 단위다.
 
@@ -80,18 +82,18 @@ sudo apt install \
 
 ```mermaid
 graph TD
-  W["world"] -->|"static initial pose"| O["odom"]
-  O -->|"Gazebo diff drive TF"| BF["base_footprint"]
-  BF -->|"fixed: z = 0.12 m"| B["base_link"]
+  W["world"] -->|"초기 위치 · 고정 변환"| O["odom"]
+  O -->|"차동구동 TF"| BF["base_footprint"]
+  BF -->|"고정 · z = 0.12 m"| B["base_link"]
   B -->|"continuous +y"| LW["left_wheel_link"]
   B -->|"continuous +y"| RW["right_wheel_link"]
   B -->|"continuous +z"| CS["caster_swivel_link"]
   CS -->|"continuous +y"| CW["caster_wheel_link"]
 ```
 
-`base_footprint`는 바닥에 투영된 2D 기준 프레임이다. 질량과 충돌 형상을 가진 실제 차체 프레임 `base_link`는 그보다 0.12 m 위에 있다. 내비게이션과 wheel odometry는 차체의 roll/pitch가 아니라 평면 위치를 표현하는 `base_footprint`를 기준으로 삼는다.
+`base_footprint`는 바닥에 투영된 2D 기준 프레임이다. 질량과 충돌 형상을 가진 실제 차체 프레임 `base_link`는 그보다 0.12 m 위에 있다. 내비게이션과 휠 오도메트리는 차체의 roll/pitch가 아니라 평면 위치를 표현하는 `base_footprint`를 기준으로 삼는다.
 
-이 관계는 다음 URDF 조각으로 구성한다. `base_footprint`는 TF 기준점이므로 geometry와 관성을 두지 않고, `base_link`에 물리 속성을 모은다.
+이 관계는 다음 URDF 조각으로 구성한다. `base_footprint`는 TF 기준점이므로 형상과 관성을 두지 않고, `base_link`에 물리 속성을 모은다.
 
 ```xml
 <link name="base_footprint"/>
@@ -120,9 +122,9 @@ graph TD
 </link>
 ```
 
-두 구동 바퀴의 중심 간격은 0.36 m이고 반지름은 0.09 m다. 바퀴 실린더의 기본 축은 `z`이므로 visual, collision, inertial을 x축으로 90도 회전하고, 조인트 회전축은 로봇의 `+y`로 둔다. 세 요소 중 하나만 다른 방향으로 두면 화면은 맞아 보여도 접촉이나 회전 관성이 잘못된다.
+두 구동 바퀴의 중심 간격은 0.36 m이고 반지름은 0.09 m다. 바퀴 실린더의 기본 축은 `z`이므로 표시 형상, 충돌 형상, 관성을 x축으로 90도 회전하고, 조인트 회전축은 로봇의 `+y`로 둔다. 세 요소 중 하나만 다른 방향으로 두면 화면은 맞아 보여도 접촉이나 회전 관성이 잘못된다.
 
-`common.xacro`의 바퀴 매크로는 link와 joint를 한 단위로 생성한다. 아래 조각처럼 visual과 collision에 같은 회전을 적용하고 joint 축을 `0 1 0`으로 둔다.
+`common.xacro`의 바퀴 매크로는 링크와 조인트를 한 단위로 생성한다. 아래 조각처럼 표시 형상과 충돌 형상에 같은 회전을 적용하고 조인트 축을 `0 1 0`으로 둔다.
 
 ```xml
 <xacro:macro name="simple_wheel"
@@ -168,13 +170,13 @@ graph TD
   radius="${wheel_radius}" width="${wheel_width}" mass="${wheel_mass}"/>
 ```
 
-뒤쪽 caster는 단순한 구가 아니라 두 자유도를 갖는다.
+뒤쪽 보조 바퀴(캐스터)는 단순한 구가 아니라 두 자유도를 갖는다.
 
 - `caster_swivel_joint`: 수직축을 중심으로 자유롭게 방향을 바꾼다.
 - `caster_wheel_joint`: 수평축을 중심으로 굴러간다.
 - 바퀴 중심은 swivel 축보다 0.035 m 뒤에 있어 주행 중 접촉력이 방향을 정렬한다.
 
-두 자유도와 trail은 다음 두 joint에 그대로 드러난다. `caster_swivel_joint`에는 구동 플러그인을 연결하지 않으므로 접촉력에 따라 수동으로 회전한다.
+두 자유도와 trail은 다음 두 조인트에 그대로 드러난다. `caster_swivel_joint`에는 구동 플러그인을 연결하지 않으므로 접촉력에 따라 수동으로 회전한다.
 
 ```xml
 <joint name="caster_swivel_joint" type="continuous">
@@ -196,9 +198,9 @@ graph TD
 </joint>
 ```
 
-`caster_trail`이 양수인데 x 위치에 음수로 넣었으므로 바퀴 접촉점이 swivel 축보다 뒤쪽(`-x`)에 놓인다. trail을 0으로 두면 방향을 정렬하는 모멘트가 약해지고, 지나치게 크게 두면 후진 전환 때 caster가 큰 원을 그리며 차체를 밀 수 있다.
+`caster_trail`이 양수인데 x 위치에 음수로 넣었으므로 바퀴 접촉점이 swivel 축보다 뒤쪽(`-x`)에 놓인다. trail을 0으로 두면 방향을 정렬하는 모멘트가 약해지고, 지나치게 크게 두면 후진 전환 때 보조 바퀴(캐스터)가 큰 원을 그리며 차체를 밀 수 있다.
 
-### visual, collision, inertial
+### 표시 형상, 충돌 형상, 관성
 
 한 링크에는 목적이 다른 세 정보가 들어간다.
 
@@ -214,7 +216,7 @@ graph TD
 I_{xx}=\frac{m}{12}(y^2+z^2)
 \]
 
-관성값을 임의의 매우 큰 수로 넣으면 모델이 당장은 덜 흔들릴 수 있지만, 제어 응답과 접촉력이 왜곡된다. 먼저 질량과 형상에서 올바른 값을 계산하고, 그 다음 마찰과 감쇠를 조정하는 습관이 좋다.
+관성값을 임의의 큰 값으로 넣으면 모델이 당장은 덜 흔들릴 수 있지만, 제어 응답과 접촉력이 왜곡된다. 먼저 질량과 형상에서 올바른 값을 계산하고, 그다음 마찰과 감쇠를 조정하는 습관이 좋다.
 
 ### Xacro를 URDF로 펼쳐 보기
 
@@ -227,10 +229,10 @@ xacro src/gazebo_tutorial_description/urdf/diffbot.urdf.xacro \
 check_urdf /tmp/diffbot.urdf
 ```
 
-`check_urdf`가 없다면 `sudo apt install liburdfdom-tools`로 설치한다. 출력의 루트가 `base_footprint`이고 네 개의 continuous joint가 보이면 구조가 정상이다.
+`check_urdf`가 없다면 `sudo apt install liburdfdom-tools`로 설치한다. 출력의 루트가 `base_footprint`인지 확인한다. 조인트 이름과 타입은 다음 명령으로 확인할 수 있다. `continuous` 타입은 구동 바퀴 둘과 캐스터의 회전축 둘, 총 네 개다.
 
 ```bash
-grep -E '<(link|joint) name=' /tmp/diffbot.urdf
+rg '<(link|joint) name=' /tmp/diffbot.urdf
 ```
 
 ## 3. Differential Drive 플러그인 이해
@@ -282,31 +284,31 @@ grep -E '<(link|joint) name=' /tmp/diffbot.urdf
 |---|---:|---|
 | `left_joint`, `right_joint` | `left_wheel_joint`, `right_wheel_joint` | Gazebo가 속도를 줄 구동 조인트 |
 | `wheel_separation` | 0.36 m | 두 바퀴 중심 사이 거리 |
-| `wheel_diameter` | 0.18 m | URDF collision과 같은 바퀴 지름 |
+| `wheel_diameter` | 0.18 m | URDF 충돌 형상과 같은 바퀴 지름 |
 | ROS remapping `cmd_vel:=cmd_vel` | `/cmd_vel` | `Twist` 명령 입력 |
-| `odometry_source` | 0 | world pose가 아닌 바퀴 회전량 적분 |
+| `odometry_source` | 0 | 월드 기준 위치·자세가 아닌 바퀴 회전량 적분 |
 | ROS remapping `odom:=odom` | `/odom` | `nav_msgs/msg/Odometry` 출력 |
 | `odometry_frame` | `odom` | odometry 기준 프레임 |
-| `robot_base_frame` | `base_footprint` | odometry의 child frame |
+| `robot_base_frame` | `base_footprint` | odometry의 자식 프레임 |
 | `publish_odom_tf` | true | `odom → base_footprint` 동적 TF 발행 |
 | `publish_wheel_tf` | false | 바퀴 TF 중복 발행 방지 |
 
 플러그인과 ROS 노드가 맡는 데이터 흐름은 다음과 같다. `/odom`과
-`odom → base_footprint`는 diff-drive 플러그인이 만들고, 바퀴와 caster TF는
-joint-state 플러그인과 `robot_state_publisher`가 함께 만든다.
+`odom → base_footprint`는 차동구동 플러그인이 만들고, 바퀴와 보조 바퀴(캐스터) TF는
+조인트 상태 플러그인과 `robot_state_publisher`가 함께 만든다.
 
 ```mermaid
 flowchart TB
-  C["/cmd_vel"] --> D["diff-drive plugin"]
-  D --> J["left/right wheel joints"]
-  J --> O["/odom + odom TF"]
-  J --> S["/joint_states + link TF"]
-  O --> P["/wheel_odom_path in RViz"]
+  C["/cmd_vel"] --> D["차동구동 플러그인"]
+  D --> J["왼쪽·오른쪽 wheel joints"]
+  J --> O["/odom · odom TF"]
+  J --> S["/joint_states · 링크 TF"]
+  O --> P["RViz 주행 궤적"]
 ```
 
-`update_rate`는 플러그인의 제어·odometry 갱신 목표 주파수다. `max_wheel_torque`는 각 바퀴에 허용할 최대 토크이고, `max_wheel_acceleration`은 순간적인 속도 점프를 제한한다. 토크가 너무 작으면 정지 마찰을 이기지 못하고, 가속도 제한이 너무 크면 teleop 명령이 계단처럼 들어올 때 바퀴가 미끄러지기 쉽다. covariance 세 값은 센서 자체를 더 정확하게 만드는 값이 아니라 `/odom.pose.covariance`에 기록할 불확실성 선언이다.
+`update_rate`는 플러그인의 제어·odometry 갱신 목표 주파수다. `max_wheel_torque`는 각 바퀴에 허용할 최대 토크이고, `max_wheel_acceleration`은 순간적인 속도 점프를 제한한다. 토크가 너무 작으면 정지 마찰을 이기지 못하고, 가속도 제한이 너무 크면 teleop 명령이 갑자기 바뀔 때 바퀴가 미끄러지기 쉽다. covariance 세 값은 센서 자체를 더 정확하게 만드는 값이 아니라 `/odom.pose.covariance`에 기록할 불확실성 값이다.
 
-`publish_wheel_tf`를 끈 이유가 중요하다. 바퀴와 caster의 TF는 `/joint_states`를 구독하는 `robot_state_publisher`가 URDF 관절 구조에 따라 발행한다. diff-drive 플러그인까지 같은 TF를 발행하면 동일 child frame에 두 발행자가 생겨 RViz가 흔들리거나 TF 경고가 발생할 수 있다.
+`publish_wheel_tf`를 끈 이유가 중요하다. 바퀴와 보조 바퀴(캐스터)의 TF는 `/joint_states`를 구독하는 `robot_state_publisher`가 URDF 조인트 구조에 따라 발행한다. 차동구동 플러그인까지 같은 TF를 발행하면 동일 자식 프레임에 두 발행자가 생겨 RViz가 흔들리거나 TF 경고가 발생할 수 있다.
 
 Humble 플러그인의 실제 구현은 입력과 출력의 기본 ROS 이름 `cmd_vel`, `odom`을 만들고 `<ros>` 블록의 remapping을 적용한다. 토픽 이름을 바꿀 때는 오래된 예제의 `command_topic` 또는 `odometry_topic` 태그에 의존하지 말고 remapping을 사용한다.
 
@@ -338,7 +340,7 @@ caster_wheel_joint
 
 ## 4. Gazebo와 RViz 실행
 
-터미널 1에서 통합 launch를 실행한다.
+터미널 1에서 통합 실행 파일을 실행한다.
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -346,9 +348,9 @@ source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py
 ```
 
-기본값은 Gazebo GUI와 RViz를 모두 열고, 빈 world에 `diffbot`을 spawn하며, `robot_state_publisher`와 odometry-to-path 노드도 시작한다. 창을 열 수 없는 환경에서는 다음처럼 서버만 검사한다.
+기본값은 Gazebo GUI와 RViz를 모두 열고, 빈 월드에 `diffbot`을 생성하며, `robot_state_publisher`와 odometry-to-path 노드도 시작한다. 두 창이 열린 뒤 Gazebo에 로봇이 서 있고 RViz에 같은 모델이 보이는지 확인한다. 이 실행은 계속 켜 둔다.
 
-launch 내부에서는 Xacro를 문자열로 전개해 `robot_description`에 넣고, 같은 값을 `robot_state_publisher`와 `spawn_entity.py`가 공유한다. 핵심 구조는 다음과 같다.
+실행 파일 내부에서는 Xacro를 문자열로 전개해 `robot_description`에 넣고, 같은 값을 `robot_state_publisher`와 `spawn_entity.py`가 공유한다. 핵심 구조는 다음과 같다.
 
 ```python
 robot_description = ParameterValue(
@@ -375,6 +377,7 @@ odom_path = Node(
     package='gazebo_tutorial_tools',
     executable='odom_to_path',
     parameters=[{
+        'use_sim_time': ParameterValue(use_sim_time, value_type=bool),
         'odom_topic': odom_topic,
         'path_topic': path_topic,
         'path_frame': path_frame,
@@ -383,7 +386,9 @@ odom_path = Node(
 )
 ```
 
-`robot_state_publisher`는 `/robot_description`과 `/joint_states`를 이용해 `base_footprint` 아래 TF를 계산한다. `spawn_entity.py`는 동일한 description을 Gazebo entity로 만든다. `odom_to_path`는 플러그인의 `/odom`을 RViz용 `/wheel_odom_path`로 바꾼다. 세 노드가 서로 다른 모델 파일을 읽지 않으므로 TF와 시뮬레이션 형상이 어긋나는 문제를 줄일 수 있다.
+`robot_state_publisher`는 `robot_description` 파라미터의 URDF와 `/joint_states`를 이용해 `base_footprint` 아래 TF를 계산한다. `spawn_entity.py`는 동일한 description을 Gazebo entity로 만든다. `odom_to_path`는 플러그인의 `/odom`을 RViz용 `/wheel_odom_path`로 바꾼다. 세 노드가 서로 다른 모델 파일을 읽지 않으므로 TF와 시뮬레이션 형상이 어긋나는 문제를 줄일 수 있다.
+
+창을 열 수 없는 환경에서는 기존 실행을 `Ctrl+C`로 종료한 뒤 서버만 실행한다.
 
 ```bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py \
@@ -392,16 +397,20 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py \
 
 시뮬레이션을 일시 정지한 상태로 시작하고 싶다면 `pause:=true`를 추가한다. 멈춘 동안에는 `/clock`, `/odom`, `/joint_states`가 갱신되지 않는 것이 정상이다.
 
-### 인터페이스 계약 확인
+### 토픽과 메시지 형식 확인
 
-터미널 2를 열어 source한 뒤 확인한다.
+터미널 2에서 환경 설정을 읽고 토픽을 확인한다.
 
 ```bash
+source /opt/ros/humble/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 topic list | sort
 ros2 topic info /cmd_vel --verbose
 ros2 topic info /odom --verbose
 ros2 topic hz /joint_states
 ```
+
+주기가 몇 번 출력되면 `Ctrl+C`로 `hz`를 종료한다. 이때 터미널 1의 시뮬레이션은 계속 실행 중이어야 한다.
 
 최소한 다음 토픽이 보여야 한다.
 
@@ -417,7 +426,7 @@ ros2 topic hz /joint_states
 /wheel_odom_path
 ```
 
-`/cmd_vel`에는 diff-drive 플러그인 구독자가 하나 이상, `/odom`에는 플러그인 발행자가 하나 있어야 한다. 타입은 각각 `geometry_msgs/msg/Twist`, `nav_msgs/msg/Odometry`다.
+`/cmd_vel`에는 차동구동 플러그인 구독자가 하나 이상, `/odom`에는 플러그인 발행자가 하나 있어야 한다. 타입은 각각 `geometry_msgs/msg/Twist`, `nav_msgs/msg/Odometry`다.
 
 초기 odometry 한 메시지를 확인한다.
 
@@ -455,18 +464,32 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 | `k` | 정지 |
 | `q`/`z` | 선속도와 각속도를 함께 증가/감소 |
 
-키를 누를 때 Gazebo의 좌우 바퀴뿐 아니라 caster가 진행 방향으로 돌아가는지 관찰한다. 다른 터미널에서는 명령과 조인트 상태를 동시에 확인할 수 있다.
+키를 누를 때 Gazebo의 좌우 바퀴뿐 아니라 보조 바퀴(캐스터)가 진행 방향으로 돌아가는지 관찰한다. 터미널 2에서 조인트 상태 한 개를 확인할 수 있다. teleop이 실행 중인 터미널 3에는 다른 명령을 붙여 넣지 않는다.
 
 ```bash
-ros2 topic echo /cmd_vel
-ros2 topic echo /joint_states
+ros2 topic echo /joint_states --once
 ```
 
-직진 명령에서는 좌우 구동 바퀴의 velocity 부호가 같아야 한다. 제자리 회전에서는 부호가 반대여야 한다. caster 각도는 접촉력에 따라 수동으로 정렬되므로 명령값과 즉시 일치할 필요가 없다.
+직진 명령에서는 좌우 구동 바퀴의 velocity 부호가 같아야 한다. 제자리 회전에서는 부호가 반대여야 한다. 보조 바퀴(캐스터) 각도는 접촉력에 따라 수동으로 정렬되므로 명령값과 즉시 일치할 필요가 없다.
+
+### 키보드 없이 짧게 직진하기
+
+`teleop`을 `k`, `Ctrl+C` 순서로 종료한 뒤 터미널 2에서 다음을 실행한다. 한 토픽에 두 제어 명령이 섞이지 않도록 조종 프로그램은 하나만 사용한다.
+
+```bash
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.2}, angular: {z: 0.0}}"
+sleep 2
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.0}, angular: {z: 0.0}}"
+ros2 topic echo /odom --once
+```
+
+첫 명령은 0.2 m/s 전진, 마지막 명령은 정지다. Gazebo가 실제 시간과 비슷하게 실행되면 약 0.4 m 이동하지만 가속·마찰·실시간 계수에 따라 차이가 난다. 두 번째 명령의 속도를 0으로 보내는 단계까지 실행한다. 중간에 명령을 취소했다면 정지 명령을 직접 실행한다.
 
 ## 6. TF 검증
 
-TF는 보이는 로봇 모델과 odometry 궤적을 한 좌표계에 결합한다. 각 구간을 따로 검사하면 문제 지점을 빠르게 찾을 수 있다.
+TF는 보이는 로봇 모델과 odometry 궤적을 한 좌표계에 결합한다. 각 구간을 따로 검사하면 문제 지점을 빠르게 찾을 수 있다. 아래 명령은 **하나씩** 실행하고, 값이 몇 번 출력되면 `Ctrl+C`로 종료한 뒤 다음 명령으로 넘어간다.
 
 ```bash
 # bringup이 ground-truth 비교를 위해 발행하는 기준 TF
@@ -482,7 +505,7 @@ ros2 run tf2_ros tf2_echo base_footprint base_link
 ros2 run tf2_ros tf2_echo base_link left_wheel_link
 ```
 
-기본 spawn pose에서는 `world → odom`이 항등 변환이며 주행 중에도 고정이다. launch의 `x`, `y`, `yaw`를 바꾸면 bringup이 encoder odom의 초기 원점을 그 spawn pose에 맞춘다. `odom → base_footprint`의 x, y, yaw는 주행에 따라 변해야 한다. `base_footprint → base_link`의 translation z는 항상 약 0.12 m이고, 바퀴 TF의 quaternion은 회전에 따라 변한다.
+기본 생성 위치·자세에서는 `world → odom`이 항등 변환이며 주행 중에도 고정이다. 실행 파일의 `x`, `y`, `yaw`를 바꾸면 bringup이 엔코더 odom의 초기 원점을 그 생성 위치·자세에 맞춘다. `odom → base_footprint`의 x, y, yaw는 주행에 따라 변해야 한다. `base_footprint → base_link`의 translation z는 항상 약 0.12 m이고, 바퀴 TF의 quaternion은 회전에 따라 변한다.
 
 전체 TF 트리를 파일로 만들 수도 있다.
 
@@ -491,13 +514,13 @@ cd /tmp
 ros2 run tf2_tools view_frames
 ```
 
-생성된 `frames.pdf`에서 각 프레임의 부모가 앞의 다이어그램과 같은지 확인한다. 특히 `base_footprint`의 부모는 `odom` 하나뿐이어야 한다.
+생성된 `frames_날짜-시간.pdf`(도구 버전에 따라 `frames.pdf`)에서 각 프레임의 부모가 앞의 다이어그램과 같은지 확인한다. 특히 `base_footprint`의 부모는 `odom` 하나뿐이어야 한다. `view_frames`가 출력한 실제 PDF 파일명을 확인해 연다.
 
-## 7. RViz에서 wheel odom trajectory 보기
+## 7. RViz에서 휠 오도메트리 궤적 보기
 
-launch가 시작하는 `odom_to_path` 노드는 `/odom`의 pose를 누적해 `/wheel_odom_path`를 발행한다. 기본 RViz 설정은 다음을 표시한다.
+실행 파일이 시작하는 `odom_to_path` 노드는 `/odom`의 위치·자세를 누적해 `/wheel_odom_path`를 발행한다. 아래에서는 변환 노드와 화면 설정을 함께 확인한다.
 
-변환 노드가 하는 일은 좌표 변환이 아니라 동일 프레임의 pose를 시간순으로 담는 것이다. 실제 callback의 핵심은 다음과 같다.
+변환 노드가 하는 일은 좌표 변환이 아니라 동일 프레임의 위치·자세를 시간순으로 담는 것이다. 실제 콜백의 핵심은 다음과 같다.
 
 ```python
 source_frame = message.header.frame_id.strip()
@@ -515,15 +538,15 @@ path.poses = list(self._poses)
 self._publisher.publish(path)
 ```
 
-저장소 구현은 여기에 frame 불일치 거부, simulation time 역행 시 초기화, `deque(maxlen=max_points)`를 이용한 메모리 제한도 추가한다. `path_frame`을 바꾼다고 좌표가 변환되는 것은 아니므로 `/odom.header.frame_id`와 다른 값을 단순히 지정하면 안 된다.
+저장소 구현은 여기에 프레임 불일치 거부, 시뮬레이션 시간 역행 시 초기화, `deque(maxlen=max_points)`를 이용한 메모리 제한도 추가한다. `path_frame`을 바꾼다고 좌표가 변환되는 것은 아니므로 `/odom.header.frame_id`와 다른 값을 단순히 지정하면 안 된다.
 
 - Fixed Frame: `odom`
 - RobotModel: URDF와 `/joint_states` 기반 로봇 자세
 - TF: 좌표축과 부모-자식 관계
 - Path: `/wheel_odom_path`
-- Path: `/ground_truth_path` (Gazebo world pose 비교용)
+- Path: `/ground_truth_path` (Gazebo 월드 기준 위치·자세 비교용)
 
-RViz를 별도로 열었거나 Path가 보이지 않으면 왼쪽 아래 **Add → By topic → `/wheel_odom_path` → Path**를 선택하고 Fixed Frame을 `odom`으로 설정한다. Path의 Line Style은 `Billboards`, Line Width는 `0.03` 정도가 알아보기 쉽다.
+RViz를 별도로 열었거나 Path가 보이지 않으면 왼쪽 아래 **Add → By topic → `/wheel_odom_path` → Path**를 선택하고 Fixed Frame을 `odom`으로 설정한다. Path의 Line Style은 `Billboards`, Line Width는 `0.03` 정도가 알아보기 쉽다. `/robot_description`의 Durability Policy는 `Transient Local`, `/wheel_odom_path`와 `/ground_truth_path`도 `Transient Local`로 맞춘다. 파일에 저장된 기본 RViz 설정에는 이 값이 포함돼 있다.
 
 경로 토픽 자체도 확인한다.
 
@@ -534,14 +557,14 @@ ros2 topic echo /wheel_odom_path --once
 
 `/wheel_odom_path`의 `header.frame_id`가 `odom`이고, 주행할수록 `poses` 배열이 늘어나면 정상이다. 기본 최대 점 수는 2,000개라 장시간 실행해도 메모리가 끝없이 증가하지 않는다.
 
-`diffbot`에는 이 과정에서 직접 개발하는 `libground_truth_path_plugin.so`도 연결되어 있다. 이 플러그인은 바퀴 회전량을 적분하지 않고 Gazebo가 가진 실제 world pose를 `/ground_truth_path`로 발행한다. RViz에서는 world와 odom 사이의 기준 변환을 적용해 wheel odom 경로와 함께 표시한다.
+`diffbot`에는 이 과정에서 직접 개발하는 `libground_truth_path_plugin.so`도 연결되어 있다. 이 플러그인은 바퀴 회전량을 적분하지 않고 Gazebo가 가진 실제 월드 기준 위치·자세를 `/ground_truth_path`로 발행한다. RViz에서는 월드와 odom 사이의 기준 변환을 적용해 휠 오도메트리 경로와 함께 표시한다.
 
 ```bash
 ros2 topic info /ground_truth_path
 ros2 topic echo /ground_truth_path --once
 ```
 
-초기에는 두 경로가 거의 겹치지만, 미끄러짐이 누적되면 `/wheel_odom_path`와 `/ground_truth_path`가 벌어질 수 있다. 전자는 로봇이 encoder로 **추정한 경로**, 후자는 시뮬레이터만 알 수 있는 **비교 기준 경로**다. 실제 로봇에는 완전한 ground truth 토픽이 없다는 차이도 기억한다.
+초기에는 두 경로가 거의 겹치지만, 미끄러짐이 누적되면 `/wheel_odom_path`와 `/ground_truth_path`가 벌어질 수 있다. 전자는 로봇이 엔코더로 **추정한 경로**, 후자는 시뮬레이터만 알 수 있는 **비교 기준 경로**다. 실제 로봇에는 완전한 기준 위치 토픽이 없다는 차이도 기억한다.
 
 ### 사각형 궤적 실습
 
@@ -550,9 +573,9 @@ ros2 topic echo /ground_truth_path --once
 3. 위 동작을 네 번 반복한다.
 4. Gazebo의 실제 시작 위치와 RViz Path의 마지막 위치를 비교한다.
 
-완벽한 정사각형으로 닫히지 않아도 오류라고 단정하지 않는다. 이번 모델은 `odometry_source=0`으로 바퀴 회전량을 적분한다. 접촉 미끄러짐, caster 전환 저항, 키를 누른 시간의 차이는 wheel odom에 누적 오차를 만든다. 바로 이 차이가 실제 로봇에서 encoder odometry만으로 절대 위치를 알 수 없는 이유다.
+완벽한 정사각형으로 닫히지 않아도 오류라고 단정하지 않는다. 이번 모델은 `odometry_source=0`으로 바퀴 회전량을 적분한다. 접촉 미끄러짐, 보조 바퀴(캐스터) 전환 저항, 키를 누른 시간의 차이는 휠 오도메트리에 누적 오차를 만든다. 바로 이 차이가 실제 로봇에서 엔코더 odometry만으로 절대 위치를 알 수 없는 이유다.
 
-좀 더 긴 궤적을 보관하려면 launch 인자를 바꾼다.
+좀 더 긴 궤적을 보관하려면 현재 조종·시뮬레이션을 종료하고 인자를 바꿔 다시 실행한다.
 
 ```bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py max_points:=5000
@@ -562,27 +585,27 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py max_points:=5000
 
 아래 항목을 모두 확인하면 실습이 끝난다.
 
-- Gazebo에 차체, 구동 바퀴 두 개, swivel caster가 바닥을 뚫지 않고 나타난다.
+- Gazebo에 차체, 구동 바퀴 두 개, swivel 보조 바퀴(캐스터)가 바닥을 뚫지 않고 나타난다.
 - `/cmd_vel`에 `Twist`를 보내면 전진과 제자리 회전이 모두 가능하다.
 - `/odom`의 `frame_id`는 `odom`, `child_frame_id`는 `base_footprint`다.
 - `odom → base_footprint → base_link → wheels/caster` TF가 끊기지 않는다.
-- `/joint_states`에 네 continuous joint의 실제 각도가 포함된다.
+- `/joint_states`에 네 연속 회전 조인트의 실제 각도가 포함된다.
 - RViz의 `/wheel_odom_path`가 주행에 따라 늘어나고 RobotModel과 같은 위치에서 움직인다.
-- RViz의 `/ground_truth_path`와 wheel odom 경로를 비교해 누적 오차를 설명할 수 있다.
+- RViz의 `/ground_truth_path`와 휠 오도메트리 경로를 비교해 누적 오차를 설명할 수 있다.
 
-재현 가능한 간단한 통합 검사는 다음처럼 GUI 없이 실행할 수 있다.
+자동 종료되는 실행 예제도 있다. 현재 Gazebo를 종료한 뒤 터미널 1에서 실행한다. `timeout`에 지정한 시간이 지나 종료 코드 124로 끝나는 것은 의도한 종료다. 이 명령 자체가 데이터의 정상 여부를 판정하지는 않는다.
 
 ```bash
-timeout --signal=INT 20s \
+timeout --signal=INT --kill-after=10s 60s \
   ros2 launch gazebo_tutorial_bringup diffbot.launch.py \
   gui:=false rviz:=false
 ```
 
-실행 중 다른 터미널에서 다음 명령이 모두 데이터를 반환해야 한다.
+모델 생성이 끝나면 터미널 2에서 다음 명령이 모두 데이터를 반환하는지 확인한다.
 
 ```bash
-ros2 topic hz /odom
-ros2 topic hz /joint_states
+ros2 topic echo /odom --once
+ros2 topic echo /joint_states --once
 ros2 topic echo /wheel_odom_path --once
 ros2 run tf2_ros tf2_echo odom base_footprint
 ```
@@ -595,31 +618,31 @@ ros2 run tf2_ros tf2_echo odom base_footprint
 ros2 topic info /cmd_vel --verbose
 ```
 
-Subscription count가 0이면 diff-drive 플러그인이 로드되지 않았다. Gazebo를 실행한 터미널에서 `libgazebo_ros_diff_drive.so` 오류를 먼저 찾고, Humble 환경과 `gazebo_ros_pkgs` 설치를 확인한다. 시뮬레이션이 pause 상태인지도 확인한다.
+Subscription count가 0이면 차동구동 플러그인이 로드되지 않았다. Gazebo를 실행한 터미널에서 `libgazebo_ros_diff_drive.so` 오류를 먼저 찾고, Humble 환경과 `gazebo_ros_pkgs` 설치를 확인한다. 시뮬레이션이 pause 상태인지도 확인한다.
 
 ### 로봇이 반대로 가거나 회전 방향이 틀리다
 
-두 바퀴 joint의 axis가 모두 `0 1 0`인지, `left_joint`와 `right_joint` 이름을 뒤바꾸지 않았는지 확인한다. 한쪽 바퀴만 축 부호를 반대로 두는 방식으로 보정하면 직진과 odometry 중 하나가 다시 틀어진다.
+두 바퀴 조인트의 axis가 모두 `0 1 0`인지, `left_joint`와 `right_joint` 이름을 뒤바꾸지 않았는지 확인한다. 한쪽 바퀴만 축 부호를 반대로 두는 방식으로 보정하면 직진과 odometry 중 하나가 다시 틀어진다.
 
 ### 직진 중 한쪽으로 휘거나 심하게 미끄러진다
 
-URDF의 실제 바퀴 중심 간격/지름과 플러그인의 `wheel_separation`/`wheel_diameter`가 같은지 먼저 확인한다. 그 다음 좌우 collision과 관성이 대칭인지, 바퀴가 바닥과 겹쳐 spawn되지 않았는지, `mu1`/`mu2`가 양수인지 살핀다. 물리 문제를 odometry 숫자만 바꿔 숨기지 않는다.
+URDF의 실제 바퀴 중심 간격/지름과 플러그인의 `wheel_separation`/`wheel_diameter`가 같은지 먼저 확인한다. 그다음 좌우 충돌 형상과 관성이 대칭인지, 바퀴가 바닥과 겹쳐 생성되지 않았는지, `mu1`/`mu2`가 양수인지 살핀다. 물리 문제를 odometry 숫자만 바꿔 숨기지 않는다.
 
-### RViz에서 차체는 움직이지만 바퀴나 caster가 멈춰 있다
+### RViz에서 차체는 움직이지만 바퀴나 보조 바퀴(캐스터)가 멈춰 있다
 
 ```bash
 ros2 topic echo /joint_states --once
 ros2 topic info /joint_states --verbose
 ```
 
-네 joint 이름이 모두 있는지 확인한다. `/joint_states`를 발행하는 데스크톱 `joint_state_publisher`를 별도로 실행했다면 종료한다. 이 실습에서는 Gazebo 플러그인만 실제 관절 상태를 발행해야 한다.
+네 조인트 이름이 모두 있는지 확인한다. `/joint_states`를 발행하는 데스크톱 `joint_state_publisher`를 별도로 실행했다면 종료한다. 이 실습에서는 Gazebo 플러그인만 실제 관절 상태를 발행해야 한다.
 
 ### RViz의 RobotModel 또는 Path가 보이지 않는다
 
 RViz Fixed Frame을 `odom`으로 맞추고 다음을 순서대로 확인한다.
 
 ```bash
-ros2 topic echo /robot_description --once
+ros2 topic echo /robot_description --once --qos-durability transient_local
 ros2 topic echo /odom --once
 ros2 topic echo /wheel_odom_path --once
 ros2 run tf2_ros tf2_echo odom base_link
@@ -629,8 +652,6 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ### TF에 `multiple authority` 또는 반복 경고가 나온다
 
-`odom → base_footprint`는 diff-drive 플러그인 하나가, `base_footprint` 아래 URDF TF는 `robot_state_publisher` 하나가 맡아야 한다. 별도의 static transform publisher나 두 번째 robot_state_publisher를 실행하지 않았는지 확인한다. 모델의 `publish_wheel_tf`는 `false`로 유지한다.
+`odom → base_footprint`는 차동구동 플러그인 하나가, `base_footprint` 아래 URDF TF는 `robot_state_publisher` 하나가 맡아야 한다. 별도의 static transform publisher나 두 번째 robot_state_publisher를 실행하지 않았는지 확인한다. 모델의 `publish_wheel_tf`는 `false`로 유지한다.
 
-## 정리
-
-이번 실습의 핵심은 로봇을 한 번 움직이는 데 그치지 않고 명령, 물리 조인트, wheel odometry, TF, RViz Path가 같은 치수와 프레임 계약을 공유하게 만드는 것이다. 다음 4륜 로버 실습에서는 같은 계약을 여러 바퀴의 differential drive와 Ackermann 조향으로 확장한다.
+실습이 끝나면 조종 터미널에서 `k`, `Ctrl+C`를 누르고 시뮬레이션 터미널도 `Ctrl+C`로 종료한다. 다음 [4륜 로버 실습](04_rover.md)에서는 바퀴 네 개의 차동구동과 Ackermann 조향을 비교한다.

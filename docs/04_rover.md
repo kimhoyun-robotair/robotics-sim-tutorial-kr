@@ -1,22 +1,24 @@
-# 4륜 rover: skid steering과 Ackermann steering
+# 4륜 로버: 차동구동과 Ackermann 조향 비교
 
-이 장에서는 같은 차체와 바퀴 치수를 사용하는 4륜 rover 두 대를 비교한다.
+이 장에서는 같은 차체와 바퀴 치수를 사용하는 4륜 로버 두 대를 비교한다.
 
 - `rover_diff`: 네 바퀴의 축 방향을 고정하고 왼쪽 두 바퀴와 오른쪽 두 바퀴의 속도 차이로 회전한다.
 - `rover_ackermann`: 앞바퀴 두 개가 각각 조향하고 뒷바퀴 두 개가 차체를 밀어 움직인다.
 
 두 모델 모두 `geometry_msgs/msg/Twist` 형식의 `/cmd_vel`을 받고 `/odom`과
-`odom → base_footprint` TF를 발행한다. bringup launch는 `/odom`의 pose를 누적하는
+`odom → base_footprint` TF를 발행한다. bringup 실행 파일은 `/odom`의 위치·자세를 누적하는
 `gazebo_tutorial_tools/odom_to_path`도 함께 실행하므로 RViz의
 `/wheel_odom_path`에서 주행 궤적을 바로 비교할 수 있다.
 
-!!! important "두 모델 모두 실제 wheel odometry를 발행한다"
-    `rover_diff`는 `odometry_source=0`으로 설정되어 첫 wheel pair(이 모델에서는
-    앞바퀴)의 회전량을 적분한 **encoder wheel odometry**를 발행한다. 반면 Humble의
-    `libgazebo_ros_ackermann_drive.so`에는 encoder 선택 항목이 없다. 따라서
-    Ackermann launch는 `gazebo_tutorial_tools/ackermann_odom`을 함께 실행해 뒷바퀴
-    회전량과 앞바퀴 조향각을 적분한 `/odom`과 TF를 만든다. 내장 플러그인의 world
-    pose는 `/ground_truth/odom`으로 분리해 추정값과 비교한다.
+!!! important "두 모델 모두 실제 휠 오도메트리를 발행한다"
+    `rover_diff`는 `odometry_source=0`으로 설정되어 첫 바퀴 쌍(이 모델에서는
+    앞바퀴)의 회전량을 적분한 **엔코더 휠 오도메트리**를 발행한다. 반면 Humble의
+    `libgazebo_ros_ackermann_drive.so`에는 엔코더 선택 항목이 없다. 따라서
+    Ackermann 실행 파일은 `gazebo_tutorial_tools/ackermann_odom`을 함께 실행해 뒷바퀴
+    회전량과 앞바퀴 조향각을 적분한 `/odom`과 TF를 만든다. 내장 플러그인의 월드
+    위치·자세는 `/ground_truth/odom`으로 분리해 추정값과 비교한다.
+
+시작하기 전에 [환경 구성과 빌드](01_setup.md), [2륜 로봇 조종](03_diffbot.md)을 마친다. 이전 시뮬레이션과 키보드 조종 프로그램은 모두 종료한다. 아래 XML·Python은 구현을 설명하는 발췌 코드이며, 실행할 때는 저장소의 전체 파일을 사용한다.
 
 ## 1. 모델 파일을 먼저 읽어 보기
 
@@ -31,14 +33,14 @@ gazebo_tutorial_description/urdf/
 
 두 모델의 공통 치수는 다음과 같다.
 
-| 항목 | 값 | Xacro property |
+| 항목 | 값 | Xacro 속성 |
 | --- | ---: | --- |
 | 바퀴 반지름 | 0.16 m | `rover_wheel_radius` |
 | 바퀴 폭 | 0.08 m | `rover_wheel_width` |
 | 좌우 윤거(track width) | 0.62 m | `rover_track_width` |
 | 앞뒤 축간거리(wheelbase) | 0.56 m | `rover_wheelbase` |
 
-메인 Xacro는 공통 파일을 include한 뒤 필요한 매크로만 호출한다. 치수는
+메인 Xacro는 공통 파일을 불러온 뒤 필요한 매크로만 호출한다. 치수는
 `rover_macros.xacro`에 한 번만 선언하므로 두 모델이 같은 기하 조건을 공유한다.
 
 ```xml
@@ -54,8 +56,8 @@ gazebo_tutorial_description/urdf/
 <xacro:rover_base body_mass="12.0"/>
 ```
 
-`base_footprint`는 바닥에 투영한 질량 없는 기준 frame이고, `base_link`는 관성·visual·
-collision을 가진 실제 차체다. 공통 매크로 안의 fixed joint가 차체 중심을 바닥에서
+`base_footprint`는 바닥에 투영한 질량 없는 기준 프레임이고, `base_link`는 관성·표시 형상·
+충돌 형상을 가진 실제 차체다. 공통 매크로 안의 고정 조인트가 차체 중심을 바닥에서
 0.24 m 위로 올린다.
 
 ```xml
@@ -96,28 +98,27 @@ check_urdf /tmp/rover_diff.urdf
 check_urdf /tmp/rover_ackermann.urdf
 ```
 
-두 명령의 마지막에 `Successfully Parsed XML`이 보이면 link/joint tree가 유효하다.
+두 명령의 마지막에 `Successfully Parsed XML`이 보이면 링크·조인트 tree가 유효하다.
 `check_urdf`가 없다면 `sudo apt install liburdfdom-tools`로 설치할 수 있다.
 
 ## 2. 4륜 differential/skid 모델의 구조
 
-`rover_diff.urdf.xacro`의 모든 wheel joint는 `base_link`를 parent로 하는
-`continuous` joint이고 축은 `0 1 0`, 즉 로봇의 좌우 방향이다.
+`rover_diff.urdf.xacro`의 모든 바퀴 조인트는 `base_link`를 부모로 하는
+`continuous` 조인트이고 축은 `0 1 0`, 즉 로봇의 좌우 방향이다.
 
-```mermaid
-flowchart TB
-  B["base_link"] --> FL["front_left_wheel_joint"]
-  B --> FR["front_right_wheel_joint"]
-  B --> RL["rear_left_wheel_joint"]
-  B --> RR["rear_right_wheel_joint"]
-```
+| 바퀴 | 조인트 이름 | 부모 링크 |
+| --- | --- | --- |
+| 왼쪽 앞 | `front_left_wheel_joint` | `base_link` |
+| 오른쪽 앞 | `front_right_wheel_joint` | `base_link` |
+| 왼쪽 뒤 | `rear_left_wheel_joint` | `base_link` |
+| 오른쪽 뒤 | `rear_right_wheel_joint` | `base_link` |
 
-Gazebo 플러그인의 이름은 differential drive이지만, 이처럼 앞뒤 바퀴의 조향축이
-고정된 4륜 차체에 적용하면 물리적인 움직임은 **skid steering**이다. 회전할 때
+Gazebo 플러그인의 이름은 differential drive이지만, 이처럼 앞뒷바퀴의 조향축이
+고정된 4륜 차체에 적용하면 물리적인 움직임은 **스키드 조향**이다. 회전할 때
 바퀴가 옆으로 조금 미끄러져야 하며, 제자리 회전도 가능하다.
 
 고정 차축 바퀴는 공통 매크로 하나로 정의한다. 이를 네 좌표에서 호출하므로 형상,
-관성, joint limit이 네 바퀴에 동일하게 적용된다.
+관성, 조인트 한계이 네 바퀴에 동일하게 적용된다.
 
 ```xml
 <xacro:macro name="fixed_axle_wheel" params="prefix parent x y z">
@@ -143,13 +144,13 @@ Gazebo 플러그인의 이름은 differential drive이지만, 이처럼 앞뒤 �
 ```
 
 위에는 대각선 두 호출만 보였지만 실제 파일은 `front_right`와 `rear_left`까지 같은
-방식으로 호출한다. `prefix`가 link와 joint 이름에 포함되므로 매크로 재사용 중에도
+방식으로 호출한다. `prefix`가 링크와 조인트 이름에 포함되므로 매크로 재사용 중에도
 이름이 충돌하지 않는다.
 
-### 왜 joint 태그를 네 개 모두 써야 하나
+### 왜 조인트 태그를 네 개 모두 써야 하나
 
 Humble의 `libgazebo_ros_diff_drive.so`는 `<num_wheel_pairs>`만큼
-`<left_joint>`와 `<right_joint>`를 반복해서 읽는다. 이 예제에는 wheel pair가
+`<left_joint>`와 `<right_joint>`를 반복해서 읽는다. 이 예제에는 바퀴 쌍가
 앞·뒤 두 쌍이므로 다음처럼 플러그인 전체를 구성한다.
 
 ```xml
@@ -182,19 +183,19 @@ Humble의 `libgazebo_ros_diff_drive.so`는 `<num_wheel_pairs>`만큼
 </plugin>
 ```
 
-joint를 두 쌍 쓰고 `num_wheel_pairs`를 생략하면 기본값 1과 실제 joint 개수가 맞지 않아
-플러그인이 중단된다. separation과 diameter도 pair별 vector이므로 두 번 적어
+조인트를 두 쌍 쓰고 `num_wheel_pairs`를 생략하면 기본값 1과 실제 조인트 개수가 맞지 않아
+플러그인이 중단된다. separation과 diameter도 쌍별 목록이므로 두 번 적어
 앞축과 뒤축에 같은 값을 명시한다. `<ros>` remapping은 `/cmd_vel`과 `/odom`이라는
-ROS 인터페이스를 만들고, `publish_odom_tf=true`는 `odom → base_footprint`의 소유자를
+ROS 인터페이스를 만들고, `publish_odom_tf=true`는 `odom → base_footprint`의 발행자를
 이 플러그인으로 정한다. 바퀴 TF는 `/joint_states`와 URDF를 읽는
 `robot_state_publisher`가 발행하므로 `publish_wheel_tf`는 끈다.
 
-`max_wheel_torque`는 각 joint에 가할 최대 토크이고 `max_wheel_acceleration`은 명령
+`max_wheel_torque`는 각 조인트에 가할 최대 토크이고 `max_wheel_acceleration`은 명령
 변화율을 제한한다. `update_rate`는 제어와 odometry 갱신 목표 주파수다.
-`odometry_source=0`은 Gazebo world pose가 아닌 encoder 적분을 선택한다.
+`odometry_source=0`은 Gazebo 월드 기준 위치·자세가 아닌 엔코더 적분을 선택한다.
 
-별도의 joint-state 플러그인은 네 바퀴의 Gazebo 물리 각도와 속도를 `/joint_states`로
-발행한다. 이 토픽을 `robot_state_publisher`가 읽어 네 wheel link의 TF를 갱신한다.
+별도의 조인트 상태 플러그인은 네 바퀴의 Gazebo 물리 각도와 속도를 `/joint_states`로
+발행한다. 이 토픽을 `robot_state_publisher`가 읽어 네 바퀴 링크의 TF를 갱신한다.
 
 ```xml
 <plugin name="rover_diff_joint_states"
@@ -208,18 +209,18 @@ ROS 인터페이스를 만들고, `publish_odom_tf=true`는 `odom → base_footp
 </plugin>
 ```
 
-명령부터 RViz까지의 소유 관계를 정리하면 다음과 같다.
+명령부터 RViz까지의 발행 관계를 정리하면 다음과 같다.
 
 ```mermaid
 flowchart TB
-  C["/cmd_vel"] --> D["diff-drive plugin"]
-  D --> J["four wheel joints"]
-  J --> O["/odom + odom TF"]
-  J --> S["/joint_states + wheel TF"]
-  O --> P["/wheel_odom_path in RViz"]
+  C["/cmd_vel"] --> D["차동구동 플러그인"]
+  D --> J["바퀴 조인트 네 개"]
+  J --> O["/odom · odom TF"]
+  J --> S["/joint_states · 바퀴 TF"]
+  O --> P["RViz 주행 궤적"]
 ```
 
-네 바퀴 encoder를 모두 쓰는 4륜 odometry를 직접 만든다면 양쪽 바퀴 각속도의 앞·뒤
+네 바퀴 엔코더를 모두 쓰는 4륜 odometry를 직접 만든다면 양쪽 바퀴 각속도의 앞·뒤
 평균을 각각 $\bar{\omega}_L$, $\bar{\omega}_R$로 두고 다음 이상적인 평면 운동학을
 적용할 수 있다.
 
@@ -229,21 +230,21 @@ v = \frac{r}{2}(\bar{\omega}_R + \bar{\omega}_L), \qquad
 $$
 
 여기서 $r$은 바퀴 반지름, $b$는 좌우 윤거다. 다만 Humble의
-`gazebo_ros_diff_drive` 구현은 여러 pair의 평균을 odometry에 사용하지 않는다.
-`UpdateWheelVelocities()`는 두 pair를 모두 구동하지만 `UpdateOdometryEncoder()`는
-joint 배열의 첫 left/right와 `wheel_separation[0]`, `wheel_diameter[0]`만 읽는다.
-이 모델은 앞바퀴 pair를 먼저 적었으므로 실제 `/odom`은
-`front_left_wheel_joint`와 `front_right_wheel_joint`의 회전량만 적분한다. 뒤 pair는
+`gazebo_ros_diff_drive` 구현은 여러 쌍의 평균을 odometry에 사용하지 않는다.
+`UpdateWheelVelocities()`는 두 쌍를 모두 구동하지만 `UpdateOdometryEncoder()`는
+조인트 배열의 첫 왼쪽·오른쪽와 `wheel_separation[0]`, `wheel_diameter[0]`만 읽는다.
+이 모델은 앞바퀴 쌍를 먼저 적었으므로 실제 `/odom`은
+`front_left_wheel_joint`와 `front_right_wheel_joint`의 회전량만 적분한다. 뒤 쌍은
 구동에는 참여하지만 odometry 계산에는 참여하지 않는다.
 
 이 구현 제한과 별개로 실제 Gazebo에서는 접촉 마찰과 옆 미끄러짐 때문에 ground
-truth와 encoder 적분 결과가 조금씩 달라질 수 있다. 또한 Humble 구현은
+truth와 엔코더 적분 결과가 조금씩 달라질 수 있다. 또한 Humble 구현은
 `twist.twist.linear.x`를 이동량의 크기로 계산하므로 후진 중에도 해당 값이 양수로
 표시될 수 있다. 전·후진 궤적은 `/odom.pose.pose`와 RViz Path로 판단한다.
 
-## 3. differential rover 실행과 키보드 조종
+## 3. differential 로버 실행과 키보드 조종
 
-첫 번째 터미널에서 launch한다.
+첫 번째 터미널에서 실행한다.
 
 ```bash
 cd ~/robotics-sim-tutorial-kr/ros2_ws
@@ -254,7 +255,7 @@ ros2 launch gazebo_tutorial_bringup rover_diff.launch.py
 ```
 
 Gazebo와 RViz가 함께 열리고 로봇이 바닥에 안정적으로 놓일 때까지 잠시 기다린다.
-launch 인자는 다음처럼 확인할 수 있다.
+실행 가능한 인자는 새 터미널에서 다음처럼 확인할 수 있다. 이미 실행 중인 터미널에는 명령을 덧붙이지 않는다.
 
 ```bash
 ros2 launch gazebo_tutorial_bringup rover_diff.launch.py --show-args
@@ -283,31 +284,32 @@ teleop 터미널에 포커스를 둔 상태에서 사용한다.
 | `e` / `c` | 각속도 배율만 증가 / 감소 |
 
 먼저 `i`로 약 2 m 직진하고 `j`로 약 90도 회전하는 동작을 네 번 반복해 사각형을
-그린다. skid steering 특성 때문에 네 모서리가 정확한 직각이나 한 점 회전으로
+그린다. 스키드 조향 특성 때문에 네 모서리가 정확한 직각이나 한 점 회전으로
 보이지 않을 수 있다.
 
-명령 수신과 odometry를 별도 터미널에서 확인한다.
+터미널 3에서 환경을 읽고 명령 연결과 오도메트리를 확인한다.
 
 ```bash
-ros2 topic hz /cmd_vel
-ros2 topic hz /odom
+source /opt/ros/humble/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
+ros2 topic info /cmd_vel --verbose
 ros2 topic echo /odom --once
 ros2 run tf2_ros tf2_echo odom base_footprint
 ```
 
-`/cmd_vel`은 키를 누르는 동안에만 측정해야 주기가 표시된다. `/odom`의
+`/cmd_vel`에는 조종 프로그램의 발행자와 구동 플러그인의 구독자가 각각 있어야 한다. 마지막 `tf2_echo`는 값이 몇 번 출력되면 `Ctrl+C`로 종료한다. `/odom`의
 `header.frame_id`는 `odom`, `child_frame_id`는 `base_footprint`여야 한다.
 
-## 4. RViz에서 wheel odometry Path 확인
+## 4. RViz에서 휠 오도메트리 Path 확인
 
-launch가 불러오는 `odom.rviz`에는 다음 구성이 포함된다.
+실행 파일이 불러오는 `odom.rviz`에는 다음 구성이 포함된다.
 
 - Fixed Frame: `odom`
 - RobotModel: `/robot_description`
 - TF
 - Odometry: `/odom`
 - Path: `/wheel_odom_path`
-- Ground Truth Path: `/ground_truth_path`(해당 launch에서 제공할 때)
+- 기준 위치 Path: `/ground_truth_path`(해당 실행 파일에서 제공할 때)
 
 Path가 보이지 않으면 RViz 왼쪽 아래 **Add → By topic → `/wheel_odom_path` → Path**를
 선택하고 Global Options의 Fixed Frame을 `odom`으로 설정한다. 경로 생성 상태는
@@ -319,47 +321,50 @@ ros2 topic info /wheel_odom_path --verbose
 ros2 topic echo /wheel_odom_path --once
 ```
 
-Path는 최대 2,000점을 보관한다. Gazebo에서 simulation reset을 눌러 시간이 뒤로
-가면 변환 노드가 이전 궤적을 자동으로 지운다. 경로만 즉시 비우려면 launch를
+Path는 최대 2,000점을 보관한다. Gazebo에서 시뮬레이션 초기화을 눌러 시간이 뒤로
+가면 변환 노드가 이전 궤적을 자동으로 지운다. 경로만 즉시 비우려면 실행 파일을
 종료한 뒤 다시 실행하는 것이 가장 간단하다.
 
-Ackermann launch에서는 wheel odometry를 누적한 초록색 `/wheel_odom_path`와 내장
-플러그인의 world pose를 누적한 빨간색 `/ground_truth_path`를 함께 표시한다. 두
-경로는 처음에는 거의 겹치지만 미끄러짐과 bicycle 근사 오차가 누적되면 벌어진다.
+Ackermann 실행 파일에서는 휠 오도메트리를 누적한 초록색 `/wheel_odom_path`와 내장
+플러그인의 월드 기준 위치·자세를 누적한 빨간색 `/ground_truth_path`를 함께 표시한다. 두
+경로는 처음에는 거의 겹치지만 미끄러짐과 자전거 모델의 근사 오차가 누적되면 벌어진다.
 
 RViz를 별도로 켜야 하는 환경에서는 다음처럼 실행할 수 있다.
 
 ```bash
-rviz2 -d $(ros2 pkg prefix --share gazebo_tutorial_bringup)/rviz/odom.rviz
+source /opt/ros/humble/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
+rviz2 -d "$(ros2 pkg prefix --share gazebo_tutorial_bringup)/rviz/odom.rviz" \
+  --ros-args -p use_sim_time:=true
 ```
 
-GUI 없는 환경에서 spawn과 토픽만 검사하려면 다음을 사용한다.
+현재 실행을 종료한 뒤 GUI 없이 모델 생성·토픽을 확인하려면 다음을 실행한다. 60초가 지나 `timeout`이 종료 코드 124를 반환하는 것은 의도된 종료다.
 
 ```bash
-timeout --signal=INT 20s \
+timeout --signal=INT --kill-after=10s 60s \
   ros2 launch gazebo_tutorial_bringup rover_diff.launch.py \
   gui:=false rviz:=false
 ```
 
-## 5. Ackermann 모델의 joint tree
+## 5. Ackermann 모델의 조인트 트리
 
 자동차형 로봇의 앞바퀴는 방향을 바꾸면서 동시에 굴러야 한다. URDF에는 두 축을
-가진 `universal` joint가 없으므로 각 앞바퀴를 두 joint로 분리한다.
+가진 `universal` 조인트가 없으므로 각 앞바퀴를 두 조인트로 분리한다.
 
 ```mermaid
 flowchart TB
-  B["base_link"] --> LS["left steering · revolute z"]
-  LS --> LW["left wheel · continuous y"]
-  B --> RS["right steering · revolute z"]
-  RS --> RW["right wheel · continuous y"]
+  B["base_link"] --> LS["왼쪽 조향 · z축 회전"]
+  LS --> LW["왼쪽 바퀴 · y축 회전"]
+  B --> RS["오른쪽 조향 · z축 회전"]
+  RS --> RW["오른쪽 바퀴 · y축 회전"]
 ```
 
 - `front_left_steering_joint`, `front_right_steering_joint`: z축을 중심으로 조향
-- `front_left_wheel_joint`, `front_right_wheel_joint`: 조향 knuckle 아래에서 자유롭게 구름
-- `rear_left_wheel_joint`, `rear_right_wheel_joint`: base에 연결된 구동 바퀴
+- `front_left_wheel_joint`, `front_right_wheel_joint`: 조향 너클(조향 연결부) 아래에서 자유롭게 구름
+- `rear_left_wheel_joint`, `rear_right_wheel_joint`: 차체에 연결된 구동 바퀴
 
-공통 Xacro의 `steered_wheel` 매크로는 조향 link와 wheel link를 직렬로 연결한다.
-조향 joint는 `z`축 revolute이고, 그 child 아래의 wheel joint는 `y`축 continuous다.
+공통 Xacro의 `steered_wheel` 매크로는 조향 링크 아래에 바퀴 링크를 연결한다.
+조향 조인트는 `z`축으로 제한된 각도만큼 회전하는 `revolute`, 바퀴 조인트는 `y`축으로 계속 회전하는 `continuous` 타입이다.
 
 ```xml
 <xacro:macro name="steered_wheel" params="prefix parent x y z">
@@ -394,7 +399,7 @@ flowchart TB
 ```
 
 메인 모델은 앞축에는 이 매크로를, 뒤축에는 앞서 본 `fixed_axle_wheel`을 호출한다.
-따라서 차체 치수는 같아도 joint tree만으로 두 구동 방식을 바꿀 수 있다.
+이처럼 같은 차체 치수에 다른 조인트 구조와 구동 플러그인을 조합해 두 구동 방식을 구성한다.
 
 ```xml
 <xacro:steered_wheel
@@ -416,10 +421,10 @@ flowchart TB
   y="-${rover_track_width / 2.0}" z="-0.08"/>
 ```
 
-Humble의 Ackermann 플러그인은 앞바퀴 spin joint의 child link에 있는 첫 번째
-collision으로 바퀴 중심을 구하고, 뒤 오른쪽 바퀴의 첫 번째 collision으로 반지름을
-구한다. 따라서 이 예제는 각 wheel link에 정확히 하나의 원통 collision을 두고,
-wheel link가 반드시 해당 spin joint의 child가 되도록 구성한다.
+Humble의 Ackermann 플러그인은 앞바퀴 회전 조인트의 자식 링크에 있는 첫 번째
+충돌 형상으로 바퀴 중심을 구하고, 뒤 오른쪽 바퀴의 첫 번째 충돌 형상으로 반지름을
+구한다. 따라서 이 예제는 각 바퀴 링크에 정확히 하나의 원통 충돌 형상을 두고,
+바퀴 링크가 반드시 해당 회전 조인트의 자식이 되도록 구성한다.
 
 ```xml
 <link name="${name}">
@@ -446,24 +451,24 @@ ROS 1 Ackermann 예제나 새 Gazebo용 플러그인과 섞지 않도록 태그 
 
 | 역할 | Humble Gazebo Classic 태그 | 이 모델의 값 |
 | --- | --- | --- |
-| 앞바퀴 구름 joint | `front_left_joint`, `front_right_joint` | `front_*_wheel_joint` |
-| 뒷바퀴 구동 joint | `rear_left_joint`, `rear_right_joint` | `rear_*_wheel_joint` |
-| 앞바퀴 조향 joint | `left_steering_joint`, `right_steering_joint` | `front_*_steering_joint` |
+| 앞바퀴 구름 조인트 | `front_left_joint`, `front_right_joint` | `front_*_wheel_joint` |
+| 뒷바퀴 구동 조인트 | `rear_left_joint`, `rear_right_joint` | `rear_*_wheel_joint` |
+| 앞바퀴 조향 조인트 | `left_steering_joint`, `right_steering_joint` | `front_*_steering_joint` |
 | 선택 조향 핸들 | `steering_wheel_joint` | `steering_wheel_joint` |
 | 속도/타이어 조향 한계 | `max_speed`, `max_steer` | 2.0 m/s, 0.60 rad |
 | 핸들 최대각 | `max_steering_angle` | 7.85 rad |
 | 조향 PID | `left_steering_pid_gain`, `right_steering_pid_gain` | `80 0 2` |
 | 구동 PID | `linear_velocity_pid_gain` | `20 0 0.5` |
-| world-pose odometry 출력 | `publish_odom` | `true` |
-| world-pose 누적 거리 출력 | `publish_distance` | `true` |
+| 월드 기준 오도메트리 출력 | `publish_odom` | `true` |
+| 월드 기준 누적 거리 출력 | `publish_distance` | `true` |
 | 선택 조향각 출력 | `publish_steerangle` | 생략(기본 `false`) |
-| world pose 토픽 | ROS remapping `odom:=ground_truth/odom` | `/ground_truth/odom` |
+| 월드 기준 위치·자세 토픽 | ROS remapping `odom:=ground_truth/odom` | `/ground_truth/odom` |
 | 내장 odom TF | `publish_odom_tf` | `false` |
-| world pose frame | `odometry_frame` | `world` |
+| 월드 기준 위치·자세 프레임 | `odometry_frame` | `world` |
 
-`wheel_separation`, `wheel_diameter`, `odometry_source`는 diff-drive 플러그인의 태그이며
-Ackermann 플러그인이 읽지 않는다. Ackermann 플러그인은 wheel collision의 위치와
-크기로 윤거·wheelbase·반지름을 직접 계산한다.
+`wheel_separation`, `wheel_diameter`, `odometry_source`는 차동구동 플러그인의 태그이며
+Ackermann 플러그인이 읽지 않는다. Ackermann 플러그인은 바퀴 충돌 형상의 위치와
+크기로 윤거·축간거리·반지름을 직접 계산한다.
 
 실제 `rover_ackermann.urdf.xacro`의 플러그인 블록은 다음과 같다.
 
@@ -504,22 +509,22 @@ Ackermann 플러그인이 읽지 않는다. Ackermann 플러그인은 wheel coll
 </plugin>
 ```
 
-`max_speed`와 `max_steer`는 입력 제한이며, `max_steering_angle`은 선택적인
-`steering_wheel_joint`의 핸들 회전 한계다. `*_steering_pid_gain`은 두 조향 joint의
+`max_speed`와 `max_steer`는 입력 제한이며, `max_steering_angle`은 선택 항목인
+`steering_wheel_joint`의 핸들 회전 한계다. `*_steering_pid_gain`은 두 조향 조인트의
 목표각 추종에, `linear_velocity_pid_gain`은 뒤 구동축 속도 추종에 사용한다.
 `publish_distance=true`는 연속한 Gazebo `Model::WorldPose()`의 x-y 변위 크기를 더한
-누적 거리 `/distance`를 발행한다. 이 값은 뒷바퀴 회전량을 적분한 encoder 거리가
-아니라 **world-pose 기반 ground-truth 주행 거리**다. 바퀴가 헛도는 상황에서
-`/distance`와 `/odom`의 rear-wheel 적분 거리가 달라지는 것이 정상이다. 내장
-odometry와 wheel odometry의 TF가 충돌하지 않도록 내장 `publish_odom_tf`는 반드시
+누적 거리 `/distance`를 발행한다. 이 값은 뒷바퀴 회전량을 적분한 엔코더 거리가
+아니라 **실제 위치 변화로 계산한 주행 거리**다. 바퀴가 헛도는 상황에서
+`/distance`와 `/odom`의 뒷바퀴 회전량 적분 거리가 달라지는 것이 정상이다. 내장
+오도메트리와 휠 오도메트리의 TF가 충돌하지 않도록 내장 `publish_odom_tf`는 반드시
 끈다.
 
-!!! warning "Ackermann 플러그인은 world의 마찰 모델을 바꾼다"
-    Humble의 플러그인은 로드될 때 Gazebo physics engine의 `friction_model`을
-    `cone_model`로 설정한다. 이는 해당 rover에만 적용되는 설정이 아니라 같은 world의
+!!! warning "Ackermann 플러그인은 월드의 마찰 모델을 바꾼다"
+    Humble의 플러그인은 로드될 때 Gazebo 물리 엔진의 `friction_model`을
+    `cone_model`로 설정한다. 이는 해당 로버에만 적용되는 설정이 아니라 같은 월드의
     모든 충돌 계산에 영향을 주는 전역 변경이다. 이 단일 모델 실습에는 문제가 없지만,
     여러 모델을 동시에 배치하거나 마찰 모델별 결과를 비교할 때는 결과가 섞일 수 있다.
-    공정한 비교가 필요하면 각 실험을 별도 Gazebo 세션에서 실행하고 동일한 world physics
+    공정한 비교가 필요하면 각 실험을 별도 Gazebo 세션에서 실행하고 동일한 월드 물리 계산
     설정을 사용했는지 함께 기록한다.
 
 Humble 플러그인은 선택 태그 `<publish_steerangle>true</publish_steerangle>`도 지원하며,
@@ -535,7 +540,7 @@ Humble 플러그인은 선택 태그 `<publish_steerangle>true</publish_steerang
 <publish_steerangle>true</publish_steerangle>
 ```
 
-중앙 타이어 조향 명령을 $\delta$, 윤거를 $b$, wheelbase를 $L$이라 하면 플러그인은
+중앙 타이어 조향 명령을 $\delta$, 윤거를 $b$, 축간거리를 $L$이라 하면 플러그인은
 안쪽과 바깥쪽 앞바퀴의 목표각을 서로 다르게 계산한다.
 
 $$
@@ -546,12 +551,12 @@ $$
 $$
 
 왼쪽으로 돌 때 안쪽인 왼쪽 앞바퀴의 조향각이 더 커지는 것이 정상이다.
-`max_steer=0.60` rad에서는 안쪽 바퀴가 약 0.833 rad까지 커질 수 있어, 실제 steering
-joint limit은 여유를 두고 ±1.0 rad로 설정한다. 중앙 조향 한계보다 안쪽 wheel joint
-한계가 더 크게 필요한 점을 놓치면 최대 회전에서 바퀴가 limit에 계속 부딪힌다.
+`max_steer=0.60` rad에서는 안쪽 바퀴가 약 0.833 rad까지 커질 수 있어, 실제 조향
+조인트 한계는 여유를 두고 ±1.0 rad로 설정한다. 중앙 조향 한계보다 안쪽 바퀴 조인트
+한계가 더 크게 필요한 점을 놓치면 최대 회전에서 바퀴가 조향 한계에 계속 걸린다.
 
-Ackermann 모델도 joint-state 플러그인에서 조향, 구름, 구동 joint를 명시한다. 이
-목록에서 빠진 joint는 Gazebo 안에서는 움직여도 `/joint_states`에 나타나지 않는다.
+Ackermann 모델도 조인트 상태 플러그인에서 조향, 구름, 구동 조인트를 명시한다. 이
+목록에서 빠진 조인트는 Gazebo 안에서는 움직여도 `/joint_states`에 나타나지 않는다.
 
 ```xml
 <plugin name="rover_ackermann_joint_states"
@@ -567,12 +572,12 @@ Ackermann 모델도 joint-state 플러그인에서 조향, 구름, 구동 joint�
 </plugin>
 ```
 
-### Ackermann wheel odometry는 누가 계산하나
+### Ackermann 휠 오도메트리는 누가 계산하나
 
-내장 Ackermann 플러그인의 기본 odometry는 wheel encoder 적분값이 아니라 Gazebo
-world pose다. 이를 `/odom`이라는 같은 이름으로 wheel odometry처럼 사용하거나
+내장 Ackermann 플러그인의 기본 오도메트리는 바퀴 회전량 적분값이 아니라 Gazebo
+월드 기준 위치·자세다. 이를 `/odom`이라는 같은 이름으로 휠 오도메트리처럼 사용하거나
 이 플러그인이 odom TF까지
-발행하게 두면 추정값과 ground truth를 구분할 수 없고 TF 소유자도 충돌한다. 따라서
+발행하게 두면 추정값과 기준 위치를 구분할 수 없고 TF 발행자도 충돌한다. 따라서
 Xacro는 내장 출력을 다음처럼 분리한다.
 
 ```xml
@@ -588,22 +593,40 @@ bringup이 실행하는 `/ackermann_odom` 노드는 `/joint_states`에서 다음
 - `front_left_steering_joint`, `front_right_steering_joint`: 앞바퀴 조향각
 
 샘플 사이의 뒷바퀴 회전 변화량을 $\Delta\phi_L$, $\Delta\phi_R$, 왼·오른쪽 앞바퀴
-조향각을 $\delta_L$, $\delta_R$라 하자. Ackermann pair의 등가 중앙 조향각 $\delta$는
+조향각을 $\delta_L$, $\delta_R$라 하자. Ackermann 앞바퀴 쌍의 등가 중앙 조향각 $\delta$는
 단순 산술평균이 아니라 다음 관계로 복원한다.
 
 $$
 \tan\delta = \frac{2}{\cot\delta_L + \cot\delta_R}
 $$
 
-이제 bicycle 모델의 증분은 다음과 같다.
+이제 뒤 차축 중심에서의 이동 거리와 회전량을 자전거 모델로 계산한다.
 
 $$
 \Delta s = \frac{r}{2}(\Delta\phi_L + \Delta\phi_R), \qquad
 \Delta\theta = \frac{\Delta s}{L}\tan\delta
 $$
 
-노드는 이 값을 적분해 `/odom`과 `odom → base_footprint`를 발행한다. 실제 callback에서
-joint 이름을 매핑하고 pose를 갱신하는 핵심은 다음과 같다.
+여기서 $\Delta s$는 **뒤 차축 중심**의 이동 거리다. 이 차량의 `base_footprint`는
+차체 중심에 있으므로 뒤 차축보다 0.28 m 앞에 있다. 뒤 차축의 위치를 그대로
+차체 중심이라고 발행하면 회전할 때 RViz의 로봇과 궤적이 어긋난다. 따라서
+`rear_axle_offset=0.28`을 적용해 차체 중심의 이동량으로 바꾼다.
+
+뒤 차축에서 차체 중심까지의 거리를 $d$, 회전량을 $\alpha=\Delta\theta$라 하면,
+**회전하기 전 차체 좌표계**에서 차체 중심의 이동량은 다음과 같다.
+
+$$
+\Delta x_b = \Delta s\frac{\sin\alpha}{\alpha}
+               + d(\cos\alpha-1), \qquad
+\Delta y_b = \Delta s\frac{1-\cos\alpha}{\alpha}
+               + d\sin\alpha
+$$
+
+직진에 가까워 $\alpha$가 0으로 접근하면 $\Delta x_b$는 $\Delta s$,
+$\Delta y_b$는 0에 가까워진다. 구현에서는 작은 회전량에 급수식을 사용해 0으로
+나누는 문제를 피한다. `reference_point_increment`가 이 계산을 맡고, 콜백은
+결과를 `odom` 좌표계로 회전해 누적한 뒤 `/odom`과 `odom → base_footprint`를 발행한다.
+실제 구현에서 필요한 부분을 발췌하면 다음과 같다.
 
 ```python
 positions = dict(zip(message.name, message.position))
@@ -619,21 +642,29 @@ delta_right = shortest_angular_delta(self._previous_right, right)
 distance = 0.5 * (delta_left + delta_right) * self._wheel_radius
 yaw_delta = bicycle_increment(distance, steering, self._wheelbase)
 
-heading_midpoint = self._yaw + 0.5 * yaw_delta
-self._x += distance * math.cos(heading_midpoint)
-self._y += distance * math.sin(heading_midpoint)
+local_x, local_y = reference_point_increment(
+    distance, yaw_delta, self._rear_axle_offset)
+self._x += local_x * math.cos(self._yaw) - local_y * math.sin(self._yaw)
+self._y += local_x * math.sin(self._yaw) + local_y * math.cos(self._yaw)
 self._yaw = normalized_angle(self._yaw + yaw_delta)
 ```
 
-기본 $r=0.16$ m, $L=0.56$ m는 Xacro와 같다. wheel joint가 $\pm\pi$ 경계를 넘을 때의
+속도도 차체 중심에 맞춘다. 차체 좌표계에서 $v_x=\Delta s/\Delta t$,
+$\omega=\Delta\theta/\Delta t$일 때, 차체 중심의 횡방향 속도는
+$v_y=d\omega$다. 따라서 `/odom.twist.twist.linear.y`에는
+`rear_axle_offset * angular_velocity`, 즉 이 모델에서는 `0.28 * angular_velocity`를
+기록한다. 조향 중 이 값이 0이 아니어도 옆 미끄러짐을 뜻하는 것은 아니다.
+뒤 차축보다 앞에 있는 기준점이 회전하면서 생기는 속도다.
+
+기본 $r=0.16$ m, $L=0.56$ m, $d=0.28$ m는 Xacro의 치수와 같다. 바퀴 조인트가 $\pm\pi$ 경계를 넘을 때의
 각도 차이를 `shortest_angular_delta`로 보정하며, Gazebo reset으로 JointState 시간이
-뒤로 가면 적분 상태도 초기화한다. 등가 조향각 공식은 이상적인 Ackermann pair에서
-정확하며, 두 조향 actuator가 과도 상태에서 서로 반대 방향을 보고하면 노드는 두 각의
-평균으로 일시 fallback한다. 이 계산은 센서 노이즈가 없는 joint 상태를 사용하지만
+뒤로 가면 적분 상태도 초기화한다. 등가 조향각 공식은 이상적인 Ackermann 앞바퀴 쌍에서
+정확하며, 두 조향 구동기가 과도 상태에서 서로 반대 방향을 보고하면 노드는 두 각의
+평균으로 잠시 대체한다. 이 계산은 센서 노이즈가 없는 조인트 상태를 사용하지만
 접촉 미끄러짐을 직접 알 수 없으므로 `/ground_truth/odom`과 차이가 나는 것이 정상이다.
 
-launch는 Ackermann 모델일 때만 이 노드와 ground-truth Path 변환 노드를 추가한다.
-아래 파라미터의 반지름과 wheelbase는 Xacro property와 반드시 같아야 한다.
+실행 파일은 Ackermann 모델일 때만 이 노드와 기준 위치 Path 변환 노드를 추가한다.
+아래 파라미터의 반지름·축간거리·뒤 차축 오프셋은 Xacro의 실제 치수와 같아야 한다.
 
 ```python
 Node(
@@ -645,6 +676,7 @@ Node(
         'odom_topic': odom_topic,
         'wheel_radius': 0.16,
         'wheelbase': 0.56,
+        'rear_axle_offset': 0.28,
         'publish_tf': ParameterValue(ackermann_publish_tf, value_type=bool),
     }],
 )
@@ -663,10 +695,10 @@ Node(
 )
 ```
 
-## 6. Ackermann rover 실행과 조종
+## 6. Ackermann 로버 실행과 조종
 
-diff rover launch를 실행 중이라면 먼저 `Ctrl-C`로 종료한다. 두 모델은 기본적으로
-같은 `/cmd_vel`, `/odom`, TF frame 이름을 사용하므로 동시에 실행하지 않는다.
+diff 로버 실행 파일을 실행 중이라면 먼저 `Ctrl-C`로 종료한다. 두 모델은 기본적으로
+같은 `/cmd_vel`, `/odom`, TF 프레임 이름을 사용하므로 동시에 실행하지 않는다.
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -675,9 +707,11 @@ source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py
 ```
 
-두 번째 터미널에서 같은 teleop 명령을 실행한다.
+두 번째 터미널에서 환경 설정을 다시 읽고 키보드 조종을 실행한다.
 
 ```bash
+source /opt/ros/humble/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
@@ -692,9 +726,9 @@ Ackermann 모델에서는 `j`나 `l`만 눌러 선속도 0인 제자리 회전�
     받아 `max_steer`로 제한한다. 실제 타이어 목표각을 계산할 때는 선속도의 부호를
     곱하므로 후진 시 조향 부호도 함께 바뀐다. 이 예제의 teleop은 플러그인의 동작을
     직접 확인하도록 그대로 연결한다. 표준 yaw-rate 명령을 따르는 상위 제어기를
-    붙일 때는 속도와 wheelbase로 조향각을 계산하는 변환 노드를 사이에 둔다.
+    붙일 때는 속도와 축간거리로 조향각을 계산하는 변환 노드를 사이에 둔다.
 
-표준 `Twist`의 목표 yaw rate를 $\omega_z$, 선속도를 $v$, wheelbase를 $L$이라 하면
+표준 `Twist`의 목표 yaw rate를 $\omega_z$, 선속도를 $v$, 축간거리를 $L$이라 하면
 물리적인 중앙 타이어 각은 $\delta=\tan^{-1}(L\omega_z/v)$다. 하지만 Humble
 플러그인이 내부에서 선속도의 부호를 한 번 더 적용하므로, 플러그인의 `angular.z`에
 보낼 값은 다음처럼 $|v|$를 사용한다.
@@ -704,7 +738,7 @@ u_{steer} = \tan^{-1}\!\left(\frac{L\omega_z}{|v|}\right)
 $$
 
 변환 노드에서는 저속 특이점과 플러그인 한계를 함께 처리해야 한다. 다음 함수는 그
-핵심만 보인 코드 조각이다. 현재 예제 launch에는 이 노드를 넣지 않았으므로 teleop의
+핵심만 보인 코드 조각이다. 현재 예제 실행 파일에는 이 노드를 넣지 않았으므로 teleop의
 `angular.z`가 곧바로 `steering_angle`인 점에 유의한다.
 
 ```python
@@ -717,7 +751,7 @@ def yaw_rate_to_steering(linear_x, yaw_rate, wheelbase=0.56, max_steer=0.60):
     return max(-max_steer, min(max_steer, steering))
 ```
 
-원하는 값을 한 번 보내는 재현 가능한 시험은 다음과 같다.
+원하는 값을 직접 보내는 시험도 할 수 있다. 먼저 teleop에서 `k`, `Ctrl+C`로 정지·종료해 명령이 섞이지 않게 한다. 시뮬레이션은 켜 두고 같은 터미널에서 아래 명령을 정지 단계까지 실행한다.
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
@@ -730,11 +764,11 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 ```
 
 첫 명령은 0.8 m/s와 약 20도의 중앙 조향각을 요청한다. 플러그인의 이동 거리와
-joint-state publisher가 보고하는 실제 조향각을 함께 확인할 수 있다. 현재 모델에서는
+조인트 상태 발행자가 보고하는 실제 조향각을 함께 확인할 수 있다. 현재 모델에서는
 선택 출력인 `steerangle`을 켜지 않았으므로 조향각은 `/joint_states`를 기준으로 검증한다.
 
-아래 `/distance`는 world pose가 실제로 움직인 누적 거리이고, `/odom`은 뒤 wheel과
-앞 steering joint로 추정한 pose다. 따라서 두 값을 같은 encoder 산출물로 해석하지
+아래 `/distance`는 월드 기준 위치·자세가 실제로 움직인 누적 거리이고, `/odom`은 뒷바퀴와
+앞바퀴 조향 조인트로 추정한 위치·자세다. 따라서 두 값을 같은 엔코더 산출물로 해석하지
 않는다.
 
 ```bash
@@ -744,6 +778,7 @@ ros2 node info /ackermann_odom
 ros2 topic echo /odom --once
 ros2 topic echo /ground_truth/odom --once
 ros2 run tf2_ros tf2_echo base_link front_left_steering_link
+# 위 출력 확인 후 Ctrl+C를 누르고 다음 명령을 실행한다.
 ros2 run tf2_ros tf2_echo odom base_footprint
 ```
 
@@ -752,48 +787,49 @@ Gazebo에서 회전 중인 앞바퀴를 위에서 보면 안쪽/바깥쪽 각도
 
 ## 7. 같은 조건으로 두 궤적 비교하기
 
-두 launch를 차례로 실행해 다음 관찰표를 채운다. 매번 3초 직진, 5초 좌회전,
-3초 직진 순서로 같은 속도 배율을 사용한다.
+두 실행 파일을 차례로 실행해 다음 관찰표를 확인한다. 매번 3초 직진, 5초 전진 좌회전,
+3초 직진 순서로 진행한다. 차동구동의 `angular.z`는 각속도(rad/s), Ackermann의
+`angular.z`는 이 플러그인에서 조향각(rad)이므로 **같은 숫자를 넣어도 같은 회전반경이 되지는 않는다.**
+이 실습은 궤적의 형태를 비교하는 과정이다. 시뮬레이션 속도가 다르면 실제 시간 기준 주행 거리도 달라진다.
 
 | 관찰 항목 | 4륜 diff/skid | Ackermann |
 | --- | --- | --- |
 | 선속도 0에서 회전 | 가능 | 불가능 |
 | 회전 중 앞바퀴 방향 | 차체와 평행 | 안쪽/바깥쪽 각도가 다름 |
 | 모서리 궤적 | 급하게 꺾이거나 제자리 회전 | 연속적인 원호 |
-| 지면에서 필요한 현상 | 횡방향 skid | 이상적으로 pure rolling에 가까움 |
-| 이 예제 `/odom`의 근거 | 첫 pair(앞바퀴) encoder 적분 | 뒤 wheel + 앞 steering 적분 |
-| 별도 ground truth | 기본 launch에는 없음 | `/ground_truth/odom` → `/ground_truth_path` |
+| 지면에서 필요한 현상 | 횡방향 미끄러짐 | 이상적으로 미끄러짐 없는 구름 운동에 가까움 |
+| 이 예제 `/odom`의 근거 | 첫 쌍(앞바퀴) 엔코더 적분 | 뒷바퀴 회전량 + 앞바퀴 조향각 적분 |
+| 별도 기준 위치 | 기본 실행 파일에는 없음 | `/ground_truth/odom` → `/ground_truth_path` |
 
-wheel odometry 오차를 직접 보고 싶다면 rover를 낮은 마찰 world나 무거운 차체로
-실험한다. 바퀴는 회전하지만 차체가 덜 움직일 때 초록색 wheel odometry 궤적과
-빨간색 ground-truth 궤적이 달라진다. 이 차이가 실제 로봇에서 IMU·LiDAR·visual
-odometry를 함께 사용하는 이유다.
+휠 오도메트리 오차를 직접 보고 싶다면 로버를 낮은 마찰 월드나 무거운 차체로
+실험한다. 바퀴는 회전하지만 차체가 덜 움직일 때 초록색 휠 오도메트리 궤적과
+빨간색 실제 이동 궤적이 달라진다. 이 차이가 실제 로봇에서 IMU·라이다·영상 기반 오도메트리를 함께 사용하는 이유다.
 
 ## 8. 자주 생기는 문제
 
 ### 네 바퀴 중 앞이나 뒤만 돈다
 
-`rover_diff.urdf.xacro`에서 `num_wheel_pairs`가 2인지, left/right joint 태그가 각각
+`rover_diff.urdf.xacro`에서 `num_wheel_pairs`가 2인지, 왼쪽·오른쪽 조인트 태그가 각각
 두 개인지 확인한다. Gazebo 로그에 `Inconsistent number of joints specified`가
-보이면 pair 수와 joint 수가 맞지 않는 것이다.
+보이면 쌍 수와 조인트 수가 맞지 않는 것이다.
 
 ```bash
 ros2 topic echo /joint_states --once
 ```
 
-네 wheel joint 이름과 velocity가 모두 들어오는지도 함께 확인한다.
+네 바퀴 조인트의 이름과 회전 속도가 모두 들어오는지도 함께 확인한다.
 
 ### Ackermann 플러그인이 시작하자마자 종료된다
 
 터미널에서 `wheel joint ... not found` 또는 `steering joint ... not found`를 찾는다.
-플러그인 태그의 문자열은 URDF joint 이름과 글자 하나까지 같아야 한다. 특히
-`front_left_joint`에는 steering joint가 아니라 **wheel spin joint**를 지정하고,
-`left_steering_joint`에 steering joint를 지정해야 한다.
+플러그인 태그의 문자열은 URDF 조인트 이름과 글자 하나까지 같아야 한다. 특히
+`front_left_joint`에는 조향 조인트가 아니라 **바퀴 회전 조인트**를 지정하고,
+`left_steering_joint`에 조향 조인트를 지정해야 한다.
 
 ### Ackermann에서 `/ground_truth/odom`만 나오고 `/odom`이 없다
 
-내장 drive 플러그인은 정상이고 wheel odometry 노드가 입력을 받지 못한 상태다.
-필수 joint 네 개와 노드를 확인한다.
+내장 구동 플러그인은 정상이고 휠 오도메트리 노드가 입력을 받지 못한 상태다.
+필수 조인트 네 개와 노드를 확인한다.
 
 ```bash
 ros2 topic echo /joint_states --once
@@ -801,15 +837,15 @@ ros2 node info /ackermann_odom
 ros2 topic info /odom --verbose
 ```
 
-JointState의 `name` 배열에 두 rear wheel joint와 두 front steering joint가 모두 있어야
+JointState의 `name` 배열에 뒷바퀴 조인트 둘과 앞바퀴 조향 조인트 둘가 모두 있어야
 한다. 이름은 `ackermann_odom` 파라미터와 글자 하나까지 일치해야 한다.
 
 ### 앞바퀴가 차체 가운데로 이동하거나 반지름이 0으로 계산된다
 
-Ackermann 플러그인은 wheel joint child의 첫 collision을 검사한다. wheel link가
-joint의 parent로 뒤집혀 있거나 collision이 없으면 기하 계산이 실패한다. 이
+Ackermann 플러그인은 바퀴 조인트 자식의 첫 충돌 형상을 검사한다. 바퀴 링크가
+조인트의 부모로 뒤집혀 있거나 충돌 형상이 없으면 기하 계산이 실패한다. 이
 저장소의 `steered_wheel` 매크로처럼 `steering link → wheel joint → wheel link` 순서를
-유지하고 wheel link에 하나의 cylinder/sphere collision을 둔다.
+유지하고 바퀴 링크에 하나의 cylinder/sphere 충돌 형상을 둔다.
 
 ### 조향이 심하게 떨린다
 
@@ -817,45 +853,50 @@ joint의 parent로 뒤집혀 있거나 collision이 없으면 기하 계산이 �
 
 - 반응이 너무 느리면 `*_steering_pid_gain`의 P를 조금 올린다.
 - 목표각 주변에서 계속 진동하면 P를 낮추거나 D를 올린다.
-- 큰 I 값은 정지 마찰 오차를 줄일 수 있지만 wind-up을 만들기 쉬우므로 처음에는 0으로 둔다.
-- 실시간 계수가 매우 낮을 때 생기는 떨림은 PID보다 렌더링/physics 부하 문제일 수 있으므로 `gui:=false`로 비교한다.
+- 큰 I 값은 정지 마찰 오차를 줄일 수 있지만 적분 오차 누적을 만들기 쉬우므로 처음에는 0으로 둔다.
+- 실시간 계수가 매우 낮을 때 생기는 떨림은 PID보다 렌더링·물리 계산 부하 문제일 수 있으므로 `gui:=false`로 비교한다.
 
 ### `/odom`은 나오지만 RViz Path가 없다
 
-frame과 변환 노드를 순서대로 확인한다.
+프레임과 변환 노드를 순서대로 확인한다.
 
 ```bash
 ros2 topic echo /odom --once
-ros2 node list | grep odom_to_path
+ros2 node list | rg odom_to_path
 ros2 topic hz /wheel_odom_path
 ros2 run tf2_ros tf2_echo odom base_footprint
 ```
 
-RViz Fixed Frame이 `odom`인지, Path display의 topic이 `/wheel_odom_path`인지 확인한다.
-`path_frame` launch 인자를 `/odom`과 다른 frame으로 바꾸면 단순 재라벨링으로 잘못된
+RViz Fixed Frame이 `odom`인지, Path 표시의 Topic이 `/wheel_odom_path`인지 확인한다.
+`path_frame` 실행 파일 인자를 `/odom`과 다른 프레임으로 바꾸면 프레임 이름만 바꾸는 방식으로 잘못된
 궤적을 만들지 않도록 변환 노드가 입력을 거부한다.
 
 ### 로봇이 전혀 움직이지 않는다
 
-Gazebo가 pause 상태인지 먼저 확인하고 `/cmd_vel` publisher와 subscriber 수를 본다.
+Gazebo가 pause 상태인지 먼저 확인하고 `/cmd_vel` 발행자와 구독자 수를 본다.
 
 ```bash
 ros2 topic info /cmd_vel --verbose
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.5}, angular: {z: 0.0}}"
+  "{linear: {x: 0.2}, angular: {z: 0.0}}"
+sleep 2
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.0}, angular: {z: 0.0}}"
 ```
 
-subscriber가 0이면 플러그인이 로드되지 않은 것이다. `gazebo_ros_pkgs` 설치, plugin
-파일명, joint 이름을 Gazebo 터미널의 첫 오류부터 확인한다.
+구독자가 0이면 플러그인이 로드되지 않은 것이다. `gazebo_ros_pkgs` 설치, 플러그인
+파일명, 조인트 이름을 Gazebo 터미널의 첫 오류부터 확인한다.
+
+주행이 끝나면 `k`로 정지한 뒤 조종 터미널과 시뮬레이션 터미널에서 차례로 `Ctrl+C`를 누른다. 다음 모델로 바꾸기 전에 두 실행이 모두 종료됐는지 확인한다.
 
 ## 완료 기준
 
 - 두 Xacro를 `xacro`와 `check_urdf`로 전개·검사할 수 있다.
-- diff rover의 네 wheel joint가 모두 움직이고 제자리 회전이 가능하다.
-- Ackermann rover의 조향 joint와 wheel spin joint를 구분해 설명할 수 있다.
-- teleop으로 두 모델에 직선과 곡선 명령을 보낼 수 있다.
+- diff 로버의 네 바퀴 조인트가 모두 움직이고 제자리 회전이 가능하다.
+- Ackermann 로버의 조향 조인트와 바퀴 회전 조인트를 구분해 설명할 수 있다.
+- 키보드 조종으로 두 모델에 직선과 곡선 명령을 보낼 수 있다.
 - `/odom`, `odom → base_footprint`, `/wheel_odom_path`를 각각 토픽과 RViz에서 확인한다.
-- diff의 첫 wheel pair와 Ackermann의 rear-wheel/steering 적분이 각각 `/odom`을 만드는 방식을 설명한다.
+- diff의 첫 바퀴 쌍과 Ackermann의 뒷바퀴 회전량·앞바퀴 조향각 적분이 각각 `/odom`을 만드는 방식을 설명한다.
 - Ackermann의 `/odom`과 `/ground_truth/odom` 및 두 Path의 차이를 RViz에서 확인한다.
 
 구현 세부 사항은 ROS 2 브랜치의

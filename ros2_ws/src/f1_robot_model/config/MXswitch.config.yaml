@@ -11,12 +11,12 @@ teleop_twist_joy_node:
     axis_angular:  # Left/Right
       yaw: 0     # 왼쪽 조이스틱의 좌우
     scale_angular:
-      yaw: 0.4   # 조이스틱 입력의 0.4배가 회전 속도로 전달
+      yaw: 0.4   # 조이스틱 입력의 0.4배가 조향각(rad)로 전달
     scale_angular_turbo:
-      yaw: 0.8   # 가속 모드의 경우 조이스틱 입력의 0.8배가 회전 속도로 전달
+      yaw: 0.6   # 가속 모드의 경우 조이스틱 입력의 0.8배가 조향각(rad)로 전달
 
     enable_button: 0         # 시작 트리거, A 버튼
     enable_turbo_button: 1   # 가속 모드 시작 트리거, B 버튼
-    # A랑 B버튼을 누리면서 조이스틱을 움직여야 함
+    # A랑 B버튼을 누르면서 조이스틱을 움직여야 함
 
     publish_stamped_twist: false  # true이면 geometry_msgs/TwistStamped, false이면 geometry_msgs/Twist 메시지를 게시

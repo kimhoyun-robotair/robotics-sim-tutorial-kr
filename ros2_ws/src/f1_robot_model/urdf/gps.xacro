@@ -10,6 +10,7 @@
                     <namespace>gps</namespace>
                     <remapping>~/out:=data</remapping>
                 </ros>
+                <frame_name>gps</frame_name>
             </plugin>
         </sensor>
     </gazebo>

@@ -6,8 +6,6 @@
   <maintainer email="kimhoyun.robotair@gmail.com">kimhoyun-robotair</maintainer>
   <license>Apache-2.0</license>
 
-  <buildtool_depend>ament_python</buildtool_depend>
-
   <exec_depend>gazebo_ros</exec_depend>
   <exec_depend>gazebo_tutorial_description</exec_depend>
   <exec_depend>gazebo_tutorial_tools</exec_depend>

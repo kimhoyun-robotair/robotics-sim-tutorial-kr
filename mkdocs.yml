@@ -1,10 +1,10 @@
 site_name: ROS 2 Humble × Gazebo Classic 11 튜토리얼
 site_description: Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11을 위한 실행 중심 한국어 튜토리얼
-repo_url: https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr
-repo_name: kimhoyun-robotair/gazebo-sim-tutorial-kr
+repo_url: https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr
+repo_name: kimhoyun-robotair/robotics-sim-tutorial-kr
 edit_uri: edit/Humble/docs/
 
-# main 브랜치의 Jazzy/Harmonic 문서는 Humble 브랜치 사이트에서 노출하지 않는다.
+# 다른 과정의 문서는 Humble 과정의 탐색 메뉴에서 제외한다.
 exclude_docs: |
   01_roadmap.md
   02_getting-started/**
@@ -78,11 +78,11 @@ nav:
   - 홈: index.md
   - 1. 환경 구성: 01_setup.md
   - 2. URDF · Xacro · SDF: 02_urdf_xacro_sdf.md
-  - 3. 2륜 + Caster 실습: 03_diffbot.md
-  - 4. 4륜 Rover 실습: 04_rover.md
+  - 3. 2륜과 보조 바퀴 실습: 03_diffbot.md
+  - 4. 4륜 로버 실습: 04_rover.md
   - 5. 센서와 RViz: 05_sensors.md
-  - 6. URDF 기반 TF · Odom: 06_tf_rviz.md
-  - 7. 커스텀 Gazebo 플러그인: 07_custom_plugin.md
+  - 6. TF · 휠 오도메트리: 06_tf_rviz.md
+  - 7. Gazebo 플러그인 만들기: 07_custom_plugin.md
   - 8. 문제 해결 · 검증: 08_debugging.md
   - 9. 설계 원칙 · 다음 단계: 09_next_steps.md
   - 10. 빠른 참고표: 10_reference.md

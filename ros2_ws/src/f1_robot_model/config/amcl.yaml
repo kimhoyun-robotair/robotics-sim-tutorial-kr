@@ -14,7 +14,7 @@ amcl:
     global_frame_id: "map"
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
-    laser_max_range: 100.0
+    laser_max_range: 10.0
     laser_min_range: -1.0
     laser_model_type: "likelihood_field"
     max_beams: 60
@@ -40,7 +40,7 @@ amcl:
     scan_topic: scan
 
     # Initial Pose 설정
-    set_initial_pose: True
+    set_initial_pose: false
     initial_pose.x: 0.0
     initial_pose.y: 0.0
     initial_pose.z: 0.0
@@ -49,4 +49,4 @@ amcl:
 map_server:
   ros__parameters:
     use_sim_time: True
-    yaml_filename: "demomap_2.yaml"
+    yaml_filename: ""  # launch의 map 인자로 절대 경로를 전달합니다.

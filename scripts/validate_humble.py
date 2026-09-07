@@ -442,7 +442,15 @@ def validate_sdf_tree(v: Validator, path: Path, root: ET.Element) -> None:
         world = worlds[0]
         v.require(static_name(world.get("name")), path, "world name이 필요합니다")
         uris = all_text(world, "uri")
-        v.require(any(uri == "model://ground_plane" for uri in uris), path, "ground_plane include가 없습니다")
+        inline_floor = any(
+            first_child_text(model, "static") == "true"
+            and (model.find("link/collision/geometry/plane") is not None
+                 or (model.get("name") in {"ground", "ground_plane", "floor"}
+                     and model.find("link/collision/geometry/box") is not None))
+            for model in child_elements(world, "model")
+        )
+        v.require(any(uri == "model://ground_plane" for uri in uris) or inline_floor,
+                  path, "ground_plane include 또는 로컬 바닥 충돌 형상이 필요합니다")
 
 
 def find_plugins(root: ET.Element, filename: str) -> list[ET.Element]:
@@ -599,7 +607,7 @@ def validate_sensor_contract(
     nodes = [node for root in roots for node in root.iter()]
     sensors = [node for node in nodes if local_name(node.tag) == "sensor"]
     types = Counter(node.get("type", "") for node in sensors)
-    for sensor_type in ("imu", "camera", "multicamera", "depth", "wideanglecamera"):
+    for sensor_type in ("imu", "camera", "depth", "wideanglecamera"):
         v.require(types[sensor_type] >= 1, path, f"필수 sensor type 누락: {sensor_type}")
     v.require(types["ray"] >= 2, path, "2D/3D LiDAR용 ray sensor가 각각 필요합니다")
 
@@ -652,36 +660,31 @@ def validate_sensor_contract(
             "fisheye <lens><type>은 lens_type macro parameter를 사용해야 합니다",
         )
 
-    multicameras = [node for node in sensors if node.get("type") == "multicamera"]
-    v.require(any(len(child_elements(node, "camera")) >= 2 for node in multicameras), path, "stereo multicamera에는 camera가 2개 이상 필요합니다")
-    stereo_plugins = [
-        node
-        for sensor in multicameras
-        for node in sensor.iter()
-        if local_name(node.tag) == "plugin"
-        and node.get("filename") == "libgazebo_ros_camera.so"
-    ]
-    v.require(len(stereo_plugins) == 1, path, "stereo camera ROS plugin이 정확히 하나 필요합니다")
-
-    stereo_cameras = [
-        camera
-        for sensor in multicameras
+    # Each physical eye needs its own optical origin and ROS projection matrix.
+    stereo_sensors = {
+        camera.get("name"): sensor
+        for sensor in sensors if sensor.get("type") == "camera"
         for camera in child_elements(sensor, "camera")
-    ]
-    cameras_by_name = {camera.get("name", ""): camera for camera in stereo_cameras}
-    v.require(set(cameras_by_name) == {"left", "right"}, path, "stereo camera 이름은 left/right여야 합니다")
-    left_pose = first_child_text(cameras_by_name.get("left", ET.Element("camera")), "pose") or ""
-    right_pose = first_child_text(cameras_by_name.get("right", ET.Element("camera")), "pose") or ""
-    v.require(
-        re.search(r"\$\{\s*baseline\s*/\s*2(?:\.0)?\s*\}", left_pose) is not None,
-        path,
-        "stereo left camera pose에 +baseline/2 물리 오프셋이 필요합니다",
-    )
-    v.require(
-        re.search(r"\$\{\s*-baseline\s*/\s*2(?:\.0)?\s*\}", right_pose) is not None,
-        path,
-        "stereo right camera pose에 -baseline/2 물리 오프셋이 필요합니다",
-    )
+        if camera.get("name") in {"left", "right"}
+    }
+    v.require(set(stereo_sensors) == {"left", "right"}, path,
+              "stereo에는 좌우 camera 센서가 각각 필요합니다")
+    for side, sensor in stereo_sensors.items():
+        plugins = find_plugins(sensor, "libgazebo_ros_camera.so")
+        v.require(len(plugins) == 1, path, f"stereo {side} ROS camera plugin이 필요합니다")
+        if plugins:
+            plugin = plugins[0]
+            frame = first_child_text(plugin, "frame_name") or ""
+            v.require(frame == "${prefix}_" + side + "_optical_frame", path,
+                      f"stereo {side}에는 해당 렌즈 중심의 optical frame이 필요합니다")
+            baseline = first_child_text(plugin, "hack_baseline") or ""
+            expected = "${baseline}" if side == "right" else "0.0"
+            v.require(baseline == expected, path,
+                      f"stereo {side} 투영행렬의 기준선 설정이 물리 배치와 다릅니다")
+        pose = first_child_text(sensor, "pose") or ""
+        sign = "-" if side == "right" else ""
+        v.require(re.search(r"\$\{\s*" + sign + r"baseline\s*/\s*2(?:\.0)?\s*\}", pose) is not None,
+                  path, f"stereo {side} 센서에 물리 기준선의 절반만큼 위치 차이가 필요합니다")
 
     main_root = roots[0]
     stereo_calls = [
@@ -831,7 +834,8 @@ def validate_custom_plugin(v: Validator) -> None:
         for dependency in ("gazebo_dev", "gazebo_ros", "nav_msgs", "rclcpp"):
             v.require(dependency in dependencies, manifest, f"custom plugin dependency 누락: {dependency}")
         gazebo_exports = [node for export in child_elements(manifest_root, "export") for node in child_elements(export, "gazebo_ros")]
-        v.require(any("gazebo_plugin_path" in node.attrib for node in gazebo_exports), manifest, "Gazebo plugin path export가 없습니다")
+        v.require(any(node.get("plugin_path") == "${prefix}/../../lib" for node in gazebo_exports),
+                  manifest, "gazebo_ros plugin_path는 share 디렉터리에서 설치 lib 경로를 가리켜야 합니다")
 
     source_text = v.read_text(source)
     for token in (

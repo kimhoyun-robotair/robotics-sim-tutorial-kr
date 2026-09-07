@@ -44,3 +44,21 @@ def bicycle_increment(
 ) -> float:
     """Return yaw change for a center-line bicycle model."""
     return distance * math.tan(steering_angle) / wheelbase
+
+
+def reference_point_increment(distance: float, yaw_delta: float, rear_axle_offset: float):
+    """Move a body reference point ahead of the rear axle along a constant arc.
+
+    Return local x/y displacement in the OLD body frame. Encoder distance is
+    measured at the rear axle, while base_footprint lies at the chassis centre.
+    """
+    if abs(yaw_delta) < 1.0e-8:
+        sinc = 1.0 - yaw_delta * yaw_delta / 6.0
+        cosc = 0.5 * yaw_delta - yaw_delta ** 3 / 24.0
+    else:
+        sinc = math.sin(yaw_delta) / yaw_delta
+        cosc = (1.0 - math.cos(yaw_delta)) / yaw_delta
+    return (
+        distance * sinc + rear_axle_offset * (math.cos(yaw_delta) - 1.0),
+        distance * cosc + rear_axle_offset * math.sin(yaw_delta),
+    )

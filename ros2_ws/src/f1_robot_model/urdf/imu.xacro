@@ -54,7 +54,8 @@
                     <namespace>imu</namespace>
                     <remapping>~/out:=data</remapping>
                 </ros>
-                <initialOrientationAsReference>true</initialOrientationAsReference>
+                <frame_name>imu</frame_name>
+                <initial_orientation_as_reference>false</initial_orientation_as_reference>
             </plugin>
         </sensor>
     </gazebo>

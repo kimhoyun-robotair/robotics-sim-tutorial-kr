@@ -1,42 +1,50 @@
 # ROS 2 Humble × Gazebo Classic 11
 
-이 튜토리얼의 목표는 단순히 gazebo 상에서 로봇을 한번 올려놓는 것으로 끝나는 것은 아니고, 튜토리얼을 모두 마치고 나면 직접 만든 URDF/Xacro 기반 로봇 Asset이 gazebo 상에서 물리적으로 안정되게 움직이고, ROS2 Topic(토픽)/TF를 통해 ROS2 <-> Gazebo를 연결하며, 센서 데이터와 Wheel Odometry Trajectory를 RViz 상에서 검증할 수 있는 능력을 기르는 것을 목표로 한다.
+이 과정에서는 URDF/Xacro로 로봇을 만들고 Gazebo Classic 11에서 움직여 본다. 키보드로 주행 명령을 보내고, 센서 데이터와 바퀴 회전량으로 계산한 궤적을 RViz에서 확인한다. 마지막에는 직접 만든 C++ 플러그인으로 시뮬레이터의 실제 이동 경로를 출력한다.
+
+**Gazebo가 처음이라면 [환경 구성](01_setup.md)부터 차례로 진행한다.** 이 문서는 Ubuntu 22.04와 ROS 2 Humble을 사용하며, 모든 실행 파일은 저장소의 `Humble` 브랜치를 기준으로 한다.
+
+## 먼저 알아둘 용어
+
+| 용어 | 이 과정에서의 뜻 |
+| --- | --- |
+| Gazebo | 중력·접촉·센서를 계산하며 로봇을 움직이는 시뮬레이터 |
+| 월드(world) | 지면, 조명, 장애물, 로봇을 배치하는 가상 환경 |
+| ROS 2 노드 | 제어·센서 처리 등 한 가지 작업을 맡는 실행 프로그램 |
+| 토픽(topic) | 노드가 이름과 메시지 형식을 정해 데이터를 주고받는 통로 |
+| TF | 차체·바퀴·센서 좌표계 사이의 위치·방향 관계 |
+| RViz | ROS 2로 들어온 모델·센서·좌표계·경로를 보여 주는 화면 |
+| 휠 오도메트리(wheel odometry) | 바퀴 회전량으로 추정한 로봇의 이동량·위치 |
+| 기준 위치(ground truth) | 시뮬레이터가 계산한 실제 위치. 추정값과 비교할 때 사용 |
+
+RViz 자체가 로봇의 움직임이나 센서 값을 계산하지는 않는다. Gazebo와 ROS 2 노드가 만든 데이터를 TF에 맞춰 화면에 그린다.
 
 ## 완성할 시스템
 
 ```mermaid
 flowchart TB
-  K["keyboard teleop"] -->|/cmd_vel| G["Gazebo drive plugin"]
-  G -->|"/odom + odom→base_footprint"| R["ROS 2 / RViz"]
-  U["URDF + Xacro"] --> S["spawn_entity"]
+  K["키보드 조종"] -->|/cmd_vel| G["Gazebo 구동 플러그인"]
+  G -->|"/odom과 TF"| R["ROS 2 · RViz"]
+  U["URDF · Xacro"] --> S["모델 생성"]
   S --> G
-  Z["Gazebo sensors"] -->|"Image · IMU · Scan · PointCloud2"| R
-  P["custom ModelPlugin"] -->|/ground_truth_path| R
+  Z["Gazebo 센서"] -->|"영상 · IMU · 라이다"| R
+  P["직접 만든 플러그인"] -->|/ground_truth_path| R
 ```
 
-## 튜토리얼 관련 기준
-
-- 모든 명령은 Ubuntu 22.04와 ROS 2 Humble을 기준으로 설명한다.
-- `gazebo`라는 명령을 쓰는 **Gazebo Classic 11**을 사용한다. `gz sim`을 쓰는 새 Gazebo와 플러그인·launch 형식이 다르다 (혼동 금지).
-- 모델에는 `visual`뿐 아니라 `collision`, `inertial`, joint limit와 마찰을 함께 정의한다.
-- “토픽이 존재한다”와 “RViz에서 올바른 frame으로 보인다”를 구분해 검증한다.
-- Gazebo의 simulation time을 사용하는 모든 ROS 노드에 `use_sim_time:=true`를 적용한다.
-- wheel odometry와 ground truth를 서로 다른 값으로 취급한다. 전자는 바퀴 운동학 추정이고, 후자는 시뮬레이터가 아는 실제 pose이다.
-
-## 권장 학습 순서
+## 학습 순서와 완료 기준
 
 | 단계 | 문서 | 완료 기준 |
 | --- | --- | --- |
-| 1 | [환경 구성](01_setup.md) | Gazebo 11과 ROS 패키지 버전을 확인한다 |
-| 2 | [URDF·Xacro·SDF](02_urdf_xacro_sdf.md) | 세 형식이 어떻게 다른지에 대해 확인한다 |
-| 3 | [2륜 로봇](03_diffbot.md) | 간단한 사각형 박스로 로봇을 만들어 주행하고 `/wheel_odom_path`를 본다 |
-| 4 | [4륜 rover](04_rover.md) | skid와 Ackermann 궤적 차이를 비교한다 |
-| 5 | [센서](05_sensors.md) | 각 메시지를 RViz에서 올바른 frame으로 본다 |
-| 6 | [TF와 RViz](06_tf_rviz.md) | TF tree와 동적/정적 변환의 출처를 찾는다 |
-| 7 | [커스텀 플러그인](07_custom_plugin.md) | 직접 빌드한 `.so`가 Path를 publish한다 |
-| 8 | [디버깅](08_debugging.md) | 시간·QoS·TF·물리 문제를 분리 진단한다 |
+| 1 | [환경 구성](01_setup.md) | Gazebo 11과 ROS 패키지를 설치하고 버전을 확인한다 |
+| 2 | [URDF·Xacro·SDF](02_urdf_xacro_sdf.md) | 세 형식의 역할을 구분하고 모델을 변환·검사한다 |
+| 3 | [2륜 로봇](03_diffbot.md) | 로봇을 주행하고 `/wheel_odom_path`를 확인한다 |
+| 4 | [4륜 로버](04_rover.md) | 차동구동과 Ackermann 조향의 움직임을 비교한다 |
+| 5 | [센서](05_sensors.md) | 카메라·라이다·IMU를 올바른 좌표계로 표시한다 |
+| 6 | [TF와 RViz](06_tf_rviz.md) | 정적·동적 좌표 변환을 어떤 노드가 발행하는지 찾는다 |
+| 7 | [플러그인 만들기](07_custom_plugin.md) | 직접 빌드한 `.so` 파일로 실제 이동 경로를 발행한다 |
+| 8 | [문제 해결](08_debugging.md) | 시간·통신 설정·TF·물리 문제를 나누어 진단한다 |
 
-각 장의 명령은 저장소를 `Humble` 브랜치로 clone하고 `ros2_ws`를 빌드했다는 전제로 작성한다. 처음이라면 환경 구성부터 순서대로 진행한다.
+예제는 모델의 외형뿐 아니라 충돌 형상·질량·관성·관절·마찰을 함께 정의한다. 각 단계에서는 토픽 이름만 확인하는 데 그치지 않고, 데이터가 계속 들어오는지와 RViz의 위치·방향이 맞는지까지 확인한다. 시뮬레이션 시간을 사용하는 노드는 `use_sim_time:=true`로 설정한다.
 
-!!! warning "Gazebo Classic의 수명"
-    Gazebo Classic은 2025년 1월에 공식 지원이 종료되었다. 이 튜토리얼은 ROS 2 Humble 기반의 기존 시스템을 재현하고 유지보수하는 데 초점을 둔다. 새 제품을 시작한다면 최신 ROS 2와 새 Gazebo의 지원 조합도 검토한다.
+!!! note "Gazebo Classic과 새 Gazebo 구분"
+    이 과정은 `gazebo` 명령을 사용하는 **Gazebo Classic 11** 전용이다. `gz sim`을 사용하는 새 Gazebo와는 플러그인과 실행 설정이 다르다. Gazebo Classic은 2025년 1월에 공식 지원이 종료됐으며, 이 과정은 기존 Humble 시스템 학습·유지보수에 초점을 둔다. [공식 안내](https://classic.gazebosim.org/)에서 지원 종료 정보를 확인할 수 있다.

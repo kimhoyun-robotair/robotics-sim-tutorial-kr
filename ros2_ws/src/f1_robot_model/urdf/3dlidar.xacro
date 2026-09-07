@@ -2,11 +2,11 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
     <joint name="lidar_base_joint" type="fixed">
         <parent link="base_link"/>
-        <child link="base"/>
-        <origin xyz="0.2 0 0.1" rpy="0 0 0"/>
+        <child link="lidar_3d_base"/>
+        <origin xyz="0 0 0.18" rpy="0 0 0"/>
     </joint>
 
-    <link name="base">
+    <link name="lidar_3d_base">
         <visual>
             <geometry>
                 <cylinder radius="0.04267" length="0.05867"/>
@@ -23,17 +23,17 @@
         </xacro:inertial_cylinder-->
     </link>
 
-    <gazebo reference="base">
+    <gazebo reference="lidar_3d_base">
         <material>Gazebo/Red</material>
     </gazebo>
 
     <joint name="laser_joint" type="fixed">
-        <parent link="base"/>
-        <child link="top"/>
+        <parent link="lidar_3d_base"/>
+        <child link="lidar_3d_link"/>
         <origin xyz="0 0 0.067" rpy="0 0 0"/>
     </joint>
 
-    <link name="top">
+    <link name="lidar_3d_link">
         <visual>
             <geometry>
                 <cylinder radius="0.04267" length="0.07357"/>
@@ -50,7 +50,7 @@
         </xacro:inertial_cylinder-->
     </link>
 
-    <gazebo reference="top">
+    <gazebo reference="lidar_3d_link">
         <material>Gazebo/Red</material>
         <sensor type="ray" name="velodyne2-HDL32E">
             <pose>0 0 0 0 0 0</pose>
@@ -84,12 +84,12 @@
             </ray>
             <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_velodyne_laser.so">
                 <ros>
-                    <namespace>/velodyne2</namespace>
-                    <remapping>~/out:=velodyne_points2</remapping>
+                    <namespace>/lidar_3d</namespace>
+                    <remapping>~/out:=points</remapping>
                 </ros>
-                <frame_name>top</frame_name>
+                <frame_name>lidar_3d_link</frame_name>
                 <organize_cloud>false</organize_cloud>
-                <min_range>0.9</min_range>
+                <min_range>0.3</min_range>
                 <max_range>130.0</max_range>
                 <gaussian_noise>0.008</gaussian_noise>
             </plugin>

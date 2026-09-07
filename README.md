@@ -1,13 +1,12 @@
 # ROS 2 Humble × Gazebo Classic 11 튜토리얼 (한국어)
 
-이 브랜치는 Ubuntu 22.04, ROS 2 Humble, Gazebo Classic 11을 기준으로 모바일 로봇 시뮬레이션을 처음부터 끝까지 실습하는 한국어 과정이다. 단순히 모델을 화면에 띄우는 데서 멈추지 않고, 키보드 조종, wheel odometry, TF, RViz 궤적, 카메라·LiDAR·IMU, 그리고 C++ 커스텀 Gazebo 플러그인까지 하나의 워크스페이스에서 재현한다.
+Ubuntu 22.04에서 ROS 2 Humble과 Gazebo Classic 11로 모바일 로봇을 만들고 움직여 보는 한국어 실습 과정이다. 로봇 모델을 띄운 뒤 키보드 조종, 바퀴 회전량으로 계산한 위치 추정(휠 오도메트리), 좌표 변환(TF), RViz 궤적 표시, 카메라·라이다·IMU, C++ 플러그인을 차례로 실습한다.
 
-> **브랜치 안내**
-> 이 내용은 `Humble` 브랜치 전용이다. `main`은 Jazzy/Gazebo Harmonic 과정이므로 이 브랜치의 명령과 섞어 사용하지 않는다.
+> 이 문서와 실행 명령은 **`Humble` 브랜치 전용**이다. 다른 브랜치의 모델·플러그인·명령을 섞어 사용하지 않는다.
 
-## 지원 환경
+## 실습 환경
 
-| 항목 | 검증 기준 |
+| 항목 | 사용 환경 |
 | --- | --- |
 | 운영체제 | Ubuntu 22.04 LTS (Jammy) |
 | ROS 2 | Humble Hawksbill |
@@ -15,68 +14,64 @@
 | ROS 연동 | `gazebo_ros_pkgs` / `gazebo_plugins` |
 | 빌드 | `colcon`, CMake, Python 3 |
 
-Gazebo Classic은 2025년 1월에 공식 지원이 종료된 레거시 제품이다. 이 과정은 기존 Humble 시스템을 학습·유지보수하는 데 사용한다. 신규 프로젝트라면 최신 ROS 2와 새 Gazebo 조합도 함께 검토한다.
+Gazebo Classic의 공식 지원은 2025년 1월에 종료됐다. 이 과정은 기존 Humble 시스템을 학습하고 유지보수하는 데 맞춰져 있다. [Gazebo Classic 공식 안내](https://classic.gazebosim.org/)에서 지원 종료 정보를 확인할 수 있다.
 
-## 5분 시작
+## 처음 시작하기
+
+**ROS 2가 처음이라면 [환경 구성](docs/01_setup.md)부터 진행한다.** Ubuntu 기본 패키지 저장소만 등록된 상태에서는 `ros-humble-*` 패키지를 설치할 수 없다. 환경 구성 문서에서 ROS 패키지 저장소 등록, 설치, `rosdep` 초기화까지 마친 뒤 아래 명령을 실행한다. 설치·빌드 시간은 인터넷 연결과 컴퓨터 성능에 따라 달라진다.
+
+### 1. Humble 브랜치 받기와 빌드
+
+아래 명령은 홈 폴더에 같은 이름의 저장소가 없는 경우를 기준으로 한다. 이미 다른 브랜치로 받은 저장소가 있다면 [별도 폴더에 받는 방법](docs/01_setup.md#4-humble-브랜치-받기)을 따른다.
 
 ```bash
-sudo apt update
-sudo apt install -y \
-  build-essential cmake git ripgrep \
-  liburdfdom-tools python3-venv \
-  ros-humble-desktop \
-  ros-humble-gazebo-ros-pkgs \
-  ros-humble-rviz-imu-plugin \
-  ros-humble-xacro \
-  ros-humble-teleop-twist-keyboard \
-  python3-colcon-common-extensions \
-  python3-rosdep
-
-if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
-  sudo rosdep init
-fi
-rosdep update --rosdistro humble
-
 cd ~
 git clone --branch Humble --single-branch \
-  https://github.com/kimhoyun-robotair/gazebo-sim-tutorial-kr.git
-cd gazebo-sim-tutorial-kr/ros2_ws
-
+  https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr.git
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
 colcon build --symlink-install
 source install/setup.bash
 ```
 
-첫 번째 로봇을 실행한다.
+`colcon` 요약에 실패한 패키지가 없는지 확인한다. 오류가 있으면 launch를 실행하기 전에 빌드 로그의 첫 오류부터 해결한다.
 
-```bash
-ros2 launch gazebo_tutorial_bringup diffbot.launch.py
-```
-
-새 터미널에서 같은 환경을 source한 뒤 키보드 조종을 시작한다.
+### 2. 터미널 1: Gazebo와 RViz 실행
 
 ```bash
 source /opt/ros/humble/setup.bash
-source ~/gazebo-sim-tutorial-kr/ros2_ws/install/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
+ros2 launch gazebo_tutorial_bringup diffbot.launch.py
+```
+
+Gazebo에 차체·구동 바퀴 두 개·뒤쪽 보조 바퀴가 나타나고 RViz에 같은 로봇이 보이면 다음 단계로 진행한다. 이 명령은 시뮬레이션이 끝날 때까지 계속 실행되므로 터미널을 열어 둔다.
+
+### 3. 터미널 2: 키보드로 움직이기
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
 
-RViz의 `Path` 표시에는 `/wheel_odom_path`를 사용하고, Gazebo 플러그인이 계산한 odometry에는 `/odom`을 사용한다.
+영문 입력 상태로 이 터미널을 선택한 뒤 `i`로 전진, `j`로 제자리 좌회전, `k`로 정지한다. RViz의 초록색 `/wheel_odom_path`가 주행에 따라 늘어나는지 확인한다. 끝날 때는 `k`로 정지한 뒤 터미널 2와 1에서 차례로 `Ctrl+C`를 누른다.
 
 ## 실습 바로가기
 
-| 실습 | 실행 명령 | 핵심 결과 |
-| --- | --- | --- |
-| 2륜 + caster | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` | DiffDrive, `/odom`, TF, RViz Path |
-| 4륜 skid/differential | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` | 네 바퀴 구동과 skid steering |
-| 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` | 조향 기구, Ackermann 궤적 |
-| 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` | IMU, 카메라, 2D/3D LiDAR |
-| 카메라만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` | mono, stereo, RGBD, fisheye |
-| LiDAR만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` | LaserScan, PointCloud2 |
+아래 launch는 **한 번에 하나씩** 실행한다. 각 실행은 같은 기본 토픽과 프레임 이름을 사용한다.
 
-각 launch는 `gui:=false`, `rviz:=false`, `pause:=true`, `world:=...` 같은 인자를 지원한다. 정확한 인자 목록은 다음 명령으로 확인한다.
+| 실습 | 실행 명령 | 확인할 결과 |
+| --- | --- | --- |
+| 2륜 + 보조 바퀴 | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` | 차동구동, `/odom`, TF, RViz 궤적 |
+| 4륜 차동구동 | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` | 네 바퀴 구동과 옆 미끄러짐을 동반한 회전 |
+| 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` | 앞바퀴 조향과 곡선 궤적 |
+| 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` | IMU, 카메라, 2D·3D 라이다 |
+| 카메라만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` | 단안·스테레오·RGB-D·어안 카메라 |
+| 라이다만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` | LaserScan, PointCloud2 |
+
+각 launch는 `gui:=false`, `rviz:=false`, `pause:=true`, `world:=...` 등의 인자를 지원한다. 실행 가능한 인자와 기본값은 다음 명령으로 확인한다.
 
 ```bash
 ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
@@ -84,17 +79,10 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
 
 ## 미니 프로젝트: F1TENTH 시뮬레이션
 
-기본 Gazebo 실습을 마친 뒤에는 `ros2_ws/src/f1_robot_model`과 `ros2_ws/src/velodyne_simulator`를 하나의 미니 프로젝트로 학습하면 좋다. F1TENTH 크기의 Ackermann 차량을 직접 띄우고 제어하면서 URDF/Xacro 모델링, Gazebo 플러그인, ROS 2 메시지 변환, Velodyne 3D LiDAR의 `PointCloud2` 데이터 흐름을 한 번에 연결해 볼 수 있어, 개별 예제를 실제 로봇 시뮬레이션 구조로 확장하는 연습에 적합하다. 또한, 이를 활용한 다른 시뮬레이션을 개발하는데도 유용하게 활용될 수 있다고 생각한다.
-
-관련해서 더 자세한 설명은 `F1TENTH.md`와 `F1TENTH_USERGUIDE.md`를 참고하길 바란다.
+기본 실습을 마쳤다면 `f1_robot_model`과 `velodyne_simulator`로 F1TENTH 크기의 차량을 실행해 본다. 앞바퀴 조향, ROS 2 제어 명령, Velodyne 3D 라이다를 하나의 차량에서 연결하는 실습이다. 준비 과정과 조종 방법은 [프로젝트 소개](F1TENTH.md)와 [사용 안내](F1TENTH_USERGUIDE.md)에 있다.
 
 ```bash
-sudo apt install -y \
-  ros-humble-ackermann-msgs \
-  ros-humble-joy \
-  ros-humble-teleop-twist-joy
-
-cd ros2_ws
+cd ~/robotics-sim-tutorial-kr/ros2_ws
 source /opt/ros/humble/setup.bash
 rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
 colcon build --symlink-install --packages-up-to f1_robot_model velodyne_simulator
@@ -102,39 +90,43 @@ source install/setup.bash
 ros2 launch f1_robot_model display.launch.py
 ```
 
+이전 Gazebo 실습을 종료하고 실행한다. 창이 열린 뒤에는 사용 안내의 별도 조종 터미널을 준비한다.
+
 ## 학습 순서
 
 1. [환경 구성](docs/01_setup.md)
 2. [URDF·Xacro·SDF 이해](docs/02_urdf_xacro_sdf.md)
 3. [2륜 로봇 실습](docs/03_diffbot.md)
-4. [4륜 rover 실습](docs/04_rover.md)
+4. [4륜 로버 실습](docs/04_rover.md)
 5. [Gazebo 센서와 RViz](docs/05_sensors.md)
-6. [URDF 기반 TF와 wheel odom 궤적](docs/06_tf_rviz.md)
-7. [C++ 커스텀 Gazebo 플러그인](docs/07_custom_plugin.md)
+6. [URDF 기반 TF와 휠 오도메트리 궤적](docs/06_tf_rviz.md)
+7. [C++ Gazebo 플러그인 만들기](docs/07_custom_plugin.md)
 8. [문제 해결과 검증](docs/08_debugging.md)
 9. [다음 단계와 설계 원칙](docs/09_next_steps.md)
 10. [명령·토픽·프레임 참고표](docs/10_reference.md)
 
 ## 저장소 구성
 
-```text
-ros2_ws/src/
-├── gazebo_tutorial_description/  # URDF/Xacro 로봇과 센서 모델
-├── gazebo_tutorial_bringup/      # Gazebo·spawn·RViz 통합 launch/world/config
-├── gazebo_tutorial_tools/        # Odom → Path, Ackermann wheel odom 노드
-├── gazebo_tutorial_plugins/      # Gazebo Classic C++ ModelPlugin
-├── f1_robot_model/               # F1TENTH Ackermann 차량·world·launch
-└── velodyne_simulator/           # Velodyne 모델·Gazebo 센서 플러그인
-```
+| 경로 (`ros2_ws/src/` 기준) | 내용 |
+| --- | --- |
+| `gazebo_tutorial_description/` | URDF/Xacro 로봇·센서 모델 |
+| `gazebo_tutorial_bringup/` | Gazebo·모델 생성·RViz 실행, 월드·설정 파일 |
+| `gazebo_tutorial_tools/` | Odom → Path, Ackermann 휠 오도메트리 노드 |
+| `gazebo_tutorial_plugins/` | Gazebo Classic C++ ModelPlugin |
+| `f1_robot_model/` | F1TENTH 차량·월드·실행 파일 |
+| `velodyne_simulator/` | Velodyne 모델·Gazebo 센서 플러그인 |
 
-문서 사이트를 로컬에서 보려면 저장소 루트에서 다음을 실행한다.
+문서 사이트를 로컬에서 보려면 새 터미널에서 다음을 실행한다.
 
 ```bash
+cd ~/robotics-sim-tutorial-kr
 python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements-docs.txt
+source .venv/bin/activate
+python -m pip install -r requirements-docs.txt
 mkdocs serve
 ```
+
+브라우저에서 `http://127.0.0.1:8000`을 연다. 문서 서버는 `Ctrl+C`로 종료한다.
 
 ## 라이선스
 

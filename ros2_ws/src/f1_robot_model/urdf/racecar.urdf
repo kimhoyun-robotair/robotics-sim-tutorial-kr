@@ -5,6 +5,11 @@
   <xacro:include filename="$(find f1_robot_model)/urdf/imu.xacro"/>
   <xacro:include filename="$(find f1_robot_model)/urdf/auto_inertial.xacro"/>
 
+  <xacro:arg name="depth_camera" default="true"/>
+  <xacro:arg name="stereo_camera" default="false"/>
+  <xacro:arg name="lidar_3d" default="false"/>
+  <xacro:arg name="gps" default="true"/>
+
   <!-- Add chassis and it's inertia link -->
 
   <link name="base_link" />
@@ -14,6 +19,10 @@
       <xacro:chassis_geometry/>
       <material name="blue" />
     </visual>
+    <collision>
+      <origin xyz="0.1477 0 0.015"/>
+      <geometry><box size="0.36 0.18 0.035"/></geometry>
+    </collision>
     <inertial>
       <xacro:chassis_inertial_params />
     </inertial>
@@ -118,7 +127,7 @@
     </visual>
   </link>
 
-  <joint name="right_steering_hinge_joint" type="continuous">
+  <joint name="right_steering_hinge_joint" type="revolute">
     <origin xyz="0.325 -0.1 0" rpy="0 1.5708 0" />
     <parent link="chassis" />
     <child link="right_steering_hinge" />
@@ -193,9 +202,9 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find f1_robot_model)/meshes/hokuyo.dae"/>
-        <material name="grey" />
+        <mesh filename="package://f1_robot_model/meshes/hokuyo.dae"/>
       </geometry>
+      <material name="grey" />
     </visual>
   </link>
 
@@ -217,8 +226,8 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <box size="0.01 0.01 0.01"/>
-        <material name="blue" />
       </geometry>
+      <material name="blue" />
     </visual>
   </link>
 
@@ -240,8 +249,8 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <box size="0.01 0.01 0.01"/>
-        <material name="blue" />
       </geometry>
+      <material name="blue" />
     </visual>
   </link>
 
@@ -256,18 +265,17 @@
 
   <xacro:include filename="$(find f1_robot_model)/urdf/racecar.gazebo" />
   <xacro:include filename="$(find f1_robot_model)/urdf/materials.xacro" />
-  <!--If you want to use Depth camera, Plz Uncomment Code-->
-  <!--xacro:include filename="$(find f1_robot_model)/urdf/depth_camera.xacro"/-->
-
-  <!--If you want to use stereo camera with 2-mono camera, Plz Uncomment Codes-->
-  <!--xacro:include filename="$(find f1_robot_model)/urdf/left_camera.xacro"/-->
-  <!--xacro:include filename="$(find f1_robot_model)/urdf/right_camera.xacro"/-->
-
-  <!--If you want to use 3D LiDAR, Plz Uncomment Code-->
-  <!--xacro:include filename="$(find f1_robot_model)/urdf/3dlidar.xacro"/-->
-
-  <!--If you want to use GPS, Plz Uncomment Code-->
-  <xacro:include filename="$(find f1_robot_model)/urdf/gps.xacro"/>
+  <xacro:if value="$(arg depth_camera)">
+    <xacro:include filename="$(find f1_robot_model)/urdf/depth_camera.xacro"/>
+  </xacro:if>
+  <xacro:if value="$(arg stereo_camera)">
+    <xacro:include filename="$(find f1_robot_model)/urdf/left_camera.xacro"/>
+    <xacro:include filename="$(find f1_robot_model)/urdf/right_camera.xacro"/>
+  </xacro:if>
+  <xacro:if value="$(arg lidar_3d)">
+    <xacro:include filename="$(find f1_robot_model)/urdf/3dlidar.xacro"/>
+  </xacro:if>
+  <xacro:if value="$(arg gps)">
+    <xacro:include filename="$(find f1_robot_model)/urdf/gps.xacro"/>
+  </xacro:if>
 </robot>
-
-

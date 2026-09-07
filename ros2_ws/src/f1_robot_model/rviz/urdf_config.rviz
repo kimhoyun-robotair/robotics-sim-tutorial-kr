@@ -1,64 +1,108 @@
 Panels:
-  - Class: rviz_common/Displays
-    Help Height: 78
-    Name: Displays
-    Property Tree Widget:
-      Expanded:
-        - /Global Options1
-        - /Status1
-        - /RobotModel1/Links1
-        - /TF1
-      Splitter Ratio: 0.5
-    Tree Height: 557
+- Class: rviz_common/Displays
+  Name: Displays
+- Class: rviz_common/Views
+  Name: Views
 Visualization Manager:
-  Class: ""
-  Displays:
-    - Alpha: 0.5
-      Cell Size: 1
-      Class: rviz_default_plugins/Grid
-      Color: 160; 160; 164
-      Enabled: true
-      Name: Grid
-    - Alpha: 0.6
-      Class: rviz_default_plugins/RobotModel
-      Description Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /robot_description
-      Enabled: true
-      Name: RobotModel
-      Visual Enabled: true
-    - Class: rviz_default_plugins/TF
-      Enabled: true
-      Name: TF
-      Marker Scale: 0.3
-      Show Arrows: true
-      Show Axes: true
-      Show Names: true
-  Enabled: true
+  Class: ''
   Global Options:
-    Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: odom
     Frame Rate: 30
-  Name: root
+    Background Color: 40; 44; 52
+  Displays:
+  - Class: rviz_default_plugins/Grid
+    Name: Grid
+    Enabled: true
+    Plane Cell Count: 20
+    Cell Size: 0.5
+  - Class: rviz_default_plugins/RobotModel
+    Name: RobotModel
+    Enabled: true
+    Description Source: Topic
+    Description Topic:
+      Value: /robot_description
+      Durability Policy: Transient Local
+      Reliability Policy: Reliable
+      History Policy: Keep Last
+      Depth: 1
+  - Class: rviz_default_plugins/LaserScan
+    Name: 2D LiDAR
+    Enabled: true
+    Topic:
+      Value: /scan
+      Reliability Policy: Best Effort
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Depth: 5
+    Style: Points
+    Size (Pixels): 3
+    Color Transformer: FlatColor
+    Color: 255; 100; 70
+    Decay Time: 0
+  - Class: rviz_default_plugins/PointCloud2
+    Name: Depth points
+    Enabled: true
+    Topic:
+      Value: /camera/points
+      Reliability Policy: Best Effort
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Depth: 5
+    Style: Points
+    Size (Pixels): 2
+    Color Transformer: RGB8
+    Decay Time: 0
+  - Class: rviz_default_plugins/Image
+    Name: RGB camera
+    Enabled: true
+    Topic:
+      Value: /camera/image_raw
+      Reliability Policy: Best Effort
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Depth: 5
+  - Class: rviz_default_plugins/PointCloud2
+    Name: 3D LiDAR (optional)
+    Enabled: false
+    Topic:
+      Value: /lidar_3d/points
+      Reliability Policy: Best Effort
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Depth: 5
+    Style: Points
+    Size (Pixels): 2
+    Color Transformer: AxisColor
+    Axis: Z
+  - Class: rviz_default_plugins/TF
+    Name: TF
+    Enabled: false
+    Show Axes: true
+    Show Names: true
+    Marker Scale: 0.2
   Tools:
-    - Class: rviz_default_plugins/Interact
-      Hide Inactive Objects: true
-    - Class: rviz_default_plugins/MoveCamera
-    - Class: rviz_default_plugins/Select
-    - Class: rviz_default_plugins/FocusCamera
-    - Class: rviz_default_plugins/Measure
-      Line color: 128; 128; 0
-  Transformation:
-    Current:
-      Class: rviz_default_plugins/TF
-  Value: true
+  - Class: rviz_default_plugins/Interact
+  - Class: rviz_default_plugins/MoveCamera
+  - Class: rviz_default_plugins/SetInitialPose
+    Topic:
+      Value: /initialpose
+      Reliability Policy: Reliable
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Depth: 5
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Name: Current View
+      Distance: 4.0
+      Pitch: 0.5
+      Yaw: 3.9
+      Focal Point:
+        X: 0.7
+        Y: 0.0
+        Z: 0.3
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-    Saved: ~
+Window Geometry:
+  Width: 1280
+  Height: 800
+  X: 0
+  Y: 0

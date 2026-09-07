@@ -3,18 +3,29 @@
 <package format="3">
   <name>f1_robot_model</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>F1TENTH model and sensor exercises for ROS 2 Humble and Gazebo Classic 11.</description>
   <maintainer email="genis@todo.todo">genis</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0 (repository additions); original model assets: see UPSTREAM.md</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <!-- Robot modeling in rviz and gazebo -->
-  <depend>joint_state_publisher</depend>
   <depend>robot_state_publisher</depend>
-  <depend>rviz</depend>
+  <exec_depend>rviz2</exec_depend>
   <depend>xacro</depend>
-  <depend>gazebo_ros_ackermann_drive</depend>
+  <exec_depend>gazebo_plugins</exec_depend>
   <depend>gazebo_ros</depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>joy</exec_depend>
+  <exec_depend>teleop_twist_joy</exec_depend>
+  <exec_depend>velodyne_gazebo_plugins</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_amcl</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>nav2_common</exec_depend>
+  <exec_depend>nav2_rviz_plugins</exec_depend>
   <!-- Message depend -->
   <depend>ackermann_msgs</depend>
   <depend>geometry_msgs</depend>

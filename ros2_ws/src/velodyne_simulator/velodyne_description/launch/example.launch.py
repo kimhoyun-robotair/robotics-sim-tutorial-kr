@@ -87,6 +87,8 @@ def generate_launch_description():
     package='rviz2',
     executable='rviz2',
     arguments=['-d', rviz_config_file],
+    parameters=[{'use_sim_time': True}],
+    condition=IfCondition(LaunchConfiguration('rviz')),
     output='screen'
   )
 
@@ -114,6 +116,7 @@ def generate_launch_description():
   ld.add_action(declare_gpu_cmd)
   ld.add_action(declare_organize_cloud_cmd)
   ld.add_action(declare_gui_cmd)
+  ld.add_action(DeclareLaunchArgument('rviz', default_value='true'))
   ld.add_action(start_gazebo)
   ld.add_action(start_robot_state_publisher_cmd)
   ld.add_action(spawn_example_cmd)
