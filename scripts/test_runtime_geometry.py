@@ -1,5 +1,6 @@
 """Independent range references for the original Building Editor world."""
 from pathlib import Path
+import math
 
 import pytest
 
@@ -43,3 +44,15 @@ def test_relative_to_is_rejected_instead_of_misinterpreted(tmp_path):
       </collision></link></model></world></sdf>''')
     with pytest.raises(AssertionError, match="parent-relative"):
         expected_box_range(world, (-3, 0, 0), (1, 0, 0))
+
+
+def test_f1_wall_edge_explains_clipped_camera_pixel():
+    root = Path(__file__).resolve().parents[1]
+    world = root / "ros2_ws/src/f1_robot_model/world/demomap_2/model.sdf"
+    focal = 160 / math.tan(1.089 / 2)
+    wall = expected_box_range(world, (0.2, 0, 0.15), (1, -(180 - 159.5) / focal, 0))
+    opening = expected_box_range(world, (0.2, 0, 0.15), (1, -(200 - 159.5) / focal, 0))
+    assert wall["world_collision"] == "demomap_2/Wall_20"
+    assert 4 < wall["distance_m"] < 8
+    assert opening["world_collision"] == "demomap_2/Wall_35"
+    assert opening["distance_m"] > 20

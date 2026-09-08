@@ -64,6 +64,31 @@ class RenderedUrdfTests(unittest.TestCase):
                 validator.errors,
             )
 
+    def test_transmission_and_control_joint_references_are_not_definitions(self):
+        urdf = VALID_URDF.replace('</robot>', '''
+          <transmission name="sensor_transmission">
+            <joint name="sensor_joint"><hardwareInterface>PositionJointInterface</hardwareInterface></joint>
+          </transmission>
+          <ros2_control name="control" type="system">
+            <joint name="sensor_joint"><state_interface name="position"/></joint>
+          </ros2_control>
+        </robot>''')
+        validator = self.validator(Path("."))
+        validate_rendered_urdf(validator, "joint reference fixture", ET.fromstring(urdf))
+        self.assertEqual([], validator.errors)
+
+    def test_duplicate_root_joint_definitions_are_still_rejected(self):
+        urdf = VALID_URDF.replace('</robot>', '''
+          <link name="another_sensor_link"/>
+          <joint name="sensor_joint" type="fixed">
+            <parent link="base_link"/><child link="another_sensor_link"/>
+          </joint>
+        </robot>''')
+        validator = self.validator(Path("."))
+        validate_rendered_urdf(validator, "duplicate joint fixture", ET.fromstring(urdf))
+        self.assertTrue(any("중복된 static <joint>" in error for error in validator.errors),
+                        validator.errors)
+
     def test_missing_joint_child_link_is_rejected(self):
         urdf = VALID_URDF.replace('child link="sensor_link"', 'child link="missing_link"')
         with tempfile.TemporaryDirectory() as temporary:

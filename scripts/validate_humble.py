@@ -423,12 +423,19 @@ def validate_scoped_xml_names(v: Validator, path: Path, root: ET.Element) -> Non
         duplicates = [f"<{tag} name=\"{name}\">" for (tag, name), count in names.items() if count > 1]
         v.require(not duplicates, path, f"같은 XML scope에 중복 name이 있습니다: {', '.join(duplicates)}")
 
-    # URDF link and joint names are global, not merely sibling-scoped.  Ignore
-    # names that contain Xacro expressions because one macro may be called many
-    # times with distinct values.
+    # URDF definitions are global, but transmission/joint and ros2_control/joint
+    # only refer to those definitions. Count direct robot children and Xacro
+    # wrapper children; references must not create false duplicate errors.
+    # Ignore computed names because a macro may use distinct argument values.
     if local_name(root.tag) == "robot":
+        parents = {child: parent for parent in root.iter() for child in parent}
         for tag in ("link", "joint"):
-            names = [node.get("name", "") for node in root.iter() if local_name(node.tag) == tag and static_name(node.get("name"))]
+            names = [
+                node.get("name", "") for node in root.iter()
+                if local_name(node.tag) == tag and static_name(node.get("name"))
+                and node in parents
+                and (parents[node] is root or parents[node].tag.startswith(f"{{{XACRO_NS}}}"))
+            ]
             duplicates = sorted(name for name, count in Counter(names).items() if count > 1)
             v.require(not duplicates, path, f"중복된 static <{tag}> name: {', '.join(duplicates)}")
 

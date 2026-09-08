@@ -10,8 +10,12 @@
 
 주행과 센서 표시가 올바르게 동작하는 데 필요한 수정은 유지했다. 여기에는 유효한 URDF material 위치와 메시 경로, 조향 조인트 제한, 실제 조인트 상태를 이용한 단일 TF 발행, odometry, Classic 플러그인에 맞춘 조향각 변환, 센서 프레임·카메라 보정값·RViz QoS가 포함된다. RGB-D 점군과 3D 라이다는 켠 경우에만 RViz에서도 자동으로 표시한다. 사용자가 직접 지정한 RViz 설정 파일은 수정하지 않는다.
 
+Gazebo에서도 원본 차량 메시가 보이도록 `package.xml`에 `gazebo_model_path="${prefix}/.."`를 추가했다. 여기서 `${prefix}`는 설치된 패키지의 `share/f1_robot_model` 경로다. 그 부모인 `share`를 검색해야 `model://f1_robot_model/meshes/...`를 찾을 수 있다. 이 경로가 없으면 RViz가 `package://` 메시를 정상 표시하더라도 Gazebo에서는 차량 메시를 읽지 못할 수 있다. 메시 파일이나 모델 치수를 바꾸지 않고 검색 경로만 등록했다.
+
 플러그인 동작을 확인한 공식 소스:
 
+- [패키지의 모델 검색 경로 export를 읽는 구현](https://github.com/ros-simulation/gazebo_ros_pkgs/blob/3.9.0/gazebo_ros/scripts/gazebo_ros_paths.py)
+- [Gazebo 서버에 검색 경로를 전달하는 launch](https://github.com/ros-simulation/gazebo_ros_pkgs/blob/3.9.0/gazebo_ros/launch/gzserver.launch.py)
 - [Ackermann 제어와 odometry (실제 검증 환경의 gazebo_ros_pkgs 3.9.0)](https://github.com/ros-simulation/gazebo_ros_pkgs/blob/3.9.0/gazebo_plugins/src/gazebo_ros_ackermann_drive.cpp)
 - [카메라 토픽·보정 정보·optical 점군 변환](https://github.com/ros-simulation/gazebo_ros_pkgs/blob/3.9.0/gazebo_plugins/src/gazebo_ros_camera.cpp)
 - [IMU 프레임과 월드 기준 자세](https://github.com/ros-simulation/gazebo_ros_pkgs/blob/3.9.0/gazebo_plugins/src/gazebo_ros_imu_sensor.cpp)

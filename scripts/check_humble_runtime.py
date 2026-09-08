@@ -675,7 +675,13 @@ def main():
                              (v - info.k[5]) * distance / info.k[4], distance)
                 assert all(abs(a - b) < 0.02 for a, b in zip(predicted, xyz)), (predicted, xyz)
                 projection_errors = []
-                for sample_u, sample_v in ((u - 40, v), (u + 40, v), (u, v - 30), (u, v + 30)):
+                # In the original F1 map, u+40 looks past Wall_20 to a wall
+                # beyond the 8 m camera range. Use visible wall pixels for the
+                # projection check and verify that clipped ray separately below.
+                horizontal_offset = 20 if args.model == "f1" else 40
+                projection_pixels = ((u - horizontal_offset, v), (u + horizontal_offset, v),
+                                     (u, v - 30), (u, v + 30))
+                for sample_u, sample_v in projection_pixels:
                     point = cloud_xyz(cloud, sample_v, sample_u)
                     sample_depth = struct.unpack_from((">" if depth.is_bigendian else "<") + "f",
                         depth.data, sample_v * depth.step + 4 * sample_u)[0]
@@ -693,8 +699,26 @@ def main():
                 report["checks"]["depth_world_reference"] = reference
                 report["checks"]["rgbd_optical_xyz"] = {"center_xyz_m": xyz, "center_depth_m": distance,
                                                         "calibrated_projection_xyz_m": predicted,
+                                                        "off_center_pixels": projection_pixels,
                                                         "off_center_projection_errors_m": projection_errors,
                                                         "optical_forward_in_base": forward}
+                if args.model == "f1":
+                    sample_u, sample_v = u + 40, v
+                    ray = ((sample_u - info.k[2]) / info.k[0],
+                           (sample_v - info.k[5]) / info.k[4], 1.0)
+                    clipped_reference = reference_range(cloud.header.frame_id, ray)
+                    far = float(robot.findtext("gazebo/sensor[@type='depth']/camera/clip/far"))
+                    assert clipped_reference["distance_m"] > far, clipped_reference
+                    clipped_xyz = cloud_xyz(cloud, sample_v, sample_u)
+                    clipped_depth = struct.unpack_from((">" if depth.is_bigendian else "<") + "f",
+                        depth.data, sample_v * depth.step + 4 * sample_u)[0]
+                    assert math.isinf(clipped_depth) and clipped_depth > 0, clipped_depth
+                    assert all(math.isinf(value) for value in clipped_xyz), clipped_xyz
+                    report["checks"]["rgbd_out_of_range"] = {
+                        "pixel": [sample_u, sample_v], "max_depth_m": far,
+                        "expected_optical_depth_m": clipped_reference["distance_m"],
+                        "world_collision": clipped_reference["world_collision"],
+                        "depth_and_xyz_are_infinite": True}
             if args.model == "sensor_bot":
                 left, right = messages["/stereo/left/camera_info"], messages["/stereo/right/camera_info"]
                 assert abs(left.p[3]) < 1e-9 and right.p[0] > 0
@@ -844,9 +868,22 @@ def main():
                 spin_until(capture_when_ready, 25, "full RViz window after completed motion")
                 report["checks"]["rviz_capture"] = capture[0]
 
+            log.flush()
+            launch_log = (output / "launch.log").read_text(errors="replace")
+            mesh_failures = [line for line in launch_log.splitlines()
+                             if "No mesh specified" in line
+                             or ("File or path does not exist" in line and "model://" in line)]
+            assert not mesh_failures, "Gazebo failed to load model meshes: " + " | ".join(mesh_failures[:3])
+            report["checks"]["gazebo_mesh_load_errors"] = []
+
             report["status"] = "passed"
         except Exception as error:
             report["errors"].append(f"{type(error).__name__}: {error}")
+            if args.rviz and not (output / "rviz.png").exists():
+                try:
+                    report["checks"]["rviz_failure_capture"] = capture_rviz(output)
+                except Exception as capture_error:
+                    report["checks"]["rviz_failure_capture_error"] = str(capture_error)
         finally:
             for sig in previous_handlers:
                 signal.signal(sig, signal.SIG_IGN)

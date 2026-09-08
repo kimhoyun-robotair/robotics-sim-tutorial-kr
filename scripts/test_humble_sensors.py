@@ -166,6 +166,28 @@ def test_f1_building_editor_map_is_preserved_byte_for_byte():
         "5bb46412d580673fff69987b3455fbde8f24d61f8b9f4ec362b7c1c116de5dbc")
 
 
+def test_f1_meshes_resolve_after_gazebo_converts_package_uris_to_model_uris():
+    share = SOURCE / "f1_robot_model"
+    package = ET.parse(share / "package.xml").getroot()
+    exported_paths = [
+        Path(export.get("gazebo_model_path").replace("${prefix}", str(share))).resolve()
+        for export in package.findall("export/gazebo_ros")
+        if export.get("gazebo_model_path")
+    ]
+    assert exported_paths, "Gazebo must receive the model search path from package.xml"
+    robot = expand_f1(depth_camera=True, lidar_3d=True)
+    filenames = {mesh.get("filename") for mesh in robot.iter("mesh")}
+    assert len(filenames) >= 8  # Chassis, four wheels, two hinges, and the Hokuyo.
+    for filename in filenames:
+        assert filename.startswith("package://f1_robot_model/")
+        model_uri = filename.replace("package://", "model://", 1)
+        relative = model_uri.removeprefix("model://")
+        candidates = [directory / relative for directory in exported_paths]
+        expected_asset = SOURCE / filename.removeprefix("package://")
+        assert any(asset.is_file() and asset.resolve() == expected_asset.resolve()
+                   for asset in candidates), model_uri
+
+
 @pytest.mark.parametrize("filename", ["urdf_config.rviz", "sim_config.rviz"])
 def test_f1_default_rviz_subscribes_only_to_present_sensors(filename):
     config = yaml.safe_load((SOURCE / "f1_robot_model/rviz" / filename).read_text())

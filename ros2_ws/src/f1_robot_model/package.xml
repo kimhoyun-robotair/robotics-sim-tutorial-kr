@@ -40,5 +40,7 @@
 
   <export>
     <build_type>ament_cmake</build_type>
+    <!-- package://f1_robot_model/... becomes model://f1_robot_model/... in Gazebo. -->
+    <gazebo_ros gazebo_model_path="${prefix}/.."/>
   </export>
 </package>
