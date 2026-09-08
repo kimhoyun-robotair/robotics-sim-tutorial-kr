@@ -4,7 +4,7 @@ Ubuntu 22.04에서 ROS 2 Humble과 Gazebo Classic 11로 모바일 로봇을 만�
 
 > 이 문서와 실행 명령은 **`Humble` 브랜치 전용**이다. 다른 브랜치의 모델·플러그인·명령을 섞어 사용하지 않는다.
 
-문서·센서·TF를 재점검하면서 수정한 내용과 실제 Gazebo·RViz 검증 결과는 [재점검 기록](docs/11_review.md)에 정리했다.
+F1TENTH 기본 구성 복원, RGB-D·3D 라이다 옵션과 4륜 센서 차량의 검증 결과는 [최신 변경 기록](docs/12_f1_sensor_revision.md)에 정리했다. 문서·센서·TF를 처음 재점검한 내용은 [9월 7일 기록](docs/11_review.md)에서 확인할 수 있다.
 
 ## 실습 환경
 
