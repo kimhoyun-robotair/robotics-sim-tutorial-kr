@@ -302,7 +302,7 @@ check_urdf /tmp/sensor_bot_minimal.urdf
 check_urdf /tmp/sensor_bot_cameras.urdf
 ```
 
-두 결과를 비교하면 `cameras`에서 카메라 링크와 광학 프레임이 추가된 것을 볼 수 있다.
+두 결과 모두 앞바퀴가 조향하는 4륜 Ackermann 차체와 IMU를 사용한다. 두 결과를 비교하면 `cameras`에서 카메라 링크와 광학 프레임이 추가된 것을 볼 수 있다. `sensor_profile`은 센서 묶음만 바꾸며 차량의 구동 방식은 바꾸지 않는다.
 
 ```bash
 rg '<link name=' /tmp/sensor_bot_minimal.urdf

@@ -23,7 +23,7 @@ source install/setup.bash
 | 바퀴 두 개와 보조 바퀴 | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` |
 | 4륜 스키드·차동 구동 | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` |
 | 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` |
-| 센서 로봇 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` |
+| 4륜 Ackermann 센서 차량 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` |
 
 `Successfully spawned entity` 로그와 Gazebo·RViz 창을 확인한다. 다른 모델로 바꾸려면 실행 중인 터미널에서 `Ctrl+C`를 누르고 종료를 기다린다.
 
@@ -40,7 +40,18 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
 
-`i`는 전진, `u`는 전진하며 왼쪽 회전, `k`는 정지다. Ackermann은 제자리 회전할 수 없으므로 곡선 주행 키를 쓴다. 종료할 때는 `k`로 정지한 뒤 `Ctrl+C`를 누른다.
+`i`는 전진, `u`는 전진하며 왼쪽 회전, `k`는 정지다. 기본 Ackermann 차량과 센서 차량은 제자리 회전할 수 없으므로 곡선 주행 키를 쓴다. 두 차량에서 `/cmd_vel.linear.x`는 속도 [m/s], `/cmd_vel.angular.z`는 조향각 [rad]이다. 차동 구동 차량에서 `angular.z`로 지정하는 회전 속도 [rad/s]와 의미가 다르다. 종료할 때는 `k`로 정지한 뒤 `Ctrl+C`를 누른다.
+
+센서 차량을 낮은 속도로 직접 조종하려면 키보드 조종을 종료한 뒤 다음 명령을 실행한다. 5초 동안 0.2 m/s로 왼쪽으로 움직이고 나서 정지 명령을 보낸다. 첫 번째 명령은 `timeout` 때문에 종료 코드 124로 끝나는 것이 정상이다.
+
+```bash
+timeout 5s ros2 topic pub --rate 10 /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.2}, angular: {z: 0.2}}"
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.0}, angular: {z: 0.0}}"
+```
+
+이 플러그인은 명령 발행이 멈춰도 마지막 속도를 유지한다. 실습을 끝낼 때는 반드시 정지 명령을 보내고 시뮬레이션을 종료한다.
 
 **터미널 C**에서도 같은 환경 두 줄을 읽고 데이터를 확인한다.
 
@@ -85,4 +96,4 @@ ros2 launch gazebo_tutorial_bringup sensors.launch.py --show-args
 
 `empty.world`와 `sensor.world`는 지면·조명을 파일 안에 정의하므로 외부 모델 다운로드가 필요 없다. 센서 월드에는 색상과 거리가 다른 상자·원통·벽이 있다. 센서 RViz는 `world`, 기본 주행 RViz는 `odom`을 고정 프레임으로 사용한다.
 
-Ackermann 내장 플러그인의 `/ground_truth/odom`은 바퀴 엔코더가 아닌 Gazebo의 실제 위치다. 별도 `ackermann_odom` 노드가 뒷바퀴 회전량과 앞바퀴 조향각으로 `/odom`을 계산하고, 뒤 차축에서 차체 중심까지 0.28 m의 차이도 반영한다. 자세한 비교는 [TF·RViz 실습](../../../docs/06_tf_rviz.md)을 참고한다.
+기본 Ackermann 차량과 모든 센서 프로필은 같은 오도메트리 구성을 사용한다. Ackermann 내장 플러그인의 `/ground_truth/odom`은 바퀴 엔코더가 아닌 Gazebo의 실제 위치다. 별도 `ackermann_odom` 노드가 뒷바퀴 회전량과 앞바퀴 조향각으로 `/odom`을 계산하고, 뒤 차축에서 차체 중심까지 0.28 m의 차이도 반영한다. 자세한 비교는 [TF·RViz 실습](../../../docs/06_tf_rviz.md)을 참고한다.

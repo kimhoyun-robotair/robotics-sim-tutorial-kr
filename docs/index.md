@@ -39,12 +39,14 @@ flowchart TB
 | 2 | [URDF·Xacro·SDF](02_urdf_xacro_sdf.md) | 세 형식의 역할을 구분하고 모델을 변환·검사한다 |
 | 3 | [2륜 로봇](03_diffbot.md) | 로봇을 주행하고 `/wheel_odom_path`를 확인한다 |
 | 4 | [4륜 로버](04_rover.md) | 차동구동과 Ackermann 조향의 움직임을 비교한다 |
-| 5 | [센서](05_sensors.md) | 카메라·라이다·IMU를 올바른 좌표계로 표시한다 |
+| 5 | [4륜 Ackermann 센서 실습](05_sensors.md) | 카메라·라이다·IMU를 올바른 좌표계로 표시하고 조향하며 확인한다 |
 | 6 | [TF와 RViz](06_tf_rviz.md) | 정적·동적 좌표 변환을 어떤 노드가 발행하는지 찾는다 |
 | 7 | [플러그인 만들기](07_custom_plugin.md) | 직접 빌드한 `.so` 파일로 실제 이동 경로를 발행한다 |
 | 8 | [문제 해결](08_debugging.md) | 시간·통신 설정·TF·물리 문제를 나누어 진단한다 |
 
 예제는 모델의 외형뿐 아니라 충돌 형상·질량·관성·관절·마찰을 함께 정의한다. 각 단계에서는 토픽 이름만 확인하는 데 그치지 않고, 데이터가 계속 들어오는지와 RViz의 위치·방향이 맞는지까지 확인한다. 시뮬레이션 시간을 사용하는 노드는 `use_sim_time:=true`로 설정한다.
+
+센서 실습의 `all`, `cameras`, `lidars`, `minimal` 프로필은 모두 4륜 Ackermann 차량을 사용한다. 기본 실습 이후의 [F1TENTH 미니 프로젝트](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/Humble/F1TENTH.md)는 기존 Building Editor 맵에서 바퀴·IMU·2D 라이다로 시작한다. RGB-D 카메라와 3D 라이다는 별도 옵션으로 추가한다.
 
 !!! note "Gazebo Classic과 새 Gazebo 구분"
     이 과정은 `gazebo` 명령을 사용하는 **Gazebo Classic 11** 전용이다. `gz sim`을 사용하는 새 Gazebo와는 플러그인과 실행 설정이 다르다. Gazebo Classic은 2025년 1월에 공식 지원이 종료됐으며, 이 과정은 기존 Humble 시스템 학습·유지보수에 초점을 둔다. [공식 안내](https://classic.gazebosim.org/)에서 지원 종료 정보를 확인할 수 있다.

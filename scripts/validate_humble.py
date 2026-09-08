@@ -343,7 +343,7 @@ def validate_launch_wrapper(v: Validator, path: Path, tree: ast.AST) -> None:
     v.require(rviz_target.is_file(), path, f"default RViz config가 존재하지 않습니다: {rviz_name}")
     world_target = v.root / "ros2_ws" / "src" / "gazebo_tutorial_bringup" / "worlds" / world_name
     v.require(world_target.is_file(), path, f"default world가 존재하지 않습니다: {world_name}")
-    if xacro_name == "rover_ackermann.urdf.xacro":
+    if xacro_name in {"rover_ackermann.urdf.xacro", "sensor_bot.urdf.xacro"}:
         v.require(boolean_keyword(call, "use_ackermann_encoder_odom") is True, path, "Ackermann launch는 encoder wheel odometry node를 활성화해야 합니다")
     if xacro_name == "sensor_bot.urdf.xacro":
         v.require(boolean_keyword(call, "pass_sensor_profile") is True, path, "sensor launch는 sensor_profile을 Xacro에 전달해야 합니다")
@@ -553,6 +553,26 @@ def validate_drive_plugin(v: Validator, path: Path, root: ET.Element, drive_kind
             v.require(len(gains) == 3 and any(value != 0.0 for value in gains), path, f"<{pid_tag}>에는 non-zero P/I/D 3개 값이 필요합니다")
 
 
+def xacro_source_tree(v: Validator, path: Path) -> ET.Element:
+    """Collect source includes so shared vehicle macros retain static checks."""
+    combined = ET.Element("sources")
+    pending, visited = [path], set()
+    while pending:
+        source = pending.pop()
+        if source in visited or not source.is_file():
+            continue
+        visited.add(source)
+        root = v.parse_xml(source)
+        if root is None:
+            continue
+        combined.append(root)
+        for include in root.iter(XACRO_INCLUDE):
+            target = resolve_xacro_include(v, source, include.get("filename", ""))
+            if target is not None:
+                pending.append(target)
+    return combined
+
+
 def validate_robot_contracts(v: Validator) -> None:
     urdf_dir = v.root / "ros2_ws" / "src" / "gazebo_tutorial_description" / "urdf"
     for filename, drive_kind in DRIVE_MODELS.items():
@@ -561,7 +581,7 @@ def validate_robot_contracts(v: Validator) -> None:
         root = v.parse_xml(path) if path.is_file() else None
         if root is None:
             continue
-        validate_drive_plugin(v, path, root, drive_kind)
+        validate_drive_plugin(v, path, xacro_source_tree(v, path), drive_kind)
 
         if filename == "diffbot.urdf.xacro":
             caster_nodes = [
@@ -575,7 +595,7 @@ def validate_robot_contracts(v: Validator) -> None:
     v.require(sensor_path.is_file(), urdf_dir, "sensor_bot.urdf.xacro가 없습니다")
     sensor_root = v.parse_xml(sensor_path) if sensor_path.is_file() else None
     if sensor_root is not None:
-        validate_drive_plugin(v, sensor_path, sensor_root, "diff")
+        validate_drive_plugin(v, sensor_path, xacro_source_tree(v, sensor_path), "ackermann")
         sensor_roots = [sensor_root]
         include_nodes = [
             node for node in sensor_root.iter()
@@ -1062,6 +1082,17 @@ def validate_rendered_urdf(v: Validator, label: object, root: ET.Element) -> Non
             reference = node.get("reference", "")
             v.require(reference in known_links or reference in known_joints, label, f"<gazebo reference> 대상이 없습니다: {reference}")
 
+    # Fixed-joint reduction can move sensors from different URDF links into one
+    # SDF link. Unique sensor names prevent one camera from replacing another.
+    sensor_names = [sensor.get("name", "") for sensor in root.iter("sensor")]
+    duplicates = sorted(name for name, count in Counter(sensor_names).items() if not name or count > 1)
+    v.require(not duplicates, label, f"고정 조인트를 합치면 센서 이름이 중복됩니다: {', '.join(duplicates)}")
+    for sensor in root.iter("sensor"):
+        for plugin in sensor.findall("plugin"):
+            frame = plugin.findtext("frame_name")
+            if frame is not None:
+                v.require(frame in known_links, label, f"센서 {sensor.get('name')}의 frame_name에 해당하는 TF 링크가 없습니다: {frame}")
+
     validate_scoped_xml_names(v, Path(str(label)), root)
 
 
@@ -1130,8 +1161,28 @@ def validate_with_ros_tools(v: Validator) -> None:
                 output.write_text(rendered, encoding="utf-8")
                 run_checked(v, label, [check_urdf, str(output)])
 
+        f1_source = v.root / "ros2_ws/src/f1_robot_model/urdf/racecar.urdf"
+        for depth in ("false", "true"):
+            for lidar in ("false", "true"):
+                label = f"racecar.urdf[depth_camera={depth},lidar_3d={lidar}]"
+                rendered = run_checked(v, label, [
+                    xacro, str(f1_source), f"depth_camera:={depth}", f"lidar_3d:={lidar}"])
+                if rendered is None:
+                    continue
+                try:
+                    root = ET.fromstring(rendered)
+                except ET.ParseError as exc:
+                    v.require(False, label, f"rendered URDF XML parse 실패: {exc}")
+                    continue
+                validate_rendered_urdf(v, label, root)
+                output = temporary_dir / f"racecar.{depth}.{lidar}.urdf"
+                output.write_text(rendered, encoding="utf-8")
+                run_checked(v, label, [check_urdf, str(output)])
+
     for world in sorted((v.root / "ros2_ws" / "src").rglob("*.world")):
         run_checked(v, world, [gz, "sdf", "-k", str(world)])
+    f1_world = v.root / "ros2_ws/src/f1_robot_model/world/demomap_2/model.sdf"
+    run_checked(v, f1_world, [gz, "sdf", "-k", str(f1_world)])
 
 
 def run_validation(root: Path, require_ros_tools: bool = False) -> Validator:

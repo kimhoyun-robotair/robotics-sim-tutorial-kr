@@ -11,6 +11,7 @@ Source: ros-simulation/gazebo_ros_pkgs, gazebo_plugins/src/gazebo_ros_camera.cpp
 from __future__ import annotations
 
 import math
+import hashlib
 from pathlib import Path
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
@@ -84,6 +85,109 @@ def expand(filename="sensor_bot.urdf.xacro", profile="all"):
     return ET.fromstring(rendered.toxml())
 
 
+def expand_f1(**options):
+    with patch.object(xacro.substitution_args, "_eval_find", lambda name: str(SOURCE / name)):
+        rendered = xacro.process_file(
+            str(SOURCE / "f1_robot_model/urdf/racecar.urdf"),
+            mappings={name: str(value).lower() for name, value in options.items()})
+    return ET.fromstring(rendered.toxml())
+
+
+def xml_signature(element):
+    """Compare model values while ignoring source indentation and comments."""
+    return (element.tag, tuple(sorted(element.attrib.items())),
+            (element.text or "").strip(), tuple(xml_signature(child) for child in element))
+
+
+@pytest.mark.parametrize("profile", ["all", "cameras", "lidars", "minimal"])
+def test_sensor_profiles_keep_the_existing_four_wheel_ackermann_vehicle(profile):
+    vehicle, robot = expand("rover_ackermann.urdf.xacro"), expand(profile=profile)
+    for tag in ("link", "joint"):
+        actual = {element.get("name"): element for element in robot.findall(tag)}
+        assert not any("caster" in name for name in actual)
+        for original in vehicle.findall(tag):
+            assert xml_signature(actual[original.get("name")]) == xml_signature(original)
+    for tag in ("front_left_joint", "front_right_joint", "rear_left_joint", "rear_right_joint"):
+        joint_name = robot.findtext(f"gazebo/plugin[@filename='libgazebo_ros_ackermann_drive.so']/{tag}")
+        joint = robot.find(f"joint[@name='{joint_name}']")
+        assert joint is not None and joint.get("type") == "continuous"
+    for side in ("left", "right"):
+        joint = robot.find(f"joint[@name='front_{side}_steering_joint']")
+        assert joint is not None and joint.get("type") == "revolute"
+        assert vector(joint.find("axis").get("xyz")) == (0., 0., 1.)
+        assert float(joint.find("limit").get("lower")) < 0 < float(joint.find("limit").get("upper"))
+    assert not robot.findall("gazebo/plugin[@filename='libgazebo_ros_diff_drive.so']")
+    plugins = robot.findall("gazebo/plugin[@filename='libgazebo_ros_ackermann_drive.so']")
+    assert len(plugins) == 1
+    assert xml_signature(plugins[0]) == xml_signature(
+        vehicle.find("gazebo/plugin[@filename='libgazebo_ros_ackermann_drive.so']"))
+
+
+@pytest.mark.parametrize("depth,lidar", [(False, False), (True, False), (False, True), (True, True)])
+def test_f1_optional_sensors_do_not_change_the_base_vehicle(depth, lidar):
+    robot = expand_f1(depth_camera=depth, lidar_3d=lidar)
+    expected = {"imu", "hokuyo_sensor"}
+    if depth:
+        expected.add("depth_camera_sensor")
+    if lidar:
+        expected.add("velodyne2-HDL32E")
+    sensors = list(robot.iter("sensor"))
+    names = [sensor.get("name") for sensor in sensors]
+    assert len(names) == len(set(names))
+    assert set(names) == expected
+    transforms = frames(robot)
+    for sensor in sensors:
+        plugin = sensor.find("plugin")
+        assert plugin is not None
+        assert plugin.findtext("frame_name") in transforms
+    assert ("camera_link_optical" in transforms) is depth
+    assert ("lidar_3d_link" in transforms) is lidar
+    assert not any("gps" in name for name in transforms)
+    for tag in ("link", "joint"):
+        actual = {element.get("name"): element for element in robot.findall(tag)}
+        for original in expand_f1().findall(tag):
+            assert xml_signature(actual[original.get("name")]) == xml_signature(original)
+    assert len(robot.findall("joint[@type='continuous']")) == 4
+    assert len(robot.findall("joint[@type='revolute']")) == 2
+
+
+def test_f1_default_model_contains_only_imu_and_planar_lidar():
+    robot = expand_f1()
+    assert {sensor.get("name") for sensor in robot.iter("sensor")} == {"imu", "hokuyo_sensor"}
+    lidar = next(sensor for sensor in robot.iter("sensor") if sensor.get("name") == "hokuyo_sensor")
+    assert lidar.find("ray/scan/vertical") is None
+    assert lidar.findtext("plugin/output_type") == "sensor_msgs/LaserScan"
+
+
+def test_f1_building_editor_map_is_preserved_byte_for_byte():
+    world = SOURCE / "f1_robot_model/world/demomap_2/model.sdf"
+    # User's original map at d1b01698b16af03616a62b414a132926989091a6.
+    assert hashlib.sha256(world.read_bytes()).hexdigest() == (
+        "5bb46412d580673fff69987b3455fbde8f24d61f8b9f4ec362b7c1c116de5dbc")
+
+
+@pytest.mark.parametrize("filename", ["urdf_config.rviz", "sim_config.rviz"])
+def test_f1_default_rviz_subscribes_only_to_present_sensors(filename):
+    config = yaml.safe_load((SOURCE / "f1_robot_model/rviz" / filename).read_text())
+    displays = {display["Name"]: display
+                for display in config["Visualization Manager"]["Displays"]}
+    for name, topic in {"2D LiDAR": "/scan", "IMU": "/imu/data"}.items():
+        assert displays[name]["Enabled"] is True
+        assert displays[name]["Topic"]["Value"] == topic
+        assert displays[name]["Topic"]["Reliability Policy"] == "Best Effort"
+    for name, topic in {"Depth points": "/camera/points", "RGB camera": "/camera/image_raw",
+                        "3D LiDAR (optional)": "/lidar_3d/points"}.items():
+        assert displays[name]["Enabled"] is False
+        assert displays[name]["Topic"]["Value"] == topic
+        assert displays[name]["Topic"]["Reliability Policy"] == "Best Effort"
+    assert displays["Depth points"]["Color Transformer"] == "RGB8"
+    imu = displays["IMU"]
+    assert imu["fixed_frame_orientation"] is True
+    assert imu["Acceleration properties"]["Derotate acceleration"] is True
+    scale = imu["Acceleration properties"]["Acc. vector scale"]
+    assert 0 < (9.80665 + 1.) * scale <= 0.72
+
+
 def camera_geometry(robot):
     transforms = frames(robot)
     cameras = {}
@@ -148,6 +252,39 @@ def test_rgbd_camera_info_reprojects_native_point_to_original_pixel(pixel):
     x, y, z = ((u - (width - 1) / 2) * depth / focal,
                (v - (height - 1) / 2) * depth / focal, depth)
     assert (focal * x / z + cx, focal * y / z + cy) == pytest.approx(pixel, abs=1e-9)
+
+
+@pytest.mark.parametrize("lidar", [False, True])
+def test_f1_rgbd_optical_tf_and_camera_info_match_native_points(lidar):
+    robot = expand_f1(depth_camera=True, lidar_3d=lidar)
+    camera, plugin, physical, optical = camera_geometry(robot)["camera"]
+    assert physical[0] == pytest.approx(optical[0], abs=1e-9)
+    for optical_axis, body_axis in [((0, 0, 1), (1, 0, 0)),
+                                     ((1, 0, 0), (0, -1, 0)),
+                                     ((0, 1, 0), (0, 0, -1))]:
+        assert rotated(optical[1], optical_axis) == pytest.approx(rotated(physical[1], body_axis), abs=1e-9)
+    width, height = (int(camera.findtext("image/" + key)) for key in ("width", "height"))
+    focal = width / (2 * math.tan(float(camera.findtext("horizontal_fov")) / 2))
+    cx, cy = float(plugin.findtext("cx")), float(plugin.findtext("cy"))
+    for u, v in [(0, 0), (width // 2, height // 2), (width - 1, height - 1)]:
+        depth = 2.75
+        x = (u - (width - 1) / 2) * depth / focal
+        y = (v - (height - 1) / 2) * depth / focal
+        assert (focal * x / depth + cx, focal * y / depth + cy) == pytest.approx((u, v), abs=1e-9)
+
+
+@pytest.mark.parametrize("depth", [False, True])
+def test_f1_3d_lidar_has_vertical_layers_and_its_own_ros_frame(depth):
+    robot = expand_f1(depth_camera=depth, lidar_3d=True)
+    sensor = robot.find("gazebo[@reference='lidar_3d_link']/sensor")
+    assert sensor is not None
+    assert int(sensor.findtext("ray/scan/vertical/samples")) == 32
+    assert float(sensor.findtext("ray/scan/vertical/min_angle")) < 0
+    assert float(sensor.findtext("ray/scan/vertical/max_angle")) > 0
+    assert sensor.findtext("plugin/frame_name") == "lidar_3d_link"
+    assert sensor.findtext("plugin/ros/namespace") == "/lidar_3d"
+    assert sensor.findtext("plugin/ros/remapping") == "~/out:=points"
+    assert frames(robot)["lidar_3d_link"][0] == pytest.approx((0., 0., 0.247), abs=1e-9)
 
 
 @pytest.mark.parametrize("spawn_yaw,imu_rpy", [
@@ -238,11 +375,19 @@ def test_total_mass_is_inside_actual_wheel_support_polygon(filename, profile):
             geometry = cylinder if cylinder is not None else sphere
             if geometry is None:
                 continue
-            centre, _ = compose(transforms[name], origin(collision.find("origin")))
+            centre, orientation = compose(transforms[name], origin(collision.find("origin")))
             radius = float(geometry.get("radius"))
-            if abs(centre[2] - radius) < 1e-5:
+            vertical_extent = radius
+            if cylinder is not None:
+                axis_z = abs(rotated(orientation, (0., 0., 1.))[2])
+                vertical_extent = (axis_z * float(cylinder.get("length")) / 2
+                                   + math.sqrt(max(0., 1 - axis_z ** 2)) * radius)
+            if abs(centre[2] - vertical_extent) < 1e-5:
                 contacts.append(centre[:2])
     assert len(contacts) >= 3
+    if filename in {"rover_ackermann.urdf.xacro", "sensor_bot.urdf.xacro"}:
+        assert sorted(contacts) == pytest.approx(sorted([
+            (-0.28, -0.31), (-0.28, 0.31), (0.28, -0.31), (0.28, 0.31)]), abs=1e-9)
     polygon = hull(contacts)
     cx, cy, _ = [value / mass_sum for value in weighted]
     for a, b in zip(polygon, polygon[1:] + polygon[:1]):

@@ -20,6 +20,7 @@ import shutil
 import signal
 import socket
 import statistics
+from types import SimpleNamespace
 import struct
 import subprocess
 import sys
@@ -173,6 +174,65 @@ class TimestampedTfGate:
                 "last_failed_exact_tf": self.last_failure}
 
 
+def sdf_pose(element):
+    """Read the local SDF pose; reject frame conventions this probe cannot resolve."""
+    pose = element.find("pose")
+    if pose is not None:
+        assert not pose.get("relative_to"), "probe requires explicit parent-relative SDF poses"
+    x, y, z, roll, pitch, yaw = map(float, (element.findtext("pose") or "0 0 0 0 0 0").split())
+    cr, sr, cp, sp, cy, sy = (math.cos(roll / 2), math.sin(roll / 2),
+                              math.cos(pitch / 2), math.sin(pitch / 2),
+                              math.cos(yaw / 2), math.sin(yaw / 2))
+    return (x, y, z), SimpleNamespace(x=sr * cp * cy - cr * sp * sy,
+        y=cr * sp * cy + sr * cp * sy, z=cr * cp * sy - sr * sp * cy,
+        w=cr * cp * cy + sr * sp * sy)
+
+
+def ray_box_distance(origin, direction, size):
+    """Intersect a ray with a centred axis-aligned box, in the box's local frame."""
+    near, far = -math.inf, math.inf
+    for value, delta, length in zip(origin, direction, size):
+        if abs(delta) < 1e-12:
+            if abs(value) > length / 2:
+                return None
+            continue
+        hits = sorted(((-length / 2 - value) / delta, (length / 2 - value) / delta))
+        near, far = max(near, hits[0]), min(far, hits[1])
+        if near > far:
+            return None
+    distance = near if near > 1e-6 else far
+    return distance if distance > 1e-6 and math.isfinite(distance) else None
+
+
+def expected_box_range(world_source, world_origin, world_direction):
+    """Raycast the unchanged world's box walls, including Building Editor poses.
+
+    The ray is transformed through model, link and collision poses. Ground planes
+    and cylinders do not intersect the selected forward reference rays in these
+    tutorial worlds. The returned collision is recorded alongside every range.
+    """
+    world = ET.parse(world_source).getroot().find("world")
+    hits = []
+    for model in world.findall("model"):
+        for link in model.findall("link"):
+            for collision in link.findall("collision"):
+                size = collision.findtext("geometry/box/size")
+                if size is None:
+                    continue
+                origin, direction = world_origin, world_direction
+                for element in (model, link, collision):
+                    translation, q = sdf_pose(element)
+                    inverse = SimpleNamespace(x=-q.x, y=-q.y, z=-q.z, w=q.w)
+                    origin = rotated(inverse, tuple(a - b for a, b in zip(origin, translation)))
+                    direction = rotated(inverse, direction)
+                distance = ray_box_distance(origin, direction, tuple(map(float, size.split())))
+                if distance is not None:
+                    hits.append((distance, model.get("name") + "/" + link.get("name")))
+    assert hits, "forward reference ray misses all world box walls"
+    distance, collision = min(hits)
+    return {"distance_m": distance, "world_collision": collision}
+
+
 def add_state_plugin(source, destination):
     """Preserve the demonstration world and add only an observing world plugin."""
     tree = ET.parse(source)
@@ -245,6 +305,8 @@ def main():
                         choices=["sensor_bot", "diffbot", "rover_diff", "rover_ackermann", "f1"])
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument("--rviz", action="store_true")
+    parser.add_argument("--f1-sensors", choices=["basic", "rgbd", "lidar3d", "both"], default="basic",
+                        help="F1 optional sensors; basic preserves wheel + IMU + 2D LiDAR")
     parser.add_argument("--timeout", type=float, default=300,
                         help="total active wall-clock budget per model; cleanup adds at most 18 s")
     args = parser.parse_args()
@@ -253,6 +315,10 @@ def main():
     output = args.evidence.resolve()
     output.mkdir(parents=True, exist_ok=True)
     report = {"model": args.model, "status": "failed", "checks": {}, "errors": []}
+    f1_rgbd = args.model == "f1" and args.f1_sensors in ("rgbd", "both")
+    f1_lidar3d = args.model == "f1" and args.f1_sensors in ("lidar3d", "both")
+    if args.model == "f1":
+        report["f1_sensors"] = args.f1_sensors
 
     def write_report():
         (output / "result.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -270,7 +336,7 @@ def main():
         from ackermann_msgs.msg import AckermannDriveStamped
         from nav_msgs.msg import Odometry, Path as RosPath
         from rosgraph_msgs.msg import Clock
-        from sensor_msgs.msg import CameraInfo, Image, Imu, JointState, LaserScan, NavSatFix, PointCloud2
+        from sensor_msgs.msg import CameraInfo, Image, Imu, JointState, LaserScan, PointCloud2
         from std_msgs.msg import String
         from tf2_ros import Buffer, TransformListener
     except ImportError as error:
@@ -311,7 +377,7 @@ def main():
         try:
             package = "f1_robot_model" if args.model == "f1" else "gazebo_tutorial_bringup"
             share = Path(get_package_share_directory(package))
-            world_source = share / ("world/sensor_arena.world" if args.model == "f1" else
+            world_source = share / ("world/demomap_2/model.sdf" if args.model == "f1" else
                                     "worlds/sensor.world" if args.model == "sensor_bot" else "worlds/empty.world")
             world_copy = output / "probe.world"
             add_state_plugin(world_source, world_copy)
@@ -322,8 +388,12 @@ def main():
             if args.model == "sensor_bot":
                 command.append("sensor_profile:=all")
             if args.model == "f1":
-                command += ["depth_camera:=true", "stereo_camera:=true", "lidar_3d:=true",
-                            "gps:=true", "joystick:=false", "ackermann_adapter:=true"]
+                command += ["joystick:=false", "ackermann_adapter:=true"]
+                # The basic case deliberately uses the launch defaults.
+                if f1_rgbd:
+                    command.append("depth_camera:=true")
+                if f1_lidar3d:
+                    command.append("lidar_3d:=true")
             report["command"] = command
             report["world_source"] = str(world_source)
             process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
@@ -355,21 +425,20 @@ def main():
                 depth_topics = ("/rgbd/depth/image_raw", "/rgbd/depth/camera_info", "/rgbd/points")
                 frames.update({t: "rgbd_camera_optical_frame" for t in depth_topics})
             elif args.model == "f1":
-                # These are the public topics of the maintained F1 model.
-                scan_topic, imu_topic, cloud3d_topic = "/scan", "/imu/data", "/lidar_3d/points"
-                frames.update({scan_topic: "laser", imu_topic: "imu", cloud3d_topic: "lidar_3d_link"})
-                image_pairs.append(("/camera/image_raw", "/camera/camera_info", "bgr8"))
-                for side in ("left", "right"):
-                    prefix, frame = "/" + side + "_camera", side + "_camera_link_optical"
-                    image_pairs.append((prefix + "/image_raw", prefix + "/camera_info", "bgr8"))
-                    frames[prefix + "/image_raw"] = frames[prefix + "/camera_info"] = frame
-                depth_topics = ("/camera/depth/image_raw", "/camera/depth/camera_info", "/camera/points")
-                frames.update({t: "camera_link_optical" for t in
-                               ("/camera/image_raw", "/camera/camera_info", *depth_topics)})
-                topics["/gps/data"] = NavSatFix
-                frames["/gps/data"] = "gps"
+                scan_topic, imu_topic = "/scan", "/imu/data"
+                frames.update({scan_topic: "laser", imu_topic: "imu"})
+                if f1_lidar3d:
+                    cloud3d_topic = "/lidar_3d/points"
+                    frames[cloud3d_topic] = "lidar_3d_link"
+                if f1_rgbd:
+                    image_pairs.append(("/camera/image_raw", "/camera/camera_info", "bgr8"))
+                    depth_topics = ("/camera/depth/image_raw", "/camera/depth/camera_info", "/camera/points")
+                    frames.update({t: "camera_link_optical" for t in
+                                   ("/camera/image_raw", "/camera/camera_info", *depth_topics)})
             if scan_topic:
-                topics[scan_topic], topics[imu_topic], topics[cloud3d_topic] = LaserScan, Imu, PointCloud2
+                topics[scan_topic], topics[imu_topic] = LaserScan, Imu
+            if cloud3d_topic:
+                topics[cloud3d_topic] = PointCloud2
             for image_topic, info_topic, _ in image_pairs:
                 topics[image_topic], topics[info_topic] = Image, CameraInfo
             if depth_topics:
@@ -378,7 +447,7 @@ def main():
                 topics["/ground_truth_path"] = RosPath
             if args.model != "f1":
                 topics["/wheel_odom_path"] = RosPath
-            if args.model == "rover_ackermann":
+            if args.model in ("rover_ackermann", "sensor_bot"):
                 topics["/ground_truth/odom"] = Odometry
             tf_gates = {topic: TimestampedTfGate(frame) for topic, frame in frames.items()}
             collecting_tf_samples = False
@@ -487,6 +556,36 @@ def main():
             assert all(math.isfinite(value) for value in joint_state.position)
             report["checks"]["connected_tf_links"] = sorted(links)
             report["checks"]["moving_joints"] = sorted(movable)
+            children = {joint.find("child").get("link") for joint in robot.findall("joint")}
+            roots = links - children
+            assert len(roots) == 1, roots
+            root_link = roots.pop()
+            if args.model == "sensor_bot":
+                required_wheels = {f"{axle}_{side}_wheel_joint" for axle in ("front", "rear") for side in ("left", "right")}
+                assert required_wheels <= movable, movable
+                assert not any("caster" in link for link in links), "sensor robot still has a caster"
+                report["checks"]["ackermann_base"] = {"four_wheel_joints": sorted(required_wheels), "caster_links": []}
+            if args.model == "f1":
+                sensors = robot.findall("gazebo/sensor")
+                types = sorted(sensor.get("type") for sensor in sensors)
+                expected = ["imu", "ray"] + (["depth"] if f1_rgbd else []) + (["ray"] if f1_lidar3d else [])
+                assert types == sorted(expected), (types, expected)
+                report["checks"]["enabled_sensor_types"] = types
+                # Disabled options must not publish hidden data or leave unexpected cameras.
+                forbidden = ["/left_camera/image_raw", "/right_camera/image_raw", "/gps/data"]
+                if not f1_rgbd:
+                    forbidden += ["/camera/image_raw", "/camera/depth/image_raw", "/camera/points"]
+                if not f1_lidar3d:
+                    forbidden.append("/lidar_3d/points")
+                unexpected = {topic: node.count_publishers(topic) for topic in forbidden
+                              if node.count_publishers(topic) > 0}
+                assert not unexpected, f"disabled sensors still publish: {unexpected}"
+                report["checks"]["disabled_sensor_publishers_absent"] = forbidden
+                world_names = messages["/probe/model_states"].name
+                assert "demomap_2" in world_names, world_names
+                initial = ground_pose().position
+                assert math.hypot(initial.x, initial.y) < 0.05, f"original spawn origin moved: {initial}"
+                report["checks"]["building_editor_world"] = {"model": "demomap_2", "spawn_xy_m": [initial.x, initial.y]}
             # Readiness must recover from sensor messages older than the initial
             # TF cache without accepting a latest-time transform as sensor-time TF.
             # Start collecting here so all qualifying stamps are newly received.
@@ -538,6 +637,15 @@ def main():
             if args.model != "f1":
                 report["checks"]["wheel_odom_path_initial"] = check_wheel_path(messages["/wheel_odom_path"])
 
+            def reference_range(frame, forward):
+                mount = buffer.lookup_transform(root_link, frame, Time()).transform
+                pose = ground_pose()
+                offset = rotated(pose.orientation, (mount.translation.x, mount.translation.y, mount.translation.z))
+                world_origin = tuple(a + b for a, b in zip(
+                    (pose.position.x, pose.position.y, pose.position.z), offset))
+                world_direction = rotated(pose.orientation, rotated(mount.rotation, forward))
+                return expected_box_range(world_source, world_origin, world_direction)
+
             for image_topic, info_topic, encoding in image_pairs:
                 image, info = messages[image_topic], messages[info_topic]
                 assert image.width == info.width > 0 and image.height == info.height > 0
@@ -580,10 +688,9 @@ def main():
                 transform = buffer.lookup_transform("base_link", cloud.header.frame_id, Time())
                 forward = rotated(transform.transform.rotation, (0, 0, 1))
                 assert max(abs(a - b) for a, b in zip(forward, (1, 0, 0))) < 1e-5, forward
-                if args.model == "sensor_bot":
-                    assert abs(distance - 5.625) < 0.12, f"front wall depth {distance}, expected 5.625 m"
-                else:
-                    assert abs(distance - 2.8) < 0.12, f"front wall depth {distance}, expected 2.8 m"
+                reference = reference_range(cloud.header.frame_id, (0, 0, 1))
+                assert abs(distance - reference["distance_m"]) < 0.15, (distance, reference)
+                report["checks"]["depth_world_reference"] = reference
                 report["checks"]["rgbd_optical_xyz"] = {"center_xyz_m": xyz, "center_depth_m": distance,
                                                         "calibrated_projection_xyz_m": predicted,
                                                         "off_center_projection_errors_m": projection_errors,
@@ -597,35 +704,17 @@ def main():
                 t = transform.transform.translation
                 assert abs(t.x - baseline) < 1e-6 and abs(t.y) < 1e-6 and abs(t.z) < 1e-6, (t, baseline)
                 report["checks"]["stereo_baseline_m"] = baseline
-                assert abs(front_range(messages[scan_topic]) - 5.795) < 0.15, front_range(messages[scan_topic])
                 assert max(abs(v) for v in quaternion_rpy(ground_pose().orientation)[:2]) < 0.03, "sensor robot tilts at rest"
-            if args.model == "f1":
-                left, right = messages["/left_camera/camera_info"], messages["/right_camera/camera_info"]
-                assert abs(left.p[3]) < 1e-9 and right.p[0] > 0
-                baseline = -right.p[3] / right.p[0]
-                assert abs(baseline - 0.2) < 1e-6, baseline
-                transform = buffer.lookup_transform(left.header.frame_id, right.header.frame_id, Time())
-                t = transform.transform.translation
-                assert abs(t.x - baseline) < 1e-6 and abs(t.y) < 1e-6 and abs(t.z) < 1e-6
-                report["checks"]["stereo_baseline_m"] = baseline
-                assert abs(front_range(messages[scan_topic]) - 2.9) < 0.15, front_range(messages[scan_topic])
-                fix = messages["/gps/data"]
-                assert all(math.isfinite(v) for v in (fix.latitude, fix.longitude, fix.altitude))
-                assert -90 <= fix.latitude <= 90 and -180 <= fix.longitude <= 180 and fix.status.status >= 0
-                world = ET.parse(world_source).getroot().find("world")
-                latitude = float(world.findtext("spherical_coordinates/latitude_deg", "0"))
-                longitude = float(world.findtext("spherical_coordinates/longitude_deg", "0"))
-                altitude = float(world.findtext("spherical_coordinates/elevation", "0"))
-                assert abs(fix.latitude - latitude) < 0.0001 and abs(fix.longitude - longitude) < 0.0001
-                assert abs(fix.altitude - altitude) < 5, "GNSS altitude must be metres above world datum"
-                report["checks"]["gnss"] = {"latitude_deg": fix.latitude, "longitude_deg": fix.longitude,
-                                             "altitude_m": fix.altitude, "status": fix.status.status}
             if scan_topic:
                 scan = messages[scan_topic]
                 finite = [r for r in scan.ranges if math.isfinite(r)]
                 assert finite and all(scan.range_min <= r <= scan.range_max for r in finite)
+                reference = reference_range(scan.header.frame_id, (1, 0, 0))
+                measured = front_range(scan)
+                assert abs(measured - reference["distance_m"]) < 0.15, (measured, reference)
                 report["checks"]["lidar"] = {"rays": len(scan.ranges), "finite_rays": len(finite),
-                                              "forward_range_m": front_range(scan)}
+                                              "forward_range_m": measured, "world_reference": reference}
+            if cloud3d_topic:
                 cloud = messages[cloud3d_topic]
                 # Classic ray plugin may flatten scan rows to height=1.
                 xyzs = [cloud_xyz(cloud, row, column) for row in range(cloud.height)
@@ -638,12 +727,13 @@ def main():
                 forward_returns = [x for x, y, z in finite_xyzs
                                    if x > 0 and abs(y / x) < 0.025 and abs(z / x) < 0.035]
                 assert forward_returns, "3D cloud has no +X forward wall returns in its mounting frame"
-                expected_wall = 6.045 if args.model == "sensor_bot" else 3.0
+                reference = reference_range(cloud.header.frame_id, (1, 0, 0))
                 cloud_wall = statistics.median(forward_returns)
-                assert abs(cloud_wall - expected_wall) < 0.15, (cloud_wall, expected_wall)
+                assert abs(cloud_wall - reference["distance_m"]) < 0.15, (cloud_wall, reference)
                 report["checks"]["lidar3d"] = {"width": cloud.width, "height": cloud.height,
                     "finite_points": len(finite_xyzs), "vertical_angle_span_rad": max(vertical_angles) - min(vertical_angles),
-                    "forward_wall_x_m": cloud_wall}
+                    "forward_wall_x_m": cloud_wall, "world_reference": reference}
+            if imu_topic:
                 # Drop startup impact samples before checking the stationary IMU.
                 samples = list(imu_samples)[-100:]
                 assert len(samples) >= 20 and all(math.isfinite(n) for row in samples for n in row)
@@ -663,7 +753,7 @@ def main():
             command = Twist()
             command.linear.x = 0.15
             # A longer path remains visible behind the larger tutorial bodies.
-            long_path = args.model in ("diffbot", "rover_diff", "rover_ackermann")
+            long_path = args.model in ("diffbot", "rover_diff", "rover_ackermann", "sensor_bot")
             ground_target, odom_target = (0.80, 0.75) if long_path else (0.20, 0.15)
             movement = {"command_linear_m_s": 0.15, "ground_distance_m": 0.0, "odom_distance_m": 0.0,
                         "required_ground_distance_m": ground_target, "required_odom_distance_m": odom_target}
@@ -698,7 +788,7 @@ def main():
                 movement["front_wall_approach_m"] = initial_front - front_range(messages[scan_topic])
                 assert movement["front_wall_approach_m"] > 0.08, movement
 
-            if args.model in ("rover_ackermann", "f1"):
+            if args.model in ("rover_ackermann", "sensor_bot", "f1"):
                 start_pose = ground_pose()
                 start_x, start_y = start_pose.position.x, start_pose.position.y
                 initial_yaw = previous_yaw = quaternion_rpy(start_pose.orientation)[2]

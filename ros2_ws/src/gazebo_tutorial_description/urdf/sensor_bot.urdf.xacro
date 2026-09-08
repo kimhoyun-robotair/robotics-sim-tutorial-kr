@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="sensor_bot">
-  <!-- 센서 구현을 종류별 파일로 분리하고 여기서는 조합만 담당한다. -->
+  <!-- 기존 4륜 Ackermann 차량에 센서를 조합한다. -->
+  <xacro:include filename="$(find gazebo_tutorial_description)/urdf/macros/ackermann_rover.xacro"/>
   <xacro:include filename="$(find gazebo_tutorial_description)/urdf/sensors/sensor_common.xacro"/>
   <xacro:include filename="$(find gazebo_tutorial_description)/urdf/sensors/imu_sensor.xacro"/>
   <xacro:include filename="$(find gazebo_tutorial_description)/urdf/sensors/mono_rgb_camera.xacro"/>
@@ -26,20 +27,10 @@
   <xacro:property name="enable_lidars"
     value="${sensor_profile == 'all' or sensor_profile == 'lidars'}"/>
 
-  <xacro:property name="wheel_radius" value="0.10"/>
-  <xacro:property name="wheel_width" value="0.045"/>
-  <xacro:property name="wheel_separation" value="0.43"/>
-  <!-- all 프로필의 전방 센서 모멘트를 상쇄하는 후방 caster 겸 counterweight. -->
-  <xacro:property name="caster_radius" value="0.05"/>
-  <xacro:property name="caster_mass" value="1.20"/>
-  <xacro:property name="caster_x" value="-0.20"/>
+  <!-- rover_ackermann와 같은 앞바퀴 조향·뒷바퀴 구동 구조다.
+       /cmd_vel의 angular.z는 조향각 [rad]이며 yaw rate가 아니다. -->
+  <xacro:ackermann_rover/>
 
-  <material name="body_blue">
-    <color rgba="0.10 0.35 0.75 1.0"/>
-  </material>
-  <material name="dark_gray">
-    <color rgba="0.08 0.08 0.08 1.0"/>
-  </material>
   <material name="sensor_gray">
     <color rgba="0.30 0.32 0.35 1.0"/>
   </material>
@@ -47,194 +38,67 @@
     <color rgba="0.10 0.75 0.35 1.0"/>
   </material>
 
-  <xacro:macro name="box_inertial" params="mass x y z">
-    <inertial>
-      <mass value="${mass}"/>
-      <inertia
-        ixx="${mass * (y * y + z * z) / 12.0}" ixy="0.0" ixz="0.0"
-        iyy="${mass * (x * x + z * z) / 12.0}" iyz="0.0"
-        izz="${mass * (x * x + y * y) / 12.0}"/>
-    </inertial>
-  </xacro:macro>
+  <!-- 센서 본체와 지지대는 시각 요소와 관성을 갖는다. 기존 센서 장착
+       매크로처럼 충돌 형상은 생략하므로 라이다 광선을 스스로 가리지 않는다. -->
+  <xacro:if value="${enable_cameras}">
+    <xacro:sensor_mount_box
+      link_name="camera_mount_rail_link" parent="base_link" xyz="0.38 0 0.11"
+      size_x="0.06" size_y="0.36" size_z="0.02" color="rover_metal"/>
+    <xacro:sensor_mount_box
+      link_name="mono_camera_support_link" parent="base_link" xyz="0.40 -0.13 0.1225"
+      size_x="0.02" size_y="0.02" size_z="0.005" color="rover_metal" mass="0.01"/>
+    <xacro:sensor_mount_box
+      link_name="rgbd_camera_support_link" parent="base_link" xyz="0.40 0.13 0.1225"
+      size_x="0.02" size_y="0.02" size_z="0.005" color="rover_metal" mass="0.01"/>
+    <xacro:sensor_mount_box
+      link_name="stereo_camera_support_link" parent="base_link" xyz="0.40 0 0.185"
+      size_x="0.02" size_y="0.02" size_z="0.13" color="rover_metal"/>
+    <xacro:sensor_mount_box
+      link_name="fisheye_camera_support_link" parent="base_link" xyz="0.10 -0.17 0.1975"
+      size_x="0.02" size_y="0.02" size_z="0.235" color="rover_metal"/>
+  </xacro:if>
 
-  <!-- 바닥 투영 프레임. 차체 중심은 지면에서 0.18 m 위에 있다. -->
-  <link name="base_footprint"/>
-  <link name="base_link">
-    <visual>
-      <geometry>
-        <box size="0.55 0.38 0.16"/>
-      </geometry>
-      <material name="body_blue"/>
-    </visual>
-    <collision>
-      <geometry>
-        <box size="0.55 0.38 0.16"/>
-      </geometry>
-    </collision>
-    <xacro:box_inertial mass="7.0" x="0.55" y="0.38" z="0.16"/>
-  </link>
-  <joint name="base_footprint_joint" type="fixed">
-    <parent link="base_footprint"/>
-    <child link="base_link"/>
-    <origin xyz="0 0 0.18" rpy="0 0 0"/>
-  </joint>
-
-  <xacro:macro name="drive_wheel" params="side y">
-    <link name="${side}_wheel_link">
-      <visual>
-        <origin rpy="${pi / 2.0} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-        <material name="dark_gray"/>
-      </visual>
-      <collision>
-        <origin rpy="${pi / 2.0} 0 0"/>
-        <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
-        </geometry>
-      </collision>
-      <inertial>
-        <mass value="0.45"/>
-        <inertia
-          ixx="${0.45 * (3.0 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12.0}"
-          ixy="0" ixz="0"
-          iyy="${0.45 * wheel_radius * wheel_radius / 2.0}"
-          iyz="0"
-          izz="${0.45 * (3.0 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12.0}"/>
-      </inertial>
-    </link>
-    <joint name="${side}_wheel_joint" type="continuous">
-      <parent link="base_link"/>
-      <child link="${side}_wheel_link"/>
-      <origin xyz="0 ${y} -0.08" rpy="0 0 0"/>
-      <axis xyz="0 1 0"/>
-      <limit effort="20.0" velocity="30.0"/>
-      <dynamics damping="0.05" friction="0.0"/>
-    </joint>
-    <gazebo reference="${side}_wheel_link">
-      <material>Gazebo/Black</material>
-      <mu1>1.2</mu1>
-      <mu2>1.2</mu2>
-      <kp>1000000</kp>
-      <kd>10</kd>
-      <minDepth>0.001</minDepth>
-      <maxVel>0.1</maxVel>
-    </gazebo>
-  </xacro:macro>
-
-  <xacro:drive_wheel side="left" y="${wheel_separation / 2.0}"/>
-  <xacro:drive_wheel side="right" y="${-wheel_separation / 2.0}"/>
-
-  <link name="caster_link">
-    <visual>
-      <geometry>
-        <sphere radius="${caster_radius}"/>
-      </geometry>
-      <material name="dark_gray"/>
-    </visual>
-    <collision>
-      <geometry>
-        <sphere radius="${caster_radius}"/>
-      </geometry>
-    </collision>
-    <inertial>
-      <mass value="${caster_mass}"/>
-      <inertia
-        ixx="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"
-        ixy="0" ixz="0"
-        iyy="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"
-        iyz="0"
-        izz="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"/>
-    </inertial>
-  </link>
-  <joint name="caster_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="caster_link"/>
-    <origin xyz="${caster_x} 0 -0.13" rpy="0 0 0"/>
-  </joint>
-  <gazebo reference="caster_link">
-    <material>Gazebo/Black</material>
-    <mu1>0.01</mu1>
-    <mu2>0.01</mu2>
-  </gazebo>
-
-  <gazebo reference="base_link">
-    <material>Gazebo/Blue</material>
-  </gazebo>
-
-  <!-- Wheel encoder odometry: odometry_source=0 means encoder integration. -->
-  <gazebo>
-    <plugin name="sensor_bot_diff_drive" filename="libgazebo_ros_diff_drive.so">
-      <ros>
-        <namespace>/</namespace>
-        <remapping>cmd_vel:=cmd_vel</remapping>
-        <remapping>odom:=odom</remapping>
-      </ros>
-      <update_rate>50</update_rate>
-      <left_joint>left_wheel_joint</left_joint>
-      <right_joint>right_wheel_joint</right_joint>
-      <wheel_separation>${wheel_separation}</wheel_separation>
-      <wheel_diameter>${2.0 * wheel_radius}</wheel_diameter>
-      <max_wheel_torque>20.0</max_wheel_torque>
-      <max_wheel_acceleration>3.0</max_wheel_acceleration>
-      <odometry_source>0</odometry_source>
-      <publish_odom>true</publish_odom>
-      <publish_odom_tf>true</publish_odom_tf>
-      <!-- Wheel TF는 joint_states를 받은 robot_state_publisher가 URDF parent 기준으로 발행한다. -->
-      <publish_wheel_tf>false</publish_wheel_tf>
-      <odometry_frame>odom</odometry_frame>
-      <robot_base_frame>base_footprint</robot_base_frame>
-      <covariance_x>0.001</covariance_x>
-      <covariance_y>0.001</covariance_y>
-      <covariance_yaw>0.01</covariance_yaw>
-    </plugin>
-  </gazebo>
-
-  <gazebo>
-    <plugin name="sensor_bot_joint_states" filename="libgazebo_ros_joint_state_publisher.so">
-      <ros>
-        <namespace>/</namespace>
-        <remapping>joint_states:=joint_states</remapping>
-      </ros>
-      <update_rate>50</update_rate>
-      <joint_name>left_wheel_joint</joint_name>
-      <joint_name>right_wheel_joint</joint_name>
-    </plugin>
-  </gazebo>
+  <xacro:if value="${enable_lidars}">
+    <xacro:sensor_mount_box
+      link_name="lidar_2d_support_link" parent="base_link" xyz="0.20 0 0.2375"
+      size_x="0.02" size_y="0.02" size_z="0.315" color="rover_metal"/>
+    <xacro:sensor_mount_box
+      link_name="lidar_3d_support_link" parent="base_link" xyz="-0.15 0 0.2925"
+      size_x="0.02" size_y="0.02" size_z="0.425" color="rover_metal"/>
+  </xacro:if>
 
   <!-- IMU는 모든 프로필에서 사용한다. -->
   <xacro:gazebo_imu_sensor
-    prefix="imu" parent="base_link" xyz="0 0 0.10"
+    prefix="imu" parent="base_link" xyz="-0.14 0.12 0.09"
     topic="imu/data" update_rate="100.0"
     angular_stddev="0.0002" linear_stddev="0.017"/>
 
   <xacro:if value="${enable_cameras}">
     <xacro:gazebo_mono_rgb_camera
-      prefix="camera" parent="base_link" xyz="0.30 -0.12 0.07"
+      prefix="camera" parent="base_link" xyz="0.40 -0.13 0.15"
       camera_name="camera" format="L8" update_rate="15.0"/>
 
     <xacro:gazebo_stereo_camera
-      prefix="stereo_camera" parent="base_link" xyz="0.30 0 0.15"
+      prefix="stereo_camera" parent="base_link" xyz="0.40 0 0.27"
       camera_name="stereo" baseline="0.08" update_rate="10.0"/>
 
     <xacro:gazebo_rgbd_camera
-      prefix="rgbd_camera" parent="base_link" xyz="0.30 0.12 0.07"
+      prefix="rgbd_camera" parent="base_link" xyz="0.40 0.13 0.15"
       camera_name="rgbd" min_depth="0.10" max_depth="12.0" update_rate="10.0"/>
 
     <xacro:gazebo_fisheye_camera
-      prefix="fisheye_camera" parent="base_link" xyz="0.06 -0.10 0.22"
+      prefix="fisheye_camera" parent="base_link" xyz="0.10 -0.17 0.34"
       camera_name="fisheye" horizontal_fov="3.1415926535"
       lens_type="equidistant" env_texture_size="512" update_rate="10.0"/>
   </xacro:if>
 
   <xacro:if value="${enable_lidars}">
     <xacro:gazebo_lidar_2d
-      prefix="lidar_2d" parent="base_link" xyz="0.13 0 0.22"
+      prefix="lidar_2d" parent="base_link" xyz="0.20 0 0.42"
       topic="scan" samples="720" update_rate="15.0"/>
 
     <xacro:gazebo_lidar_3d
-      prefix="lidar_3d" parent="base_link" xyz="-0.12 0 0.22"
+      prefix="lidar_3d" parent="base_link" xyz="-0.15 0 0.54"
       topic="points" horizontal_samples="360" vertical_samples="16"
       update_rate="10.0"/>
   </xacro:if>

@@ -58,10 +58,10 @@ source install/setup.bash
 | 2륜 차동 구동 | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` |
 | 4륜 스키드·차동 구동 | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` |
 | 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` |
-| 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` |
-| 카메라와 IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` |
-| 라이다와 IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` |
-| 구동계와 IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=minimal` |
+| 4륜 Ackermann + 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` |
+| 4륜 Ackermann + 카메라·IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` |
+| 4륜 Ackermann + 라이다·IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` |
+| 4륜 Ackermann + IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=minimal` |
 
 `Successfully spawned entity` 로그가 나온 뒤 다른 터미널에서 조회·조종 명령을 실행한다. 다음 실습으로 바꾸려면 기존 실행을 `Ctrl+C`로 끝내고 종료 로그를 기다린다.
 
@@ -117,7 +117,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 | `w` / `x` | 선속도 증가 / 감소 |
 | `e` / `c` | 회전 명령 크기 증가 / 감소 |
 
-Ackermann은 제자리 회전할 수 없다. Humble의 내장 플러그인은 `Twist.angular.z`를 중앙 바퀴의 조향 목표각(rad)으로 사용하므로, 일반적인 차동 구동의 각속도 명령(rad/s)과 구분한다. 종료할 때는 `k`로 멈춘 뒤 `Ctrl+C`를 누른다.
+Ackermann 로버와 센서 차량은 제자리 회전할 수 없다. Humble의 내장 플러그인은 `Twist.angular.z`를 중앙 바퀴의 조향 목표각(rad)으로 사용하므로, 일반적인 차동 구동의 각속도 명령(rad/s)과 구분한다. 종료할 때는 `k`로 멈춘 뒤 `Ctrl+C`를 누른다.
 
 ## 공통 토픽과 오도메트리
 
@@ -134,9 +134,9 @@ Ackermann은 제자리 회전할 수 없다. Humble의 내장 플러그인은 `T
 
 | 모델 | `/odom`의 계산 근거 |
 | --- | --- |
-| `diffbot`, `sensor_bot` | 좌우 바퀴 회전량 적분 |
+| `diffbot` | 좌우 바퀴 회전량 적분 |
 | `rover_diff` | Humble 차동 구동 플러그인의 첫 번째 좌우 바퀴 쌍 적분 |
-| `rover_ackermann` | 뒷바퀴 회전량·앞바퀴 조향각 적분 후 뒤 차축에서 차체 중심으로 좌표 변환 |
+| `rover_ackermann`, `sensor_bot` | 뒷바퀴 회전량·앞바퀴 조향각 적분 후 뒤 차축에서 차체 중심으로 좌표 변환 |
 
 Ackermann 내장 플러그인의 출력은 `/ground_truth/odom`으로 분리한다. 이것은 바퀴 엔코더가 아닌 Gazebo의 위치를 사용한다. 별도 노드의 `rear_axle_offset=0.28`은 뒤 차축과 `base_footprint` 사이의 거리를 반영한다.
 

@@ -491,7 +491,7 @@ Gazebo를 초기화해 시뮬레이션 시간이 뒤로 가거나 입력 프레�
 
 ## 7. RViz에서 센서 프레임 확인하기
 
-키보드 터미널에서 `k`로 정지한 뒤 `Ctrl+C`로 종료한다. 터미널 A의 diffbot 실행도 `Ctrl+C`로 끝낸 뒤 센서 모델을 실행한다. 이때 불러오는 `sensors.rviz`는 IMU의 월드 기준 자세를 표시하기 위해 Fixed Frame을 `world`로 둔다. 앞의 주행용 `odom.rviz`는 `odom`을 사용한다.
+키보드 터미널에서 `k`로 정지한 뒤 `Ctrl+C`로 종료한다. 터미널 A의 diffbot 실행도 `Ctrl+C`로 끝낸 뒤 4륜 Ackermann 센서 모델을 실행한다. 이때 불러오는 `sensors.rviz`는 IMU의 월드 기준 자세를 표시하기 위해 Fixed Frame을 `world`로 둔다. 앞의 주행용 `odom.rviz`는 `odom`을 사용한다.
 
 ```bash
 ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all
@@ -500,6 +500,8 @@ ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all
 `sensors.rviz`에는 IMU, 흑백·스테레오·RGBD·어안 영상, 2D LaserScan, 3D PointCloud2,
 RGBD 점군이 준비되어 있다. 센서 데이터가 발행되는데 보이지 않는다면 먼저
 메시지의 프레임을 확인한다.
+
+센서 차량에서도 `/ackermann_odom`이 `odom → base_footprint`를 발행한다. 앞바퀴 두 개는 조향 조인트 아래에 회전 조인트가 있고, 이 움직임은 `/joint_states`를 받은 `robot_state_publisher`가 표시한다. 조종 시 `angular.z`는 조향각이므로 `u`·`o`처럼 전진과 회전을 함께 명령한다.
 
 ```bash
 timeout 10s ros2 topic echo --once /scan --field header

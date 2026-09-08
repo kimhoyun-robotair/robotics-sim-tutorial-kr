@@ -69,9 +69,11 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 | 2륜 + 보조 바퀴 | `ros2 launch gazebo_tutorial_bringup diffbot.launch.py` | 차동구동, `/odom`, TF, RViz 궤적 |
 | 4륜 차동구동 | `ros2 launch gazebo_tutorial_bringup rover_diff.launch.py` | 네 바퀴 구동과 옆 미끄러짐을 동반한 회전 |
 | 4륜 Ackermann | `ros2 launch gazebo_tutorial_bringup rover_ackermann.launch.py` | 앞바퀴 조향과 곡선 궤적 |
-| 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` | IMU, 카메라, 2D·3D 라이다 |
-| 카메라만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` | 단안·스테레오·RGB-D·어안 카메라 |
-| 라이다만 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` | LaserScan, PointCloud2 |
+| 4륜 Ackermann + 센서 전체 | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=all` | 조향·휠 오도메트리, IMU, 카메라, 2D·3D 라이다 |
+| 4륜 Ackermann + 카메라·IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=cameras` | 단안·스테레오·RGB-D·어안 카메라 |
+| 4륜 Ackermann + 라이다·IMU | `ros2 launch gazebo_tutorial_bringup sensors.launch.py sensor_profile:=lidars` | LaserScan, PointCloud2 |
+
+센서 실습은 모든 프로필에서 기존 4륜 Ackermann 로버를 사용한다. 조종할 때 `i`로 직진하고 `u`·`o`로 전진하며 회전한다. `/cmd_vel`의 `angular.z`는 조향각(rad)이므로 차동구동 실습처럼 제자리 회전할 수 없다. 자세한 명령과 확인 방법은 [센서 실습](docs/05_sensors.md)에 있다.
 
 각 launch는 `gui:=false`, `rviz:=false`, `pause:=true`, `world:=...` 등의 인자를 지원한다. 실행 가능한 인자와 기본값은 다음 명령으로 확인한다.
 
@@ -81,7 +83,7 @@ ros2 launch gazebo_tutorial_bringup diffbot.launch.py --show-args
 
 ## 미니 프로젝트: F1TENTH 시뮬레이션
 
-기본 실습을 마쳤다면 `f1_robot_model`과 `velodyne_simulator`로 F1TENTH 크기의 차량을 실행해 본다. 앞바퀴 조향, ROS 2 제어 명령, Velodyne 3D 라이다를 하나의 차량에서 연결하는 실습이다. 준비 과정과 조종 방법은 [프로젝트 소개](F1TENTH.md)와 [사용 안내](F1TENTH_USERGUIDE.md)에 있다.
+기본 실습을 마쳤다면 `f1_robot_model`로 F1TENTH 크기의 차량을 실행해 본다. 기본 실행은 기존 Building Editor 맵에 차량을 생성하며, 바퀴·IMU·2D 라이다를 사용한다. RGB-D 카메라와 Velodyne 3D 라이다는 필요할 때 각각 켤 수 있다. 준비 과정과 조종 방법은 [프로젝트 소개](F1TENTH.md)와 [사용 안내](F1TENTH_USERGUIDE.md)에 있다.
 
 ```bash
 cd ~/robotics-sim-tutorial-kr/ros2_ws
@@ -93,6 +95,14 @@ ros2 launch f1_robot_model display.launch.py
 ```
 
 이전 Gazebo 실습을 종료하고 실행한다. 창이 열린 뒤에는 사용 안내의 별도 조종 터미널을 준비한다.
+
+기본 구성을 확인했다면 실행을 `Ctrl+C`로 종료한 뒤 두 센서 옵션을 켜 본다. 같은 Building Editor 맵에서 RGB-D 영상·점군과 3D 라이다 점군을 확인할 수 있다.
+
+```bash
+ros2 launch f1_robot_model display.launch.py depth_camera:=true lidar_3d:=true
+```
+
+RGB-D 카메라만 필요하면 `depth_camera:=true`, 3D 라이다만 필요하면 `lidar_3d:=true`를 붙인다. 두 옵션의 기본값은 모두 `false`다.
 
 ## 학습 순서
 

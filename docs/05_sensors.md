@@ -1,6 +1,6 @@
 # 5. Gazebo 센서와 RViz 시각화
 
-이 장에서는 이동 로봇에 IMU, 카메라, 2D/3D 라이다를 달고 측정값을 RViz에서 확인한다. 바퀴 회전량으로 이동 거리와 방향을 계산하는 **휠 오도메트리**도 함께 살펴본다. 센서를 하나씩 추가하면서 **장착 위치, Gazebo 센서, ROS 플러그인, 토픽, RViz 설정**이 어떻게 연결되는지 배운다.
+이 장에서는 앞 장의 **4륜 Ackermann 로버**에 IMU, 카메라, 2D/3D 라이다를 달고 측정값을 RViz에서 확인한다. `sensor_bot`이라는 모델 이름은 그대로 사용하며, 네 가지 센서 프로필 모두 같은 4륜 차량을 사용한다. 바퀴 회전량으로 이동 거리와 방향을 계산하는 **휠 오도메트리**도 함께 살펴본다. 센서를 하나씩 추가하면서 **장착 위치, Gazebo 센서, ROS 플러그인, 토픽, RViz 설정**이 어떻게 연결되는지 배운다.
 
 예제는 **ROS 2 Humble + Gazebo Classic 11 + `gazebo_ros_pkgs` 3.9 계열**을 대상으로 한다. 새 Gazebo에서 사용하는 `ros_gz` 플러그인이나 `<gz_frame_id>` 같은 태그를 이 예제에 섞어 쓰지 않아야 한다.
 
@@ -22,7 +22,9 @@
 
 ```text
 gazebo_tutorial_description/urdf/
-├── sensor_bot.urdf.xacro          # 차체, 구동계, 센서 조합
+├── sensor_bot.urdf.xacro          # Ackermann 차량과 센서 조합
+├── macros/
+│   └── ackermann_rover.xacro      # rover_ackermann과 공유하는 4륜 차체·구동계
 └── sensors/
     ├── sensor_common.xacro        # 장착 링크와 optical frame
     ├── imu_sensor.xacro
@@ -50,6 +52,8 @@ install(
 ```xml
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="sensor_bot">
   <xacro:include
+    filename="$(find gazebo_tutorial_description)/urdf/macros/ackermann_rover.xacro"/>
+  <xacro:include
     filename="$(find gazebo_tutorial_description)/urdf/sensors/sensor_common.xacro"/>
   <xacro:include
     filename="$(find gazebo_tutorial_description)/urdf/sensors/imu_sensor.xacro"/>
@@ -69,15 +73,15 @@ install(
 </robot>
 ```
 
-가져온 매크로는 다음처럼 필요한 위치와 설정만 넘겨 호출한다. 메인 파일은 센서 내부 구현보다 **어떤 센서를 어디에 장착하는가**를 보여 주는 조합가 된다.
+가져온 매크로는 다음처럼 필요한 위치와 설정만 넘겨 호출한다. 메인 파일은 센서 내부 구현보다 **어떤 센서를 어디에 장착하는가**를 보여 준다.
 
 ```xml
 <xacro:gazebo_imu_sensor
-  prefix="imu" parent="base_link" xyz="0 0 0.10"
+  prefix="imu" parent="base_link" xyz="-0.14 0.12 0.09"
   topic="imu/data" update_rate="100.0"/>
 
 <xacro:gazebo_lidar_2d
-  prefix="lidar_2d" parent="base_link" xyz="0.13 0 0.22"
+  prefix="lidar_2d" parent="base_link" xyz="0.20 0 0.42"
   topic="scan" samples="720" update_rate="15.0"/>
 ```
 
@@ -85,7 +89,7 @@ install(
 
 ## 5.3 센서 모델 실행
 
-카메라와 3D 라이다는 CPU와 GPU 부하가 크므로 `sensor_profile` 인자로 필요한 묶음만 생성한다.
+카메라와 3D 라이다는 CPU와 GPU 부하가 크므로 `sensor_profile` 인자로 필요한 묶음만 생성한다. 프로필을 바꿔도 앞바퀴 조향, 뒷바퀴 구동, 휠 오도메트리 구성은 같다.
 
 | 프로필 | 생성되는 센서 | 추천 용도 |
 |---|---|---|
@@ -125,7 +129,7 @@ timeout 10s ros2 topic echo /scan --field header --once \
 ### 3단계: RViz 화면 확인하기
 
 1. 왼쪽 **Displays**에서 **Global Options → Fixed Frame**이 `world`인지 확인한다.
-2. **RobotModel**에 차체와 바퀴가 보이는지 확인한다. 없으면 `Description Source: Topic`, `Description Topic: /robot_description`, `Durability Policy: Transient Local`을 확인한다.
+2. **RobotModel**에 4륜 차체와 앞바퀴 조향부가 보이는지 확인한다. 없으면 `Description Source: Topic`, `Description Topic: /robot_description`, `Durability Policy: Transient Local`을 확인한다.
 3. **2D LiDAR**와 **3D LiDAR**를 켜서 주변 물체의 윤곽을 확인한다.
 4. **RGBD Color**와 **RGBD PointCloud**를 켠다. 로봇 앞의 벽과 상자가 영상과 점군에서 같은 방향에 있어야 한다.
 5. 기본적으로 꺼 둔 **Stereo Right**와 **RGBD Depth**는 해당 실습에서 체크해 켠다. 모든 영상 창을 한꺼번에 띄울 필요는 없다.
@@ -139,55 +143,46 @@ timeout 10s ros2 topic echo /scan --field header --once \
 ```bash
 cd ~/robotics-sim-tutorial-kr/ros2_ws
 # 센서의 배치·호출 인자 확인
-sed -n '1,260p' src/gazebo_tutorial_description/urdf/sensor_bot.urdf.xacro
+cat src/gazebo_tutorial_description/urdf/sensor_bot.urdf.xacro
 # 센서 자체의 전체 구현 확인
 cat src/gazebo_tutorial_description/urdf/sensors/rgbd_camera.xacro
 ```
 
 수정 후 터미널 A에서 `Ctrl+C`를 누르고 종료를 기다린 뒤 같은 실행 명령을 다시 입력한다. Xacro는 실행할 때 전개되므로 실행 중인 로봇에는 수정 내용이 즉시 반영되지 않는다. 파일을 새로 추가하거나 설치 설정을 바꿨다면 `colcon build --symlink-install`도 다시 실행한다. 실습을 마칠 때도 터미널 A에서 `Ctrl+C`로 종료한다.
 
-### 전체 센서 장착 시 전도 방지
+### 4륜 차체와 센서 장착 위치
 
-이 로봇의 두 구동 바퀴는 `x=0` 축에서 지면과 접촉하고 후방 보조 바퀴는 `x=-0.20 m`에서 접촉하므로, 정지 상태의 무게중심을 `-0.20 < x < 0`인 지지영역 안에 두어야 한다. `all` 프로필에서는 센서 장착 링크 일곱 개가 각각 `0.05 kg`이고 여러 카메라가 차체 앞쪽에 있어, 센서가 만드는 x축 모멘트의 합이 약 `+0.0485 kg·m`이다. 기존 `0.20 kg` 보조 바퀴의 후방 모멘트 `-0.0400 kg·m`보다 크므로 전체 무게중심이 구동 바퀴 축보다 조금 앞에 놓이고 로봇이 전방으로 넘어질 수 있다.
-
-예제는 보조 바퀴를 후방 균형추 역할까지 포함하는 `1.20 kg` 등가 질량으로 모델링한다. 반지름과 질량을 Xacro 변수로 공유하고, 구의 관성 모멘트 `I = 2mr²/5`도 같은 값으로 계산한다.
+`sensor_bot`은 `rover_ackermann`과 같은 `ackermann_rover` 매크로를 호출한다. 차체·바퀴·조향 조인트·구동 플러그인을 함께 재사용하므로 센서 프로필마다 구동 설정을 따로 맞출 필요가 없다.
 
 ```xml
-<xacro:property name="caster_radius" value="0.05"/>
-<xacro:property name="caster_mass" value="1.20"/>
-<xacro:property name="caster_x" value="-0.20"/>
-
-<link name="caster_link">
-  <visual>
-    <geometry><sphere radius="${caster_radius}"/></geometry>
-  </visual>
-  <collision>
-    <geometry><sphere radius="${caster_radius}"/></geometry>
-  </collision>
-  <inertial>
-    <mass value="${caster_mass}"/>
-    <inertia
-      ixx="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"
-      ixy="0" ixz="0"
-      iyy="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"
-      iyz="0"
-      izz="${2.0 * caster_mass * caster_radius * caster_radius / 5.0}"/>
-  </inertial>
-</link>
-<joint name="caster_joint" type="fixed">
-  <parent link="base_link"/>
-  <child link="caster_link"/>
-  <origin xyz="${caster_x} 0 -0.13" rpy="0 0 0"/>
-</joint>
+<xacro:include
+  filename="$(find gazebo_tutorial_description)/urdf/macros/ackermann_rover.xacro"/>
+<xacro:ackermann_rover/>
 ```
 
-`all` 프로필의 전체 질량은 약 `9.45 kg`이고 x축 무게중심은 다음과 같이 약 `-0.020 m`가 된다. 따라서 무게중심의 지면 투영점이 바퀴 축과 후방 보조 바퀴 사이에 놓인다.
+| 차체 항목 | 값 |
+|---|---:|
+| 차체 길이 × 너비 × 높이 | 0.72 × 0.50 × 0.16 m |
+| 바퀴 반지름 | 0.16 m |
+| 앞뒤 차축 간격 | 0.56 m |
+| 좌우 바퀴 중심 간격 | 0.62 m |
+| `base_footprint → base_link` 높이 | 0.24 m |
 
-\[
-x_{COM} = \frac{(-0.20)(1.20) + 0.0485}{9.45} \approx -0.020\,\mathrm{m}
-\]
+앞바퀴의 조향축은 수직 방향이고 바퀴 회전축은 수평 방향이다. 뒷바퀴는 조향하지 않고 차량을 밀어 움직인다. 구체적인 관절 구조와 관성 계산은 [4륜 로버](04_rover.md)에서 설명한다.
 
-센서 질량을 0에 가깝게 줄이는 방법은 관성 응답을 왜곡하므로 사용하지 않는다. 실제 로봇으로 확장할 때는 각 부품의 실측 질량과 위치로 전체 무게중심을 다시 계산하고 배터리나 별도 균형추의 위치를 조정해야 한다.
+다음 장착 위치는 모두 **`base_link` 기준의 미터 단위**다. 지면 기준 높이와 혼동하지 않는다. 예를 들어 2D 라이다 중심은 `base_link`보다 0.42 m 높으며, 차량이 평지에 놓이면 지면에서는 약 0.66 m 높이에 있다.
+
+| 센서 | `x y z` | 배치 목적 |
+|---|---|---|
+| IMU | `-0.14 0.12 0.09` | 뒤쪽 라이다 지지대 옆의 차체 상단에 고정 |
+| 흑백 카메라 | `0.40 -0.13 0.15` | 차체 전방 오른쪽에서 전방 촬영 |
+| RGB-D 카메라 | `0.40 0.13 0.15` | 차체 전방 왼쪽에서 영상·깊이·점군 생성 |
+| 스테레오 카메라 중심 | `0.40 0 0.27` | 좌우 카메라 간격 0.08 m 유지 |
+| 광각 카메라 | `0.10 -0.17 0.34` | 차체 위에서 넓은 화각 확보 |
+| 2D 라이다 | `0.20 0 0.42` | 카메라와 조향부 위에서 수평 스캔 |
+| 3D 라이다 | `-0.15 0 0.54` | 뒤쪽 높은 위치에서 여러 높이의 표면 관찰 |
+
+센서를 옮길 때는 장착 링크의 위치뿐 아니라 지지대, 시야 가림, 충돌 형상, 질량과 관성도 함께 확인한다. 네 바퀴의 접촉점이 만드는 지지영역 안에 무게중심의 지면 투영점이 있어야 한다. 카메라 점군이 바닥을 향한다면 광학 TF와 함께 Gazebo 속 차량이 기울어져 있는지도 확인한다.
 
 터미널 A의 기존 실행을 종료한 뒤 라이다만 확인하려면 다음처럼 실행한다. 카메라 디스플레이는 꺼 두면 된다.
 
@@ -222,7 +217,7 @@ check_urdf /tmp/sensor_bot.urdf
 <joint name="lidar_2d_link_joint" type="fixed">
   <parent link="base_link"/>
   <child link="lidar_2d_link"/>
-  <origin xyz="0.13 0 0.22" rpy="0 0 0"/>
+  <origin xyz="0.20 0 0.42" rpy="0 0 0"/>
 </joint>
 
 <!-- 2. SDF 확장: Gazebo가 ray를 계산 -->
@@ -299,10 +294,12 @@ check_urdf /tmp/sensor_bot.urdf
 
 | 기능 | ROS 2 토픽 | 메시지 타입 | 메시지 프레임 | 주기 |
 |---|---|---|---|---:|
-| 속도 명령 | `/cmd_vel` | `geometry_msgs/msg/Twist` | 없음 | 입력 |
+| 속도·조향 명령 | `/cmd_vel` | `geometry_msgs/msg/Twist` | 없음 | 입력 |
 | 휠 오도메트리 | `/odom` | `nav_msgs/msg/Odometry` | `odom`, child `base_footprint` | 50 Hz |
-| 바퀴 관절 | `/joint_states` | `sensor_msgs/msg/JointState` | 없음 | 50 Hz |
+| 바퀴·조향 관절 | `/joint_states` | `sensor_msgs/msg/JointState` | 없음 | 50 Hz |
 | 누적 경로 | `/wheel_odom_path` | `nav_msgs/msg/Path` | `odom` | odom 연동 |
+| 월드 기준 위치 | `/ground_truth/odom` | `nav_msgs/msg/Odometry` | `world`, child `base_footprint` | 100 Hz |
+| 월드 기준 경로 | `/ground_truth_path` | `nav_msgs/msg/Path` | `world` | 기준 위치 연동 |
 | IMU | `/imu/data` | `sensor_msgs/msg/Imu` | `imu_link` | 100 Hz |
 | 흑백 영상 | `/camera/image_raw` | `sensor_msgs/msg/Image` (`mono8`) | `camera_optical_frame` | 15 Hz |
 | 흑백 정보 | `/camera/camera_info` | `sensor_msgs/msg/CameraInfo` | `camera_optical_frame` | 15 Hz |
@@ -334,66 +331,95 @@ done
 
 빈 결과가 나오면 현재 프로필에 센서가 포함되는지와 Gazebo 터미널의 플러그인 로드 오류를 먼저 확인한다.
 
-## 5.7 휠 오도메트리와 경로
+## 5.7 Ackermann 조종과 휠 오도메트리
 
-휠 오도메트리는 별도 Gazebo `<sensor>`가 아니라 차동 구동 플러그인이 바퀴 관절 회전을 적분해 만든다. 핵심 설정은 다음과 같다.
+이 차량의 `/cmd_vel`은 `geometry_msgs/msg/Twist`를 사용하지만, **`linear.x`는 속도(m/s), `angular.z`는 중앙 바퀴의 조향 목표각(rad)**이다. 차동구동 로봇에서 사용했던 각속도(rad/s)와 구분한다. 앞바퀴가 꺾인 상태에서 전진하거나 후진해야 차량 방향이 바뀌며 제자리 회전은 할 수 없다.
+
+### 1단계: 직진과 조향 확인하기
+
+다른 조종 노드가 없는 상태에서 **터미널 B**에 다음 두 명령을 순서대로 입력한다. 첫 명령은 0.15 m/s 전진 명령을 10 Hz로 20번 발행한다. 명령 발행이 끝나도 차량이 계속 움직일 수 있으므로 두 번째 정지 명령까지 실행한다.
+
+```bash
+ros2 topic pub --rate 10 --times 20 /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.15}, angular: {z: 0.0}}"
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.0}, angular: {z: 0.0}}"
+```
+
+Gazebo에서 네 바퀴가 구르며 차체가 전진하는지 확인한다. 이어서 전진 속도를 유지한 채 조향각을 +0.20 rad로 설정한다.
+
+```bash
+ros2 topic pub --rate 10 --times 20 /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.15}, angular: {z: 0.20}}"
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
+  "{linear: {x: 0.0}, angular: {z: 0.0}}"
+```
+
+앞바퀴가 왼쪽으로 꺾이고 차량이 왼쪽 원호를 따라 움직여야 한다. 좌우 앞바퀴는 회전 반경이 달라 조향각도 서로 다르다. 시뮬레이션 속도가 느리면 같은 실제 시간 동안 이동하는 거리도 짧아지므로, 일정한 거리보다 **움직이는 방향과 바퀴 조향**을 먼저 확인한다.
+
+### 2단계: 두 종류의 위치 데이터 구분하기
+
+Humble의 내장 Ackermann 플러그인은 바퀴 엔코더를 적분하지 않고 Gazebo가 계산한 월드 위치를 발행한다. 그래서 예제는 이를 `/ground_truth/odom`으로 분리하고 TF 발행을 끈다. 공통 매크로의 핵심 설정은 다음과 같다.
 
 ```xml
-<plugin name="sensor_bot_diff_drive" filename="libgazebo_ros_diff_drive.so">
+<plugin name="rover_ackermann_drive"
+        filename="libgazebo_ros_ackermann_drive.so">
   <ros>
     <namespace>/</namespace>
     <remapping>cmd_vel:=cmd_vel</remapping>
-    <remapping>odom:=odom</remapping>
+    <remapping>odom:=ground_truth/odom</remapping>
   </ros>
-  <update_rate>50</update_rate>
-  <left_joint>left_wheel_joint</left_joint>
-  <right_joint>right_wheel_joint</right_joint>
-  <wheel_separation>${wheel_separation}</wheel_separation>
-  <wheel_diameter>${2.0 * wheel_radius}</wheel_diameter>
-  <odometry_source>0</odometry_source>
+  ...
   <publish_odom>true</publish_odom>
-  <publish_odom_tf>true</publish_odom_tf>
+  <publish_odom_tf>false</publish_odom_tf>
   <publish_wheel_tf>false</publish_wheel_tf>
-  <odometry_frame>odom</odometry_frame>
+  <odometry_frame>world</odometry_frame>
   <robot_base_frame>base_footprint</robot_base_frame>
 </plugin>
 ```
 
-| 파라미터 | 의미 | 예제 값 |
-|---|---|---:|
-| `left_joint`, `right_joint` | 좌·우 구동 관절 이름 | 바퀴 관절 |
-| `wheel_separation` | 좌·우 바퀴 중심 간 거리 | 0.43 m |
-| `wheel_diameter` | 바퀴 직경 | 0.20 m |
-| `odometry_source` | `0`은 엔코더 적분, `1`은 월드 기준 위치와 자세 | 0 |
-| `publish_odom` | `/odom` 메시지 발행 여부 | true |
-| `publish_odom_tf` | `odom → base_footprint` TF 발행 여부 | true |
-| `publish_wheel_tf` | 플러그인의 바퀴 TF 발행 여부 | false |
+`sensors.launch.py`가 함께 실행하는 `/ackermann_odom` 노드는 `/joint_states`의 두 뒷바퀴 회전량과 두 앞바퀴 조향각을 적분한다. 바퀴 반지름은 0.16 m, 축거는 0.56 m를 사용하고, 뒤 차축에서 차체 중심까지의 0.28 m 오프셋도 반영한다.
 
-이 예제는 `odometry_source=0`을 사용하므로 바퀴가 미끄러지면 `/odom`과 Gazebo 월드 기준 위치와 자세가 달라진다. 이 차이는 실제 바퀴 엔코더 기반 위치 추정의 누적 오차를 재현한다.
+| 값 | 계산·발행 담당 | 의미 |
+|---|---|---|
+| `/odom`, `odom → base_footprint` | `ackermann_odom` | 바퀴·조향 상태로 계산한 휠 오도메트리 |
+| `/wheel_odom_path` | `odom_to_path` | 휠 오도메트리 누적 궤적 |
+| `/ground_truth/odom` | Gazebo Ackermann 플러그인 | 시뮬레이터의 월드 기준 위치 |
+| `/ground_truth_path` | `ground_truth_odom_to_path` | 월드 기준 위치의 누적 궤적 |
 
-키보드로 원호를 그리며 주행한다.
+바퀴가 미끄러지면 두 궤적이 달라질 수 있다. 계산식과 파라미터는 [4륜 로버의 휠 오도메트리 설명](04_rover.md)을 따른다. 다음 명령으로 노드·TF·메시지 프레임을 확인한다.
 
 ```bash
+ros2 node info /ackermann_odom
+timeout 10s ros2 topic echo /joint_states --once --qos-reliability best_effort
+timeout 10s ros2 topic echo /odom --field header --once
+timeout 10s ros2 topic echo /ground_truth/odom --field header --once \
+  --qos-reliability best_effort
+timeout 10s ros2 run tf2_ros tf2_echo odom base_footprint
+```
+
+`/joint_states`에는 `rear_left_wheel_joint`, `rear_right_wheel_joint`, `front_left_steering_joint`, `front_right_steering_joint`를 포함한 바퀴·조향 관절이 있어야 한다. `/odom`의 프레임은 `odom`, `/ground_truth/odom`의 프레임은 `world`여야 한다.
+
+### 3단계: RViz에서 센서와 궤적을 함께 보기
+
+1. **Global Options → Fixed Frame**을 `world`로 둔다.
+2. **Wheel Odom Trajectory**의 토픽이 `/wheel_odom_path`인지 확인한다.
+3. 비교용 **Path**를 추가할 때는 토픽을 `/ground_truth_path`로 지정하고 다른 색을 고른다.
+4. 방향 화살표가 필요하면 **Add → Odometry**로 추가하고 토픽을 `/odom`으로 지정한다. **Covariance** 아래 Position·Orientation의 표시를 꺼 두면 큰 불확실성 도형이 차량과 센서를 가리지 않는다. 메시지의 공분산 값 자체는 유지된다.
+5. 차량을 움직일 때 차체·바퀴·센서가 함께 이동하고, 점군이 주변 물체의 표면에 놓이는지 확인한다.
+
+키보드로 계속 조종하려면 새 **터미널 C**에서 환경을 읽고 실행한다.
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
 
-다른 터미널에서 odom과 TF를 확인한다.
+`i`로 전진, `u`·`o`로 전진하며 좌·우 회전, `k`로 정지한다. 조향 명령이 너무 크면 `c`를 눌러 줄인다. `j`·`l`은 선속도가 0이므로 차동구동 로봇처럼 제자리 회전하지 않는다. 실습을 마치면 `k`, `Ctrl+C` 순서로 조종 노드를 종료하고 터미널 A의 시뮬레이션도 `Ctrl+C`로 종료한다.
 
-```bash
-timeout 10s ros2 topic hz /odom
-timeout 10s ros2 topic echo /odom --once
-timeout 10s ros2 run tf2_ros tf2_echo odom base_footprint
-```
-
-RViz에서 다음 순서로 경로를 확인한다.
-
-1. **Global Options → Fixed Frame**을 `world`로 설정한다.
-2. **Add → Path**를 추가하고 Topic을 `/wheel_odom_path`로 설정한다.
-3. **Add → Odometry**를 추가하고 Topic을 `/odom`으로 설정한다.
-4. `u`, `o`, `m`, `.` 키로 원호를 주행해 경로 선과 오도메트리 화살표가 함께 쌓이는지 확인한다.
-
-`publish_wheel_tf`는 `false`로 둔다. `libgazebo_ros_joint_state_publisher.so`가 `/joint_states`를 발행하고 `robot_state_publisher`가 URDF 관절을 이용해 바퀴 TF를 계산하므로 중복 TF를 방지할 수 있다.
+바퀴·조향 TF는 `/joint_states`를 받은 `robot_state_publisher`가 발행한다. 구동 플러그인의 `publish_wheel_tf`를 켜거나 별도 노드에서 같은 TF를 다시 발행하지 않는다.
 
 ## 5.8 IMU
 
@@ -504,7 +530,7 @@ Gazebo의 `camera` 센서는 영상 렌더링을 담당하고 `libgazebo_ros_cam
 
 ```xml
 <xacro:gazebo_mono_rgb_camera
-  prefix="camera" parent="base_link" xyz="0.30 -0.12 0.07"
+  prefix="camera" parent="base_link" xyz="0.40 -0.13 0.15"
   camera_name="camera" format="L8"
   width="320" height="240" update_rate="15.0"/>
 ```
@@ -586,7 +612,7 @@ RViz에서 **Add → Image**를 추가하고 Topic을 `/camera/image_raw`로 설
 
 ```xml
 <xacro:gazebo_stereo_camera
-  prefix="stereo_camera" parent="base_link" xyz="0.30 0 0.15"
+  prefix="stereo_camera" parent="base_link" xyz="0.40 0 0.27"
   camera_name="stereo" baseline="0.08"
   width="320" height="240" update_rate="10.0"/>
 ```
@@ -651,7 +677,7 @@ Gazebo의 `depth` 센서와 `libgazebo_ros_camera.so`를 결합하면 RGB, 깊�
 
 ```xml
 <xacro:gazebo_rgbd_camera
-  prefix="rgbd_camera" parent="base_link" xyz="0.30 0.12 0.07"
+  prefix="rgbd_camera" parent="base_link" xyz="0.40 0.13 0.15"
   camera_name="rgbd" min_depth="0.10" max_depth="12.0"
   width="320" height="240" update_rate="10.0"/>
 ```
@@ -723,7 +749,7 @@ Humble의 `libgazebo_ros_camera.so`는 내부에서 부모 센서를 `CameraSens
 
 ```xml
 <xacro:gazebo_fisheye_camera
-  prefix="fisheye_camera" parent="base_link" xyz="0.06 -0.10 0.22"
+  prefix="fisheye_camera" parent="base_link" xyz="0.10 -0.17 0.34"
   camera_name="fisheye" horizontal_fov="3.1415926535"
   lens_type="equidistant" cutoff_angle="1.5707"
   env_texture_size="512" update_rate="10.0"/>
@@ -790,7 +816,7 @@ RViz Image 디스플레이로 영상을 관찰하는 데에는 문제가 없다.
 
 ```xml
 <xacro:gazebo_lidar_2d
-  prefix="lidar_2d" parent="base_link" xyz="0.13 0 0.22"
+  prefix="lidar_2d" parent="base_link" xyz="0.20 0 0.42"
   topic="scan" update_rate="15.0" samples="720"
   min_angle="-3.14159265" max_angle="3.14159265"
   min_range="0.12" max_range="15.0"/>
@@ -855,7 +881,7 @@ Gazebo 월드에 box를 놓고 로봇을 회전시켜 점들이 장애물 표면
 
 ```xml
 <xacro:gazebo_lidar_3d
-  prefix="lidar_3d" parent="base_link" xyz="-0.12 0 0.22"
+  prefix="lidar_3d" parent="base_link" xyz="-0.15 0 0.54"
   topic="points" update_rate="10.0"
   horizontal_samples="360" vertical_samples="16"
   min_vertical_angle="-0.261799" max_vertical_angle="0.261799"
@@ -918,7 +944,7 @@ Reliable 발행자는 Best Effort 구독자 요청을 만족할 수 있지만 Be
 | 연결 | 발행 주체 |
 |---|---|
 | `world → odom` | 실행 파일의 고정 TF 노드 |
-| `odom → base_footprint` | 차동 구동 플러그인 |
+| `odom → base_footprint` | `ackermann_odom` 노드 |
 | `base_footprint → base_link` | `robot_state_publisher` |
 | 차체 → IMU·라이다·카메라 장착 링크 | `robot_state_publisher` |
 | 카메라 장착 링크 → 해당 광학 프레임 | `robot_state_publisher`. 스테레오는 왼쪽·오른쪽을 각각 생성 |
@@ -1067,10 +1093,12 @@ Fixed Frame을 임시로 센서 프레임으로 바꾸는 것은 원인을 가�
 
 | 기능 | 플러그인 파일 | 핵심 태그 |
 |---|---|---|
-| 차동 구동 + 휠 오도메트리 | `libgazebo_ros_diff_drive.so` | `left_joint`, `right_joint`, `odometry_source`, `publish_odom_tf` |
-| 바퀴 관절 상태 | `libgazebo_ros_joint_state_publisher.so` | `joint_name`, `update_rate` |
+| Ackermann 구동 + 월드 기준 위치 | `libgazebo_ros_ackermann_drive.so` | 앞뒤 바퀴·조향 조인트, `max_steer`, `publish_odom_tf` |
+| 바퀴·조향 관절 상태 | `libgazebo_ros_joint_state_publisher.so` | `joint_name`, `update_rate` |
 | IMU | `libgazebo_ros_imu_sensor.so` | `~/out` remap, `frame_name`, `initial_orientation_as_reference` |
 | 흑백/RGB, 스테레오, RGBD, 광각 | `libgazebo_ros_camera.so` | `camera_name`, `frame_name`, `min_depth`, `max_depth`; 광각 렌즈는 센서 태그에서 설정 |
 | 2D/3D 라이다 | `libgazebo_ros_ray_sensor.so` | `~/out` remap, `output_type`, `frame_name` |
+
+`/odom`을 계산하는 `ackermann_odom`은 Gazebo 플러그인이 아니라 `gazebo_tutorial_tools` 패키지의 ROS 2 노드다.
 
 플러그인 설정은 ROS 2용 [`gazebo_ros_pkgs` 소스](https://github.com/ros-simulation/gazebo_ros_pkgs/tree/3.9.0)를 확인했으며 카메라 보정 관련 동작은 Humble 시기의 3.7.0 구현에서도 대조했다. Gazebo Classic 11과 `gazebo_ros_pkgs`는 2025년 1월에 EOL에 도달했다. 이 저장소는 Humble/Classic 프로젝트의 유지보수와 재현을 위한 학습 자료이며 새 프로젝트에서는 최신 Gazebo로 이전할 계획도 함께 세워야 한다.

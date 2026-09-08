@@ -7,7 +7,7 @@ ROS 2 Humble·Gazebo Classic 11 실습용 로봇 모델과 센서 Xacro 매크�
 | `urdf/diffbot.urdf.xacro` | 바퀴 두 개와 보조 바퀴를 사용하는 차동 구동 로봇 |
 | `urdf/rover_diff.urdf.xacro` | 바퀴 네 개를 사용하는 스키드·차동 구동 차량 |
 | `urdf/rover_ackermann.urdf.xacro` | 앞바퀴를 조향하는 Ackermann 차량 |
-| `urdf/sensor_bot.urdf.xacro` | IMU·카메라·2D/3D 라이다 실습 로봇 |
+| `urdf/sensor_bot.urdf.xacro` | 기존 4륜 Ackermann 차량에 IMU·카메라·2D/3D 라이다를 장착한 센서 실습 차량 |
 
 ## 빌드와 모델 검사
 
@@ -27,6 +27,24 @@ done
 ```
 
 각 모델에서 `Successfully Parsed XML`과 링크 트리가 나오면 URDF 문법 검사를 통과한 것이다. 이 검사는 센서 측정값이나 Gazebo 실행 결과까지 확인하지는 않는다. 실제 실행은 [bringup 패키지](../gazebo_tutorial_bringup/README.md)를 사용한다.
+
+## 센서 차량의 기반 모델
+
+`rover_ackermann.urdf.xacro`와 `sensor_bot.urdf.xacro`는 `urdf/macros/ackermann_rover.xacro`를 함께 사용한다. 차체 크기 0.72 × 0.50 × 0.16 m, 바퀴 반지름 0.16 m, 축거 0.56 m, 윤거 0.62 m는 두 모델이 같다. 앞바퀴 두 개로 조향하고 뒷바퀴 두 개로 구동한다.
+
+센서 차량의 `all`, `cameras`, `lidars`, `minimal` 프로필은 같은 4륜 구조를 사용한다. IMU는 항상 켜지고, 나머지 센서와 해당 지지대만 프로필에 따라 달라진다. 카메라는 차체 앞쪽, 라이다는 차체와 바퀴보다 높은 곳에 장착했다. 센서 위치가 달라져도 광학 프레임, 스테레오 간격, 카메라 보정값은 센서 매크로에서 함께 유지한다.
+
+| 센서 | `base_link` 기준 위치 `(x, y, z)` [m] |
+| --- | --- |
+| IMU | `(-0.14, 0.12, 0.09)` |
+| 단안 카메라 | `(0.40, -0.13, 0.15)` |
+| 스테레오 카메라 중심 | `(0.40, 0, 0.27)` |
+| RGB-D 카메라 | `(0.40, 0.13, 0.15)` |
+| 어안 카메라 | `(0.10, -0.17, 0.34)` |
+| 2D 라이다 | `(0.20, 0, 0.42)` |
+| 3D 라이다 | `(-0.15, 0, 0.54)` |
+
+`base_link`는 지면에서 0.24 m 위에 있다. 센서와 지지대의 질량·관성도 모델에 포함한다. 지지대는 기존 센서 장착부와 마찬가지로 충돌 형상을 생략했다. 따라서 이 모델로 장착부 자체의 라이다 가림 현상이나 센서 충돌을 분석하지는 않는다.
 
 ## 센서 재사용
 

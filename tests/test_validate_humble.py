@@ -1,6 +1,7 @@
 """Regression tests for the ROS-independent Humble tutorial validator."""
 
 from pathlib import Path
+import ast
 import re
 import tempfile
 import unittest
@@ -14,6 +15,7 @@ from scripts.validate_humble import (
     remapping_target,
     resolve_markdown_target,
     translated_xml_identifiers,
+    validate_launch_wrapper,
     validate_rendered_urdf,
 )
 
@@ -75,6 +77,26 @@ class RenderedUrdfTests(unittest.TestCase):
                 any("child link가 없습니다" in error for error in validator.errors),
                 validator.errors,
             )
+
+    def test_duplicate_sensor_names_across_fixed_links_are_rejected(self):
+        urdf = VALID_URDF.replace('<gazebo reference="sensor_link"/>', '''
+          <gazebo reference="base_link"><sensor name="camera" type="camera"/></gazebo>
+          <gazebo reference="sensor_link"><sensor name="camera" type="camera"/></gazebo>''')
+        validator = self.validator(Path("."))
+        validate_rendered_urdf(validator, "fixed sensor fixture", ET.fromstring(urdf))
+        self.assertTrue(any("센서 이름이 중복" in error for error in validator.errors), validator.errors)
+
+    def test_sensor_frame_must_be_a_real_tf_link(self):
+        urdf = VALID_URDF.replace('<gazebo reference="sensor_link"/>', '''
+          <gazebo reference="sensor_link"><sensor name="depth" type="depth">
+            <plugin name="camera" filename="libgazebo_ros_camera.so">
+              <frame_name>missing_optical_link</frame_name>
+            </plugin>
+          </sensor></gazebo>''')
+        validator = self.validator(Path("."))
+        validate_rendered_urdf(validator, "missing optical fixture", ET.fromstring(urdf))
+        self.assertTrue(any("frame_name에 해당하는 TF 링크가 없습니다" in error
+                            for error in validator.errors), validator.errors)
 
 
 class MarkdownTests(unittest.TestCase):
@@ -146,6 +168,46 @@ class PluginContractTests(unittest.TestCase):
             """
         )
         self.assertEqual("ground_truth/odom", remapping_target(plugin, "odom"))
+
+    def test_sensor_ackermann_launch_requires_encoder_odometry(self):
+        root = Path(__file__).resolve().parents[1]
+        path = root / "ros2_ws/src/gazebo_tutorial_bringup/launch/sensors.launch.py"
+        source = '''generate_robot_launch(
+            default_xacro="sensor_bot.urdf.xacro", default_entity="sensor_bot",
+            pass_sensor_profile=True, use_ackermann_encoder_odom=False)'''
+        validator = Validator(root=root)
+        validate_launch_wrapper(validator, path, ast.parse(source))
+        self.assertTrue(any("encoder wheel odometry" in error for error in validator.errors),
+                        validator.errors)
+
+    def test_f1_spawn_defaults_preserve_building_editor_map_and_original_pose(self):
+        root = Path(__file__).resolve().parents[1]
+        launch = root / "ros2_ws/src/f1_robot_model/launch/robot_spawn.launch.py"
+        tree = ast.parse(launch.read_text(encoding="utf-8"))
+        defaults = {}
+        for call in ast.walk(tree):
+            if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name):
+                continue
+            if call.func.id != "DeclareLaunchArgument" or not call.args:
+                continue
+            if not isinstance(call.args[0], ast.Constant):
+                continue
+            for keyword in call.keywords:
+                if keyword.arg == "default_value":
+                    defaults[call.args[0].value] = keyword.value
+        for coordinate in ("x", "y", "z", "yaw"):
+            self.assertEqual(0., float(ast.literal_eval(defaults[coordinate])))
+        world = defaults["world"]
+        self.assertIsInstance(world, ast.Call)
+        self.assertEqual(["world", "demomap_2", "model.sdf"],
+                         [ast.literal_eval(part) for part in world.args[1:]])
+        sensor_defaults = next(node.value for node in ast.walk(tree)
+                               if isinstance(node, ast.Assign)
+                               and any(isinstance(target, ast.Name) and target.id == "sensor_defaults"
+                                       for target in node.targets))
+        self.assertEqual({"depth_camera": "false", "lidar_3d": "false",
+                          "stereo_camera": "false", "gps": "false"},
+                         ast.literal_eval(sensor_defaults))
 
 
 class WorkflowRegressionTests(unittest.TestCase):

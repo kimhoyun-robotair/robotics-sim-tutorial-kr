@@ -238,8 +238,9 @@ RobotModel이 비어 있다면 **Description Topic**이 `/robot_description`인�
 
 ## 8.8 `/cmd_vel`을 보내도 움직이지 않을 때
 
-키보드 입력 문제를 제외하려면 일정한 속도를 직접 보낸다. 센서 실습 중이었다면
-터미널 1의 실행을 종료하고 `diffbot.launch.py`로 돌아간다.
+키보드 입력 문제를 제외하려면 일정한 속도를 직접 보낸다. 다음 직진·정지 명령은
+차동구동 모델과 4륜 Ackermann 센서 모델에서 모두 사용할 수 있다. 다른 조종 노드가
+실행 중이면 먼저 정지하고 종료해 명령이 겹치지 않게 한다.
 
 ```bash
 ros2 topic pub --rate 10 --times 20 /cmd_vel geometry_msgs/msg/Twist \
@@ -262,8 +263,10 @@ ros2 topic echo /joint_states --once --qos-reliability best_effort
 | `/cmd_vel` 구독자가 0개 | 구동 플러그인 로드, 토픽 이름, 네임스페이스 |
 | 구독자는 있지만 바퀴가 안 돎 | 조인트 이름, 구동 플러그인 파라미터, 일시 정지 여부 |
 | 바퀴는 도는데 차체가 안 움직임 | 바닥 접촉, 마찰, 충돌 형상, 토크 한도 |
-| Ackermann 로버가 안 꺾임 | 조향 조인트 축·한도, 축간거리, 좌우 바퀴 간격 |
+| Ackermann 로버·센서 차량이 안 꺾임 | `linear.x`도 0보다 크게 보냈는지, 조향 조인트 축·한도, 축간거리, 좌우 바퀴 간격 |
 | Ackermann `/odom`이 없음 | `/ackermann_odom` 노드와 두 뒷바퀴·두 앞 조향 조인트의 상태 |
+
+Ackermann 차량에서는 `angular.z`가 각속도(rad/s)가 아닌 조향 목표각(rad)이다. 예를 들어 `{linear: {x: 0.15}, angular: {z: 0.20}}`은 천천히 전진하면서 왼쪽으로 도는 명령이다. `linear.x: 0.0`인 채 조향각만 주면 바퀴 방향은 바뀌어도 제자리 회전하지 않는다.
 
 ## 8.9 플러그인이 로드되지 않을 때
 

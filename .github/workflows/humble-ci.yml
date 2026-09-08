@@ -117,7 +117,7 @@ jobs:
           source /opt/ros/humble/setup.bash
           source ros2_ws/install/setup.bash
           set -u
-          python3 -m pytest -q scripts/test_humble_sensors.py
+          python3 -m pytest -q scripts/test_humble_sensors.py scripts/test_runtime_geometry.py
       - name: Render sensors and RViz and verify actual vehicle motion
         if: always() && steps.workspace_build.outcome == 'success'
         run: |
@@ -134,23 +134,29 @@ jobs:
           export LIBGL_ALWAYS_SOFTWARE=1 QT_XCB_NO_MITSHM=1
           result=0
           display_number=100
-          for model in diffbot rover_diff rover_ackermann sensor_bot f1; do
-            export XDG_RUNTIME_DIR="$evidence/$model/qt-runtime"
+          for scenario in diffbot rover_diff rover_ackermann sensor_bot f1_basic f1_rgbd f1_lidar3d f1_both; do
+            model="$scenario"
+            extra_args=()
+            if [[ "$scenario" == f1_* ]]; then
+              model=f1
+              extra_args=(--f1-sensors "${scenario#f1_}")
+            fi
+            export XDG_RUNTIME_DIR="$evidence/$scenario/qt-runtime"
             mkdir -p "$XDG_RUNTIME_DIR"
             chmod 700 "$XDG_RUNTIME_DIR"
             # Each model gets a fresh X server number and its own Qt runtime.
             # Keep GL/Xvfb diagnostics instead of retrying a rendering failure.
-            if ! xvfb-run -n "$display_number" -e "$evidence/$model/xvfb.log" \
+            if ! xvfb-run -n "$display_number" -e "$evidence/$scenario/xvfb.log" \
               -s '-screen 0 1920x1200x24 -noreset' bash -c '
                 timeout 10s glxinfo -B > "$2/glxinfo.txt" &&
                 exec python3 scripts/check_humble_runtime.py --model "$1" \
-                  --rviz --evidence "$2"
-              ' bash "$model" "$evidence/$model"; then
+                  --rviz --evidence "$2" "${@:3}"
+              ' bash "$model" "$evidence/$scenario" "${extra_args[@]}"; then
               result=1
             fi
             display_number=$((display_number + 1))
-            if [[ -f "$evidence/$model/result.json" ]]; then
-              cat "$evidence/$model/result.json"
+            if [[ -f "$evidence/$scenario/result.json" ]]; then
+              cat "$evidence/$scenario/result.json"
             fi
           done
           exit "$result"

@@ -19,7 +19,7 @@ source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 | `/ground_truth_path` | diffbot의 직접 만든 플러그인 또는 Ackermann의 내장 플러그인에서 얻은 월드 좌표 | 시뮬레이션 결과를 평가하는 기준값. 실제 로봇에서는 같은 방식으로 얻을 수 없음 |
 | 향후 `/odometry/filtered` | `robot_localization`의 EKF/UKF로 오도메트리와 IMU 등을 융합 | 잡음을 줄일 수 있지만 공분산과 시간 설정이 필요함 |
 
-시뮬레이터의 기준 위치(ground truth)는 **비교와 평가**에 사용한다. 실제 장비를 위한 위치 추정 알고리즘에는 엔코더·IMU·라이다 등 실제로 얻을 수 있는 측정값을 입력한다. 센서 로봇의 기본 실행에는 `/ground_truth_path`가 없으므로, 이 토픽이 필요하면 [직접 만드는 플러그인](07_custom_plugin.md)을 추가해야 한다.
+시뮬레이터의 기준 위치(ground truth)는 **비교와 평가**에 사용한다. 실제 장비를 위한 위치 추정 알고리즘에는 엔코더·IMU·라이다 등 실제로 얻을 수 있는 측정값을 입력한다. 4륜 Ackermann 센서 로봇의 기본 실행에는 `/ground_truth/odom`과 `/ground_truth_path`가 함께 있으므로 `/odom`·`/wheel_odom_path`와 비교할 수 있다.
 
 ## 2. 직접 구동 플러그인에서 `ros2_control`로 확장하기
 
@@ -32,6 +32,8 @@ source ~/robotics-sim-tutorial-kr/ros2_ws/install/setup.bash
 | `gazebo_ros2_control` | 제어기의 명령을 Gazebo 관절에 전달하고 관절 상태를 읽음 |
 
 한 관절을 두 제어기가 동시에 구동하면 안 된다. 전환할 때는 기존 구동 플러그인을 제거하거나 Xacro 조건문으로 끄고, 관절의 명령·상태 인터페이스와 제어기 설정을 추가한다. 이 저장소의 기본 실행 인자만 바꿔서 제어 방식이 자동 전환되지는 않는다.
+
+위 표의 `diff_drive_controller`는 차동구동 차량용이다. 센서 실습의 4륜 Ackermann 차량은 앞바퀴 조향과 뒷바퀴 구동을 다루는 제어기가 필요하다. 현재 `/cmd_vel.angular.z`는 조향각(rad)이므로, 새 제어기가 각속도(rad/s)를 받는다면 명령을 그대로 연결하지 말고 축거와 속도에 맞춰 변환해야 한다.
 
 ## 3. 같은 TF는 한 곳에서만 발행한다
 
@@ -104,7 +106,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
   --ros-args --remap cmd_vel:=/cmd_vel
 ```
 
-`i`와 `u`로 짧게 움직인 뒤 `k`로 멈춘다. 터미널 B에서 `Ctrl+C`를 눌러 기록을 끝낸다. 터미널 C의 키보드 노드와 터미널 A의 시뮬레이션도 종료한다.
+`i`와 `u`로 짧게 움직인 뒤 `k`로 멈춘다. 센서 차량은 Ackermann 방식이므로 `u`는 전진하면서 조향하는 명령이며, `j`로 제자리 회전할 수 없다. 터미널 B에서 `Ctrl+C`를 눌러 기록을 끝낸다. 터미널 C의 키보드 노드와 터미널 A의 시뮬레이션도 종료한다.
 
 터미널 B에서 방금 만든 기록을 확인하고 재생한다.
 
@@ -161,7 +163,7 @@ ROS 네임스페이스를 붙여도 메시지 내부의 `frame_id`는 자동으�
 
 | 단계 | 실습 | 확인할 결과 |
 | --- | --- | --- |
-| 초급 | 바퀴 실제 반지름은 두고 구동 플러그인의 `wheel_diameter`를 5% 변경 | 기준 위치와 오도메트리 사이에 이동 거리 오차가 생기는지 비교 |
+| 초급 | 센서 차량의 바퀴 형상은 두고 `ackermann_odom`의 `wheel_radius`만 5% 변경 | 기준 위치와 오도메트리 사이에 이동 거리 오차가 생기는지 비교 |
 | 초급 | 바퀴의 `mu1`, `mu2`를 낮춤 | 같은 주행 명령에서 미끄러짐과 궤적 차이 관찰 |
 | 초급 | 카메라의 `update_rate`를 절반으로 변경 | 시뮬레이션 시각 기준 영상 간격이 약 두 배가 되는지 확인 |
 | 중급 | `robot_localization`으로 `/odom`과 `/imu/data` 융합 | 출력 프레임·공분산·TF 발행자를 확인하고 원본과 비교 |

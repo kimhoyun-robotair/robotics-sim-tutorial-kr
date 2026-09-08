@@ -27,9 +27,12 @@
 ```text
 gazebo_tutorial_description/urdf/
 ├── macros/rover_macros.xacro
+├── macros/ackermann_rover.xacro
 ├── rover_diff.urdf.xacro
 └── rover_ackermann.urdf.xacro
 ```
+
+`rover_macros.xacro`는 차체·바퀴의 형상과 관절을 정의한다. `ackermann_rover.xacro`는 이 부품으로 4륜 조향 차량과 구동 플러그인을 구성하며, 다음 장의 센서 차량에서도 재사용한다.
 
 두 모델의 공통 치수는 다음과 같다.
 
@@ -470,7 +473,7 @@ ROS 1 Ackermann 예제나 새 Gazebo용 플러그인과 섞지 않도록 태그 
 Ackermann 플러그인이 읽지 않는다. Ackermann 플러그인은 바퀴 충돌 형상의 위치와
 크기로 윤거·축간거리·반지름을 직접 계산한다.
 
-실제 `rover_ackermann.urdf.xacro`의 플러그인 블록은 다음과 같다.
+`rover_ackermann.urdf.xacro`가 호출하는 공통 매크로 `macros/ackermann_rover.xacro`의 플러그인 블록은 다음과 같다. 센서 차량 `sensor_bot.urdf.xacro`도 같은 매크로를 사용한다.
 
 ```xml
 <plugin name="rover_ackermann_drive"
@@ -663,7 +666,7 @@ $v_y=d\omega$다. 따라서 `/odom.twist.twist.linear.y`에는
 평균으로 잠시 대체한다. 이 계산은 센서 노이즈가 없는 조인트 상태를 사용하지만
 접촉 미끄러짐을 직접 알 수 없으므로 `/ground_truth/odom`과 차이가 나는 것이 정상이다.
 
-실행 파일은 Ackermann 모델일 때만 이 노드와 기준 위치 Path 변환 노드를 추가한다.
+실행 파일은 `rover_ackermann`과 같은 구동계를 쓰는 센서 차량 `sensor_bot`에서 이 노드와 기준 위치 Path 변환 노드를 추가한다. 두 차량 모두 `/odom`은 바퀴·조향 상태로 계산하고, `/ground_truth/odom`은 Gazebo의 월드 기준 위치를 사용한다.
 아래 파라미터의 반지름·축간거리·뒤 차축 오프셋은 Xacro의 실제 치수와 같아야 한다.
 
 ```python

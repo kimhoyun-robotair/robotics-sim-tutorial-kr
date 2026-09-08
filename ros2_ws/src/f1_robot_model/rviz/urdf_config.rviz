@@ -39,9 +39,35 @@ Visualization Manager:
     Color Transformer: FlatColor
     Color: 255; 100; 70
     Decay Time: 0
+  - Class: rviz_imu_plugin/Imu
+    Enabled: true
+    Name: IMU
+    fixed_frame_orientation: true
+    Topic:
+      Depth: 10
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Best Effort
+      Value: /imu/data
+    Acceleration properties:
+      Acc. vector alpha: 1
+      Acc. vector color: 255; 0; 0
+      Acc. vector scale: 0.03
+      Derotate acceleration: true
+      Enable acceleration: true
+    Box properties:
+      Box alpha: 1
+      Box color: 255; 255; 0
+      Enable box: true
+      x_scale: 0.12
+      y_scale: 0.08
+      z_scale: 0.04
+    Axes properties:
+      Axes scale: 0.12
+      Enable axes: true
   - Class: rviz_default_plugins/PointCloud2
     Name: Depth points
-    Enabled: true
+    Enabled: false
     Topic:
       Value: /camera/points
       Reliability Policy: Best Effort
@@ -54,7 +80,7 @@ Visualization Manager:
     Decay Time: 0
   - Class: rviz_default_plugins/Image
     Name: RGB camera
-    Enabled: true
+    Enabled: false
     Topic:
       Value: /camera/image_raw
       Reliability Policy: Best Effort
