@@ -14,7 +14,7 @@
 
 워크스테이션 패키지는 `~/isaacsim`에 풀었다고 가정한다. 다른 위치에 설치했다면 모든 경로를 실제 위치로 바꾼다.
 
-> **5.1 제약을 먼저 확인하다.** Isaac Sim 5.1 문서는 현재 지원 종료 상태의 고정 버전 문서이다. 5.1은 Omniverse Launcher 대신 독립형 ZIP과 `isaac-sim.selector.sh`를 사용한다. Ubuntu 24.04의 시스템 ROS 2 Jazzy는 Python 3.12이지만 Isaac Sim 내부 Jazzy 라이브러리는 번들 Python 3.11용이다. 두 Python 환경의 패키지를 섞지 않는다. 또한 RTX 코어가 없는 A100·H100은 Isaac Sim 렌더링용 GPU로 지원하지 않는다.
+> **5.1 실행 환경을 먼저 확인한다.** Isaac Sim 5.1 문서는 현재 지원 종료 상태의 고정 버전 문서이다. 5.1은 Omniverse Launcher 대신 독립형 ZIP과 `isaac-sim.selector.sh`를 사용한다. Ubuntu 24.04의 시스템 ROS 2 Jazzy는 Python 3.12이지만 Isaac Sim 내부 Jazzy 라이브러리는 번들 Python 3.11용이다. 두 Python 환경의 패키지를 섞지 않는다. 또한 RTX 코어가 없는 A100·H100은 Isaac Sim 렌더링용 GPU로 지원하지 않는다.
 
 ## 1. 설치와 하드웨어 확인
 
@@ -28,7 +28,7 @@
 | `[HOST]` | 메모리·디스크 | `free -h; df -h "$HOME"` | 설치·캐시·장면을 위한 여유 공간이 있다. |
 | `[HOST]` | 설치 파일 | `test -x ~/isaacsim/isaac-sim.sh && test -x ~/isaacsim/python.sh && echo OK` | `OK`가 출력된다. |
 | `[SIM]` | 공식 호환성 검사 | `cd ~/isaacsim && ./isaac-sim.compatibility_check.sh` | 검사 창의 필수 항목이 통과한다. 통과는 목표 장면의 성능 보장이 아니다. |
-| `[SIM]` | 무창 호환성 검사 | `cd ~/isaacsim && ./isaac-sim.compatibility_check.sh --/app/quitAfter=10 --no-window` | 서버에서도 검사가 끝나고 치명 오류가 없다. |
+| `[SIM]` | 창 없이 호환성 검사 | `cd ~/isaacsim && ./isaac-sim.compatibility_check.sh --/app/quitAfter=10 --no-window` | 서버에서도 검사가 끝나고 치명 오류가 없다. |
 
 GPU 상태를 계속 관찰할 때 사용한다.
 
@@ -52,7 +52,7 @@ watch -n 1 nvidia-smi
 
 첫 실행은 셰이더 컴파일 때문에 수 분 이상 걸릴 수 있다. `warmup.sh`도 시스템에 따라 15분 이상 걸릴 수 있으므로 멈췄다고 단정하지 않고 CPU·GPU·로그를 함께 확인한다. `isaac-sim.streaming.sh`는 원격 WebRTC 화면을 위한 실행기이며, GUI 없는 배치 계산 전체를 뜻하는 일반적인 `headless` 실행기와 같지 않다.
 
-### Standalone Python과 진짜 headless 스크립트
+### 창 없이 실행하는 Standalone Python
 
 Isaac Sim API를 import하기 전에 `SimulationApp`을 만들고 마지막에 닫는다.
 
@@ -62,7 +62,7 @@ from isaacsim import SimulationApp
 
 simulation_app = SimulationApp({"headless": True})
 
-# Kit가 시작된 뒤 omni.*, isaacsim.* 모듈을 import하다.
+# Kit 초기화가 필요한 모듈은 SimulationApp 생성 뒤에 불러온다.
 from pxr import Usd
 
 stage = Usd.Stage.CreateInMemory()
@@ -118,13 +118,13 @@ test -n "$latest_isaac_log" && tail -F "$latest_isaac_log"
 
 ## 4. ROS 2 Jazzy와 Bridge
 
-### 두 터미널을 분리하다
+### 두 터미널을 분리하기
 
 동일 PC에서 Fast DDS를 쓸 때의 권장 시작점이다. 두 터미널의 `ROS_DOMAIN_ID`를 동일하게 맞춘다.
 
 ```bash
 # [SIM] 시스템 ROS를 source하지 않은 새 터미널
-# 아래 명령이 ROS 경로를 출력하면 이 터미널을 닫고 깨끗한 셸을 열다.
+# 아래 명령이 ROS 경로를 출력하면 이 터미널을 닫고 ROS 환경을 불러오지 않은 새 셸을 연다.
 printenv | rg '^(ROS_DISTRO|AMENT_PREFIX_PATH|COLCON_PREFIX_PATH)=' || true
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
@@ -237,7 +237,7 @@ command -v usdcat usdchecker usdview usdtree usdresolve
 | 터미널 | 목적 | 명령 |
 |---|---|---|
 | `[USD]` | ASCII로 내용 출력 | `usdcat robot.usd` |
-| `[USD]` | layer metadata만 출력 | `usdcat -l robot.usd` |
+| `[USD]` | 파일을 열 수 있는지 검사 | `usdcat -l robot.usd` |
 | `[USD]` | USDA → USDC | `usdcat robot.usda -o robot.usdc` |
 | `[USD]` | USDC → USDA | `usdcat robot.usdc -o robot.usda` |
 | `[USD]` | composition flatten | `usdcat root.usd --flatten -o flattened.usda` |
@@ -298,7 +298,7 @@ docker run --name isaac-sim --rm -it --gpus all \
 cd /isaac-sim
 ./isaac-sim.compatibility_check.sh --/app/quitAfter=10 --no-window
 
-# WebRTC 스트리밍이 필요할 때만 실행하다.
+# WebRTC 스트리밍이 필요할 때만 실행한다.
 ./runheadless.sh -v
 ```
 

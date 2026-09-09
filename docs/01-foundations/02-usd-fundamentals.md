@@ -2,20 +2,22 @@
 
 이 장에서는 USD를 파일 형식이 아니라 장면을 조립하는 시스템으로 이해한다. 마지막에는 Stage, Layer, Prim, Schema, Composition, Xform, Variant, Reference, Payload, Instancing을 설명하고, URDF·Xacro·MJCF와 언제 무엇을 기준 원본으로 삼아야 하는지 판단할 수 있어야 한다.
 
+이 장의 짧은 코드는 용어와 파일 구조를 이해하기 위한 예다. `warehouse.usd`, `mobile_robot.usd`처럼 예시 경로가 나오면 실제로 준비한 파일의 경로를 넣는다. 파일 생성부터 순서대로 실행하는 실습은 [USD 도구와 pxr 프로그래밍](03-usd-tools-and-python.md)에 있다.
+
 ## USD는 무엇인가
 
 USD는 Universal Scene Description의 약자다. 계층적으로 구성된 정적 데이터와 시간 샘플 데이터를 기록하고, 여러 파일과 수정 사항을 하나의 장면으로 합성하는 데이터 모델·파일 형식·런타임이다.
 
 로봇 시뮬레이션에서 USD는 다음을 함께 표현할 수 있다.
 
-- 로봇과 환경의 계층, 기하, 변환, 재질, 조명
+- 로봇과 환경의 계층, 형상, 좌표 변환, 재질, 조명
 - 강체, 충돌체, 질량, Joint, Articulation 같은 물리 속성
 - Camera, LiDAR, IMU 같은 센서 Prim과 설정
 - 애니메이션 및 시간에 따른 속성 값
 - 외부 자산 참조, 지연 로딩, 선택 가능한 구성
 - 여러 사용자의 비파괴적 수정 레이어
 
-URDF가 로봇 한 대의 링크·조인트 트리를 전달하는 데 집중한다면 USD는 로봇, 창고, 조명, 센서, 재질, 애니메이션을 포함하는 전체 디지털 월드를 합성하는 데 초점을 둔다.
+URDF가 로봇 한 대의 링크·조인트 트리를 전달하는 데 집중한다면 USD는 로봇, 창고, 조명, 센서, 재질, 애니메이션을 포함하는 전체 가상 환경를 합성하는 데 초점을 둔다.
 
 ## USDA, USDC, USD, USDZ
 
@@ -44,7 +46,7 @@ usdcat robot.usda -o robot.usd --usdFormat usdc
 
 ### Stage
 
-Stage는 조합이 끝난 장면을 보여 주는 최상위 컨테이너다. 사용자는 Stage에서 /World/Robot/base_link 같은 경로로 Prim을 조회한다. Stage 자체가 반드시 파일 하나와 같지는 않다. Root Layer, Session Layer, Sublayer, Reference, Payload 등 여러 Layer의 의견을 합성한 결과다.
+Stage는 조합이 끝난 장면을 보여 주는 최상위 컨테이너다. 사용자는 Stage에서 /World/Robot/base_link 같은 경로로 Prim을 조회한다. Stage 자체가 반드시 파일 하나와 같지는 않다. Root Layer, Session Layer, Sublayer, Reference, Payload 등 여러 Layer에 기록된 내용을 합친 결과다.
 
 ~~~python
 from pxr import Usd
@@ -59,19 +61,20 @@ for prim in stage.Traverse():
 
 ### Layer
 
-Layer는 저작된 장면 설명을 보관하는 컨테이너다. 대개 .usda, .usdc, .usd 파일 하나가 Layer 하나에 대응하지만, 메모리 전용 익명 Layer도 만들 수 있다.
+Layer는 장면의 구조와 속성 값을 기록하는 단위다. 대개 .usda, .usdc, .usd 파일 하나가 Layer 하나에 대응하지만, 메모리 전용 익명 Layer도 만들 수 있다.
 
 Stage와 Layer의 차이는 다음과 같다.
 
-- Layer는 그 파일에 직접 기록된 Prim Spec과 opinion을 보여 준다.
+- Layer는 그 파일에 직접 기록된 Prim 정의(Prim Spec)와 속성 값을 보여 준다.
 - Stage는 여러 Layer와 composition arc를 평가한 최종 Prim을 보여 준다.
-- 같은 /World/Robot Prim에 여러 Layer가 서로 다른 속성 값을 저작할 수 있다.
-- 더 강한 opinion이 약한 opinion을 덮지만 약한 Layer의 데이터가 삭제되는 것은 아니다.
+- 같은 /World/Robot Prim에 여러 Layer가 서로 다른 속성 값을 기록할 수 있다.
+- 우선순위가 높은 값이 적용되지만 약한 Layer의 데이터가 삭제되는 것은 아니다.
 
-예를 들어 base.usda가 로봇의 기본 위치를 (0, 0, 0)으로 정의하고, shot.usda가 같은 경로에 (2, 0, 0)이라는 더 강한 override를 저작하면 Stage에서는 (2, 0, 0)이 보인다. base.usda는 바뀌지 않는다.
+예를 들어 base.usda가 로봇의 기본 위치를 (0, 0, 0)으로 정의하고, shot.usda가 같은 경로에 (2, 0, 0)이라는 우선순위가 높은 덮어쓰기(override)를 기록하면 Stage에서는 (2, 0, 0)이 보인다. base.usda는 바뀌지 않는다.
+
+`base.usda`를 다음 내용으로 저장한다. USDA 파일은 첫 줄이 `#usda 1.0`이어야 한다.
 
 ~~~usda
-# base.usda
 #usda 1.0
 def Xform "World" {
     def Xform "Robot" {
@@ -81,8 +84,9 @@ def Xform "World" {
 }
 ~~~
 
+같은 디렉터리에 `shot.usda`를 저장한다.
+
 ~~~usda
-# shot.usda
 #usda 1.0
 (
     subLayers = [@base.usda@]
@@ -94,34 +98,40 @@ over "World" {
 }
 ~~~
 
-Root Layer의 직접 opinion은 일반적으로 그 Root Layer가 포함한 Sublayer보다 강하다. Sublayer 목록 안에서도 순서가 강도에 영향을 준다. 복잡한 장면에서는 추측하지 말고 Isaac Sim의 Layer 패널이나 usdview의 composition 정보를 확인하는 습관을 들인다.
+Root Layer에 직접 기록한 값은 그 아래 Sublayer의 값보다 우선한다. Sublayer 목록 안에서는 앞에 있는 Layer가 뒤의 Layer보다 우선한다. USD 문서에서 **opinion**은 이렇게 특정 Layer에 기록한 속성 값이나 설정을 뜻한다. 일상적인 의미의 '의견'으로 번역하기보다 '어느 파일에 기록한 어떤 값인가'로 이해하면 된다.
 
 ### Session Layer와 Edit Target
 
 Session Layer는 Stage 위에 존재하는 가장 강한 임시 Layer다. 사용자별 임시 선택이나 실험에 적합하지만 보통 Root Layer를 저장해도 함께 저장되지 않는다.
 
-Edit Target은 새 opinion을 어느 Layer에 쓸지 정한다. 보이는 값이 맞아도 잘못된 Layer에 저작하면 자산 재사용성이 무너진다.
+Edit Target은 수정한 값을 어느 Layer에 기록할지 정한다. 보이는 값이 맞아도 잘못된 Layer에 기록하면 다른 장면에서 자산을 재사용할 때 문제가 생긴다.
 
 ~~~python
-from pxr import Sdf, Usd, UsdGeom
+from pxr import Gf, Sdf, Usd, UsdGeom
 
-stage = Usd.Stage.Open("shot.usda")
-overlay = Sdf.Layer.CreateNew("robot_pose_override.usda")
-stage.GetRootLayer().subLayerPaths.insert(0, overlay.identifier)
+# 원본 shot.usda를 수정하지 않고 새 Root Layer 위에서 덮어쓴다.
+stage = Usd.Stage.CreateNew("robot_pose_override.usda")
+stage.GetRootLayer().subLayerPaths.append("./shot.usda")
 
-with Usd.EditContext(stage, overlay):
+with Usd.EditContext(stage, stage.GetRootLayer()):
     robot = UsdGeom.Xform.Get(stage, "/World/Robot")
-    robot.AddTranslateOp(opSuffix="lesson").Set((1.0, 0.0, 0.0))
+    if not robot:
+        raise RuntimeError("shot.usda의 /World/Robot을 찾을 수 없다")
+    robot.GetPrim().GetAttribute("xformOp:translate").Set(Gf.Vec3d(1.0, 0.0, 0.0))
 
-overlay.Save()
+position = UsdGeom.XformCache().GetLocalToWorldTransform(robot.GetPrim()).ExtractTranslation()
+assert Gf.IsClose(position, Gf.Vec3d(1.0, 0.0, 0.0), 1e-9)
+print("로봇 위치:", position)
 stage.GetRootLayer().Save()
 ~~~
 
-> 실무 원칙: 원본 로봇 Layer에 환경별 위치와 튜닝을 직접 굽지 않는다. 로봇 자산은 Reference하고 환경 또는 실험용 Layer에서 override한다.
+`robot_pose_override.usda`를 열면 위치가 `(1, 0, 0)`이다. `shot.usda`를 열면 여전히 `(2, 0, 0)`이다. 새 Layer를 기존 Root Layer **아래**에 추가하면 기존 Root Layer의 값이 우선하므로 원하는 수정이 가려질 수 있다.
+
+> 실무 원칙: 원본 로봇 Layer에 환경별 위치와 튜닝을 직접 저장하지 않는다. 로봇 자산은 Reference하고 환경 또는 실험용 Layer에서 필요한 값만 바꾼다.
 
 ### Prim
 
-Prim은 Stage 장면 그래프의 지속적인 객체다. 파일 시스템의 디렉터리처럼 자식 Prim을 가질 수 있지만, 타입과 속성, 관계, 메타데이터도 가진다.
+Prim은 Stage에서 경로로 식별하는 장면 객체다. 파일 시스템의 디렉터리처럼 자식 Prim을 가질 수 있지만, 타입과 속성, 관계, 메타데이터도 가진다.
 
 ~~~text
 /World                       Xform
@@ -160,7 +170,7 @@ for rel in prim.GetRelationships():
 
 ## Schema는 Prim에 의미를 부여한다
 
-Schema는 어떤 속성과 관계가 어떤 의미를 가지는지 정의한 계약이다. 단순히 이름이 radius인 Attribute를 만들었다고 Sphere가 되는 것이 아니라 UsdGeomSphere Schema를 통해 표준 의미를 부여한다.
+Schema는 어떤 속성과 관계가 어떤 의미를 가지는지 정의한 규칙이다. 단순히 이름이 radius인 Attribute를 만들었다고 Sphere가 되는 것이 아니라 UsdGeomSphere Schema를 통해 표준 의미를 부여한다.
 
 Schema는 두 범주를 구분하면 이해하기 쉽다.
 
@@ -193,7 +203,7 @@ mass_api.CreateMassAttr(2.0)
 
 Isaac Sim에서는 표준 UsdPhysics Schema 외에도 PhysX와 Isaac 전용 Schema를 만난다. 다른 OpenUSD 도구가 Prim 자체는 읽더라도 해당 전용 Schema의 실행 의미를 모를 수 있다.
 
-## Composition: 여러 의견을 하나의 장면으로 합치기
+## Composition: 여러 파일의 설정을 하나의 장면으로 합치기
 
 Composition은 여러 Layer의 Prim Spec과 composition arc를 하나의 Stage로 합성하는 과정이다. 주요 arc는 다음과 같다.
 
@@ -203,8 +213,8 @@ Composition은 여러 Layer의 Prim Spec과 composition arc를 하나의 Stage�
 | Reference | 외부 자산을 특정 Prim 아래에 조립한다 | `robot.usd`를 `/World/Robot`에 배치한다 |
 | Payload | Reference처럼 조립하되 필요할 때만 로드한다 | 대형 공장 구역이나 고해상도 로봇을 지연 로드한다 |
 | VariantSet | 이름 있는 대안 중 하나를 선택한다 | `gripper=parallel/suction`, `color=red/blue`를 선택한다 |
-| Inherits | class Prim의 opinion을 상속한다 | 여러 자산에 공통 설정을 배포한다 |
-| Specializes | 기본 모델을 전문화한 강한 기본값 관계를 만든다 | 자산 템플릿 파이프라인에서 드물게 사용한다 |
+| Inherits | class Prim의 설정을 상속한다 | 여러 자산에 공통 설정을 배포한다 |
+| Specializes | 기본 모델을 바탕으로 세부 모델을 만들며 기본값을 제공한다 | 자산 템플릿 파이프라인에서 드물게 사용한다 |
 
 Composition은 파일을 복사·붙여넣는 작업이 아니다. Stage는 arc를 유지한 채 계산된 결과를 보여 준다. Flatten하면 계산 결과를 한 Layer에 굽고 많은 arc를 제거하므로 원본 파이프라인의 편집 구조를 잃을 수 있다.
 
@@ -212,8 +222,9 @@ Composition은 파일을 복사·붙여넣는 작업이 아니다. Stage는 arc�
 
 Reference는 다른 Layer의 Prim을 현재 namespace에 합성한다. 여러 환경에서 같은 로봇 자산을 중복 저장하지 않고 재사용할 수 있다.
 
+`warehouse.usda`의 예이다. 먼저 `./assets/mobile_robot.usd`에 참조할 로봇 자산을 준비한다.
+
 ~~~usda
-# warehouse.usda
 #usda 1.0
 (
     defaultPrim = "World"
@@ -231,7 +242,7 @@ def Xform "World" {
 }
 ~~~
 
-Python에서는 다음처럼 저작한다.
+Python에서는 다음처럼 기록한다.
 
 ~~~python
 from pxr import Usd, UsdGeom
@@ -295,7 +306,7 @@ variants.SetVariantSelection("blue")
 stage.GetRootLayer().Save()
 ~~~
 
-Variant는 단순 가시성 토글보다 강력하다. 각 Variant 내부에서 Reference, 재질, Prim, 속성 값을 다르게 저작할 수 있다. 다만 가능한 Variant 조합이 폭발적으로 늘어날 수 있으므로 독립적인 선택 축만 별도 VariantSet으로 만든다.
+Variant는 단순 가시성 토글보다 강력하다. 각 Variant 내부에서 Reference, 재질, Prim, 속성 값을 다르게 지정할 수 있다. 다만 가능한 Variant 조합이 폭발적으로 늘어날 수 있으므로 독립적인 선택 축만 별도 VariantSet으로 만든다.
 
 ## Xform과 좌표 변환
 
@@ -344,7 +355,7 @@ for index in range(4):
 stage.GetRootLayer().Save()
 ~~~
 
-Instance Proxy 내부에는 일반적인 방식으로 개별 opinion을 저작할 수 없다. 인스턴스별 색상이나 센서 구성이 필요하면 인스턴스 루트 바깥에 데이터를 두거나 Variant/primvar/비인스턴스 구조를 설계한다.
+Instance Proxy 내부에는 일반적인 방식으로 인스턴스마다 다른 값을 직접 기록할 수 없다. 인스턴스별 색상이나 센서 구성이 필요하면 인스턴스 루트 바깥에 데이터를 두거나 Variant/primvar/비인스턴스 구조를 설계한다.
 
 ### PointInstancer
 
@@ -372,6 +383,8 @@ Isaac Sim 로봇 자산은 visual과 collision mesh를 별도 파일로 분리�
 
 URDF는 XML로 로봇의 링크와 조인트, visual, collision, inertial을 기술한다. ROS의 robot_state_publisher, RViz, MoveIt 등과 교환하기 좋다. 그러나 일반 URDF는 닫힌 루프, 여러 부모를 가진 링크, 풍부한 장면 구성, USD Layer 같은 비파괴 합성을 직접 표현하지 못한다.
 
+관절 정의를 읽는 데 필요한 부분만 남긴 예다. visual과 collision을 생략했으므로 이 코드만 가져와 화면이나 물리 동작을 확인하는 용도로 쓰지는 않는다. 외형·충돌·관성을 갖춘 첫 변환 예제는 [포맷 변환](04-format-conversion.md)에 있다.
+
 ~~~xml
 <robot name="two_link">
   <link name="base_link"/>
@@ -398,14 +411,14 @@ Xacro는 독립적인 런타임 로봇 포맷이 아니라 URDF/XML 생성기다
 ~~~xml
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="demo">
   <xacro:property name="wheel_radius" value="0.08"/>
-  <xacro:macro name="wheel" params="side y">
+  <xacro:macro name="wheel" params="side">
     <link name="${side}_wheel">
       <visual>
         <geometry><cylinder radius="${wheel_radius}" length="0.03"/></geometry>
       </visual>
     </link>
   </xacro:macro>
-  <xacro:wheel side="left" y="0.15"/>
+  <xacro:wheel side="left"/>
 </robot>
 ~~~
 

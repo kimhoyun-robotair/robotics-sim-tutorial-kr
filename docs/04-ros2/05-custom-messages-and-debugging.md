@@ -1,20 +1,20 @@
-# Custom message, generic node와 계층별 debugging
+# 커스텀 메시지, Generic 노드와 계층별 디버깅
 
-이 튜토리얼에서는 표준 bridge node에 없는 인터페이스를 추가하다. 핵심은 `.msg/.srv/.action` 정의를 Isaac Sim의 Python 3.11 환경과 외부 Jazzy의 Python 3.12 환경에 각각 빌드하되, 두 프로세스는 DDS로만 연결하는 것이다.
+이 튜토리얼에서는 표준 Bridge 노드에 없는 인터페이스를 추가한다. 핵심은 `.msg/.srv/.action` 정의를 Isaac Sim의 Python 3.11 환경과 외부 Jazzy의 Python 3.12 환경에 각각 빌드하되, 두 프로세스는 DDS로만 연결하는 것이다.
 
-## 1. 먼저 custom interface가 정말 필요한지 결정하다
+## 1. 먼저 사용자 정의 인터페이스가 정말 필요한지 결정한다
 
-다음 순서로 선택하다.
+다음 순서로 선택한다.
 
-1. 의미가 맞는 표준 ROS interface가 있으면 그대로 사용하다.
-2. 표준 type이지만 전용 bridge node가 없으면 ROS 2 Generic Publisher/Subscriber를 사용하다.
-3. custom type이 필요하면 interface package를 양쪽 환경에 빌드하고 generic node를 사용하다.
-4. 변환·state·고유 sensor 계산이 필요하면 custom Python OmniGraph node 또는 독립 ROS node를 만들다.
-5. 매우 높은 rate와 큰 buffer가 필요할 때만 C++ node를 검토하다.
+1. 의미가 맞는 표준 ROS 인터페이스가 있으면 그대로 사용한다.
+2. 표준 타입이지만 전용 Bridge 노드가 없으면 ROS 2 Generic Publisher/Subscriber를 사용한다.
+3. 사용자 정의 타입이 필요하면 인터페이스 패키지를 양쪽 환경에 빌드하고 Generic 노드를 사용한다.
+4. 변환·상태·고유 센서 계산이 필요하면 사용자 정의 Python OmniGraph 노드 또는 독립 ROS 노드를 만든다.
+5. 매우 높은 실행 빈도와 큰 버퍼가 필요할 때만 C++ 노드를 검토한다.
 
-공식 5.1 Custom C++ OmniGraph 예제는 Humble 중심 제약이 있으므로 Ubuntu 24.04/Jazzy에서는 독립 ROS 2 C++ node 또는 Python node를 우선하고 porting test를 별도로 수행하다.
+공식 5.1 Custom C++ OmniGraph 예제는 Humble 중심 제약이 있으므로 Ubuntu 24.04/Jazzy에서는 독립 ROS 2 C++ 노드 또는 Python 노드를 우선하고 이식 시험를 별도로 수행한다.
 
-## 2. 작은 interface package를 만들다
+## 2. 작은 인터페이스 패키지를 만든다
 
 ```bash
 # [ROS]
@@ -25,7 +25,7 @@ ros2 pkg create course_interfaces --build-type ament_cmake
 mkdir -p course_interfaces/msg course_interfaces/srv
 ```
 
-`course_interfaces/msg/RobotHealth.msg`를 작성하다.
+`course_interfaces/msg/RobotHealth.msg`를 작성한다.
 
 ```text
 builtin_interfaces/Time stamp
@@ -36,7 +36,7 @@ uint32 dropped_sensor_frames
 string[] warnings
 ```
 
-`course_interfaces/srv/SetScenario.srv`를 작성하다.
+`course_interfaces/srv/SetScenario.srv`를 작성한다.
 
 ```text
 string scenario_name
@@ -46,7 +46,7 @@ bool accepted
 string reason
 ```
 
-`CMakeLists.txt`의 핵심을 구성하다.
+`CMakeLists.txt`의 핵심을 구성한다.
 
 ```cmake
 cmake_minimum_required(VERSION 3.8)
@@ -66,7 +66,7 @@ ament_export_dependencies(rosidl_default_runtime)
 ament_package()
 ```
 
-`package.xml`에 다음 의존성을 추가하다.
+`package.xml`에 다음 의존성을 추가한다.
 
 ```xml
 <buildtool_depend>ament_cmake</buildtool_depend>
@@ -76,7 +76,7 @@ ament_package()
 <member_of_group>rosidl_interface_packages</member_of_group>
 ```
 
-시스템 Jazzy/Python 3.12용으로 빌드하고 정의를 검사하다.
+시스템 Jazzy/Python 3.12용으로 빌드하고 정의를 검사한다.
 
 ```bash
 # [ROS]
@@ -89,9 +89,9 @@ ros2 interface show course_interfaces/msg/RobotHealth
 ros2 interface show course_interfaces/srv/SetScenario
 ```
 
-## 3. 외부 publisher로 type을 먼저 검증하다
+## 3. 외부 발행 노드로 타입을 먼저 검증한다
 
-`course_health_pub.py`를 일반 `ament_python` package에 넣거나 임시로 실행하다.
+`course_health_pub.py`를 일반 `ament_python` 패키지에 넣거나 임시로 실행한다.
 
 ```python
 #!/usr/bin/env python3
@@ -139,11 +139,11 @@ ros2 topic type /robot/health
 ros2 topic echo /robot/health --once
 ```
 
-Isaac Sim을 연결하기 전에 외부 publisher/subscriber끼리 통신하게 해야 interface 정의와 일반 workspace 문제를 분리할 수 있다.
+Isaac Sim을 연결하기 전에 외부 발행 노드와 구독 노드끼리 통신하게 해야 인터페이스 정의와 일반 워크스페이스 문제를 분리할 수 있다.
 
-## 4. 같은 interface를 Isaac Sim Python 3.11에 제공하다
+## 4. 같은 인터페이스를 Isaac Sim Python 3.11에 제공한다
 
-Python 3.12 `install/`을 `[SIM]`에서 source하면 안 되다. 동일 source package를 NVIDIA `IsaacSim-ros_workspaces`의 Python 3.11 build context에 포함하고 공식 build script를 사용하다.
+Python 3.12 `install/`을 `[SIM]`에서 불러오면 안 된다. 동일 소스 패키지를 NVIDIA `IsaacSim-ros_workspaces`의 Python 3.11 빌드 환경에 포함하고 공식 빌드 스크립트를 사용한다.
 
 ```bash
 # 빌드용 터미널: source package를 Python 3.11 workspace 쪽 src에도 둔다.
@@ -154,7 +154,7 @@ cd "$HOME/IsaacSim-ros_workspaces"
 ./build_ros.sh -d jazzy -v 24.04
 ```
 
-새 `[SIM]` 터미널에서 Python 3.11 산출물을 source한 뒤 실행하다.
+새 `[SIM]` 터미널에서 Python 3.11 산출물을 불러온 뒤 실행한다.
 
 ```bash
 # [SIM]
@@ -167,7 +167,7 @@ export ROS_DOMAIN_ID=17
 ~/isaacsim/isaac-sim.sh
 ```
 
-`course_interfaces`를 import하지 못하면 다음을 기록하다.
+`course_interfaces`를 import하지 못하면 다음을 기록한다.
 
 ```bash
 # [SIM]
@@ -175,9 +175,9 @@ export ROS_DOMAIN_ID=17
 printenv | grep -E '^(AMENT|COLCON|PYTHONPATH|LD_LIBRARY_PATH)='
 ```
 
-## 5. Generic Publisher/Subscriber를 사용하다
+## 5. Generic Publisher/Subscriber를 사용한다
 
-Action Graph에서 `ROS 2 Generic Publisher` 또는 `ROS 2 Generic Subscriber`를 추가하다. Property의 type을 다음 세 필드로 지정하다.
+Action Graph에서 `ROS 2 Generic Publisher` 또는 `ROS 2 Generic Subscriber`를 추가한다. Property의 타입을 다음 세 필드로 지정한다.
 
 ```text
 messagePackage   = course_interfaces
@@ -186,9 +186,9 @@ messageName      = RobotHealth
 topicName        = /robot/health
 ```
 
-유효한 type이 발견되면 node의 input/output port가 message field에 맞추어 재구성되다. type을 바꾼 직후 port가 갱신되지 않으면 Stage를 저장하고 graph를 다시 열다. publisher에는 trigger, context와 각 field 값을 연결하고 subscriber에는 trigger/context를 연결한 뒤 output을 downstream logic으로 보내다.
+유효한 타입이 발견되면 노드의 입출력 포트가 메시지 필드에 맞추어 재구성된다. 타입을 바꾼 직후 포트가 갱신되지 않으면 Stage를 저장하고 그래프를 다시 연다. 발행 노드에는 실행 신호, 컨텍스트와 각 필드 값을 연결하고 구독 노드에는 실행 신호·컨텍스트를 연결한 뒤 출력을 후속 처리 로직으로 보낸다.
 
-표준 message smoke test는 CLI로도 가능하다.
+표준 메시지 기본 동작 확인은 CLI로도 가능하다.
 
 ```bash
 # [ROS]
@@ -196,11 +196,11 @@ ros2 topic pub --once /robot/health course_interfaces/msg/RobotHealth \
   "{robot_name: demo_bot, battery_ratio: 0.7, real_time_factor: 1.0, dropped_sensor_frames: 2, warnings: ['camera_late']}"
 ```
 
-Generic Service Server/Client도 `messagePackage / messageSubfolder / messageName`을 각각 `course_interfaces / srv / SetScenario`로 지정하다. server request와 response execution을 분리하고 한 요청에 response를 정확히 한 번 보내다.
+Generic Service Server/Client도 `messagePackage / messageSubfolder / messageName`을 각각 `course_interfaces / srv / SetScenario`로 지정한다. 서버 요청과 응답 실행을 분리하고 한 요청에 응답을 정확히 한 번 보낸다.
 
-## 6. custom Python OmniGraph node의 경계를 정하다
+## 6. 사용자 정의 Python OmniGraph 노드의 경계를 정한다
 
-custom node는 sensor acquisition/변환처럼 Stage와 graph execution에 가까운 작업에 적합하다. ROS application logic, database 접근과 오래 걸리는 network 요청은 외부 ROS node에 두다.
+사용자 정의 노드는 센서 데이터 수집·변환처럼 Stage와 그래프 실행에 가까운 작업에 적합하다. ROS 애플리케이션 로직, 데이터베이스 접근과 오래 걸리는 네트워크 요청은 외부 ROS 노드에 둔다.
 
 ```text
 course.ros_health/
@@ -213,7 +213,7 @@ course.ros_health/
     └── extension.py
 ```
 
-`.ogn`에는 데이터 계약만 선언하다.
+`.ogn`에는 데이터 연동 규칙만 선언한다.
 
 ```json
 {
@@ -234,7 +234,7 @@ course.ros_health/
 }
 ```
 
-compute는 block하지 않고 입력에서 출력을 계산하다.
+compute는 다른 실행을 막지 않고 입력에서 출력을 계산한다.
 
 ```python
 class OgnHealthGate:
@@ -245,11 +245,11 @@ class OgnHealthGate:
         return True
 ```
 
-`rclpy` subscription을 node 안에 직접 넣어야 한다면 매 frame node/context를 만들지 않다. internal state에서 한 번 생성하고 executor를 짧게 spin하며 graph reset과 extension shutdown에서 subscription, node와 context를 명시적으로 정리하다. callback thread에서 USD Stage를 직접 수정하지 말고 thread-safe queue로 simulation thread에 넘기다.
+`rclpy` 구독을 노드 안에 직접 넣어야 한다면 매 프레임 노드/컨텍스트를 만들지 않는다. 내부 상태에서 한 번 생성하고 executor를 짧게 spin하며 그래프 초기화와 확장 종료에서 구독, 노드와 컨텍스트를 명시적으로 정리한다. 콜백 스레드에서 USD Stage를 직접 수정하지 말고 스레드 안전 큐로 시뮬레이션 스레드에 넘긴다.
 
-## 7. namespace와 여러 robot
+## 7. 네임스페이스와 여러 로봇
 
-다음처럼 topic을 robot별로 격리하다.
+다음처럼 토픽을 로봇별로 격리한다.
 
 ```text
 /robot_01/cmd_vel
@@ -258,7 +258,7 @@ class OgnHealthGate:
 /robot_02/cmd_vel
 ```
 
-Action Graph의 `nodeNamespace` 또는 launch remap을 사용하다. graph prim 위치를 이용한 automatic namespace는 편리하지만 복잡한 hierarchy의 모든 node에 정확히 적용되지 않는 5.1 known issue가 있으므로 결과를 검사하다.
+Action Graph의 `nodeNamespace` 또는 launch remap을 사용한다. 그래프 prim 위치를 이용한 자동 네임스페이스는 편리하지만 복잡한 계층의 모든 노드에 정확히 적용되지 않는 5.1 알려진 문제가 있으므로 결과를 검사한다.
 
 ```bash
 # [DBG]
@@ -267,22 +267,22 @@ ros2 node list | sort
 ros2 topic info /robot_01/cmd_vel -v
 ```
 
-namespace를 topic 문자열과 node namespace 양쪽에 중복해 `/robot_01/robot_01/...`를 만들지 않다.
+네임스페이스를 토픽 문자열과 노드 네임스페이스 양쪽에 중복해 `/robot_01/robot_01/...`를 만들지 않는다.
 
 ## 8. 증상별 진단 표
 
 | 증상 | 먼저 볼 것 | 다음 조치 |
 |---|---|---|
-| topic이 전혀 없음 | Timeline, graph exec, bridge extension | Console error, domain/context 확인 |
-| topic은 있으나 subscriber 0 | domain, namespace, type | daemon restart, discovery/firewall 확인 |
-| endpoint는 보이나 data 없음 | QoS와 graph trigger | offered/requested QoS, gate/enabled 확인 |
-| custom type을 못 찾음 | Python 3.11 package path | 두 workspace의 interface build 확인 |
-| RViz sensor가 간헐적 | timestamp, TF, Best Effort | rate/bandwidth/RTF를 함께 측정 |
-| robot이 폭주 | last command와 watchdog | zero command, drive gain/limit 확인 |
-| Nav2가 extrapolation error | `/clock`, `use_sim_time`, TF timestamp | 모든 publisher의 time source 통일 |
-| Stop→Play 뒤 graph 이상 | Stage 저장, stale node state | reset callback, Stage reopen |
+| 토픽이 전혀 없음 | Timeline, 그래프 실행, Bridge 확장 | 콘솔 오류, 도메인/컨텍스트 확인 |
+| 토픽은 있으나 구독 노드 0 | 도메인, 네임스페이스, 타입 | 데몬 재시작, 참여자 탐색·방화벽 확인 |
+| 통신 끝점은 보이나 데이터 없음 | QoS와 그래프 실행 신호 | 발행 측·구독 측 QoS, gate/enabled 확인 |
+| 사용자 정의 타입을 못 찾음 | Python 3.11 패키지 경로 | 두 워크스페이스의 인터페이스 빌드 확인 |
+| RViz 센서가 간헐적 | 타임스탬프, TF, Best Effort | 주기/대역폭/RTF를 함께 측정 |
+| 로봇이 폭주 | 마지막 명령과 watchdog | 속도 0 명령, drive gain/한계 확인 |
+| Nav2가 extrapolation error | `/clock`, `use_sim_time`, TF 타임스탬프 | 모든 발행 노드의 시간 기준 통일 |
+| Stop→Play 뒤 그래프 이상 | Stage 저장, 오래된 노드 상태 | 초기화 콜백, Stage 다시 열기 |
 
-## 9. 재현 가능한 debugging 명령 묶음
+## 9. 재현 가능한 디버깅 명령 묶음
 
 ```bash
 # [DBG]
@@ -305,14 +305,14 @@ ros2 run tf2_tools view_frames
 ros2 run tf2_ros tf2_echo odom base_link
 ```
 
-daemon cache가 의심될 때만 갱신하다.
+데몬 캐시가 의심될 때만 갱신한다.
 
 ```bash
 ros2 daemon stop
 ros2 daemon start
 ```
 
-Isaac Sim 로그를 파일로 남기다.
+Isaac Sim 로그를 파일로 남긴다.
 
 ```bash
 # [SIM]
@@ -321,7 +321,7 @@ mkdir -p "$HOME/isaacsim-course/logs"
   --/log/file="$HOME/isaacsim-course/logs/isaac-ros2.log"
 ```
 
-사용자 persistent setting 때문에 rate/graph 동작이 달라졌다고 의심될 때 재현용으로 factory setting을 시험하다.
+사용자가 저장한 설정 때문에 주기/그래프 동작이 달라졌다고 의심될 때 재현용으로 초기 설정을 시험한다.
 
 ```bash
 # [SIM] 사용자 설정을 초기 상태로 실행하는 진단용 옵션이다.
@@ -344,15 +344,15 @@ actual timestamp + frame:
 Isaac log 앞뒤 50줄:
 ```
 
-토큰, 사내 host, 개인 경로와 전체 환경 변수 dump의 비밀값은 공유 전에 제거하다.
+토큰, 사내 호스트, 개인 경로와 전체 환경 변수 dump의 비밀값은 공유 전에 제거한다.
 
 ## 완료 체크포인트
 
 - [ ] `RobotHealth.msg`를 Python 3.11과 3.12 양쪽에서 import했다.
-- [ ] Generic Subscriber가 외부 publisher의 custom message를 받았다.
-- [ ] custom node의 lifecycle에서 ROS/graph resource를 정리하다.
-- [ ] 두 robot namespace의 topic이 충돌하지 않다.
-- [ ] 진단 순서를 domain→discovery→type→QoS→time→TF→rate로 수행했다.
+- [ ] Generic Subscriber가 외부 발행 노드의 사용자 정의 메시지를 받았다.
+- [ ] 사용자 정의 노드의 lifecycle에서 ROS·그래프 자원을 정리한다.
+- [ ] 두 로봇 네임스페이스의 토픽이 충돌하지 않는다.
+- [ ] 진단 순서를 도메인→참여자 탐색→타입→QoS→시간→TF→주기로 수행했다.
 
 ## 출처
 

@@ -1,14 +1,14 @@
 # 물리, 재질, 조명과 센서
 
-이 튜토리얼은 “보기 좋은 장면”과 “물리적으로 의미 있는 장면”을 분리해 설계하는 방법을 다룬다. 강체와 충돌체를 구성하고, 마찰과 반발을 조정하고, 조명·카메라·접촉 센서로 결과를 관측한다.
+이 튜토리얼은 화면의 시각적 표현과 물리 속성을 각각 설계하는 방법을 다룬다. 강체와 충돌체를 구성하고, 마찰과 반발을 조정하고, 조명·카메라·접촉 센서로 결과를 관측한다.
 
-## 1. Physics Scene과 시간
+## 1. 물리 장면과 시간
 
-Stage에는 보통 하나의 Physics Scene prim이 있으며 중력, solver, CPU/GPU dynamics와 CCD 같은 전역 설정을 가진다. GUI에서는 `Create > Physics > Physics Scene`으로 만든다. Core API에서 `World` 또는 `PhysicsContext`를 만들 때도 physics scene이 준비된다.
+Stage에는 보통 하나의 물리 장면 prim이 있으며 중력, 솔버, CPU/GPU 물리 계산과 연속 충돌 감지(CCD) 같은 전역 설정을 가진다. GUI에서는 `Create > Physics > Physics Scene`으로 만든다. Core API에서 `World` 또는 `PhysicsContext`를 만들 때도 물리 장면이 준비된다.
 
-### timestep을 먼저 고정하기
+### 물리 시간 간격부터 정하기
 
-물리 timestep은 정확도와 비용의 가장 중요한 축이다.
+물리 시간 간격은 계산 정확도와 처리 시간에 큰 영향을 준다.
 
 ```python
 from isaacsim.core.api import World
@@ -20,7 +20,7 @@ world = World(
 )
 ```
 
-위 설정은 물리를 120 Hz, 렌더를 60 Hz로 진행한다. 빠른 그리퍼, 작은 물체, 강한 joint drive에서 timestep을 줄이면 안정성이 좋아질 수 있지만 계산량은 증가한다. timestep만 줄이고 controller의 `dt`를 그대로 두면 제어 동작이 달라지므로 함께 갱신한다.
+위 설정은 물리를 120 Hz, 렌더를 60 Hz로 진행한다. 빠른 그리퍼, 작은 물체, 강한 관절 드라이브에서 시간 간격을 줄이면 안정성이 좋아질 수 있지만 계산량은 증가한다. 물리 시간 간격만 줄이고 제어기의 `dt`를 그대로 두면 제어 동작이 달라지므로 함께 갱신한다.
 
 ## 2. 강체, 충돌체와 질량
 
@@ -28,13 +28,13 @@ world = World(
 
 | 요소 | 질문 | 잘못 설정했을 때 증상 |
 |---|---|---|
-| Visual geometry | 어떻게 보이는가? | 화면 모양만 이상하다. |
-| Collider | 어디에서 접촉하는가? | 통과, 공중 접촉, 떨림이 생긴다. |
-| Rigid Body | 힘을 받아 움직이는가? | 중력에 반응하지 않거나 정적 구조가 움직인다. |
-| Mass/inertia | 얼마나 움직이기 어려운가? | 비현실적 가속, joint 불안정이 생긴다. |
-| Physics material | 마찰·반발이 어떤가? | 미끄러짐, 튐이 현실과 다르다. |
+| 시각 형상 | 어떻게 보이는가? | 화면에 보이는 모양이 잘못된다. |
+| 충돌 형상 | 어디에서 접촉하는가? | 통과, 공중 접촉, 떨림이 생긴다. |
+| 강체 | 힘을 받아 움직이는가? | 중력에 반응하지 않거나 정적 구조가 움직인다. |
+| 질량/관성 | 얼마나 움직이기 어려운가? | 비현실적 가속, 관절 불안정이 생긴다. |
+| 물리 재질 | 마찰·반발이 어떤가? | 미끄러짐, 튐이 현실과 다르다. |
 
-동적 강체는 rigid body root 아래 여러 시각 mesh와 collider를 둘 수 있다. rigid body transform을 움직이면 자식 전체가 움직인다. collider 자식의 local transform은 body 기준 충돌 위치이다.
+동적 강체는 강체 루트 아래 여러 시각 메시와 충돌 형상을 둘 수 있다. 강체 변환을 움직이면 자식 전체가 움직인다. 충돌 형상 자식의 로컬 변환은 물체 기준 충돌 위치이다.
 
 ### Core API로 동적·정적 물체 만들기
 
@@ -64,7 +64,7 @@ static_platform = world.scene.add(
 )
 ```
 
-### raw USD schema로 의미 확인하기
+### USD 원본 스키마로 의미 확인하기
 
 ```python
 import omni.usd
@@ -82,42 +82,42 @@ mass_api = UsdPhysics.MassAPI.Apply(prim)
 mass_api.CreateMassAttr(1.0)
 ```
 
-Core API는 이처럼 여러 schema를 적용하고 속성을 authoring하는 반복 작업을 묶는다. 복잡한 자산의 특정 속성을 수정할 때는 raw `pxr` API가 더 직접적이다.
+Core API는 이처럼 여러 스키마를 적용하고 속성을 작성하는 반복 작업을 묶는다. 복잡한 자산의 특정 속성을 수정할 때는 원본 `pxr` API가 더 직접적이다.
 
-## 3. 충돌 approximation 선택
+## 3. 충돌 형상의 근사 방식 선택하기
 
-복잡한 visual mesh를 그대로 충돌 계산에 쓰는 것은 비싸고 동적 강체에서 제약이 있다. 목적에 맞는 단순 collider를 별도로 만드는 것이 가장 좋다.
+복잡한 시각 메시를 그대로 충돌 계산에 쓰는 것은 계산량이 많고 동적 강체에서는 제약도 있다. 목적에 맞는 단순 충돌 형상을 별도로 만드는 것이 가장 좋다.
 
-| approximation | 적합한 경우 | 특징 |
+| 근사 방식 | 적합한 경우 | 특징 |
 |---|---|---|
 | Box/Sphere/Capsule | 바퀴, 링크, 상자, 단순 소품 | 가장 빠르고 안정적이다. |
-| Convex Hull | 대체로 볼록한 단일 mesh | 빠르지만 오목한 부분을 메운다. |
-| Convex Decomposition | 오목한 동적 물체 | 여러 hull로 근사해 정확도와 비용을 조절한다. |
-| Triangle Mesh | 복잡한 정적 환경 | 정적 collider에 주로 사용한다. 동적 body에는 일반적으로 피한다. |
+| 볼록 껍질 | 대체로 볼록한 단일 메시 | 빠르지만 오목한 부분을 메운다. |
+| 볼록 분해 | 오목한 동적 물체 | 여러 볼록 형상으로 나누어 정확도와 계산량을 조절한다. |
+| Triangle Mesh | 복잡한 정적 환경 | 정적 충돌 형상에 주로 사용한다. 동적 물체에는 일반적으로 피한다. |
 | SDF Mesh | 오목한 동적 형상이 꼭 필요한 경우 | 해상도·메모리 비용과 지원 제약을 검토한다. |
 
-GUI에서 collider를 선택하고 Property의 Collider 설정에서 approximation을 바꾼다. Simulation Debug visualization으로 visual mesh와 collider가 어긋나지 않았는지 확인한다. hull 수가 적을수록 대체로 빠르다.
+GUI에서 충돌 형상을 선택하고 Property의 충돌 형상 설정에서 근사 방식을 바꾼다. 물리 디버그 시각화로 시각 메시와 충돌 형상이 어긋나지 않았는지 확인한다. 볼록 형상의 수가 적을수록 대체로 계산이 빠르다.
 
 ### 얇은 물체를 통과할 때
 
-1. physics timestep을 줄인다.
-2. collider 두께를 현실적으로 만든다.
-3. Contact Offset을 너무 작게 두지 않았는지 확인한다.
-4. 빠른 물체라면 Physics Scene과 해당 rigid body에서 CCD를 켠다.
-5. solver iteration을 무작정 올리기 전에 scale, mass와 속도를 확인한다.
+1. 물리 시간 간격을 줄인다.
+2. 충돌 형상 두께를 현실적으로 만든다.
+3. contact offset을 너무 작게 두지 않았는지 확인한다.
+4. 빠른 물체라면 물리 장면과 해당 강체에서 CCD를 켠다.
+5. 솔버 반복 횟수를 무작정 올리기 전에 크기, 질량과 속도를 확인한다.
 
-Rest Offset은 충돌 형상의 유효 표면을 조절하고, Contact Offset은 제약 생성을 시작하는 거리를 정한다. Contact Offset을 크게 하면 안정적일 수 있지만 접촉 pair 수와 비용이 늘고 물체가 떠 보일 수 있다.
+rest offset은 충돌 형상의 유효 표면을 조절하고, contact offset은 제약 생성을 시작하는 거리를 정한다. contact offset을 크게 하면 안정적일 수 있지만 접촉 쌍 수와 비용이 늘고 물체가 떠 보일 수 있다.
 
 ## 4. 물리 재질과 렌더 재질은 다르다
 
-렌더 재질은 색, roughness, metallic, transparency를 정한다. 물리 재질은 정지 마찰, 동마찰과 restitution을 정한다. 빨간 고무처럼 보인다고 자동으로 마찰이 높아지지 않는다.
+렌더 재질은 색, 거칠기, 금속성, 투명도를 정한다. 물리 재질은 정지 마찰, 동마찰과 반발계수을 정한다. 빨간 고무처럼 보인다고 자동으로 마찰이 높아지지 않는다.
 
 GUI에서는 다음 순서로 만든다.
 
 1. `Create > Physics > Physics Material > Rigid Body Material`을 선택한다.
 2. `static friction`, `dynamic friction`, `restitution`을 조정한다.
-3. collider prim을 선택한다.
-4. Property의 Physics Material 영역에서 만든 재질을 할당한다.
+3. 충돌 형상 prim을 선택한다.
+4. Property의 물리 재질 영역에서 만든 재질을 할당한다.
 
 Python에서는 다음처럼 적용한다.
 
@@ -134,15 +134,15 @@ dynamic_box.apply_physics_material(rubber)
 static_platform.apply_physics_material(rubber)
 ```
 
-정지 마찰은 미끄러지기 시작하는 임계에, 동마찰은 이미 미끄러지는 동안에 영향을 준다. restitution 0은 비탄성에 가깝고 1에 가까울수록 잘 튄다. 두 접촉 재질을 어떤 규칙으로 합치는지(combine mode)도 결과에 영향을 주므로 실측 튜닝에서는 함께 기록한다.
+정지 마찰은 미끄러지기 시작하는 조건에, 동마찰은 이미 미끄러지는 동안에 영향을 준다. 반발계수가 0이면 비탄성에 가깝고 1에 가까울수록 잘 튄다. 두 접촉 재질을 어떤 규칙으로 합치는지(combine mode)도 결과에 영향을 주므로 실측값에 맞춰 조정할 때는 함께 기록한다.
 
 ### 마찰 실험
 
-경사로를 10°, 20°, 30°로 바꾸어 상자가 움직이기 시작하는 각도를 기록한다. 질량만 바꿨을 때 마찰 임계가 크게 달라진다면 collider, solver 또는 drive 간섭을 의심한다. 시뮬레이션 물성을 맞출 때는 눈대중 대신 실험 조건과 측정값을 표로 남긴다.
+경사로를 10°, 20°, 30°로 바꾸어 상자가 움직이기 시작하는 각도를 기록한다. 질량만 바꿨을 때 미끄러지기 시작하는 각도가 크게 달라진다면 충돌 형상, 솔버 또는 드라이브 간섭을 의심한다. 시뮬레이션 물성을 맞출 때는 눈대중 대신 실험 조건과 측정값을 표로 남긴다.
 
 ## 5. 조명
 
-조명은 physics에 영향을 주지 않지만 카메라 센서 데이터의 분포를 바꾼다.
+조명은 물리에 영향을 주지 않지만 카메라 센서 데이터의 분포를 바꾼다.
 
 | 조명 | 용도 |
 |---|---|
@@ -167,20 +167,22 @@ fill.CreateRadiusAttr(0.3)
 UsdGeom.Xformable(fill.GetPrim()).AddTranslateOp().Set(Gf.Vec3d(1.0, -1.0, 2.0))
 ```
 
-합성 데이터나 perception 평가에서는 exposure, 광원 위치, 색온도, 그림자와 재질을 실험 설정의 일부로 저장한다. Viewport가 밝다고 별도 render product의 노출도 같다고 가정하지 않는다.
+합성 데이터나 인지 평가에서는 노출, 광원 위치, 색온도, 그림자와 재질을 실험 설정의 일부로 저장한다. Viewport가 밝다고 별도 렌더 출력(Render Product)의 노출도 같다고 가정하지 않는다.
 
 ## 6. 카메라 기초
 
-Camera prim은 렌즈와 pose를 표현하고, 실제 영상은 camera에 연결된 **render product**에서 생성한다. `isaacsim.sensors.camera.Camera` wrapper는 render product 초기화와 RGB/depth/annotator 접근을 묶는다.
+카메라 prim은 렌즈와 자세를 표현하고, 실제 영상은 카메라에 연결된 **렌더 출력(Render Product)**에서 생성한다. `isaacsim.sensors.camera.Camera` API 객체는 Render Product 초기화, RGB·깊이 데이터 읽기와 annotator 접근 기능을 제공한다.
 
 ### GUI에서 확인
 
 1. `Create > Camera`로 카메라를 만든다.
-2. Stage에서 Camera를 선택해 frustum을 확인한다.
-3. Viewport 위 카메라 아이콘에서 해당 Camera를 선택한다.
-4. focal length와 aperture를 바꾸며 field of view 변화를 확인한다.
+2. Stage에서 카메라를 선택해 시야 영역(frustum)을 확인한다.
+3. Viewport 위 카메라 아이콘에서 해당 카메라를 선택한다.
+4. 초점 거리와 조리개 크기를 바꾸며 시야각 변화를 확인한다.
 
 ### Standalone 카메라 예제
+
+조명과 목표 물체를 직접 만든다. 정해진 위치의 빨간 큐브를 아래로 내려다보게 하므로 임의의 카메라 각도를 추측할 필요가 없다. 장시간의 빈 프레임, 시간 정지, RGB·깊이·IMU를 함께 검사하는 완성 파일은 [camera_imu.py](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/IsaacSim5.1/examples/standalone/camera_imu.py)이다.
 
 ```python
 from isaacsim import SimulationApp
@@ -197,6 +199,8 @@ from isaacsim.sensors.camera import Camera
 try:
     world = World(stage_units_in_meters=1.0)
     world.scene.add_default_ground_plane()
+    from pxr import UsdLux
+    UsdLux.DomeLight.Define(world.stage, "/World/Light").CreateIntensityAttr(700.0)
     world.scene.add(
         DynamicCuboid(
             prim_path="/World/Target",
@@ -209,9 +213,9 @@ try:
 
     camera = Camera(
         prim_path="/World/Sensors/Camera",
-        position=np.array([2.0, 0.0, 1.5]),
+        position=np.array([0.0, 0.0, 3.0]),
         orientation=rot_utils.euler_angles_to_quats(
-            np.array([0.0, 55.0, 180.0]), degrees=True
+            np.array([0.0, 90.0, 0.0]), degrees=True
         ),
         frequency=20,
         resolution=(640, 480),
@@ -219,45 +223,50 @@ try:
 
     world.reset()
     camera.initialize()
+    camera.add_distance_to_image_plane_to_frame()
 
     # renderer와 annotator가 채워질 시간을 준다.
-    for _ in range(30):
+    for _ in range(180):
         world.step(render=True)
 
     rgba = camera.get_rgba()
-    assert rgba is not None and rgba.shape[:2] == (480, 640), rgba.shape
+    assert rgba is not None, "카메라 출력이 없다"
+    assert rgba.shape == (480, 640, 4), rgba.shape
+    assert rgba[..., :3].std() > 2, "영상이 균일하다. 물체·조명·카메라 방향을 확인한다"
+    depth = camera.get_depth()
+    assert depth is not None and abs(float(depth[240, 320]) - 2.5) < 0.05
     print("RGBA shape:", rgba.shape, "dtype:", rgba.dtype)
 finally:
     simulation_app.close()
 ```
 
-카메라 축 convention 때문에 목표가 보이지 않으면 임의 quaternion을 계속 바꾸기보다 GUI에서 카메라를 배치하고 pose를 읽거나 `set_world_pose`/look-at 유틸리티를 사용한다. ROS optical frame은 또 다른 축 convention을 사용하므로 ROS 변환 장에서 명시적으로 다룬다.
+카메라 축 방향 때문에 목표가 보이지 않으면 임의 쿼터니언을 계속 바꾸기보다 GUI에서 카메라를 배치하고 자세를 읽거나 `set_world_pose`/look-at 유틸리티를 사용한다. ROS optical 프레임은 축 방향의 규칙이 다르므로 ROS 변환 장에서 명시적으로 다룬다.
 
 ### 카메라 품질 체크리스트
 
-- resolution과 frequency가 요구사항에 맞는가?
-- clipping range가 장면 scale을 포함하는가?
-- intrinsic matrix와 distortion model이 실제 센서 보정값과 맞는가?
+- 해상도와 주파수가 요구사항에 맞는가?
+- 렌더링 거리 범위가 장면 크기를 포함하는가?
+- 내부 파라미터 행렬과 왜곡 모델이 실제 센서 보정값과 맞는가?
 - 첫 프레임이 비어 있을 수 있음을 처리했는가?
-- RGB, depth, segmentation이 같은 timestamp/render product 기준인가?
-- 5.1의 OpenCV pinhole/fisheye용 native lens distortion schema를 사용하고, 폐기 예정 polynomial 근사 API에 새 코드를 의존하지 않는가?
+- RGB, 깊이, 영역 분할이 같은 타임스탬프/렌더 출력(Render Product) 기준인가?
+- 5.1의 OpenCV pinhole/fisheye용 기본 제공 렌즈 왜곡 스키마를 사용하고, 폐기 예정인 다항식 근사 API에 새 코드를 의존하지 않는가?
 
 ## 7. 접촉 센서
 
-Contact Sensor는 부모 rigid body의 PhysX Contact Report를 읽고 threshold와 공간 영역으로 필터링한다. 구형 필터 영역은 “그 공간에서 새 충돌을 만드는 것”이 아니라 이미 부모 collider 표면에서 생긴 contact 가운데 센서에 포함할 것을 고른다.
+접촉 센서는 부모 강체의 PhysX 접촉 정보를 읽고 임곗값과 공간 영역으로 필터링한다. 구형 필터 영역은 “그 공간에서 새 충돌을 만드는 것”이 아니라 이미 부모 충돌 형상 표면에서 생긴 접촉 가운데 센서에 포함할 것을 고른다.
 
 ### GUI 구성
 
-1. collider가 적용된 rigid body prim을 선택한다.
+1. 충돌 형상이 적용된 강체 prim을 선택한다.
 2. `Create > Sensors > Contact Sensor`를 누른다.
-3. sensor radius, min/max threshold와 sensor period를 설정한다.
+3. 센서 반경, 최소·최대 임곗값과 측정 주기를 설정한다.
 4. Play한 뒤 Action Graph의 `Isaac Read Contact Sensor` 노드로 읽는다.
 
-그래프는 `On Playback Tick → Isaac Read Contact Sensor → To String → Print Text`로 연결할 수 있다. 정확히 physics step마다 읽어야 하는 제어라면 `On Physics Step`을 사용하고 graph pipeline 설정을 확인한다.
+그래프는 `On Playback Tick → Isaac Read Contact Sensor → To String → Print Text`로 연결할 수 있다. 정확히 물리 스텝마다 읽어야 하는 제어라면 `On Physics Step`을 사용하고 그래프 처리 과정 설정을 확인한다.
 
-### Python wrapper 예제
+### Python API 객체 예제
 
-다음은 이미 `/World/Cube`에 collider가 있는 상태에서 실행하는 핵심 부분이다.
+다음은 이미 `/World/Cube`에 충돌 형상이 있는 상태에서 실행하는 핵심 부분이다.
 
 ```python
 import numpy as np
@@ -278,7 +287,7 @@ frame = contact.get_current_frame()
 print("contact:", frame.get("in_contact"), "force:", frame.get("force"))
 ```
 
-또는 저수준 interface를 사용한다.
+또는 저수준 인터페이스를 사용한다.
 
 ```python
 from isaacsim.sensors.physics import _sensor
@@ -291,41 +300,41 @@ if reading.is_valid:
     print(reading.time, reading.in_contact, reading.value)
 ```
 
-sensor frequency는 physics frequency보다 높일 수 없다. `frequency`와 `dt`를 동시에 주지 않으며, `translation`과 `position`도 동시에 주지 않는다. Contact Sensor는 Play 시 동적으로 준비되므로 실행 중에 prim을 다른 rigid body 아래로 옮기면 무효화된다. 계층을 바꿀 때는 Stop한 뒤 수정하고 다시 시작한다.
+센서 주파수는 물리 주파수보다 높일 수 없다. `frequency`와 `dt`를 동시에 주지 않으며, `translation`과 `position`도 동시에 주지 않는다. 접촉 센서는 Play 시 동적으로 준비되므로 실행 중에 prim을 다른 강체 아래로 옮기면 무효화된다. 계층을 바꿀 때는 Stop한 뒤 수정하고 다시 시작한다.
 
-## 8. 관절 힘, Effort와 IMU로 확장
+## 8. 관절 힘·토크 센서와 IMU로 확장하기
 
 접촉 외에도 물리 기반 센서를 사용할 수 있다.
 
-- `get_applied_joint_efforts()`는 사용자가 명령한 effort를 읽는다.
-- `get_measured_joint_efforts()`는 motion axis 방향의 측정 성분을 읽는다.
-- `get_measured_joint_forces()`는 joint별 6D spatial force를 반환하며 fixed joint를 force/torque sensor처럼 활용할 수 있다.
-- `isaacsim.sensors.physics.EffortSensor`는 joint effort의 sampling을 추상화한다.
-- IMU는 linear acceleration과 angular velocity를 제공한다. 실제 센서와 비교하려면 bias, noise, bandwidth와 frame을 별도로 모델링한다.
+- `get_applied_joint_efforts()`는 사용자가 명령한 토크·힘을 읽는다.
+- `get_measured_joint_efforts()`는 관절 운동 축 방향의 측정 성분을 읽는다.
+- `get_measured_joint_forces()`는 관절별 6D 공간 힘을 반환하며 고정 관절을 힘/토크 센서처럼 활용할 수 있다.
+- `isaacsim.sensors.physics.EffortSensor`는 관절의 힘·토크를 지정한 주기로 읽는 기능을 제공한다.
+- IMU는 선가속도와 각속도를 제공한다. 실제 센서와 비교하려면 편향, 잡음, 대역폭과 좌표계을 별도로 모델링한다.
 
-명령 effort와 측정 force는 같은 값이 아니다. 중력, 접촉, 관성, constraint 반력이 측정 force에 함께 나타날 수 있다.
+명령 토크·힘과 측정 힘은 같은 값이 아니다. 중력, 접촉, 관성, 구속 조건에 의한 반력이 측정 힘에 함께 나타날 수 있다.
 
 ## 9. 안정성 진단 순서
 
-물체가 폭발하거나 떨릴 때 solver iteration부터 크게 올리지 않는다.
+물체가 갑자기 튀거나 떨릴 때 솔버 반복 횟수부터 크게 올리지 않는다.
 
 1. stage 단위와 자산 크기를 확인한다.
-2. collider가 겹친 초기 pose인지 visualization으로 확인한다.
-3. 0 또는 극단적인 mass, 잘못된 inertia가 있는지 확인한다.
-4. joint limit와 drive target이 충돌하지 않는지 확인한다.
-5. contact/rest offset과 얇은 형상을 확인한다.
-6. timestep을 줄여 현상이 사라지는지 비교한다.
-7. CCD, solver iteration과 stabilization을 필요한 곳에만 적용한다.
-8. Physics residual reporting과 Simulation Data Visualizer로 constraint 수렴을 관찰한다.
+2. 충돌 형상이 겹친 초기 자세인지 시각화하여 확인한다.
+3. 0 또는 극단적인 질량, 잘못된 관성이 있는지 확인한다.
+4. 관절 제한과 드라이브 목표가 충돌하지 않는지 확인한다.
+5. contact offset과 rest offset과 얇은 형상을 확인한다.
+6. 물리 시간 간격을 줄여 현상이 사라지는지 비교한다.
+7. CCD, 솔버 반복 횟수과 안정화 기능을 필요한 곳에만 적용한다.
+8. 물리 잔차 보고 기능(residual reporting)과 Simulation Data Visualizer로 구속 조건이 수렴하는지 관찰한다.
 
 ## 10. 검증 체크포인트
 
-- [ ] rigid body와 collider의 역할을 각각 설명할 수 있다.
-- [ ] 동적 mesh에 무조건 triangle mesh collider를 쓰지 않는 이유를 안다.
+- [ ] 강체와 충돌 형상의 역할을 각각 설명할 수 있다.
+- [ ] 동적 메시에 무조건 Triangle Mesh 충돌 형상을 쓰지 않는 이유를 안다.
 - [ ] 렌더 재질과 물리 재질을 별도로 설정했다.
 - [ ] 카메라의 RGBA 배열 크기를 코드로 검증했다.
-- [ ] 접촉 센서 부모에 collider가 있고 Play 뒤 유효한 값을 읽었다.
-- [ ] sensor frequency가 physics frequency를 넘지 않도록 설정했다.
+- [ ] 접촉 센서 부모에 충돌 형상이 있고 Play 뒤 유효한 값을 읽었다.
+- [ ] 센서 주파수가 물리 주파수를 넘지 않도록 설정했다.
 
 ## 출처
 

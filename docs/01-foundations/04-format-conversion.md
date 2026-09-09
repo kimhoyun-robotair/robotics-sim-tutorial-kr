@@ -2,11 +2,11 @@
 
 이 장에서는 로봇 설명 파일을 Isaac Sim 5.1이 사용하는 USD 자산으로 가져오고, 필요한 경우 USD를 다시 URDF 계열로 내보내는 방법을 다룬다. 먼저 가장 중요한 원칙부터 짚어야 한다.
 
-> **변환은 단순한 확장자 변경이 아니다.** URDF, Xacro, MJCF, USD는 표현할 수 있는 정보와 실행 시점이 다르다. 가져오기(import)는 원본의 의미를 PhysX·USD 스키마로 번역하는 작업이고, 내보내기(export)는 USD의 일부만 대상 형식에 맞춰 투영하는 작업이다.
+> **변환은 단순한 확장자 변경이 아니다.** URDF, Xacro, MJCF, USD는 표현할 수 있는 정보와 실행 시점이 다르다. 가져오기(import)는 원본의 의미를 PhysX·USD 스키마로 번역하는 작업이고, 내보내기(export)는 USD의 일부만 대상 형식으로 옮기는 작업이다.
 
 따라서 프로젝트에서는 원본 URDF/Xacro/MJCF와 생성된 USD를 모두 버전 관리하고, 생성 절차도 스크립트로 남기는 편이 안전하다.
 
-## 1. 지원 경로를 먼저 이해하다
+## 1. 지원 경로를 먼저 이해하기
 
 Isaac Sim 5.1의 공식 지원 범위를 요약하면 다음과 같다.
 
@@ -17,7 +17,7 @@ Isaac Sim 5.1의 공식 지원 범위를 요약하면 다음과 같다.
 | MJCF | USD | MJCF Importer GUI·Kit 명령 | body·joint·geom·site 등의 지원 항목을 USD/PhysX로 번역한다 |
 | USD | URDF | URDF Exporter GUI | 호환되는 articulation의 부분집합을 내보낸다 |
 | USD | Xacro | 직접 경로 없음 | USD→URDF 후 사람이 매크로로 재구성한다 |
-| USD | MJCF | 5.1 공식 exporter 없음 | 필요하면 USD→URDF→MuJoCo 경로를 실험하되 손실을 감사한다 |
+| USD | MJCF | 5.1 공식 exporter 없음 | 필요하면 USD→URDF→MuJoCo 경로를 실험하되 어떤 정보가 사라졌는지 확인한다 |
 
 다음 흐름은 실무에서 가장 재현성이 높다.
 
@@ -35,7 +35,7 @@ flowchart TD
 
 ## 2. 변환 전 공통 준비
 
-### 2.1 절대 경로와 실행 환경을 확인하다
+### 2.1 절대 경로와 실행 환경을 확인하기
 
 이 장의 Python 예제는 Isaac Sim 5.1의 Python 환경에서 실행해야 한다. 워크스테이션 설치를 예로 들면 다음과 같다.
 
@@ -60,7 +60,7 @@ output.parent.mkdir(parents=True, exist_ok=True)
 print(f"입력: {source}\n출력: {output}")
 ```
 
-### 2.2 입력 자산의 단위와 축을 기록하다
+### 2.2 입력 자산의 단위와 축을 기록하기
 
 변환 전에 다음 항목을 표로 기록한다.
 
@@ -73,7 +73,7 @@ print(f"입력: {source}\n출력: {output}")
 
 잘못된 단위는 변환 후에도 문법적으로는 정상인 USD가 된다. 예를 들어 길이가 1000배 커지면 관성과 접촉 응답도 기대와 완전히 달라진다. importer 창의 미리 보기만으로 끝내지 말고 bounding box와 질량을 수치로 검사해야 한다.
 
-### 2.3 결과 검증 기준을 미리 만들다
+### 2.3 결과 검증 기준을 미리 만들기
 
 최소한 다음 값은 변환 전후에 비교한다.
 
@@ -87,11 +87,11 @@ print(f"입력: {source}\n출력: {output}")
 | 재질 | 텍스처 경로와 색이 유효한가 |
 | 시뮬레이션 | 중력 낙하, 고정 베이스, self-collision 동작이 의도와 같은가 |
 
-## 3. URDF를 USD로 가져오다
+## 3. URDF를 USD로 가져오기
 
 URDF Importer는 `link`, `joint`, `visual`, `collision`, `inertial`을 읽어 USD prim과 PhysX articulation 구조를 만든다. URDF에 없는 풍부한 렌더링·레이어·variant 정보는 importer가 만들어 낼 수 없다.
 
-### 3.1 GUI에서 가져오다
+### 3.1 GUI에서 가져오기
 
 1. Isaac Sim을 실행하고 **Window > Extensions**를 연다.
 2. `isaacsim.asset.importer.urdf`를 검색해 활성화한다. 일반 배포에서는 기본으로 활성화되어 있을 수 있다.
@@ -118,9 +118,9 @@ URDF Importer는 `link`, `joint`, `visual`, `collision`, `inertial`을 읽어 US
 
 고정 조인트 병합은 단순 성능 옵션이 아니다. 센서가 특정 링크 경로를 참조하거나 ROS 쪽에서 link frame 이름을 기대한다면 병합 후 경로가 사라질 수 있다. 먼저 끈 상태로 가져와 구조를 검증한 뒤 최적화한다.
 
-### 3.2 Python으로 반복 가능하게 가져오다
+### 3.2 Python으로 반복 가능하게 가져오기
 
-다음은 standalone 스크립트의 뼈대이다. `SimulationApp`을 가장 먼저 생성한 뒤 Kit·importer 모듈을 import해야 한다.
+다음은 파일을 입력받아 USD를 생성하는 standalone 스크립트다. `SimulationApp`으로 Kit를 시작하고 URDF 확장을 활성화한 뒤 importer 모듈을 불러온다. `--fix-base`는 바닥에 고정한 로봇팔처럼 베이스가 움직이지 않아야 할 때만 지정한다.
 
 ```python
 # import_urdf.py
@@ -131,44 +131,48 @@ from isaacsim import SimulationApp
 parser = argparse.ArgumentParser()
 parser.add_argument("urdf", help="입력 URDF 절대 또는 상대 경로")
 parser.add_argument("usd", help="출력 USD 절대 또는 상대 경로")
+parser.add_argument("--fix-base", action="store_true", help="베이스를 월드에 고정")
 args = parser.parse_args()
-
-simulation_app = SimulationApp({"headless": True})
-
-import omni.kit.commands
-from isaacsim.asset.importer.urdf import _urdf
 
 urdf_path = Path(args.urdf).expanduser().resolve()
 usd_path = Path(args.usd).expanduser().resolve()
 if not urdf_path.is_file():
-    simulation_app.close()
     raise FileNotFoundError(urdf_path)
 usd_path.parent.mkdir(parents=True, exist_ok=True)
 
-config = _urdf.ImportConfig()
-config.set_fix_base(False)
-config.set_merge_fixed_joints(False)
-config.set_import_inertia_tensor(True)
-config.set_self_collision(False)
-config.set_collision_from_visuals(False)
-config.set_convex_decomp(False)
-config.set_make_default_prim(True)
+simulation_app = SimulationApp({"headless": True})
 
-status, imported_prim_path = omni.kit.commands.execute(
-    "URDFParseAndImportFile",
-    urdf_path=str(urdf_path),
-    import_config=config,
-    dest_path=str(usd_path),
-)
+import omni.kit.commands
+from isaacsim.core.utils.extensions import enable_extension
 
-if not status:
-    simulation_app.close()
-    raise RuntimeError(f"URDF 가져오기에 실패했다: {urdf_path}")
-
-print(f"생성 완료: {usd_path}")
-print(f"가져온 prim: {imported_prim_path}")
+enable_extension("isaacsim.asset.importer.urdf")
 simulation_app.update()
-simulation_app.close()
+from isaacsim.asset.importer.urdf import _urdf
+
+try:
+    config = _urdf.ImportConfig()
+    config.set_fix_base(args.fix_base)
+    config.set_merge_fixed_joints(False)
+    config.set_import_inertia_tensor(True)
+    config.set_self_collision(False)
+    config.set_collision_from_visuals(False)
+    config.set_convex_decomp(False)
+    config.set_make_default_prim(True)
+    config.set_distance_scale(1.0)
+
+    status, imported_prim_path = omni.kit.commands.execute(
+        "URDFParseAndImportFile",
+        urdf_path=str(urdf_path),
+        import_config=config,
+        dest_path=str(usd_path),
+    )
+    if not status or not usd_path.is_file():
+        raise RuntimeError(f"URDF 가져오기에 실패했다: {urdf_path}")
+    print(f"생성 완료: {usd_path}")
+    print(f"가져온 prim: {imported_prim_path}")
+    simulation_app.update()
+finally:
+    simulation_app.close()
 ```
 
 ```bash
@@ -177,6 +181,35 @@ cd ~/isaacsim
   /absolute/path/to/robot.urdf \
   /absolute/path/to/generated/robot.usd
 ```
+
+처음에는 복잡한 로봇 대신 다음을 `box.urdf`로 저장해 변환 경로부터 확인한다. 외부 메시가 없고, 0.3 × 0.2 × 0.1 m 상자의 관성을 질량 1 kg에 맞게 넣었다.
+
+```xml
+<?xml version="1.0"?>
+<robot name="import_box">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.0041666667" iyy="0.0083333333" izz="0.0108333333"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual>
+      <geometry><box size="0.3 0.2 0.1"/></geometry>
+      <material name="blue"><color rgba="0.1 0.4 0.8 1"/></material>
+    </visual>
+    <collision><geometry><box size="0.3 0.2 0.1"/></geometry></collision>
+  </link>
+</robot>
+```
+
+1. `check_urdf box.urdf`로 XML과 링크 구조를 확인한다. 명령이 없으면 `sudo apt install liburdfdom-tools`로 설치한다.
+2. 앞 스크립트에 `box.urdf`와 `generated/box.usd` 경로를 넘긴다.
+3. Isaac Sim의 **File > Open**으로 생성 USD를 열고 `base_link`에 충돌체와 질량이 있는지 확인한다.
+4. 물리를 시험할 때는 **Ground Plane**과 **Physics Scene**을 추가하고, 상자 중심을 바닥에서 0.15 m 높이에 둔다. 상자가 바닥 안에서 시작하지 않도록 한다.
+5. **Play**를 누르면 상자가 짧게 떨어져 바닥 위에 놓여야 한다. 무게중심이 상자 중앙이므로 최종 중심 높이는 약 0.05 m이며 접촉 여유만큼 작은 차이가 날 수 있다.
+
+이 최소 자산이 정상인데 실제 로봇만 무너지면 설치보다 실제 로봇의 관성·충돌·관절 설정을 먼저 점검한다. 위 스크립트는 입력 URDF에 관성과 충돌 형상이 들어 있다고 가정한다.
 
 5.1 문서에는 command로 설정 객체를 만드는 형태도 나온다. 이 형태는 현재 확장이 등록한 command 구현을 사용한다.
 
@@ -206,7 +239,7 @@ URDF importer가 제공하는 대표 command는 다음과 같다.
 
 직접 `_urdf` 모듈을 사용할 때는 Isaac Sim **5.1.0 문서의 API**를 기준으로 한다. 다른 버전의 예제에서 가져온 클래스나 setter를 섞으면 실행 시점에 속성 오류가 날 수 있다.
 
-### 3.3 관절 drive 값을 선택하다
+### 3.3 관절 drive 값을 선택하기
 
 importer는 position 또는 velocity drive를 만들 수 있다. 자연 주파수 방식으로 stiffness와 damping을 정할 때 단일 자유도 근사식은 다음과 같다.
 
@@ -218,19 +251,19 @@ K_p = m\omega_n^2, \qquad K_d = 2m\zeta\omega_n
 
 학습 정책이 effort를 직접 출력한다면 import 단계에서 강한 position drive를 남겨 두지 않는다. 반대로 GUI에서 간단히 자세를 유지하려면 적절한 drive가 필요하다.
 
-### 3.4 URDF 특유의 함정을 점검하다
+### 3.4 URDF 특유의 함정을 점검하기
 
-- `package://my_robot/...` URI는 ROS package 검색 경로가 올바르게 설정되어야 한다. 자동화 서버에서는 작업공간을 source했는지 확인한다.
+- `package://my_robot/...` 경로를 importer가 찾는지 확인한다. ROS 터미널에서 `ros2 pkg prefix --share my_robot`로 설치 위치를 확인한 뒤, 파일 변환에서 찾지 못하면 변환용 URDF의 메시 경로를 실제 절대 경로로 바꾼다. ROS를 source했다는 사실만으로 Isaac Sim importer가 모든 경로를 해석한다고 가정하지 않는다.
 - 파일 이름과 prim 이름에 공백, 특수 문자, 숫자로 시작하는 이름이 있으면 importer가 USD 식별자 규칙에 맞게 바꿀 수 있다. 변환 후 이름 매핑을 검사한다.
 - 관성 텐서는 양의 정부호이고 링크 좌표계에 대해 올바르게 표현되어야 한다. 비정상 값은 폭발적인 동역학을 만든다.
 - concave triangle mesh는 동적 rigid body collider에 그대로 쓰기 어렵다. 단순 collision mesh 또는 convex decomposition을 사용한다.
 - `mimic`과 transmission 정보가 downstream controller에서 같은 의미로 사용되는지 별도로 확인한다.
 
-## 4. Xacro를 USD로 가져오다
+## 4. Xacro를 USD로 가져오기
 
 Xacro는 별도 로봇 물리 형식이라기보다 XML macro 언어이다. property, macro, include, 조건문, 인자를 평가하면 URDF가 나온다. Isaac Sim의 핵심 URDF importer에 `.xacro`를 그대로 넘기는 경로를 전제로 하지 않는다.
 
-### 4.1 Xacro를 URDF로 펼치다
+### 4.1 Xacro를 URDF로 펼치기
 
 Ubuntu 24.04와 ROS 2 Jazzy 환경에서 다음과 같이 실행한다.
 
@@ -251,20 +284,25 @@ check_urdf /tmp/robot.expanded.urdf
 
 ```bash
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
-source /opt/ros/jazzy/setup.bash
+# ROS 환경은 괄호 안의 하위 셸에서만 불러온다.
 mkdir -p "$PWD/build" "$PWD/generated"
-ros2 run xacro xacro \
-  "$PWD/urdf/robot.urdf.xacro" \
-  use_sim:=true safety_limits:=true \
-  -o "$PWD/build/robot.urdf"
+(
+  source /opt/ros/jazzy/setup.bash
+  ros2 run xacro xacro \
+    "$PWD/urdf/robot.urdf.xacro" \
+    use_sim:=true safety_limits:=true \
+    -o "$PWD/build/robot.urdf"
+)
 
 ~/isaacsim/python.sh "$PWD/tools/import_urdf.py" \
   "$PWD/build/robot.urdf" "$PWD/generated/robot.usd"
 ```
 
-### 4.2 ROS 2 `robot_description`에서 가져오다
+자동화 스크립트는 ROS를 불러오지 않은 새 터미널에서 실행한다. `use_sim`과 `safety_limits`는 이 예제 로봇의 인자 이름이므로 실제 Xacro가 선언한 이름으로 바꾼다. 앞에서 source한 ROS 터미널을 그대로 Isaac Sim 실행에 재사용하지 않는다.
+
+### 4.2 ROS 2 `robot_description`에서 가져오기
 
 Isaac Sim 5.1에는 ROS 2 URDF 관련 확장이 있으며, ROS 2 노드가 게시한 `robot_description`을 이용하는 워크플로도 제공한다. 이 경우 Xacro를 실행하는 launch 파일이 먼저 `robot_description`을 만들고, Isaac Sim이 그 결과를 받는다.
 
@@ -276,11 +314,11 @@ Isaac Sim 5.1에는 ROS 2 URDF 관련 확장이 있으며, ROS 2 노드가 게�
 
 반면 CI에서 결정론적인 자산을 만들 때는 **펼친 URDF를 파일로 보존한 뒤 import**하는 편이 문제 추적에 쉽다. 어떤 방식을 사용하든 Xacro macro 이름과 include 구조는 결과 USD에서 복구할 수 없다.
 
-## 5. MJCF를 USD로 가져오다
+## 5. MJCF를 USD로 가져오기
 
 MJCF는 MuJoCo 모델 형식으로, body 계층뿐 아니라 actuator, sensor, contact, equality, compiler default 등 시뮬레이터 의미를 담을 수 있다. Isaac Sim importer는 지원하는 요소를 USD·PhysX 표현으로 옮기며, MuJoCo solver의 모든 의미를 동일하게 복제하는 것은 아니다.
 
-### 5.1 GUI에서 가져오다
+### 5.1 GUI에서 가져오기
 
 1. **Window > Extensions**에서 `isaacsim.asset.importer.mjcf`를 활성화한다.
 2. **File > Import**를 열고 MJCF `.xml` 파일과 출력 USD 경로를 선택한다.
@@ -303,7 +341,7 @@ MJCF는 MuJoCo 모델 형식으로, body 계층뿐 아니라 actuator, sensor, c
 | Instanceable USD Path | instanceable geometry를 저장할 별도 USD 경로를 정한다 |
 | Distance Scale / Density | 단위 배율과 누락 질량 계산을 설정한다 |
 
-### 5.2 Python으로 가져오다
+### 5.2 Python으로 가져오기
 
 ```python
 # import_mjcf.py
@@ -319,6 +357,10 @@ args = parser.parse_args()
 simulation_app = SimulationApp({"headless": True})
 
 import omni.kit.commands
+from isaacsim.core.utils.extensions import enable_extension
+
+enable_extension("isaacsim.asset.importer.mjcf")
+simulation_app.update()
 
 mjcf_path = Path(args.mjcf).expanduser().resolve()
 usd_path = Path(args.usd).expanduser().resolve()
@@ -336,7 +378,9 @@ config.set_fix_base(False)
 config.set_import_inertia_tensor(True)
 config.set_import_sites(True)
 config.set_self_collision(False)
-config.set_make_instanceable(True)
+config.set_make_instanceable(False)
+config.set_make_default_prim(True)
+config.set_distance_scale(1.0)
 
 status, result = omni.kit.commands.execute(
     "MJCFCreateAsset",
@@ -346,7 +390,7 @@ status, result = omni.kit.commands.execute(
     dest_path=str(usd_path),
 )
 
-if not status:
+if not status or not usd_path.is_file():
     simulation_app.close()
     raise RuntimeError(f"MJCF 가져오기에 실패했다: {mjcf_path}")
 
@@ -362,6 +406,8 @@ cd ~/isaacsim
   /absolute/path/to/generated/robot.usd
 ```
 
+처음에는 `make_instanceable=False`로 구조를 쉽게 검사한다. 인스턴싱을 켤 때는 `set_instanceable_usd_path()`로 메시 저장 경로도 정하고 두 USD 파일을 함께 보관한다. 이 예제의 `set_import_inertia_tensor(True)`는 원본에 검증된 관성이 있는 경우를 전제로 한다. MJCF의 geom에서 관성을 계산하던 모델이라면 가져온 링크의 질량과 관성이 같은지 먼저 비교한다.
+
 `MJCFCreateAsset`의 반환값과 선택 인자는 설치된 5.1 확장의 command 정의에 맞춰 확인한다. Script Editor에서 다음처럼 command 문서를 찾을 수 있다.
 
 ```python
@@ -374,7 +420,7 @@ for name in omni.kit.commands.get_commands_list():
 
 GUI에서 가져오기까지는 되지만 자동화 코드가 실패한다면 다른 Isaac Sim 버전의 예제를 복사했는지 먼저 확인한다. 5.1에서는 5.1 API 문서에 나온 `MJCFCreateImportConfig`와 `MJCFCreateAsset` 조합을 기준으로 한다.
 
-### 5.3 MJCF 의미 차이를 검증하다
+### 5.3 MJCF 의미 차이를 검증하기
 
 다음 항목은 이름이 비슷해도 MuJoCo와 PhysX에서 수치적으로 같은 응답을 보장하지 않는다.
 
@@ -387,7 +433,7 @@ GUI에서 가져오기까지는 되지만 자동화 코드가 실패한다면 �
 
 따라서 MuJoCo와 Isaac Sim에서 같은 제어 입력을 넣고 joint trajectory, contact force, 에너지 변화를 비교하는 회귀 시험을 만든다. 포맷 변환 성공 메시지는 동역학 동등성의 증거가 아니다.
 
-## 6. Isaac Lab 도구로 일괄 변환하다
+## 6. Isaac Lab 도구로 일괄 변환하기
 
 Isaac Lab 2.3 계열은 Isaac Sim 5.1 기반 워크플로에서 URDF와 MJCF 변환 스크립트를 제공한다. 여러 자산을 CI에서 변환하거나 Isaac Lab 프로젝트 구조에 맞출 때 유용하다.
 
@@ -419,11 +465,11 @@ Isaac Lab 2.3 계열은 Isaac Sim 5.1 기반 워크플로에서 URDF와 MJCF 변
 ./isaaclab.sh -p scripts/tools/convert_mjcf.py --help
 ```
 
-## 7. USD를 URDF로 내보내다
+## 7. USD를 URDF로 내보내기
 
 Isaac Sim 5.1은 URDF Exporter 확장을 제공하지만, **임의의 USD stage를 완전한 URDF로 역변환하는 기능**으로 이해해서는 안 된다. URDF가 표현할 수 있는 tree형 링크·조인트 구조와 지원 geometry를 갖춘 articulation이 대상이다.
 
-### 7.1 내보내기 전에 자산을 정리하다
+### 7.1 내보내기 전에 자산을 정리하기
 
 내보낼 root prim 아래에서 다음을 확인한다.
 
@@ -431,33 +477,27 @@ Isaac Sim 5.1은 URDF Exporter 확장을 제공하지만, **임의의 USD stage�
 - 각 joint의 parent/body0와 child/body1 관계가 모두 유효한가
 - kinematic loop가 없는가
 - visual과 collision 용도가 Physics Collision API와 visibility로 명확히 구분되는가
-- 링크 이름과 joint 이름이 URDF 소비 도구에서 허용되는가
+- 링크 이름과 joint 이름이 URDF를 읽는 도구에서 허용되는가
 - 무한대 effort/velocity 같은 값이 downstream parser에서 허용되는가
 
 URDF는 폐루프 기구를 직접 표현하지 못한다. USD articulation에 loop joint가 있다면 exporter가 실패하거나 의미를 보존할 수 없다. loop를 끊고 별도 constraint를 재구성하는 설계가 필요하다.
 
-### 7.2 GUI exporter를 사용하다
+### 7.2 GUI exporter를 사용하기
 
 1. **Window > Extensions**에서 `isaacsim.asset.exporter.urdf`를 활성화한다.
 2. 내보낼 articulation root를 확인한다.
 3. **File > Export to URDF**를 연다.
 4. 출력 `.urdf`, 출력 디렉터리, mesh 디렉터리와 root prim을 설정한다.
-5. 필요하면 **Visualize Collisions**를 사용해 분류를 확인한다.
+5. 충돌 메시도 RViz에서 눈에 보이게 출력하려는 경우에만 **Visualize Collisions**를 켠다. 이 옵션은 충돌 메시를 결과 URDF의 visual에도 추가한다.
 6. Export 후 URDF와 생성된 `meshes/*.obj`를 함께 보관한다.
 
-mesh 경로 prefix는 소비 환경에 맞춰 정한다.
+mesh 경로 prefix는 URDF를 사용할 환경에 맞춰 정한다.
 
 - `file://`: 절대 파일 URI가 필요한 로컬 검사에 쓸 수 있다.
 - `package://`: ROS package로 배포할 때 사용한다. 실제 package 구조와 일치시킨다.
 - `./`: URDF 파일 기준 상대 경로로 이식성을 높인다.
 
-visual/collision 분류는 stage의 가시성과 Collision API 구성에 영향을 받는다. 일반적인 의도는 다음과 같다.
-
-| USD prim 상태 | URDF에서의 의도 |
-|---|---|
-| visible, Collision API 없음 | visual |
-| visible, Collision API 있음 | visual과 collision 양쪽 |
-| invisible, Collision API 있음 | collision만 |
+출력 URDF에서 `<visual>`과 `<collision>`을 직접 확인한다. USD의 가시성만으로 exporter의 최종 분류를 단정할 수 없으며, **Visualize Collisions** 옵션과 아래 알려진 제약도 결과에 영향을 준다. [공식 exporter 설정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/ext_omni_exporter_urdf.html)의 옵션 의미를 기준으로 검사한다.
 
 export 뒤에는 반드시 `check_urdf`와 시각화 도구로 확인한다.
 
@@ -469,7 +509,7 @@ check_urdf exported/robot.urdf
 ros2 run xacro xacro exported/robot.urdf -o /tmp/exported.normalized.urdf
 ```
 
-### 7.3 5.1 exporter의 알려진 제약을 다루다
+### 7.3 5.1 exporter의 알려진 제약을 다루기
 
 5.1 공식 known issues에는 다음 문제가 기록되어 있다.
 
@@ -480,7 +520,7 @@ ros2 run xacro xacro exported/robot.urdf -o /tmp/exported.normalized.urdf
 
 따라서 export를 자동화 파이프라인의 마지막 정답으로 여기지 않는다. 생성 결과에 대해 lint·diff·시뮬레이션 검증을 수행하고, 필요한 최소 후처리를 명시적인 스크립트로 남긴다.
 
-Isaac Sim 5.1 공개 문서에서 안정적으로 안내하는 경로는 GUI exporter이다. 6.x 문서에서 본 converter class를 5.1 자동화 코드라고 가정하지 않는다. 내부 확장 API를 직접 호출하는 자동화는 공개 호환성 계약 밖일 수 있으므로 버전 고정과 회귀 시험이 필요하다.
+Isaac Sim 5.1 공개 문서에서 안정적으로 안내하는 경로는 GUI exporter이다. 6.x 문서에서 본 converter class를 5.1 자동화 코드라고 가정하지 않는다. 내부 확장 API를 직접 호출하는 자동화는 버전이 바뀌면 동작이 달라질 수 있으므로 버전을 고정하고 결과를 비교해야 한다.
 
 ## 8. USD에서 Xacro로 돌아갈 수 있는가
 
@@ -490,7 +530,7 @@ Isaac Sim 5.1 공개 문서에서 안정적으로 안내하는 경로는 GUI exp
 2. 생성 URDF를 검사하고 누락·오분류 항목을 수정한다.
 3. 반복되는 link/joint 묶음을 사람이 Xacro macro로 추출한다.
 4. 재사용할 숫자를 `<xacro:property>`로 만들고 파일을 의미 단위로 include한다.
-5. 원래 Xacro가 있다면 새로 추론하지 말고 원본을 source of truth로 유지한다.
+5. 원래 Xacro가 있다면 새로 추론하지 말고 원본을 기준 원본으로 유지한다.
 
 USD에는 Xacro의 macro 호출, 인자 이름, 조건문, include 경계가 저장되지 않는다. 서로 다른 Xacro 프로그램이 완전히 같은 URDF를 만들 수 있으므로 결과만 보고 원래 프로그램을 복구하는 것은 원리적으로도 모호하다.
 
@@ -500,30 +540,64 @@ USD에는 Xacro의 macro 호출, 인자 이름, 조건문, include 경계가 저
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="exported_robot">
   <xacro:property name="wheel_radius" value="0.08"/>
+  <xacro:property name="wheel_width" value="0.04"/>
+  <xacro:property name="wheel_mass" value="0.2"/>
+
+  <link name="base_link">
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.0141666667" iyy="0.0083333333" izz="0.0208333333"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+    <visual><geometry><box size="0.3 0.4 0.1"/></geometry></visual>
+    <collision><geometry><box size="0.3 0.4 0.1"/></geometry></collision>
+  </link>
 
   <xacro:macro name="wheel" params="name parent xyz">
     <link name="${name}">
+      <!-- 원통의 Z축을 링크의 Y축과 맞춘다. 관성도 Y축 기준이다. -->
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <inertia ixx="${wheel_mass*(3*wheel_radius**2+wheel_width**2)/12}"
+                 iyy="${wheel_mass*wheel_radius**2/2}"
+                 izz="${wheel_mass*(3*wheel_radius**2+wheel_width**2)/12}"
+                 ixy="0" ixz="0" iyz="0"/>
+      </inertial>
       <visual>
-        <geometry><cylinder radius="${wheel_radius}" length="0.04"/></geometry>
+        <origin rpy="1.57079632679 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
       </visual>
       <collision>
-        <geometry><cylinder radius="${wheel_radius}" length="0.04"/></geometry>
+        <origin rpy="1.57079632679 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
       </collision>
     </link>
     <joint name="${name}_joint" type="continuous">
       <parent link="${parent}"/>
       <child link="${name}"/>
-      <origin xyz="${xyz}" rpy="0 1.57079632679 0"/>
-      <axis xyz="0 0 1"/>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="2.0" velocity="10.0"/>
     </joint>
   </xacro:macro>
 
-  <xacro:wheel name="left_wheel" parent="base_link" xyz="0 0.22 0"/>
-  <xacro:wheel name="right_wheel" parent="base_link" xyz="0 -0.22 0"/>
+  <xacro:wheel name="left_wheel" parent="base_link" xyz="0 0.225 0"/>
+  <xacro:wheel name="right_wheel" parent="base_link" xyz="0 -0.225 0"/>
 </robot>
 ```
 
-이 macro 구조는 변환기가 복원한 정보가 아니라 사람이 새로 설계한 소스 코드이다.
+`wheel_fixture.urdf.xacro`로 저장하고 다음 명령으로 펼친다. 링크 3개와 조인트 2개가 연결되어야 한다.
+
+```bash
+# ROS 터미널
+source /opt/ros/jazzy/setup.bash
+ros2 run xacro xacro wheel_fixture.urdf.xacro -o /tmp/wheel_fixture.urdf
+check_urdf /tmp/wheel_fixture.urdf
+```
+
+이 예제는 베이스를 고정해 바퀴 방향과 Xacro 재사용을 확인하는 실습이다. 앞의 변환 스크립트에 `--fix-base`를 붙여 가져오고, 바퀴가 바닥에 닿지 않도록 베이스를 띄운다. 두 바퀴가 모두 Y축을 중심으로 돌아야 한다. 자유 베이스 주행 모델로 쓸 때는 별도의 지지 구조와 구동 설정을 설계해야 한다.
+
+이 매크로는 USD에서 복원한 정보가 아니라 사람이 새로 작성한 코드다.
 
 ## 9. USD에서 MJCF로 돌아갈 수 있는가
 
@@ -572,7 +646,7 @@ int main(void) {
 
 원본 MJCF가 있는 경우 항상 원본을 수정하고 다시 USD로 가져오는 편이 낫다.
 
-## 10. 손실 가능성을 USD에서 자동 점검하다
+## 10. 손실 가능성을 USD에서 자동 점검하기
 
 내보내기 전에 composition arc와 variant, 적용 API를 나열하면 URDF/MJCF가 표현하지 못할 정보를 미리 찾을 수 있다.
 
@@ -604,11 +678,11 @@ for prim in stage.Traverse():
         print(prim.GetPath(), ", ".join(info))
 ```
 
-`LoadNone`은 payload를 열지 않으므로 빠른 구조 감사에 유용하다. 실제 export 대상 전체를 검사하려면 `stage.Load()` 후 다시 순회한다. 이 스크립트는 손실을 자동으로 해결하지 않으며, 사람이 검토할 후보를 만드는 용도이다.
+`LoadNone`은 payload를 열지 않으므로 빠른 구조 검사에 유용하다. 실제 export 대상 전체를 검사하려면 `stage.Load()` 후 다시 순회한다. 이 스크립트는 손실을 자동으로 해결하지 않으며, 사람이 검토할 후보를 만드는 용도이다.
 
-## 11. round-trip 시험을 설계하다
+## 11. round-trip 시험을 설계하기
 
-`URDF → USD → URDF`의 두 파일이 텍스트로 같을 필요도 없고, 대개 같지 않다. 대신 의미 기반 시험을 만든다.
+`URDF → USD → URDF`의 두 파일이 텍스트로 같을 필요도 없고, 대개 같지 않다. 대신 링크·조인트·질량·자세처럼 실제 동작에 영향을 주는 값을 비교한다.
 
 ```yaml
 # conversion_expectations.yaml
@@ -636,11 +710,11 @@ tolerance:
 5. export가 필요하면 내보낸 파일을 대상 simulator에서 다시 로드한다.
 6. 허용 오차와 의도적인 차이를 문서화한다.
 
-## 12. 변환 실패를 진단하다
+## 12. 변환 실패를 진단하기
 
-### mesh를 찾지 못하다
+### 메시를 찾지 못한다
 
-- `package://` package가 `AMENT_PREFIX_PATH`에서 보이는지 확인한다.
+- ROS 터미널에서 `ros2 pkg prefix --share 패키지이름`으로 메시 패키지의 실제 위치를 확인한다.
 - 상대 경로가 입력 XML 파일 기준인지 확인한다.
 - 대소문자가 다른 파일 이름은 Linux에서 실패한다.
 - 텍스처까지 포함해 USD를 다른 디렉터리에서 다시 열어 본다.
@@ -651,7 +725,7 @@ tolerance:
 - importer의 distance scale과 USD stage의 `metersPerUnit`을 함께 확인한다.
 - transform scale로 임시 보정한 뒤 끝내지 말고 source 단위를 고친다.
 
-### 로봇이 폭발하거나 떨리다
+### 로봇이 튀어 오르거나 떨린다
 
 - 질량이 0이거나 극단적으로 작은 링크가 있는지 확인한다.
 - inertia 행렬의 고윳값과 COM 위치를 확인한다.
@@ -665,7 +739,7 @@ tolerance:
 - USD joint의 local pose 0/1과 body0/body1을 검사한다.
 - 단순 링크 두 개짜리 최소 모델로 같은 문제를 재현한다.
 
-### importer command를 찾지 못하다
+### importer 명령을 찾지 못한다
 
 - 해당 importer 확장이 활성화되었는지 확인한다.
 - `SimulationApp` 생성 전에 `omni` 모듈을 import하지 않았는지 확인한다.
@@ -698,7 +772,7 @@ my_robot_assets/
     └── conversion_expectations.yaml
 ```
 
-`source/`는 사람이 편집하는 정본, `generated/`는 importer가 재생성할 수 있는 결과, `overrides/`는 Isaac Sim 고유 튜닝을 담는 레이어로 구분한다. 생성 파일 안에만 중요한 수정사항을 두지 않는다.
+`source/`는 사람이 편집하는 원본, `generated/`는 importer가 재생성할 수 있는 결과, `overrides/`는 Isaac Sim 고유 튜닝을 담는 레이어로 구분한다. 생성 파일 안에만 중요한 수정사항을 두지 않는다.
 
 ## 14. 체크리스트
 

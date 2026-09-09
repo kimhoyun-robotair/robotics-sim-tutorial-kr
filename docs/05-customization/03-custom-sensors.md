@@ -1,27 +1,27 @@
 # 커스텀 센서: 기존 센서 조립부터 Python 센서 개발까지
 
-이 장에서는 robot에 camera, RTX LiDAR·Radar, IMU, contact, effort, proximity sensor를 부착하고 데이터를 읽는다. 이어서 기존 sensor를 조합하는 경우와 새로운 측정 원리를 Python Extension·OmniGraph로 구현하는 경우를 구분한다. 기준은 Isaac Sim 5.1.0, Ubuntu 24.04, ROS 2 Jazzy이다.
+이 장에서는 로봇에 카메라, RTX LiDAR·Radar, IMU, 접촉, 토크·힘, 근접 센서를 부착하고 데이터를 읽는다. 이어서 기존 센서를 조합하는 경우와 새로운 측정 원리를 Python Extension·OmniGraph로 구현하는 경우를 구분한다. 기준은 Isaac Sim 5.1.0, Ubuntu 24.04, ROS 2 Jazzy이다.
 
-> **5.1 버전 경계**  
-> 이 장은 `isaacsim.*` 모듈과 5.1 sensor prim을 사용한다. 4.5 이전 RTX sensor의 `Camera` prim + JSON `sensorModelConfig` 방식은 5.0부터 deprecated이다. LiDAR는 `OmniLidar`, Radar는 `OmniRadar` prim을 사용한다.
+> **5.1에서 사용할 센서 형식**
+> 이 장은 `isaacsim.*` 모듈과 5.1 센서 prim을 사용한다. RTX 센서를 `Camera` prim과 JSON `sensorModelConfig`로 구성하던 4.x 방식은 5.0부터 사용 중단 예정(deprecated)으로 표시되었다. 일반 영상 카메라의 `Camera` prim을 뜻하는 것은 아니다. LiDAR는 `OmniLidar`, Radar는 `OmniRadar` prim을 사용한다.
 
-## 1. sensor를 고르는 기준
+## 1. 센서를 고르는 기준
 
-| sensor | 측정 대상 | 계산 자원 | 적합한 용도 |
+| 센서 | 측정 대상 | 계산 자원 | 적합한 용도 |
 |---|---|---|---|
-| Camera | RGB, depth, segmentation, motion vector | RTX render·VRAM | perception, calibration, synthetic data |
-| RTX LiDAR | ray return, range, intensity, point cloud | RTX render·VRAM | 2D/3D mapping, obstacle detection |
-| RTX Radar | range·방향·속도 성분과 material 반응 | RTX render·VRAM | 악천후 perception, Doppler 계열 실험 |
-| IMU | local acceleration, angular velocity, orientation | physics | localization, state estimation |
-| Contact | collider의 영역별 contact force | physics | foot pad, bumper, gripper contact |
-| Effort | revolute joint torque 또는 prismatic joint force | physics | load monitoring, impedance control |
-| Proximity | 부착 prim과 다른 prim의 collision 관계 | physics callback | overlap·충돌 event, safety zone prototype |
+| 카메라 | RGB, 깊이, 영역 분할, 움직임 벡터 | RTX 렌더링·VRAM | 인지, 보정, 합성 데이터 |
+| RTX LiDAR | 광선의 반사점, 거리, 반사 강도, 포인트 클라우드 | RTX 렌더링·VRAM | 2D/3D 지도 작성, 장애물 감지 |
+| RTX Radar | 거리·방향·속도 성분과 재질 반응 | RTX 렌더링·VRAM | 악천후 인지, 도플러 계열 실험 |
+| IMU | 로컬 좌표계의 가속도, 각속도, 방향 | 물리 | 위치 추정, 상태 추정 |
+| 접촉 | 충돌 형상의 영역별 접촉 힘 | 물리 | 발바닥 센서, 범퍼, 그리퍼 접촉 |
+| 토크·힘 | 회전 관절 토크 또는 직선 관절 힘 | 물리 | 하중 관찰, 임피던스 제어 |
+| 근접 | 부착 prim과 다른 prim의 충돌 관계 | 물리 콜백 | 겹침·충돌 이벤트, 충돌 구역 확인 |
 
-Proximity Sensor는 광학식 거리계가 아니다. 충돌 관계를 callback으로 기록하는 wrapper이다. 연속 거리 ray가 필요하면 PhysX ray query, RTX LiDAR 또는 별도 custom sensor를 사용한다.
+근접 센서는 광학식 거리계가 아니다. 충돌 관계를 콜백으로 기록하는 API 객체이다. 연속 거리 측정이 필요하면 PhysX 레이캐스트, RTX LiDAR 또는 별도 사용자 센서를 사용한다.
 
-## 2. 먼저 measurement contract를 작성한다
+## 2. 먼저 측정값 사양을 작성한다
 
-sensor를 Stage에 넣기 전에 다음 항목을 YAML로 고정한다.
+센서를 Stage에 넣기 전에 다음 항목을 YAML로 고정한다.
 
 ```yaml
 sensor_name: front_camera
@@ -42,11 +42,11 @@ ros:
   qos: sensor_data
 ```
 
-contract에는 prim path, parent frame, sensor frame, sample rate, timestamp 기준, 단위, 유효 범위, noise seed, ROS type·topic·QoS를 넣는다. “30 Hz camera”가 capture 30 Hz인지 ROS publish 30 Hz인지도 구분한다.
+설정 기준에는 prim 경로, 부모 프레임, 센서 프레임, 표본 주기, 타임스탬프 기준, 단위, 유효 범위, 잡음 난수 시드, ROS 메시지 형식·토픽·QoS를 넣는다. “30 Hz 카메라”가 촬영 30 Hz인지 ROS 발행 30 Hz인지도 구분한다.
 
-## 3. sensor rig와 좌표계를 설계한다
+## 3. 센서 장착 구조와 좌표계를 설계한다
 
-robot link 아래에 한 개의 rig Xform을 두고 sensor별 mount Xform을 분리한다.
+로봇 링크 아래에 한 개의 장착 구조 Xform을 두고 센서별 장착부 Xform을 분리한다.
 
 ```text
 /World/Robot/base_link
@@ -60,16 +60,16 @@ robot link 아래에 한 개의 rig Xform을 두고 sensor별 mount Xform을 분
     └── Imu_Sensor
 ```
 
-- Camera wrapper의 quaternion은 scalar-first `[w, x, y, z]`이다.
+- 카메라 API 객체의 쿼터니언은 스칼라 우선 `[w, x, y, z]`이다.
 - ROS `geometry_msgs/Quaternion` 필드는 `x, y, z, w` 순서이다.
-- USD Camera는 +Y up, -Z forward convention을 사용한다.
-- Camera API의 optical 좌표는 +Z forward, +X right, +Y down이다.
-- ROS publisher의 `frame_id`는 TF에 실제로 존재해야 한다.
-- IMU와 contact sensor는 측정할 rigid body 또는 collider 아래에 둔다.
+- USD 카메라는 +Y 위, -Z 앞 좌표계 규칙을 사용한다.
+- ROS 카메라 광학 좌표계는 +Z 전방, +X 오른쪽, +Y 아래쪽이다. Camera API의 기본 world 축과 구분한다.
+- ROS 발행자의 `frame_id`는 TF에 실제로 존재해야 한다.
+- IMU와 접촉 센서는 측정할 강체 또는 충돌 형상 아래에 둔다.
 
-extrinsic은 `$T_{parent}^{sensor}$` 한 개를 원본으로 관리한다. USD transform과 ROS static TF에 같은 숫자를 따로 손으로 입력하지 말고 calibration manifest에서 생성한다.
+센서 장착 위치와 방향을 나타내는 외부 파라미터는 부모·센서 프레임 사이의 변환 하나로 관리한다. USD 변환과 ROS 정적 TF에 같은 숫자를 따로 손으로 입력하지 말고 보정 설정 파일에서 생성한다.
 
-Stage에서 transform을 확인한다.
+Stage에서 변환을 확인한다.
 
 ```python
 import omni.usd
@@ -86,70 +86,82 @@ matrix = UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
 print(matrix)
 ```
 
-physics sensor의 parent를 바꾸거나 sensor prim을 이동할 때는 타임라인을 먼저 멈춘다. IMU와 contact sensor는 Play에서 동적으로 생성되므로 재생 중 계층을 바꾸면 reading이 무효가 될 수 있다.
+물리 센서의 부모를 바꾸거나 센서 prim을 이동할 때는 타임라인을 먼저 멈춘다. IMU와 접촉 센서는 Play에서 동적으로 생성되므로 재생 중 계층을 바꾸면 판독값이 무효가 될 수 있다.
 
-## 4. Camera
+## 4. 카메라
 
 ### 4.1 GUI에서 만든다
 
-1. `Create > Camera`로 Camera prim을 만든다.
-2. Stage에서 camera를 `front_camera_mount` 아래로 옮긴다.
-3. Property의 Transform에서 translation과 orientation을 입력한다.
-4. viewport 상단 camera 아이콘에서 이 camera를 선택해 시야를 확인한다.
-5. focal length, aperture, clipping range를 calibration 사양과 맞춘다.
+1. `Create > Camera`로 카메라 prim을 만든다.
+2. Stage에서 카메라를 `front_camera_mount` 아래로 옮긴다.
+3. Property의 변환에서 이동량과 방향을 입력한다.
+4. Viewport 상단 카메라 아이콘에서 이 카메라를 선택해 시야를 확인한다.
+5. 초점 거리, 수평·수직 필름 크기(aperture), 렌더링 거리 범위를 보정 결과와 맞춘다.
 
-Camera prim만으로 ROS image가 생기지는 않는다. render product와 annotator 또는 ROS Camera Helper가 필요하다.
+카메라 prim만으로 ROS 영상이 생기지는 않는다. 렌더 출력(Render Product)과 annotator 또는 ROS Camera Helper가 필요하다.
 
-### 4.2 Python으로 만들고 읽는다
+### 4.2 기준 장면에서 RGB·깊이를 먼저 확인한다
 
-다음은 Isaac Sim Standalone script의 핵심이다. `SimulationApp`을 먼저 만든 뒤 Isaac 모듈을 import한다.
+첫 실습에서는 로봇 장착을 미루고 [camera_imu.py](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/IsaacSim5.1/examples/standalone/camera_imu.py)를 실행한다. 빈 장면을 촬영하면 검은 화면이 센서 오류인지 장면 구성 문제인지 구분하기 어렵다. 이 예제는 조명과 빨간 기준 물체를 코드에서 직접 만든다.
 
-```python
-from isaacsim import SimulationApp
-
-simulation_app = SimulationApp({"headless": False})
-
-import numpy as np
-from isaacsim.core.api import World
-from isaacsim.sensors.camera import Camera
-
-world = World(stage_units_in_meters=1.0)
-camera = Camera(
-    prim_path="/World/Robot/base_link/Sensors/front_camera_mount/Camera",
-    name="front_camera",
-    frequency=30,
-    resolution=(1280, 720),
-    translation=np.array([0.20, 0.0, 0.35]),
-    orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-)
-
-world.reset()
-camera.initialize()
-camera.add_distance_to_image_plane_to_frame()
-
-for _ in range(10):
-    world.step(render=True)
-
-rgba = camera.get_rgba()
-depth = camera.get_depth()
-K = camera.get_intrinsics_matrix()
-
-assert rgba.shape == (720, 1280, 4)
-assert depth.shape == (720, 1280)
-assert np.isfinite(K).all()
-print("K=", K)
-
-simulation_app.close()
+```bash
+# 저장소 루트에서 실행한다.
+"$ISAACSIM_PATH/python.sh" examples/standalone/camera_imu.py \
+  --gui --output-dir results/camera_imu
 ```
 
-`frequency`와 `dt`를 동시에 주지 않는다. 이미 만든 render product를 공유할 때는 서로 다른 Camera wrapper가 같은 render product의 camera와 resolution을 서로 덮어쓰지 않게 한다.
+실행 파일은 다음 순서로 구성되어 있다.
 
-### 4.3 intrinsic과 lens distortion을 맞춘다
+1. `SimulationApp`을 만든 뒤 Isaac Sim 모듈을 불러온다.
+2. `World`를 만들고 물리·렌더링 간격을 각각 1/60초로 고정한다.
+3. 바닥과 `DomeLight`를 만든다.
+4. 한 변 0.5 m인 빨간 고정 큐브를 `(0, 0, 0.25)`에 놓는다. 윗면은 Z=0.5 m이다.
+5. 카메라를 `(0, 0, 3)`에 두고 아래를 보게 한다.
+6. `world.reset()` 뒤에 `camera.initialize()`를 호출하고 깊이 annotator를 붙인다.
+7. `world.step(render=True)`를 반복하며 초기 준비 시간을 확보한다.
+8. 서로 다른 시각의 영상 30개를 검사하고 RGB PNG와 센서 배열을 저장한다.
 
-OpenCV pinhole calibration의 $K$와 distortion coefficient를 적용할 수 있다.
+다음은 실행 파일에서 카메라를 구성하는 부분이다. `Camera` API의 기본 축은 +X 전방·+Z 위쪽이므로 Y축을 +90도로 회전하면 아래를 보게 된다. 쿼터니언의 순서는 `[w, x, y, z]`이다.
+
+```python
+from isaacsim.sensors.camera import Camera
+from isaacsim.core.utils.numpy.rotations import euler_angles_to_quats
+
+camera = Camera(
+    prim_path="/World/Camera",
+    position=np.array([0.0, 0.0, 3.0]),
+    orientation=euler_angles_to_quats(np.array([0, 90, 0]), degrees=True),
+    frequency=30,
+    resolution=(640, 480),
+)
+world.reset()
+camera.initialize()
+camera.set_clipping_range(0.1, 20.0)
+camera.add_distance_to_image_plane_to_frame()
+```
+
+`get_depth()`는 영상 평면까지의 깊이를 미터 단위로 반환한다. 화면 중앙의 물체 윗면까지 깊이는 `3.0 - 0.5 = 2.5 m`이어야 한다. `distance_to_camera`는 광선 방향 거리이므로 주변 픽셀에서 같은 값이 아니다. 저장한 `sensor_data.npz`에는 `rgba`, `depth`, `intrinsics`, `camera_position`, `camera_orientation`가 들어 있다. 자세는 `camera_axes="world"`, 쿼터니언은 `wxyz` 기준임을 문자열 필드에도 기록한다.
+
+```python
+# 위 실행 파일이 완료된 뒤, NumPy를 사용할 수 있는 Python에서 확인한다.
+import numpy as np
+
+saved = np.load("results/camera_imu/sensor_data.npz")
+print(saved["rgba"].shape)      # (480, 640, 4)
+print(saved["depth"].shape)     # (480, 640)
+print(saved["intrinsics"])     # 3 x 3 내부 파라미터 행렬
+print(saved["depth"][240, 320]) # 기준 장면에서 약 2.5 m
+```
+
+이 검사가 통과하면 카메라를 실제 로봇 링크 아래로 옮기고 월드 위치 `position` 대신 장착부 기준 `translation`을 사용한다. 단순히 prim 경로에 `Robot/base_link`를 적는 것으로 실제 로봇이 생성되는 것은 아니다. 먼저 로봇을 불러오고, 카메라가 차체 안에 들어가지 않는지 GUI에서 확인한다.
+
+### 4.3 내부 파라미터와 렌즈 왜곡을 맞춘다
+
+OpenCV의 핀홀 카메라 보정에서 구한 내부 파라미터 행렬 $K$와 왜곡 계수를 적용할 수 있다. 아래 수치는 1280×720 영상용 예시이므로 실제 카메라 해상도와 보정 결과로 바꿔 사용한다. `camera_imu.py`를 복사한 뒤, 카메라 초기화가 끝나고 영상을 수집하기 전 위치에 이 설정을 넣는다. 프로그램이 종료된 다음에는 `camera`와 `world` 객체를 그대로 사용할 수 없다.
 
 ```python
 width, height = 1280, 720
+camera.set_resolution((width, height))
 fx, fy = 910.0, 908.0
 cx, cy = 640.5, 359.5
 distortion = [0.08, -0.03, 0.0002, -0.0001, 0.004]
@@ -166,23 +178,34 @@ camera.set_clipping_range(0.1, 50.0)
 camera.set_opencv_pinhole_properties(
     cx=cx, cy=cy, fx=fx, fy=fy, pinhole=distortion
 )
+
+# 해상도를 바꾼 뒤 새 크기의 영상이 실제로 도착할 때까지 렌더링한다.
+for _ in range(120):
+    world.step(render=True)
+    rgba = camera.get_rgba()
+    if rgba is not None and rgba.shape == (height, width, 4):
+        break
+else:
+    raise RuntimeError("새 해상도의 카메라 영상을 받지 못했습니다.")
 ```
 
-5.1에서는 native OpenCV pinhole·fisheye model과 `OmniLensDistortion` schema를 사용한다. 이전 projection attribute나 fisheye polynomial 근사 API를 새 asset의 원본으로 삼지 않는다.
+해상도 변경은 다음 렌더 프레임부터 반영된다. 위 반복문이 끝난 뒤 얻은 새 영상으로 검사를 진행한다. 해상도를 바꾸기 전에 저장한 `rgba`·`depth` 배열을 새 내부 파라미터와 섞어 사용하지 않는다. 깊이 영상이 필요하면 깊이 annotator에서도 새 해상도의 프레임을 받은 뒤 사용한다.
 
-calibration acceptance test는 알려진 3D 점을 image에 projection하고 측정 pixel과 비교한다.
+5.1에서는 기본 제공 OpenCV pinhole·fisheye 모델과 `OmniLensDistortion` 스키마를 사용한다. 새 자산에는 이전 투영 속성이나 어안 렌즈 다항식 근사 API를 사용하지 않는다.
+
+보정 결과는 위치를 아는 3D 점을 영상에 투영한 뒤, 실제 관측된 픽셀 위치와 비교해 검증한다. 아래 `world_points`에는 현재 카메라의 시야 안에 배치한 기준점의 월드 좌표를 넣는다. 이 `assert`는 좌표가 유한하고 영상 범위 안에 있는지 확인하는 기초 검사다. 보정 정확도까지 확인하려면 렌더링된 영상에서 기준점을 검출해 재투영 오차를 계산해야 한다.
 
 ```python
-world_points = np.array([[2.0, 0.0, 0.5], [3.0, 0.2, 1.0]])
+world_points = np.array([[0.0, 0.0, 0.5], [0.1, 0.1, 0.5]])
 pixels = camera.get_image_coords_from_world_points(world_points)
 assert np.isfinite(pixels).all()
 assert ((pixels[:, 0] >= 0) & (pixels[:, 0] < width)).all()
 assert ((pixels[:, 1] >= 0) & (pixels[:, 1] < height)).all()
 ```
 
-### 4.4 noise를 별도 layer로 둔다
+### 4.4 잡음을 별도 처리 단계로 추가한다
 
-ground truth와 noisy output을 같은 topic으로 덮어쓰지 않는다. 먼저 noise 없는 sensor를 검증한 뒤 seed, 분포, 단위, 적용 순서를 기록한 augmentation을 추가한다.
+잡음 없는 기준값과 잡음을 추가한 출력은 서로 다른 토픽으로 보관한다. 먼저 잡음 없는 센서를 검증한 뒤 난수 시드, 분포, 단위, 적용 순서를 기록한 데이터 변형을 추가한다.
 
 ```python
 import numpy as np
@@ -196,13 +219,13 @@ def add_read_noise(rgb_u8, sigma, seed):
 noisy_rgb = add_read_noise(rgba[..., :3], sigma=4.0, seed=42)
 ```
 
-실시간 GPU pipeline에는 Replicator augmentation이나 Warp kernel을 사용한다. camera noise에는 read/shot noise, exposure, motion blur, lens distortion을 구분하고, depth에는 range-dependent noise와 dropout을 별도로 모델링한다.
+실시간 GPU 처리 과정에는 Replicator 데이터 변형이나 Warp 커널을 사용한다. 읽기 잡음과 광자 잡음, 노출, 모션 블러, 렌즈 왜곡은 서로 다른 현상이므로 적용 목적을 구분한다. 깊이 데이터에는 거리에 따른 오차와 측정 누락을 별도로 모델링한다.
 
 ## 5. RTX LiDAR와 Radar
 
-### 5.1 5.1 prim과 data pipeline
+### 5.1 Isaac Sim 5.1의 센서 Prim과 데이터 흐름
 
-RTX sensor는 GPU에서 render하고 결과를 `GenericModelOutput` AOV에 쓴다.
+RTX 센서는 GPU에서 렌더링하고 결과를 `GenericModelOutput` AOV에 쓴다.
 
 ```text
 OmniLidar 또는 OmniRadar
@@ -212,39 +235,44 @@ OmniLidar 또는 OmniRadar
         → Python / ROS 2 Writer
 ```
 
-LiDAR에는 `OmniSensorGenericLidarCoreAPI`, Radar에는 `OmniSensorGenericRadarWpmDmatAPI` schema가 적용된다. old Camera prim을 강제로 만드는 `force_camera_prim=True`는 migration 확인 외에는 사용하지 않는다.
+LiDAR에는 `OmniSensorGenericLidarCoreAPI`, Radar에는 `OmniSensorGenericRadarWpmDmatAPI` 스키마가 적용된다. 이전 카메라 prim을 강제로 만드는 `force_camera_prim=True`는 이전 버전에서의 전환 확인 외에는 사용하지 않는다.
 
-### 5.2 LiDAR를 만들고 읽는다
+### 5.2 여섯 벽으로 둘러싼 장면에서 LiDAR를 확인한다
 
-상위 `LidarRtx` wrapper는 prim, render product, annotator를 함께 관리한다.
+[rtx_lidar.py](https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr/blob/IsaacSim5.1/examples/standalone/rtx_lidar.py)는 원점에 RTX LiDAR를 놓고 각 축의 ±3 m 위치에 벽을 만든다. 센서와 월드의 원점·방향이 같으므로 좌표 변환을 잘못 적용할 여지가 적다. 벽은 레이더나 카메라와 별개로 LiDAR의 거리 출력 자체를 확인하는 기준이다.
+
+```bash
+"$ISAACSIM_PATH/python.sh" examples/standalone/rtx_lidar.py \
+  --gui --output-dir results/rtx_lidar
+```
+
+다음은 `World`와 벽을 만든 이후의 핵심 코드이다. 전체 초기화·반복·종료는 실행 파일을 사용한다.
 
 ```python
 import numpy as np
-import omni
 from isaacsim.sensors.rtx import LidarRtx
 
 lidar = LidarRtx(
-    prim_path="/World/Robot/base_link/Sensors/lidar_mount/OmniLidar",
-    translation=np.array([0.0, 0.0, 0.4]),
+    prim_path="/World/Lidar",
+    translation=np.zeros(3),
     orientation=np.array([1.0, 0.0, 0.0, 0.0]),
     config_file_name="Example_Rotary",
-    **{"omni:sensor:Core:scanRateBaseHz": 20},
 )
+world.reset()
 lidar.initialize()
 lidar.attach_annotator("IsaacExtractRTXSensorPointCloudNoAccumulator")
 
-timeline = omni.timeline.get_timeline_interface()
-timeline.play()
-
-for _ in range(20):
-    omni.kit.app.get_app().update()
-
+# 실제 파일에서는 초기 준비 후 서로 다른 시각의 30개 출력을 검사한다.
+world.step(render=True)
 frame = lidar.get_current_frame()
-assert "IsaacExtractRTXSensorPointCloudNoAccumulator" in frame
 print(frame.keys())
 ```
 
-누적 한 scan이 필요하면 `IsaacCreateRTXLidarScanBuffer`를 붙인다.
+`frame`에 키가 있다는 사실만으로 성공으로 판정하지 않는다. `frame["IsaacExtractRTXSensorPointCloudNoAccumulator"]["data"]`가 비어 있지 않고 `(N, 3)` 배열인지, 점이 벽 위에 놓이는지, `rendering_time`이 증가하는지 함께 검사한다. 최초 데이터가 늦게 도착할 수 있으므로 최대 600스텝을 기다리되 그 안에도 충분한 데이터가 없으면 실패한다.
+
+이 코드는 Standalone용이다. Script Editor에서 `omni.kit.app.get_app().update()`를 동기 반복 호출하지 않는다. GUI에서 직접 읽고 싶다면 `async def` 함수 안에서 `await omni.kit.app.get_app().next_update_async()`로 Kit 이벤트 루프에 제어권을 돌려준다.
+
+누적 한 스캔이 필요하면 `IsaacCreateRTXLidarScanBuffer`를 붙인다.
 
 ```python
 lidar.attach_annotator(
@@ -255,13 +283,13 @@ lidar.attach_annotator(
 )
 ```
 
-회전 속도가 frame rate보다 느릴 때 accumulated scan에는 여러 frame의 return이 섞인다. sensor나 물체가 움직이면 point가 끌리는 것처럼 보일 수 있다. 순간 obstacle detection에는 `NoAccumulator`, 완전한 회전 scan에는 accumulator를 선택한다.
+회전 속도가 프레임 주기보다 느릴 때 누적 스캔에는 여러 프레임의 반사점이 섞인다. 센서나 물체가 움직이면 점이 끌리는 것처럼 보일 수 있다. 순간 장애물 감지에는 `NoAccumulator`, 완전한 회전 스캔에는 누적 처리기를 선택한다.
 
-custom LiDAR model은 5.1 schema가 적용된 `OmniLidar` USD를 별도 asset으로 authoring한다. 간단한 generic prim은 command에서 `config=None`으로 만들 수 있다. emitter state attribute는 schema가 요구하는 `...:s001:...` 같은 instance prefix를 정확히 사용한다.
+사용자 정의 LiDAR 모델은 5.1 스키마가 적용된 `OmniLidar` USD를 별도 자산으로 작성한다. 기본 센서 Prim은 명령에서 `config=None`으로 만들 수 있다. 광선 발사부 상태 속성은 스키마가 요구하는 `...:s001:...` 같은 인스턴스 접두사를 정확히 사용한다.
 
 ### 5.3 Radar를 만든다
 
-5.1의 Radar는 `IsaacSensorCreateRtxRadar` command로 `OmniRadar` prim을 만든다.
+5.1의 Radar는 `IsaacSensorCreateRtxRadar` 명령으로 `OmniRadar` prim을 만든다.
 
 ```python
 import omni
@@ -281,41 +309,41 @@ _, radar_prim = omni.kit.commands.execute(
 assert radar_prim.IsValid()
 ```
 
-Script Editor에서 command를 실행한 뒤 Stage의 `OmniRadar`를 선택해 Raw USD Properties와 transform을 GUI로 확인한다. data는 render product에 `IsaacExtractRTXSensorPointCloudNoAccumulator` annotator를 붙여 읽는다. 이 annotator는 5.1에서 LiDAR와 Radar를 함께 지원한다. 전체 예제는 다음 명령으로 실행한다.
+Script Editor에서 명령을 실행한 뒤 Stage의 `OmniRadar`를 선택해 Raw USD Properties와 변환을 GUI로 확인한다. 데이터는 렌더 출력(Render Product)에 `IsaacExtractRTXSensorPointCloudNoAccumulator` annotator를 붙여 읽는다. 이 annotator는 5.1에서 LiDAR와 Radar를 함께 지원한다. 전체 예제는 다음 명령으로 실행한다.
 
 ```bash
 cd ~/isaacsim
 ./python.sh standalone_examples/api/isaacsim.util.debug_draw/rtx_radar.py
 ```
 
-Radar와 LiDAR return은 visual material 색만으로 정해지지 않는다. RTX non-visual material attribute를 사용하고, 알려진 거리의 plane·corner target과 material별 return을 검증한다.
+Radar와 LiDAR 반사점은 시각 재질 색만으로 정해지지 않는다. RTX 비시각 재질 속성을 사용하고, 거리를 아는 평면·모서리 표적을 두고, 재질에 따른 반사점을 검증한다.
 
-### 5.4 RTX calibration과 noise
+### 5.4 RTX 보정과 잡음
 
 다음을 실측 사양과 비교한다.
 
-- mount translation·orientation과 ROS TF
-- min/max range, horizontal·vertical FOV
-- channel/elevation/azimuth pattern과 scan/tick rate
-- range bias, angular bias, dropout, intensity 분포
-- moving target의 timestamp와 velocity 부호
-- non-visual material별 return
+- 장착부 이동량·방향과 ROS TF
+- 최소·최대 측정 거리, 수평·수직 시야각(FOV)
+- 채널별 고도각·방위각 패턴과 스캔·갱신 주기
+- 거리 편향, 각도 편향, 누락, 반사 강도 분포
+- 움직이는 목표의 측정 시각과 속도 부호
+- 비시각 재질별 반사점
 
-noise는 annotator 후단에서 추가할 수도 있지만, material·multipath처럼 ray 생성과 상호작용하는 현상을 단순 Gaussian noise로 대체했다고 표현하지 않는다.
+잡음은 annotator 후단에서 추가할 수도 있지만, 재질·다중 경로처럼 광선 생성과 상호작용하는 현상을 단순 가우스 잡음으로 대체했다고 표현하지 않는다.
 
-RTX annotator는 sensor output buffer가 GPU에 있어야 정상 동작한다. normal output을 켜면 VRAM 사용량이 증가한다. 필요한 field만 활성화한다.
+RTX annotator는 센서 출력 버퍼가 GPU에 있어야 정상 동작한다. 법선 출력을 켜면 VRAM 사용량이 증가한다. 필요한 필드만 활성화한다.
 
 ## 6. IMU
 
-### 6.1 GUI와 update rate
+### 6.1 GUI와 갱신 주기
 
-1. `Create > Physics > Physics Scene`으로 physics scene을 만든다.
-2. IMU를 붙일 rigid body prim을 선택한다.
+1. `Create > Physics > Physics Scene`으로 물리 장면을 만든다.
+2. IMU를 붙일 강체 prim을 선택한다.
 3. `Create > Sensors > Imu Sensor`를 선택한다.
-4. `Imu_Sensor`의 local transform을 mount 사양과 맞춘다.
-5. Raw USD Properties에서 sensor period와 세 filter width를 설정한다.
+4. `Imu_Sensor`의 로컬 위치와 방향을 장착부 사양과 맞춘다.
+5. Raw USD Properties에서 측정 주기와 가속도·각속도·방향 필터의 크기를 설정한다.
 
-sensor period가 physics delta보다 작아도 새로운 physics sample이 더 생기지는 않는다. physics가 60 Hz라면 IMU를 200 Hz로 설정해도 최신 60 Hz data가 반복된다.
+센서의 측정 간격을 물리 계산 간격보다 짧게 설정해도 새로운 물리 상태가 더 자주 계산되지는 않는다. 물리가 60 Hz라면 IMU를 200 Hz로 설정해도 최신 60 Hz 데이터가 반복된다.
 
 ### 6.2 Python으로 만들고 읽는다
 
@@ -339,21 +367,21 @@ reading = imu.get_current_frame(read_gravity=True)
 print(reading)
 ```
 
-filter width를 키우면 부드러워지지만 latency도 커진다. noise와 filter를 혼동하지 않는다. IMU model에는 axis misalignment, scale factor, white noise, bias, bias random walk, saturation, timestamp offset을 선택적으로 추가한다. stationary test에서는 angular velocity가 0에 가깝고, gravity를 읽도록 했다면 acceleration norm이 stage gravity에 가까워야 한다.
+필터에 사용하는 표본 수를 늘리면 출력은 부드러워지지만 지연도 커진다. 잡음을 추가하는 것과 필터를 적용하는 것은 별도 단계다. 실제 IMU를 모사할 때는 축 정렬 오차, 배율 오차, 백색 잡음, 편향과 시간에 따른 편향 변화, 포화, 타임스탬프 오프셋을 필요에 따라 추가한다. 정지 상태에서는 각속도가 0에 가까워야 한다. 중력을 포함해 읽는다면 가속도 벡터의 크기는 Stage의 중력 크기와 비슷해야 한다.
 
-## 7. Contact Sensor
+## 7. 접촉 센서
 
-Contact Sensor는 PhysX Contact Report를 특정 parent와 선택적 구면 영역으로 filter한다. sensor가 붙는 parent에는 collider가 필요하다.
+접촉 센서는 PhysX가 계산한 접촉 정보 중 센서가 붙은 물체와 지정한 구면 영역의 접촉만 읽는다. 센서가 붙는 부모에는 충돌 형상이 필요하다.
 
 ### 7.1 GUI
 
-1. collider가 있는 foot, bumper 또는 gripper pad prim을 선택한다.
+1. 충돌 형상이 있는 발바닥, 범퍼 또는 그리퍼 패드 Prim을 선택한다.
 2. `Create > Sensors > Contact Sensor`를 선택한다.
-3. `radius`, min/max threshold, sensor period를 설정한다.
-4. Action Graph에 `Isaac Read Contact Sensor`를 넣고 sensor prim을 지정한다.
-5. `Isaac xPrim Radius Visualizer`로 filter 영역을 확인한다.
+3. `radius`, 최소·최대 임곗값, 센서 측정 주기를 설정한다.
+4. Action Graph에 `Isaac Read Contact Sensor`를 넣고 센서 prim을 지정한다.
+5. `Isaac xPrim Radius Visualizer`로 필터 영역을 확인한다.
 
-구면 radius는 실제 collision volume을 새로 만드는 것이 아니라 이미 발생한 contact를 filter하는 영역이다.
+`radius`는 이미 발생한 접촉 중 센서가 읽을 구면 영역을 정한다. 새 충돌 형상을 만드는 속성은 아니다.
 
 ### 7.2 Python
 
@@ -375,11 +403,11 @@ frame = contact.get_current_frame()
 print(frame)
 ```
 
-known mass를 sensor 위에 정적으로 올려 $F \approx mg$를 확인하고, no-contact 상태에서 false positive가 없는지 검사한다. threshold와 saturation은 실제 sensor datasheet에 맞춘다.
+질량을 아는 물체를 센서 위에 올려 정지시킨 뒤 $F \approx mg$인지 확인한다. 접촉하지 않는 상태에서는 접촉을 잘못 검출하지 않는지도 검사한다. 임곗값과 포화 범위는 실제 센서 사양서에 맞춘다.
 
-## 8. Effort Sensor
+## 8. 관절 힘·토크(Effort) 센서
 
-Effort Sensor는 revolute joint에서 torque, prismatic joint에서 force magnitude를 읽는다. prim path는 link가 아니라 측정할 joint를 가리킨다.
+Effort 센서는 회전 관절의 토크 또는 직선 관절의 힘을 읽는다. prim 경로는 링크가 아니라 측정할 관절을 가리킨다.
 
 ```python
 from isaacsim.sensors.physics.scripts.effort_sensor import EffortSensor
@@ -396,11 +424,11 @@ assert reading.is_valid
 print("time=", reading.time, "effort=", reading.value)
 ```
 
-GUI에서는 Physics Inspector로 joint를 움직이고 drive target과 measured effort를 함께 관찰한다. calibration은 무부하 zero offset과 알려진 lever arm·weight로 수행한다. drive가 만드는 effort, gravity compensation, external contact를 구분해 시험한다.
+GUI에서는 Physics Inspector로 관절을 움직이고 드라이브 목표와 측정된 힘·토크를 함께 관찰한다. 하중이 없는 상태에서 영점 오프셋을 확인한 뒤, 길이를 아는 레버에 질량을 아는 추를 달아 측정 토크를 비교한다. 드라이브가 가하는 힘·토크, 중력 보상, 외부 접촉의 영향을 나누어 시험한다.
 
-## 9. Proximity Sensor
+## 9. 근접 센서
 
-5.1 Proximity Sensor는 `isaacsim.sensors.physx` extension의 collision callback wrapper이다.
+5.1 근접 센서는 `isaacsim.sensors.physx` Extension의 충돌 콜백 API 객체이다.
 
 ```python
 from isaacsim.core.utils.extensions import enable_extension
@@ -421,35 +449,35 @@ def on_physics_step(_step_size):
 world.add_physics_callback("read_bumper_proximity", on_physics_step)
 ```
 
-extension 종료 때 callback을 제거하고 `clear_sensors()`를 호출한다. collision layer와 collider가 맞지 않으면 data가 비어 있다. 거리계처럼 사용하려면 알려진 separation에서 의미를 먼저 확인하고, 필요한 측정이 collision event가 아니라면 다른 sensor로 바꾼다.
+Extension 종료 때 콜백을 제거하고 `clear_sensors()`를 호출한다. 충돌 레이어와 충돌 형상이 맞지 않으면 데이터가 비어 있다. 거리계처럼 사용하려면 물체 사이 거리를 알고 있는 장면에서 출력의 의미를 먼저 확인하고, 필요한 측정이 충돌 이벤트가 아니라면 다른 센서로 바꾼다.
 
-## 10. 기존 sensor 조합과 진짜 custom sensor를 구분한다
+## 10. 기존 센서 조합과 새로운 측정 모델 구분
 
-### 10.1 기존 sensor 조합
+### 10.1 기존 센서 조합
 
-다음은 custom **rig 또는 pipeline**이지 새로운 물리 sensor가 아니다.
+기존 센서의 장착 구조나 데이터 처리 방법을 바꾸는 예는 다음과 같다.
 
-- RGB + depth + IMU를 하나의 device USD로 조립한다.
-- LiDAR point cloud에서 특정 sector만 자른다.
-- contact force와 joint effort를 합쳐 grasp state를 만든다.
-- camera image에 noise·latency·dropout을 추가한다.
-- ROS message format과 topic을 custom하게 만든다.
+- RGB + 깊이 + IMU를 하나의 장치 USD로 조립한다.
+- LiDAR 포인트 클라우드에서 특정 각도 구간만 자른다.
+- 접촉 힘과 관절 토크·힘을 합쳐 파지 상태를 만든다.
+- 카메라 영상에 잡음·지연·누락을 추가한다.
+- 용도에 맞는 ROS 메시지 형식과 토픽을 정한다.
 
-가능하면 검증된 built-in sensor를 조합한다. physics·render 구현을 다시 만들 필요가 없고, ground truth와 noisy output을 나란히 유지하기 쉽다.
+요구사항을 만족하는 기본 센서가 있다면 먼저 이를 조합한다. 기존 물리·렌더링 구현을 사용하면서 원본 측정값과 후처리 결과를 비교하기 쉽다.
 
-### 10.2 진짜 custom sensor
+### 10.2 새로운 측정 모델 구현
 
-다음 조건이면 Python Extension 또는 custom OmniGraph node를 만든다.
+다음 조건이면 Python Extension 또는 사용자 정의 OmniGraph 노드를 만든다.
 
-- 새로운 measurement equation이 필요하다.
-- physics step과 정확히 동기화된 stateful sampling이 필요하다.
-- bias drift, hysteresis, dead time 같은 내부 상태가 필요하다.
-- 여러 prim의 값을 한 device state로 결합해야 한다.
-- GUI와 headless에서 재사용할 lifecycle이 필요하다.
+- 기존 센서가 지원하지 않는 측정 방정식이 필요하다.
+- 이전 측정 상태를 기억하면서 물리 계산 주기에 맞춰 새 값을 생성해야 한다.
+- 시간에 따른 편향 변화, 히스테리시스, 응답 지연 같은 내부 상태가 필요하다.
+- 여러 prim의 값을 한 장치 상태로 결합해야 한다.
+- GUI와 창 없는 실행에서 같은 초기화·갱신·종료 처리를 재사용해야 한다.
 
-## 11. Python Extension으로 custom accelerometer를 만든다
+## 11. IMU 후처리를 Python Extension으로 만든다
 
-예제는 rigid body의 world position을 physics step마다 미분하고, 일정 주기로 sampling해 noise를 더한다. 실제 제품은 PhysX velocity API를 직접 읽는 편이 더 정확하지만, 여기서는 lifecycle·rate·state 설계에 집중한다.
+이 예제는 6절에서 만든 IMU의 측정값을 물리 계산 주기마다 읽고, 새로운 타임스탬프의 유효한 값에만 잡음을 추가한다. Extension을 켤 때 콜백을 등록하고, 시뮬레이션이 초기화되거나 종료될 때 이전 표본을 정리하는 흐름을 익힌다. 위치를 수치 미분해 새로운 가속도 센서를 만드는 예제는 아니다.
 
 ### 11.1 파일 구조
 
@@ -474,80 +502,65 @@ title = "Custom Motion Sensor"
 
 [dependencies]
 "isaacsim.core.api" = {}
+"isaacsim.sensors.physics" = {}
 "omni.physx" = {}
 
 [[python.module]]
 name = "custom.motion.sensor"
 ```
 
-`registry.py`는 Extension과 OGN 사이의 작은 data contract이다.
+`registry.py`는 Extension이 만든 최신 표본을 OmniGraph 노드와 공유하는 공간이다.
 
 ```python
 LATEST = {}
 ```
 
-`extension.py`의 핵심은 physics subscription과 정리이다.
+`extension.py`에서는 물리 계산 이벤트를 구독해 IMU를 읽고, 종료할 때 구독과 저장된 표본을 정리한다.
 
 ```python
 import numpy as np
 import omni.ext
 import omni.physx
-import omni.usd
-from pxr import Usd, UsdGeom
-
+from isaacsim.sensors.physics import _sensor
 from .registry import LATEST
 
 
 class Extension(omni.ext.IExt):
     def on_startup(self, ext_id):
-        self._path = "/World/Robot/base_link"
-        self._period = 1.0 / 100.0
-        self._elapsed = 0.0
-        self._time = 0.0
-        self._last_position = None
-        self._last_velocity = None
+        # 6절에서 실제 강체에 붙인 IMU의 경로이다.
+        self._path = "/World/Robot/base_link/Imu_Sensor"
+        self._interface = _sensor.acquire_imu_sensor_interface()
+        self._last_time = None
+        self._noise_std = 0.0  # 기준 검사가 끝난 뒤에만 잡음을 추가한다.
         self._rng = np.random.default_rng(42)
-        self._subscription = (
-            omni.physx.get_physx_interface()
-            .subscribe_physics_step_events(self._on_physics_step)
+        self._subscription = omni.physx.get_physx_interface().subscribe_physics_step_events(
+            self._on_physics_step
         )
-
-    def _position(self):
-        stage = omni.usd.get_context().get_stage()
-        prim = stage.GetPrimAtPath(self._path)
-        if not prim.IsValid():
-            return None
-        matrix = UsdGeom.Xformable(prim).ComputeLocalToWorldTransform(
-            Usd.TimeCode.Default()
-        )
-        return np.asarray(matrix.ExtractTranslation(), dtype=np.float64)
 
     def _on_physics_step(self, dt):
-        position = self._position()
-        if position is None or dt <= 0.0:
+        reading = self._interface.get_sensor_reading(
+            self._path, use_latest_data=True, read_gravity=False
+        )
+        if not reading.is_valid or dt <= 0:
+            LATEST.clear()
+            self._last_time = None
             return
-
-        if self._last_position is None:
-            self._last_position = position
-            self._last_velocity = np.zeros(3)
+        if self._last_time is not None:
+            if reading.time == self._last_time:
+                return
+            if reading.time < self._last_time:
+                # Stop/Reset 후 이전 실행의 값이나 난수 상태를 재사용하지 않는다.
+                LATEST.clear()
+                self._rng = np.random.default_rng(42)
+        self._last_time = reading.time
+        acceleration = np.array([reading.lin_acc_x, reading.lin_acc_y, reading.lin_acc_z])
+        if not np.isfinite(acceleration).all():
+            LATEST.clear()
             return
-
-        velocity = (position - self._last_position) / dt
-        acceleration = (velocity - self._last_velocity) / dt
-        self._last_position = position
-        self._last_velocity = velocity
-        self._elapsed += dt
-        self._time += dt
-
-        if self._elapsed + 1e-12 < self._period:
-            return
-        self._elapsed %= self._period
-
-        noisy = acceleration + self._rng.normal(0.0, 0.02, size=3)
         LATEST["base_accel"] = {
-            "time": self._time,
-            "value": noisy,
-            "frame_id": "base_link",
+            "time": float(reading.time),
+            "value": acceleration + self._rng.normal(0, self._noise_std, size=3),
+            "frame_id": "imu_link",  # 실제 IMU 축과 같은 TF 프레임을 별도로 발행한다.
         }
 
     def on_shutdown(self):
@@ -555,18 +568,13 @@ class Extension(omni.ext.IExt):
         LATEST.clear()
 ```
 
-핵심 원칙은 다음과 같다.
+이 예제는 **기존 IMU 측정값을 가공하는 확장 기능**이다. 새로운 물리 센서를 구현한 것은 아니다. `read_gravity=False`이므로 정지 상태의 선가속도는 0 근처이고, 출력 축은 IMU의 로컬 좌표계이다. 센서 원점이 회전 중심에서 떨어져 있으면 회전에 따른 가속도도 포함된다.
 
-- render update가 아니라 physics step에서 sampling한다.
-- sample accumulator로 physics rate와 sensor rate를 분리한다.
-- noise RNG seed를 manifest에 기록한다.
-- stage가 바뀌어 prim path가 무효가 되는 경우를 처리한다.
-- shutdown에서 subscription과 shared state를 정리한다.
-- reset·time jump 때 이전 position·velocity·bias state도 reset한다.
+USD의 `ComputeLocalToWorldTransform()` 결과를 두 번 차분해 가속도를 구하지 않는다. USD에 기록된 값이 매 물리 계산 단계의 상태와 동기화된다는 보장이 없고, 두 번의 수치 차분은 작은 위치 오차를 큰 잡음으로 확대한다. 물리량을 읽는 목적이라면 IMU API 또는 초기화된 물리 객체 API를 사용한다. 수치 차분 센서를 별도로 연구할 때에는 그 한계와 좌표 변환을 명시해야 한다.
 
-## 12. OmniGraph node로 노출한다
+## 12. OmniGraph 노드에서 측정값 읽기
 
-`.ogn` schema는 scalar port로 시작하면 type 문제를 줄일 수 있다.
+처음에는 `.ogn` 스키마에서 벡터를 X·Y·Z 각각의 실수 포트로 나누면 자료형과 연결을 확인하기 쉽다.
 
 ```json
 {
@@ -592,7 +600,7 @@ class Extension(omni.ext.IExt):
 }
 ```
 
-Python compute는 shared sample을 읽고 즉시 반환한다. 여기서 block이나 sleep을 하지 않는다.
+Python `compute()`는 공유 공간의 최신 표본을 읽고 즉시 반환한다. 여기서 오래 걸리는 계산이나 대기를 수행하면 그래프 실행이 막힐 수 있다.
 
 ```python
 import omni.graph.core as og
@@ -618,33 +626,33 @@ class OgnReadMotionSensor:
         return True
 ```
 
-Extension Manager의 search path에 project root를 추가하고 extension을 활성화한다. Action Graph에서 custom node를 `On Physics Step` 또는 필요한 publisher와 연결한다. reset, stop/play, stage reload를 각각 시험한다.
+Extension Manager의 검색 경로에 프로젝트 루트를 추가하고 Extension을 활성화한다. Action Graph에서 사용자 정의 노드를 `On Physics Step` 또는 필요한 발행자와 연결한다. 초기화, Stop·Play, Stage 다시 불러오기를 각각 시험한다.
 
-## 13. ROS 2 publish contract
+## 13. ROS 2 발행 설정
 
-| data | 권장 ROS type | 필수 계약 |
+| 데이터 | 권장 ROS 메시지 형식 | 반드시 정할 항목 |
 |---|---|---|
-| RGB/depth | `sensor_msgs/msg/Image` | encoding, width/height, capture timestamp, optical frame |
-| camera calibration | `sensor_msgs/msg/CameraInfo` | K, D, distortion model, image와 같은 frame/time |
-| planar LiDAR | `sensor_msgs/msg/LaserScan` | angle/range 단위, scan time, sensor frame |
-| 3D LiDAR/Radar points | `sensor_msgs/msg/PointCloud2` | field 이름·단위·frame을 문서화한다 |
-| IMU | `sensor_msgs/msg/Imu` | covariance, local frame, gravity 포함 여부 |
-| joint effort | `sensor_msgs/msg/JointState` 또는 custom | joint name과 effort 단위 |
-| contact/proximity event | custom msg 권장 | threshold, object path, duration, force 의미 |
-| custom acceleration | `geometry_msgs/msg/AccelStamped` | frame, unit, timestamp |
+| RGB·깊이 | `sensor_msgs/msg/Image` | 인코딩, 영상 너비·높이, 촬영 타임스탬프, 광학 프레임 |
+| 카메라 보정 | `sensor_msgs/msg/CameraInfo` | K·D 행렬, 왜곡 모델, 영상과 같은 프레임·타임스탬프 |
+| 평면 LiDAR | `sensor_msgs/msg/LaserScan` | 각도·거리 단위, 스캔 시간, 센서 프레임 |
+| 3D LiDAR·Radar 반사점 | `sensor_msgs/msg/PointCloud2` | 필드 이름·단위·프레임을 문서화한다 |
+| IMU | `sensor_msgs/msg/Imu` | 공분산, 로컬 프레임, 중력 포함 여부 |
+| 관절 토크·힘 | `sensor_msgs/msg/JointState` 또는 사용자 정의 | 관절 이름과 토크·힘 단위 |
+| 접촉/근접 이벤트 | 사용자 정의 메시지 권장 | 임곗값, 물체 경로, 접촉 시간, 힘의 정의 |
+| 가속도 후처리 출력 | `geometry_msgs/msg/AccelStamped` | 프레임, 단위, 타임스탬프 |
 
-Radar detection에는 모든 제품을 포괄하는 단일 표준 message가 없다. `PointCloud2`를 쓰면 `range`, `azimuth`, `elevation`, `radial_velocity`, `rcs` 같은 field의 단위와 의미를 별도 문서에 고정한다.
+Radar 검출 결과는 제품마다 필요한 필드가 다르므로 사용할 메시지 형식을 명확히 정한다. `PointCloud2`를 쓰면 `range`, `azimuth`, `elevation`, `radial_velocity`, `rcs` 같은 필드의 단위와 의미를 별도 문서에 고정한다.
 
-Action Graph publisher는 다음 규칙을 지킨다.
+Action Graph 발행자는 다음 규칙을 지킨다.
 
-1. `Isaac Read Simulation Time`을 header timestamp에 연결한다.
-2. sensor capture 시각을 사용하고 ROS 전송 시각으로 대체하지 않는다.
+1. `Isaac Read Simulation Time`을 메시지 헤더의 타임스탬프에 연결한다.
+2. 센서 촬영 시각을 사용하고 ROS 전송 시각으로 대체하지 않는다.
 3. `frameId`가 `/tf` 또는 `/tf_static`에 존재하게 한다.
-4. image·point cloud에는 Sensor Data QoS를 사용하고 subscriber와 일치시킨다.
-5. `frameSkipCount=N`은 N개를 건너뛰고 N+1번째 frame을 발행한다.
-6. source sensor rate보다 빠른 publisher는 새 data를 만들지 못한다.
+4. 영상·포인트 클라우드에는 센서 데이터 QoS를 사용하고 구독자의 설정과 호환되는지 확인한다.
+5. Camera Helper처럼 `frameSkipCount`를 제공하는 노드에서 값을 N으로 설정하면 N개를 건너뛰고 N+1번째 프레임을 발행한다.
+6. 원본 센서 주기보다 빠른 발행자는 새 데이터를 만들지 못한다.
 
-ROS 측에서 contract를 검증한다.
+ROS 터미널에서 메시지 형식과 출력 주기를 확인한다.
 
 ```bash
 source /opt/ros/jazzy/setup.bash
@@ -658,11 +666,11 @@ ros2 topic echo /robot_01/imu/data --once \
 ros2 run tf2_ros tf2_echo base_link front_camera_optical_frame
 ```
 
-covariance를 모델링하지 않았다면 0 행렬로 “완벽한 측정”을 표현하지 않는다. ROS message 규약에 따라 unknown을 명시하고, noise model을 넣은 뒤 통계에 맞는 covariance를 제공한다.
+`sensor_msgs/msg/Imu`에서 공분산 행렬의 값이 모두 `0`이면 공분산을 알 수 없다는 뜻이다. 해당 측정값 자체를 제공하지 않는 경우에는 그 공분산 행렬의 첫 번째 원소를 `-1`로 설정한다. 예를 들어 자세를 추정하지 않는 IMU라면 `orientation_covariance[0] = -1`로 표시한다. 잡음 모델을 적용했다면 실제 출력의 통계에 맞는 공분산을 제공한다. 자세한 규약은 [ROS 2 Jazzy의 Imu 메시지 정의](https://docs.ros.org/en/jazzy/p/sensor_msgs/msg/Imu.html)를 참고한다.
 
-## 14. 자동 acceptance test
+## 14. 자동 검증 시험
 
-### 14.1 공통 rate·timestamp 검사
+### 14.1 공통 주기·타임스탬프 검사
 
 ```python
 import numpy as np
@@ -682,25 +690,25 @@ def assert_finite(name, data):
     assert np.isfinite(array).all(), name
 ```
 
-### 14.2 sensor별 ground-truth scenario
+### 14.2 센서별 기준값을 아는 시험 장면
 
-| sensor | 고정 scenario | 합격 조건 예 |
+| 센서 | 고정 시험 상황 | 합격 조건 예 |
 |---|---|---|
-| Camera | 알려진 3D marker board | reprojection RMS가 허용 pixel 이내이다 |
-| Depth | 정면 plane 2 m | 중앙 ROI median이 2 m 허용 오차 이내이다 |
-| LiDAR | 1·3·5 m plane | range bias와 dropout이 사양 이내이다 |
-| Radar | 고정·일정 속도 target | range와 radial velocity 부호·오차가 맞다 |
-| IMU | 정지 후 일정 회전 | stationary bias와 angular velocity가 맞다 |
-| Contact | known mass와 no-contact | $mg$와 threshold/hysteresis가 맞다 |
-| Effort | known lever arm·mass | expected torque와 offset이 맞다 |
-| Proximity | overlap 진입·이탈 | event path와 duration이 맞다 |
-| Custom | fixed trajectory·seed | golden trace와 tolerance 안에서 일치한다 |
+| 카메라 | 3D 위치를 아는 마커 보드 | 재투영 오차의 RMS가 허용 픽셀 수 이내이다 |
+| 깊이 | 2 m 앞의 평면 | 중앙 관심 영역의 깊이 중앙값이 2 m의 허용 오차 이내이다 |
+| LiDAR | 1·3·5 m 거리의 평면 | 거리 편향과 누락이 사양 이내이다 |
+| Radar | 고정·일정 속도 목표 | 거리와 방사 방향 속도의 부호·오차가 맞다 |
+| IMU | 정지 후 일정 회전 | 정지 편향과 각속도가 맞다 |
+| 접촉 | 질량을 아는 하중과 무접촉 상태 | $mg$와 임곗값·히스테리시스가 맞다 |
+| 힘·토크 | 길이를 아는 레버와 질량을 아는 추 | 계산한 토크와 측정값·오프셋이 맞다 |
+| 근접 | 겹침 진입·이탈 | 이벤트 경로와 지속 시간이 맞다 |
+| 사용자 정의 | 고정된 궤적과 난수 시드 | 기준 기록과 허용 오차 안에서 일치한다 |
 
-noise test는 한 frame 값을 비교하지 않고 충분한 sample의 mean, standard deviation, autocorrelation, dropout rate를 비교한다. 같은 seed에서 replay가 재현되는지도 검사한다.
+잡음 시험은 한 프레임 값을 비교하지 않고 충분한 표본의 평균·표준편차·자기상관·누락 주기를 비교한다. 같은 난수 시드로 다시 실행했을 때 결과가 재현되는지도 검사한다.
 
 ## 15. 성능과 VRAM
 
-camera와 RTX sensor는 먼저 GPU 병목을 의심한다. physics sensor와 Python custom sensor는 callback 수와 CPU 병목을 먼저 본다.
+카메라와 RTX 센서는 먼저 GPU 병목을 의심한다. 물리 센서와 Python 사용자 센서는 콜백 수와 CPU 병목을 먼저 본다.
 
 ```bash
 nvidia-smi dmon -s pucm
@@ -710,45 +718,45 @@ ros2 topic bw /robot_01/lidar/points
 
 최적화 순서는 다음과 같다.
 
-1. 사용하지 않는 sensor, annotator, writer를 끈다.
-2. camera resolution과 RTX auxiliary output을 줄인다.
-3. normal·material ID·object ID처럼 필요할 때만 field를 켠다.
-4. 같은 camera에 render product를 불필요하게 중복 생성하지 않는다.
-5. `frameSkipCount`로 ROS publish rate를 낮춘다.
-6. GPU data를 매 frame CPU numpy로 복사하지 않는다.
-7. 여러 physics sensor는 한 callback에서 batch로 읽는다.
-8. GUI와 headless의 RTF, GPU memory, topic rate를 같은 scenario에서 비교한다.
+1. 사용하지 않는 센서, annotator, writer를 끈다.
+2. 카메라 해상도와 RTX 부가 데이터 출력을 줄인다.
+3. 법선·재질 ID·물체 ID는 필요한 경우에만 켠다.
+4. 같은 카메라에 렌더 출력(Render Product)을 불필요하게 중복 생성하지 않는다.
+5. `frameSkipCount`로 ROS 발행 주기를 낮춘다.
+6. GPU 데이터를 매 프레임 CPU의 NumPy 배열로 복사하지 않는다.
+7. 여러 물리 센서는 한 콜백에서 모아 읽는다.
+8. GUI와 화면 없이 실행하는 모드의 실시간 계수(RTF), GPU 메모리, 토픽 주기를 같은 시험 상황에서 비교한다.
 
-RTX annotator는 `GenericModelOutput` GPU buffer를 요구한다. GPU output setting을 끄면 annotator가 정상 동작하지 않을 수 있다. LiDAR normal output은 VRAM과 실행 시간을 늘린다는 5.1 경고가 있다.
+RTX annotator는 `GenericModelOutput` GPU 버퍼를 요구한다. GPU 출력 설정을 끄면 annotator가 정상 동작하지 않을 수 있다. LiDAR 법선 출력은 VRAM과 실행 시간을 늘린다는 5.1 경고가 있다.
 
-## 16. failure diagnosis
+## 16. 오류 진단
 
 | 증상 | 원인 후보 | 우선 검사 |
 |---|---|---|
-| Camera image가 없다 | render product·timeline·orientation | viewport를 camera로 바꾸고 `get_rgba()` shape를 본다 |
-| depth가 두 색으로만 보인다 | infinite depth가 display 범위를 늘림 | numeric depth ROI와 clipping range를 본다 |
-| RTX point가 없다 | old Camera workflow·AOV·GPU buffer·timeline | prim type, annotator, Play 상태를 본다 |
-| LiDAR point가 끌린다 | accumulated scan과 움직이는 target | NoAccumulator 결과와 비교한다 |
-| Radar return이 비현실적이다 | model·material·FOV 불일치 | known target와 non-visual material을 본다 |
-| IMU가 반복값만 낸다 | sensor rate가 physics rate보다 빠름 | physics delta와 sensor period를 비교한다 |
-| IMU reading이 invalid이다 | rigid body parent를 Play 중 변경 | Stop 후 계층을 고치고 다시 Play한다 |
-| Contact가 invalid이다 | collider·Contact Report 없음 | parent collider와 threshold를 본다 |
-| Effort가 invalid이다 | link path를 지정함 | 실제 joint prim path를 지정한다 |
-| Proximity data가 비어 있다 | collision 없음·extension 미등록 | collider/filter와 `register_sensor`를 본다 |
-| custom 값이 과거 stage 것이다 | subscription·registry 정리 누락 | shutdown/reset path를 시험한다 |
-| ROS에서만 보이지 않는다 | QoS·frame·bridge·publish gate | `topic info --verbose`, TF, rate를 본다 |
+| 카메라 영상이 없다 | 렌더 출력(Render Product)·timeline·방향 | Viewport를 카메라로 바꾸고 `get_rgba()` 배열 형태를 본다 |
+| 깊이 영상이 두 색으로만 보인다 | 무한대 깊이 값이 표시 범위를 넓힘 | 관심 영역의 실제 깊이 값과 카메라 거리 범위를 확인한다 |
+| RTX 점이 없다 | 이전 Camera Prim 방식·AOV·GPU 버퍼·timeline | prim 자료형, annotator, Play 상태를 본다 |
+| LiDAR 점이 끌린다 | 누적 스캔과 움직이는 목표 | NoAccumulator 결과와 비교한다 |
+| Radar 반사점이 비현실적이다 | 모델·재질·FOV 불일치 | 위치·재질을 아는 표적과 비시각 재질을 본다 |
+| IMU가 반복값만 낸다 | 센서 주기가 물리 주기보다 빠름 | 물리 계산 간격과 센서 측정 주기를 비교한다 |
+| IMU 측정값이 유효하지 않다 | 강체 부모를 Play 중 변경 | Stop 후 계층을 고치고 다시 Play한다 |
+| 접촉 측정값이 유효하지 않다 | 충돌 형상·접촉 정보 없음 | 부모 충돌 형상과 임곗값을 본다 |
+| 힘·토크 측정값이 유효하지 않다 | 링크 경로를 지정함 | 실제 관절 prim 경로를 지정한다 |
+| 근접 데이터가 비어 있다 | 충돌 없음·Extension 미등록 | 충돌 형상/필터와 `register_sensor`를 본다 |
+| 사용자 정의 센서가 이전 장면의 값을 출력한다 | 구독·등록 목록 정리 누락 | 종료/초기화 경로를 시험한다 |
+| ROS에서만 보이지 않는다 | QoS·프레임·Bridge·발행 실행 조건 | `topic info --verbose`, TF, 주기를 본다 |
 
 ## 17. 완료 체크리스트
 
-- [ ] sensor prim이 올바른 rigid body·collider·mount 아래에 있다.
-- [ ] extrinsic, quaternion order, ROS optical frame을 검증했다.
-- [ ] physics/capture/publish rate를 각각 측정했다.
-- [ ] calibration manifest와 noise seed를 version control에 넣었다.
-- [ ] ground truth와 noisy output을 분리했다.
-- [ ] RTX sensor가 `OmniLidar`·`OmniRadar` 5.1 workflow를 사용한다.
-- [ ] custom Extension이 reset·shutdown에서 callback을 정리한다.
-- [ ] ROS type, frame, timestamp, QoS, covariance contract를 검증했다.
-- [ ] headless acceptance test와 성능 기준을 통과했다.
+- [ ] 센서 prim이 올바른 강체·충돌 형상·장착부 아래에 있다.
+- [ ] 외부 파라미터, 쿼터니언 성분 순서, ROS 광학 프레임을 검증했다.
+- [ ] 물리 계산·촬영·발행 주기를 각각 측정했다.
+- [ ] 보정 설정 파일과 잡음 난수 시드를 버전 관리에 포함했다.
+- [ ] 기준값과 잡음을 추가한 출력을 분리했다.
+- [ ] RTX 센서가 `OmniLidar`·`OmniRadar` 5.1 방식을 사용한다.
+- [ ] 사용자 정의 Extension이 초기화·종료에서 콜백을 정리한다.
+- [ ] ROS 메시지 형식, 프레임, 타임스탬프, QoS, 공분산 설정을 검증했다.
+- [ ] 화면 없이 실행하는 모드 검증 시험과 성능 기준을 통과했다.
 
 ## 출처
 

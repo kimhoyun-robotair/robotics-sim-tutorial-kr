@@ -2,7 +2,7 @@
 
 이 장에서는 Ubuntu 24.04의 시스템 Jazzy와 Isaac Sim 5.1의 내장 Jazzy를 충돌 없이 구성하고, `/clock` 메시지로 연결을 검증한다.
 
-## 1. 시스템 ROS 2 Jazzy를 설치하다
+## 1. 시스템 ROS 2 Jazzy를 설치한다
 
 이미 설치되어 있다면 먼저 확인한다.
 
@@ -23,7 +23,7 @@ sudo add-apt-repository -y universe
 sudo apt update
 ```
 
-ROS apt source 패키지를 설치한 뒤 Jazzy Desktop과 개발 도구를 설치한다.
+ROS apt 저장소 설정 패키지를 설치한 뒤 Jazzy Desktop과 개발 도구를 설치한다.
 
 ```bash
 ROS_APT_SOURCE_VERSION=$(curl -s \
@@ -47,9 +47,9 @@ ros2 doctor --report | sed -n '1,80p'
 
 Ubuntu 24.04의 시스템 Python은 3.12이다. 이는 정상이다.
 
-## 2. Isaac Sim의 내장 Jazzy를 사용하다
+## 2. Isaac Sim의 내장 Jazzy를 사용한다
 
-새 터미널에서 `/opt/ros/jazzy/setup.bash`를 source하지 않고 실행한다.
+새 터미널에서 `/opt/ros/jazzy/setup.bash`를 불러오지 않고 실행한다. `.bashrc`가 ROS를 자동으로 불러온다면 새 창도 이미 ROS 환경이다. 이 경우 [ROS 전용 환경 분리](01-bridge-and-qos.md)의 깨끗한 셸을 먼저 연다.
 
 ```bash
 env | grep -E '^(ROS_DISTRO|AMENT_PREFIX_PATH|PYTHONPATH)=' || true
@@ -71,7 +71,7 @@ export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}${ISAAC_SIM_PATH}/e
 
 `LD_LIBRARY_PATH`를 반복해서 덧붙이지 않는다. Bridge 콘솔 로그에 `/opt/ros/jazzy/lib/python3.12`가 나타나면 시스템 ROS 환경이 Isaac Sim 프로세스에 섞인 것이다.
 
-## 3. 외부 ROS 터미널을 준비하다
+## 3. 외부 ROS 터미널을 준비한다
 
 별도 터미널에서 다음을 실행한다.
 
@@ -84,22 +84,27 @@ printenv | grep -E '^(ROS_DISTRO|RMW_IMPLEMENTATION|ROS_DOMAIN_ID)='
 
 Isaac Sim을 실행한 환경과 외부 노드의 `ROS_DOMAIN_ID`가 같아야 한다. Domain ID는 같은 물리 네트워크 위에 논리적으로 분리된 ROS 그래프를 만든다.
 
-## 4. 공식 ROS 워크스페이스를 빌드하다
+## 4. 공식 ROS 워크스페이스를 빌드한다
 
 NVIDIA가 제공하는 launch 파일, Nav2 구성, MoveIt 구성, 예제 메시지를 사용한다.
 
 ```bash
 cd ~
-git clone https://github.com/isaac-sim/IsaacSim-ros_workspaces.git
+git clone --branch IsaacSim-5.1.0 --single-branch \
+  https://github.com/isaac-sim/IsaacSim-ros_workspaces.git
 cd IsaacSim-ros_workspaces
 git submodule update --init --recursive
+git rev-parse HEAD
 ```
 
-Jazzy 워크스페이스의 의존성을 설치하고 빌드한다.
+이 과정은 공식 `IsaacSim-5.1.0` 태그를 사용한다. 확인한 커밋은 `50de00358f220d790d17050c6368cfe9a9cb9f51`이다. 새로 실습할 때는 이 버전을 별도 폴더에 받는다. 이미 사용 중인 다른 워크스페이스를 덮어쓰거나 최신 기본 브랜치로 갱신하지 않는다.
+
+Jazzy 워크스페이스의 의존성을 설치하고 빌드한다. `rosdep`을 처음 설치했다면 `sudo rosdep init`을 한 번 실행한다. 이미 초기화되어 있다는 메시지가 나오면 다시 초기화하지 않고 다음 명령으로 진행한다.
 
 ```bash
 source /opt/ros/jazzy/setup.bash
 cd ~/IsaacSim-ros_workspaces/jazzy_ws
+rosdep update
 rosdep install -i --from-path src --rosdistro jazzy -y
 colcon build --symlink-install --event-handlers console_cohesion+
 source install/local_setup.bash
@@ -118,15 +123,15 @@ ros2 pkg list | grep -E '^(isaacsim|isaac_moveit|carter_navigation)$'
 colcon list | sed -n '1,80p'
 ```
 
-## 5. `/clock`으로 Bridge를 검증하다
+## 5. `/clock`으로 Bridge를 검증한다
 
-빈 Stage에는 publisher가 없으므로 `ros2 topic list`가 비어 있어도 Bridge 실패가 아니다. 다음 그래프를 만든다.
+빈 Stage에는 발행 노드가 없으므로 `ros2 topic list`가 비어 있어도 Bridge 실패가 아니다. 다음 그래프를 만든다.
 
 1. `Window > Graph Editors > Action Graph`에서 `/World/ROS2_Clock` 그래프를 생성한다.
 2. `On Playback Tick`, `ROS 2 Context`, `Isaac Read Simulation Time`, `ROS 2 Publish Clock`을 추가한다.
 3. `tick → execIn`, `context → context`, `simulationTime → timeStamp`를 연결한다.
 4. `ROS 2 Context`의 `Use Domain ID Env Var`를 켠다.
-5. Timeline에서 Play를 누른다.
+5. `File > Save As`로 Stage를 저장한 다음 Timeline에서 Play를 누른다.
 
 메뉴 단축 경로 `Tools > Robotics > ROS 2 OmniGraphs > Clock`을 사용해도 된다.
 
@@ -142,7 +147,7 @@ ros2 topic echo /clock --once
 
 `rosgraph_msgs/msg/Clock` 메시지가 한 번 출력되면 기본 연결이 완료된 것이다.
 
-## 6. Standalone에서 Bridge를 활성화하다
+## 6. Standalone에서 Bridge를 활성화한다
 
 Standalone 스크립트에서는 `SimulationApp`을 먼저 만들고 그 뒤에 확장을 활성화한다.
 
@@ -194,6 +199,8 @@ ros2 topic echo /clock --once
 - [ ] `isaacsim.ros2.bridge`가 활성화되었다.
 - [ ] 공식 `jazzy_ws`를 빌드했다.
 - [ ] `/clock`을 외부 터미널에서 수신했다.
+
+설치 절차와 Python 버전 구분은 [NVIDIA 5.1.0 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html), 워크스페이스 버전은 [공식 5.1.0 태그](https://github.com/isaac-sim/IsaacSim-ros_workspaces/tree/IsaacSim-5.1.0)를 기준으로 한다.
 
 ## 출처
 

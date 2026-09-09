@@ -39,16 +39,16 @@ usdview --help
 usdchecker --help
 ~~~
 
-이 장의 옵션은 OpenUSD 공식 Toolset을 기준으로 한다. Isaac Sim 또는 별도 OpenUSD 빌드에 포함된 도구의 실제 플래그가 다르면 설치본의 --help가 우선한다.
+이 장의 옵션은 OpenUSD 공식 Toolset을 기준으로 한다. Isaac Sim 또는 별도 OpenUSD 빌드에 포함된 도구의 실제 플래그가 다르면 설치본의 `--help`가 우선한다. `openusd.org/release`는 최신 문서이므로 Isaac Sim 5.1에 포함된 OpenUSD 버전과 같다고 가정하지 않는다.
 
 ## 주요 명령행 도구 한눈에 보기
 
 | 도구 | 목적 | 자주 쓰는 예 |
 |---|---|---|
 | usdcat | 내용을 텍스트로 출력하고 인코딩·flatten 결과를 저장한다 | usdc→usda, Stage flatten |
-| usdview | Hydra 뷰포트와 장면 그래프로 대화형 검사한다 | Prim 선택, Payload 미로딩 검사 |
+| usdview | Hydra 뷰포트와 장면 그래프로 대화형 검사한다 | Prim 선택, Payload를 제외한 장면 검사 |
 | usdchecker | USD·USDZ 규칙과 교환 적합성을 검증한다 | CI 유효성 검사 |
-| usddiff | 두 USD-readable 파일을 텍스트화해 비교한다 | 변경 전후, 합성 결과 비교 |
+| usddiff | USD 도구가 읽을 수 있는 두 파일을 텍스트화해 비교한다 | 변경 전후, 합성 결과 비교 |
 | usdtree | Prim 트리를 터미널에 표시한다 | Headless 구조 확인 |
 | usdresolve | Asset Resolver가 경로를 어떻게 해석하는지 확인한다 | Reference·Texture 경로 진단 |
 | usdzip | USDZ를 생성하고 목록·내용을 검사한다 | 의존 자산 패키징 |
@@ -110,7 +110,7 @@ usdview warehouse.usd --unloaded
 usdview warehouse.usd --mask /World/Robot
 ~~~
 
---unloaded는 Payload를 불러오지 않은 상태를 검사할 때 유용하다. --mask는 지정 Prim과 조상·자손만 population해 대형 장면의 문제 범위를 줄인다.
+--unloaded는 Payload를 불러오지 않은 상태를 검사할 때 유용하다. --mask는 지정 Prim과 부모·자식 Prim만 불러와 대형 장면의 문제 범위를 줄인다.
 
 다음 항목을 확인한다.
 
@@ -158,7 +158,7 @@ usddiff -f before.usd after.usd
 
 기본 비교와 -f 비교는 질문이 다르다.
 
-- 기본 비교는 Layer에 실제로 저작된 구조의 차이를 찾는다.
+- 기본 비교는 Layer에 직접 기록된 구조의 차이를 찾는다.
 - -f 비교는 composition을 평가한 최종 장면의 차이를 찾는다.
 
 usddiff는 부동소수점 허용오차를 적용하지 않는다. 1.0과 1.0000001도 차이로 보고한다. 물리 수치 회귀 테스트는 pxr로 값을 읽어 numpy tolerance를 적용하는 별도 테스트를 작성한다.
@@ -193,7 +193,7 @@ usdresolve ./assets/robot.usd
 usdresolve --anchorPath /project/scenes/world.usd ../assets/robot.usd
 ~~~
 
-셸의 realpath가 성공해도 USD의 Resolver context나 Nucleus URI가 다르면 결과가 달라질 수 있다. Reference를 저작한 Layer의 위치를 anchor로 생각한다.
+셸의 realpath가 성공해도 USD의 Resolver context나 Nucleus URI가 다르면 결과가 달라질 수 있다. 상대 경로는 Reference를 기록한 Layer의 파일 위치를 기준으로 해석한다.
 
 ## usdzip
 
@@ -291,11 +291,14 @@ print("saved:", stage.GetRootLayer().realPath)
 ~~~
 
 ~~~bash
+# OpenUSD가 설치된 별도 Python 환경에서 실행한다.
 python create_scene.py
 usdcat scene.usda
 usdchecker scene.usda
 usdview scene.usda
 ~~~
+
+Isaac Sim 번들 Python을 쓴다면 `~/isaacsim/python.sh /절대/경로/create_scene.py`로 실행한다. 파일이 생성되면 **File > Open**으로 `scene.usda`를 연다. 이 예제는 USD 파일의 구조를 익히는 단계라 바닥과 Physics Scene을 만들지 않는다. 물리 실행은 뒤의 [시뮬레이션 기초](../02-getting-started/05-first-scene-and-physics.md)에서 준비한다.
 
 Isaac Sim에서 실행할 때는 다음처럼 현재 Stage를 얻을 수도 있다.
 
@@ -345,17 +348,17 @@ if not prim.IsValid():
 ~~~python
 from pxr import Gf, Sdf, Usd, UsdGeom
 
-stage = Usd.Stage.Open("scene.usda")
+stage = Usd.Stage.CreateNew("scene_override.usda")
 root = stage.GetRootLayer()
+root.subLayerPaths.append("./scene.usda")
 session = stage.GetSessionLayer()
-overlay = Sdf.Layer.CreateNew("scene_override.usda")
 
-# Sublayer 목록의 앞쪽에 추가해 기존 Sublayer보다 강하게 둔다.
-root.subLayerPaths.insert(0, overlay.identifier)
-
-with Usd.EditContext(stage, overlay):
+# 새 Root Layer가 원본 scene.usda의 값보다 우선한다.
+with Usd.EditContext(stage, root):
     cube = UsdGeom.Xformable.Get(stage, "/World/Cube")
-    cube.AddTranslateOp(opSuffix="experiment").Set(Gf.Vec3d(1.0, 0.0, 0.0))
+    if not cube:
+        raise RuntimeError("scene.usda의 /World/Cube를 찾을 수 없다")
+    cube.GetPrim().GetAttribute("xformOp:translate").Set(Gf.Vec3d(1.0, 0.0, 0.10))
 
 print("edit target:", stage.GetEditTarget().GetLayer().identifier)
 print("root:", root.identifier)
@@ -364,11 +367,13 @@ print("used layers:")
 for layer in stage.GetUsedLayers():
     print(" -", layer.identifier)
 
-overlay.Save()
 root.Save()
+position = UsdGeom.XformCache().GetLocalToWorldTransform(cube.GetPrim()).ExtractTranslation()
+assert Gf.IsClose(position, Gf.Vec3d(1.0, 0.0, 0.10), 1e-9)
+print("수정한 위치:", position)
 ~~~
 
-Layer가 저장되었어도 Root Layer의 subLayerPaths 변경을 저장하지 않으면 다음 실행에서 연결이 사라진다.
+`scene_override.usda`를 열면 상자가 X축으로 1 m 이동하고, 원본 `scene.usda`는 그대로 남는다. 새 값을 기존 Root Layer 아래 Sublayer에 쓰면 원본에 이미 있는 값이 우선할 수 있다. 위치가 바뀌지 않을 때는 코드 실행 여부와 함께 Layer의 우선순위를 확인한다.
 
 ## 실습 4: Reference, Payload, Variant
 
@@ -384,9 +389,16 @@ body = UsdGeom.Cube.Define(asset, "/Robot/Body")
 body.CreateSizeAttr(0.4)
 body.CreateDisplayColorAttr([Gf.Vec3f(0.3, 0.3, 0.3)])
 asset.GetRootLayer().Save()
+
+# Payload 실습의 대상도 미리 만든다. 파일 누락 오류 없이 로딩 차이를 볼 수 있다.
+zone = Usd.Stage.CreateNew("heavy_zone.usd")
+zone_root = UsdGeom.Xform.Define(zone, "/Zone")
+zone.SetDefaultPrim(zone_root.GetPrim())
+UsdGeom.Cube.Define(zone, "/Zone/StorageBox").CreateSizeAttr(1.0)
+zone.GetRootLayer().Save()
 ~~~
 
-Reference와 Payload, Variant를 저작한다.
+Reference와 Payload, Variant를 추가한다.
 
 ~~~python
 from pxr import Gf, Usd, UsdGeom
@@ -414,7 +426,7 @@ tool_set.SetVariantSelection("short")
 stage.GetRootLayer().Save()
 ~~~
 
-Payload를 제외하고 열어 working set을 제어한다.
+Payload를 제외하고 열어 메모리에 불러올 장면 범위를 조절한다.
 
 ~~~python
 from pxr import Usd
@@ -423,10 +435,12 @@ stage = Usd.Stage.Open("composed_scene.usda", load=Usd.Stage.LoadNone)
 print("loaded:", stage.GetLoadSet())
 
 stage.Load("/World/HeavyZone")
+assert stage.GetPrimAtPath("/World/HeavyZone/StorageBox")
+print("Payload를 불러온 뒤:", stage.GetLoadSet())
 stage.Unload("/World/HeavyZone")
 ~~~
 
-heavy_zone.usd가 아직 없으면 Load할 때 오류가 나는 것이 정상이다. 이 실습은 Payload arc 자체와 대상 로드 실패를 구분하는 연습이다.
+처음에는 `StorageBox`를 조회할 수 없고, `stage.Load()` 뒤에는 조회할 수 있어야 한다. 파일을 찾지 못했다는 경고가 나오면 첫 번째 코드가 `heavy_zone.usd`를 같은 디렉터리에 저장했는지 확인한다.
 
 ## 실습 5: Instancing과 XformCache
 
@@ -453,7 +467,7 @@ stage.GetRootLayer().Save()
 
 반복문 안에서 매번 새 XformCache를 만들지 않는다. 시간 코드가 바뀌면 cache.SetTime()을 호출하거나 새 cache를 구성한다.
 
-## 시간 샘플을 저작한다
+## 시간에 따른 값을 기록하기
 
 ~~~python
 from pxr import Gf, Usd, UsdGeom
@@ -471,7 +485,7 @@ stage.SetTimeCodesPerSecond(60)
 stage.GetRootLayer().Save()
 ~~~
 
-USD의 timeCode는 반드시 초와 같지 않다. timeCodesPerSecond 메타데이터로 시간 축의 의미를 정한다. Isaac Sim의 물리 시뮬레이션 상태를 매 프레임 USD에 저작하면 성능이 크게 저하될 수 있으므로 기록 목적과 빈도를 설계한다.
+USD의 timeCode는 반드시 초와 같지 않다. timeCodesPerSecond 메타데이터로 시간 축의 의미를 정한다. Isaac Sim의 물리 시뮬레이션 상태를 매 프레임 USD에 기록하면 성능이 크게 저하될 수 있으므로 기록 목적과 빈도를 설계한다.
 
 ## C++ 최소 예제
 
@@ -541,7 +555,7 @@ Isaac Sim Extension용 C++ 플러그인은 독립 OpenUSD 앱과 빌드·ABI 조
 
 ### ModuleNotFoundError: No module named pxr
 
-OpenUSD Python 바인딩이 현재 interpreter에 설치·노출되지 않은 것이다. Isaac Sim 작업이면 python.sh 또는 같은 pip 가상환경을 사용한다. 독립 OpenUSD 빌드라면 Python 지원을 켰는지와 PYTHONPATH를 확인한다.
+현재 Python에서 OpenUSD 바인딩을 찾지 못한 것이다. Isaac Sim 작업이면 python.sh 또는 같은 pip 가상환경을 사용한다. 독립 OpenUSD 빌드라면 Python 지원을 켰는지와 PYTHONPATH를 확인한다.
 
 ### ModuleNotFoundError: No module named omni
 
@@ -562,7 +576,7 @@ simulation_app.close()
 
 ### 파일은 열리지만 Reference가 비어 있다
 
-- Reference 경로가 이를 저작한 Layer 기준으로 해석되는지 확인한다.
+- Reference 경로가 이를 기록한 Layer 기준으로 해석되는지 확인한다.
 - 대상 자산의 defaultPrim을 확인한다.
 - usdresolve와 usdview composition 정보를 사용한다.
 - Nucleus URI라면 연결과 인증을 확인한다.
@@ -572,9 +586,9 @@ simulation_app.close()
 - 현재 Edit Target이 Session Layer인지 확인한다.
 - 실제 변경된 Layer에 Save를 호출한다.
 - 익명 Layer라면 Export하거나 파일 기반 Layer로 옮긴다.
-- instance proxy 내부에 저작하려고 하지 않았는지 확인한다.
+- instance proxy 내부를 직접 수정하려고 하지 않았는지 확인한다.
 
-### usdchecker는 통과하지만 Isaac Sim에서 이상하다
+### usdchecker는 통과하지만 Isaac Sim 동작이 이상하다
 
 USD 문법·교환 검증과 PhysX 물리 검증은 다르다. Stage 단위, up axis, CollisionAPI, RigidBodyAPI, MassAPI, Articulation root, Joint body 관계를 Isaac Sim에서 확인한다.
 

@@ -1,18 +1,18 @@
 # Lula, RMPflow와 궤적 생성
 
-이 장에서는 “말단을 이 pose로 보내라”라는 요구를 실제 joint 명령으로 바꾸는 계층을 다룬다. Isaac Sim 5.1의 motion generation은 하나의 만능 planner가 아니라 kinematics, trajectory generator, path planner, motion policy와 articulation adapter를 조합하는 구조이다. 먼저 각 도구의 책임을 구분하고, Franka 예제로 IK와 RMPflow를 실행한 다음 custom robot에 적용한다.
+이 장에서는 “말단을 이 자세로 보내라”라는 요구를 실제 관절 명령으로 바꾸는 계층을 다룬다. Isaac Sim 5.1은 운동학 계산, 궤적 생성, 경로 계획, 반응형 동작 정책과 articulation 연결 기능을 조합해 로봇의 동작을 만든다. 먼저 각 도구의 책임을 구분하고, Franka 예제로 IK와 RMPflow를 실행한 다음 사용자 로봇에 적용한다.
 
 ## 1. 문제에 맞는 알고리즘 고르기
 
 | 도구 | 입력 | 출력 | 장애물 | 시간 정보 | 주 용도 |
 |---|---|---|---|---|---|
-| Lula FK | joint position | frame pose | 고려하지 않음 | 없음 | 상태 검증, 시각화 |
-| Lula IK | 목표 frame pose와 초기 joint 상태 | joint position | 기본적으로 고려하지 않음 | 없음 | 도달 가능한 자세 찾기 |
-| Lula trajectory generator | c-space 또는 task-space waypoint | 시간에 따른 trajectory | 고려하지 않음 | 있음 | 매끄러운 실행 궤적 만들기 |
-| Lula RRT | 시작 상태, 목표 pose, 등록한 장애물 | 충돌을 피하는 sparse path | planning 시 반영 | 직접 제공하지 않음 | 복잡한 정적 환경의 전역 경로 찾기 |
-| RMPflow | 현재 robot 상태, 목표 pose, 등록한 장애물 | 다음 joint position/velocity target | 매 step 반응 | 다음 제어 step | 움직이는 목표·장애물에 반응하기 |
+| Lula FK | 관절 위치 | 프레임 자세 | 고려하지 않음 | 없음 | 상태 검증, 시각화 |
+| Lula IK | 목표 프레임 자세와 초기 관절 상태 | 관절 위치 | 기본적으로 고려하지 않음 | 없음 | 도달 가능한 자세 찾기 |
+| Lula 궤적 생성기 | 관절 공간 또는 작업 공간의 경유점 | 시간에 따른 궤적 | 고려하지 않음 | 있음 | 매끄러운 실행 궤적 만들기 |
+| Lula RRT | 시작 상태, 목표 자세, 등록한 장애물 | 충돌을 피하는 성긴 경유점 경로 | 경로 계획 시 반영 | 직접 제공하지 않음 | 복잡한 정적 환경의 전역 경로 찾기 |
+| RMPflow | 현재 로봇 상태, 목표 자세, 등록한 장애물 | 다음 관절 위치/속도 목표 | 매 스텝 반응 | 다음 제어 스텝 | 움직이는 목표·장애물에 반응하기 |
 
-IK가 성공했다는 사실은 시작 자세에서 목표 자세까지 충돌 없이 갈 수 있다는 뜻이 아니다. RRT path도 그대로 실행하면 시간 최적이거나 매끄럽다는 보장이 없다. 흔히 다음처럼 조합한다.
+IK가 성공했다는 사실은 시작 자세에서 목표 자세까지 충돌 없이 갈 수 있다는 뜻이 아니다. RRT 경로도 그대로 실행하면 시간 최적이거나 매끄럽다는 보장이 없다. 흔히 다음처럼 조합한다.
 
 ```mermaid
 flowchart TD
@@ -23,19 +23,19 @@ flowchart TD
     E --> D
 ```
 
-좁은 통로를 찾아야 하면 RRT 같은 global planner를 먼저 고려한다. 목표나 작업자 위치가 계속 바뀌면 RMPflow가 유리하다. 안전이 중요한 실제 장비에는 어느 쪽도 단독 safety controller로 사용하지 않는다.
+좁은 통로를 찾아야 하면 RRT 같은 전역 경로 계획기를 먼저 고려한다. 목표나 작업자 위치가 계속 바뀌면 RMPflow가 유리하다. 안전이 중요한 실제 장비에는 어느 쪽도 단독 안전 제어기로 사용하지 않는다.
 
-## 2. motion generation의 데이터 계약
+## 2. 동작 생성에 필요한 데이터와 규칙
 
-### frame과 단위
+### 프레임과 단위
 
-- 위치는 stage 단위이며 이 튜토리얼은 `metersPerUnit=1`, 즉 meter를 사용한다.
-- joint angle은 radian, 각속도는 `rad/s`를 사용한다.
-- Isaac Sim Core API의 quaternion은 보통 scalar-first `[w, x, y, z]`이다.
-- 목표 pose의 frame과 `end_effector_frame_name`은 URDF에 실제로 존재해야 한다.
-- world 좌표 목표를 사용할 때 robot base가 움직였다면 solver에 최신 base pose를 전달한다.
+- 위치는 stage 단위이며 이 튜토리얼은 `metersPerUnit=1`, 즉 미터를 사용한다.
+- 관절각은 라디안, 각속도는 `rad/s`를 사용한다.
+- Isaac Sim Core API의 쿼터니언은 보통 스칼라 우선 `[w, x, y, z]`이다.
+- 목표 자세의 프레임과 `end_effector_frame_name`은 URDF에 실제로 존재해야 한다.
+- 월드 좌표계의 목표를 사용할 때 로봇 베이스가 움직였다면 솔버에 최신 베이스 자세를 전달한다.
 
-동일한 “tool tip”이라도 USD prim 이름, URDF link 이름, ROS TF frame 이름이 다를 수 있다. 문자열이 비슷하다고 추측하지 말고 solver가 인식하는 frame을 출력한다.
+동일한 “도구 끝점”이라도 USD prim 이름, URDF 링크 이름, ROS TF 프레임 이름이 다를 수 있다. 문자열이 비슷하다고 추측하지 말고 솔버가 인식하는 프레임을 출력한다.
 
 ```python
 print(kinematics_solver.get_all_frame_names())
@@ -44,20 +44,20 @@ assert "right_gripper" in kinematics_solver.get_all_frame_names()
 
 ### 필요한 설정 파일
 
-Lula 기반 알고리즘은 USD articulation만 보고 kinematics와 collision model을 자동 추론하지 않는다.
+Lula 기반 알고리즘은 USD articulation만 보고 운동학과 충돌 모델을 자동으로 추론하지 않는다.
 
 | 파일 | 담는 정보 | 사용하는 기능 |
 |---|---|---|
-| URDF | link/joint tree, frame, joint limit | FK, IK, RMPflow, RRT, trajectory |
-| robot description YAML 또는 XRDF | active c-space joints, default posture, collision sphere | Lula 계열 |
-| RMPflow YAML | attractor, damping, collision avoidance weight 등 | RMPflow |
-| RRT YAML | step size, iteration, sampling 영역과 tolerance | RRT |
+| URDF | 링크·관절 트리, 프레임, 관절 제한 | FK, IK, RMPflow, RRT, 궤적 생성 |
+| 로봇 설명 YAML 또는 XRDF | 제어할 관절, 기본 자세, 충돌 구 | Lula 계열 |
+| RMPflow YAML | 목표 유인력, 감쇠, 충돌 회피 가중치 등 | RMPflow |
+| RRT YAML | 스텝 크기, 반복 횟수, 샘플링 영역과 허용 오차 | RRT |
 
-Stage의 robot에 gripper나 tool을 조립했다면 motion generation용 URDF에도 tool offset과 필요한 joint를 반영한다. Stage만 조립하고 arm 단독 URDF를 계속 쓰면 보이는 tool tip과 planner의 end effector가 어긋난다.
+Stage의 로봇에 그리퍼나 도구를 조립했다면 동작 생성용 URDF에도 도구 오프셋과 필요한 관절을 반영한다. Stage만 조립하고 로봇 팔 단독 URDF를 계속 쓰면 화면에 보이는 도구 끝점과 경로 계획기가 사용하는 말단 위치가 어긋난다.
 
 ## 3. 제공 설정을 먼저 확인하기
 
-지원 robot은 이름으로 설정을 불러오는 편이 경로를 직접 조합하는 것보다 안전하다. 다음 코드는 Kit이 이미 실행 중인 Script Editor에서 실행하거나, Standalone의 `SimulationApp` 생성 뒤 import한다.
+지원 로봇은 이름으로 설정을 불러오는 편이 경로를 직접 조합하는 것보다 안전하다. 다음 코드는 Kit가 이미 실행 중인 Script Editor에서 실행하거나, Standalone의 `SimulationApp` 생성 뒤에 실행한다.
 
 ```python
 from isaacsim.robot_motion.motion_generation.interface_config_loader import (
@@ -76,11 +76,11 @@ print(ik_config)
 print(rmp_config)
 ```
 
-5.1 문서의 지원 목록은 해당 릴리스에 고정된 값이다. 다른 Isaac Sim 버전의 robot 이름을 그대로 가져오지 않는다.
+5.1 문서의 지원 목록은 해당 릴리스에 고정된 값이다. 다른 Isaac Sim 버전의 로봇 이름을 그대로 가져오지 않는다.
 
 ## 4. Lula FK와 IK 실습
 
-다음을 `franka_lula_ik.py`로 저장한다. 이 예제는 solver가 반환한 성공 flag를 확인한 뒤에만 action을 보낸다.
+다음을 `franka_lula_ik.py`로 저장한다. 이 예제는 솔버가 반환한 성공 여부를 확인한 뒤에만 동작을 보낸다.
 
 ```python
 from isaacsim import SimulationApp
@@ -159,18 +159,18 @@ cd ~/isaacsim
 ./python.sh /절대/경로/franka_lula_ik.py
 ```
 
-`compute_inverse_kinematics()`는 현재 articulation joint 상태를 warm start로 사용한다. 따라서 같은 목표라도 초기 자세에 따라 다른 해나 실패가 나올 수 있다. FK 결과의 회전은 rotation matrix이지만 target orientation은 quaternion이라는 차이도 주의한다.
+`compute_inverse_kinematics()`는 현재 articulation 관절 상태를 해를 찾기 위한 초기값으로 사용한다. 따라서 같은 목표라도 초기 자세에 따라 다른 해나 실패가 나올 수 있다. FK 결과의 회전은 회전 행렬이지만 목표 방향은 쿼터니언이라는 차이도 주의한다.
 
 ### 검증 포인트
 
-- `right_gripper`가 solver frame 목록에 나타나는가?
-- base pose를 바꾼 뒤에도 world 목표를 정확히 따라가는가?
+- `right_gripper`가 솔버 프레임 목록에 나타나는가?
+- 베이스 자세를 바꾼 뒤에도 월드 좌표계의 목표를 정확히 따라가는가?
 - 도달 불가능한 목표에서 `success=False`를 처리하는가?
-- position 오차뿐 아니라 orientation 오차도 별도로 측정하는가?
+- 위치 오차뿐 아니라 방향 오차도 별도로 측정하는가?
 
 ## 5. RMPflow로 움직이는 목표와 장애물 피하기
 
-RMPflow는 목표 attractor, posture policy와 collision avoidance 같은 여러 Riemannian Motion Policy를 결합해 다음 command를 계산한다. 모든 Stage collider를 자동으로 보는 것은 아니다. `add_obstacle()`로 등록한 Core API obstacle만 world model에 들어가며, 움직인 obstacle은 `update_world()`로 갱신한다.
+RMPflow는 목표로 이동하기, 자세 유지하기, 충돌 피하기 등의 Riemannian Motion Policy를 결합해 다음 명령을 계산한다. 모든 Stage 충돌 형상을 자동으로 보는 것은 아니다. `add_obstacle()`로 등록한 Core API 장애물만 환경 모델에 들어가며, 움직인 장애물은 `update_world()`로 갱신한다.
 
 다음을 `franka_rmpflow.py`로 저장한다.
 
@@ -259,46 +259,46 @@ finally:
     simulation_app.close()
 ```
 
-목표 cube는 visual-only라 obstacle로 등록하지 않는다. 파란 cube만 collision obstacle이다. obstacle prim을 GUI에서 움직이면 매 step의 `update_world()`가 새 pose를 읽어 경로를 바꾼다.
+목표 큐브는 위치를 표시하는 시각 형상이므로 장애물로 등록하지 않는다. 파란 큐브만 충돌 장애물이다. 장애물 prim을 GUI에서 움직이면 매 스텝의 `update_world()`가 새 자세를 읽어 경로를 바꾼다.
 
-### 이동 base에서의 순서
+### 이동 베이스에서의 순서
 
-arm이 AMR 위에 있다면 매 step 다음 순서를 유지한다.
+로봇 팔이 AMR 위에 있다면 매 스텝 다음 순서를 유지한다.
 
-1. base와 obstacle pose를 simulation에서 읽는다.
+1. 베이스와 장애물의 자세를 시뮬레이션에서 읽는다.
 2. `set_robot_base_pose()`를 호출한다.
 3. `update_world()`를 호출한다.
-4. 목표 pose를 설정하고 action을 계산한다.
-5. 같은 physics step에 action을 적용한다.
+4. 목표 자세를 설정하고 동작을 계산한다.
+5. 같은 물리 스텝에 동작을 적용한다.
 
-base pose를 최초 한 번만 설정하면 world와 solver의 좌표계가 점점 어긋난다.
+베이스 자세를 최초 한 번만 설정하면 월드 좌표계와 솔버의 좌표계가 점점 어긋난다.
 
 ## 6. RMPflow를 분리해서 디버깅하기
 
-RMPflow에는 collision model과 physics tracking 문제를 나누는 기능이 있다.
+RMPflow에는 충돌 모델과 실제 로봇의 목표 추종 문제를 나누는 기능이 있다.
 
 ```python
 rmpflow.visualize_collision_spheres()
 rmpflow.set_ignore_state_updates(True)
 ```
 
-`visualize_collision_spheres()`로 sphere가 link를 충분히 덮는지, tool과 gripper가 빠지지 않았는지 확인한다. `set_ignore_state_updates(True)`는 simulation의 실제 joint 상태를 무시하고 planner가 command를 완벽히 달성했다고 가정해 내부 path를 전개한다.
+`visualize_collision_spheres()`로 구가 링크를 충분히 덮는지, 도구와 그리퍼가 빠지지 않았는지 확인한다. `set_ignore_state_updates(True)`는 시뮬레이션의 실제 관절 상태를 무시하고 동작 생성기가 명령을 완벽히 달성했다고 가정해 내부 경로를 전개한다.
 
-- ghost path도 나쁘면 목표 frame, collision sphere, URDF 또는 RMPflow 설정 문제이다.
-- ghost path는 좋은데 실제 robot만 뒤처지면 drive gain, effort limit, physics timestep이나 payload 문제일 가능성이 크다.
+- 내부에서 계산한 경로도 잘못된다면 목표 프레임, 충돌 구, URDF 또는 RMPflow 설정 문제이다.
+- 내부 경로는 정상인데 실제 로봇만 뒤처진다면 드라이브 게인, 토크·힘 제한, 물리 시간 간격이나 적재물 문제일 가능성이 크다.
 
-진단 뒤에는 원래 모드로 되돌리고 reset한다.
+진단 뒤에는 원래 모드로 되돌리고 초기화한다.
 
 ```python
 rmpflow.set_ignore_state_updates(False)
 rmpflow.reset()
 ```
 
-collision sphere 시각화는 화면에 보이는 geometry이지 새로운 물리 collider가 아니다.
+충돌 구 시각화는 화면에 보이는 형상이지 새로운 물리 충돌 형상이 아니다.
 
-## 7. c-space와 task-space trajectory
+## 7. 관절 공간과 작업 공간의 궤적
 
-Lula trajectory generator는 waypoint를 spline으로 연결하고 robot description의 velocity, acceleration, jerk limit를 사용한다.
+Lula 궤적 생성기는 경유점을 스플라인으로 연결하고 로봇 설명 파일의 속도, 가속도, 저크 제한을 사용한다.
 
 ```python
 import numpy as np
@@ -339,9 +339,9 @@ for action in actions:
     world.step(render=True)
 ```
 
-위 조각은 앞선 Standalone 예제에서 `robot`과 `world`를 만든 뒤 넣는다. `ArticulationTrajectory`가 만든 action sequence는 지정한 `physics_dt` 간격으로 소비해야 한다. 60 Hz용 sequence를 120 Hz에서 한 frame마다 보내면 전체 동작 시간이 절반이 된다.
+위 조각은 앞선 Standalone 예제에서 `robot`과 `world`를 만든 뒤 넣는다. `ArticulationTrajectory`가 만든 명령열은 지정한 `physics_dt` 간격으로 순서대로 적용해야 한다. 60 Hz용 명령열을 120 Hz에서 한 프레임마다 보내면 전체 동작 시간이 절반이 된다.
 
-task-space waypoint는 다음 API를 사용한다.
+작업 공간의 경유점는 다음 API를 사용한다.
 
 ```python
 from isaacsim.robot_motion.motion_generation import LulaTaskSpaceTrajectoryGenerator
@@ -360,11 +360,11 @@ trajectory = task_generator.compute_task_space_trajectory_from_points(
 )
 ```
 
-task-space 선형 보간은 직관적인 EE path를 주지만 중간 pose마다 IK가 가능해야 한다. quaternion 부호가 달라도 같은 회전을 뜻할 수 있으므로 waypoint 사이 보간에서 불연속이 생기지 않는지도 확인한다.
+작업 공간 선형 보간은 직관적인 EE 경로를 주지만 중간 자세마다 IK가 가능해야 한다. 쿼터니언 부호가 달라도 같은 회전을 뜻할 수 있으므로 경유점 사이 보간에서 불연속이 생기지 않는지도 확인한다.
 
 ## 8. Lula RRT와 실행 궤적 연결하기
 
-RRT는 등록한 obstacle을 피하는 sparse c-space path를 만든다. 지원 robot의 설정은 loader로 가져온다.
+RRT는 등록한 장애물을 피하는 성긴 관절 공간 경로를 만든다. 지원 로봇의 설정은 설정 로딩 API로 가져온다.
 
 ```python
 from isaacsim.robot_motion.motion_generation import PathPlannerVisualizer
@@ -391,23 +391,23 @@ else:
         world.step(render=True)
 ```
 
-`PathPlannerVisualizer`의 선형 보간 결과는 빠른 시각 검증용이다. production 실행에서는 sparse RRT waypoint를 Lula trajectory generator로 시간 매개화하고, feedback으로 tracking 오차를 감시한다. 실행 중 obstacle이 움직였으면 기존 plan이 안전하다고 가정하지 말고 중지·재계획한다.
+`PathPlannerVisualizer`의 선형 보간 결과는 빠른 시각 검증용이다. 실제 작업에 사용할 때는 RRT의 경유점을 Lula 궤적 생성기에 넣어 시간에 따른 궤적으로 만들고, 피드백으로 추종 오차를 감시한다. 실행 중 장애물이 움직였다면 기존 경로를 그대로 실행하지 말고 멈춘 뒤 다시 계획한다.
 
-RRT의 주요 tuning 값은 `step_size`, `max_iterations`, sampling limit, distance metric weight와 task-space tolerance이다. iteration을 무작정 늘리기 전에 목표가 workspace 안에 있는지, collision sphere가 지나치게 큰지, 시작 상태가 이미 충돌인지 확인한다.
+RRT의 주요 조정값은 `step_size`, `max_iterations`, 샘플링 범위, 거리 지표 가중치와 작업 공간 허용 오차이다. 반복 횟수를 무작정 늘리기 전에 목표가 작업 공간 안에 있는지, 충돌 구가 지나치게 큰지, 시작 상태가 이미 충돌인지 확인한다.
 
-## 9. custom robot 설정 순서
+## 9. 사용자 로봇 설정 순서
 
-1. Robot Wizard 또는 importer로 USD articulation을 완성한다.
-2. joint name, axis, limit와 end-effector frame을 URDF와 USD 사이에서 대조한다.
-3. **Tools > Robotics > Lula Robot Description Editor** 또는 XRDF Editor에서 active c-space joints를 고른다.
-4. default c-space posture와 collision sphere를 만든다.
-5. FK로 각 frame pose를 USD와 대조한다.
+1. Robot Wizard 또는 가져오기 도구로 USD articulation을 완성한다.
+2. 관절 이름, 축, 제한과 end-effector 프레임을 URDF와 USD 사이에서 대조한다.
+3. **Tools > Robotics > Lula Robot Description Editor** 또는 XRDF Editor에서 제어할 관절을 고른다.
+4. 기본 관절 자세와 충돌 구를 만든다.
+5. FK로 각 프레임 자세를 USD와 대조한다.
 6. 가까운 목표부터 IK 성공 영역을 지도화한다.
-7. RMPflow에서 collision sphere를 시각화하고 obstacle 없는 상태를 시험한다.
-8. 큰 고정 obstacle, 움직이는 obstacle 순으로 추가한다.
-9. 마지막에 controller gain, effort limit와 payload를 포함해 physics tracking을 튜닝한다.
+7. RMPflow에서 충돌 구를 시각화하고 장애물이 없는 상태를 시험한다.
+8. 큰 고정 장애물, 움직이는 장애물 순으로 추가한다.
+9. 마지막에 제어기 게인, 토크·힘 제한과 적재물을 포함해 실제 물리 동작의 추종 성능을 조정한다.
 
-직접 설정할 때 `RmpFlow` constructor는 다음 다섯 값을 받는다.
+직접 설정할 때 `RmpFlow` 생성자는 다음 다섯 값을 받는다.
 
 ```python
 rmpflow = RmpFlow(
@@ -419,17 +419,17 @@ rmpflow = RmpFlow(
 )
 ```
 
-`maximum_substep_size`는 RMPflow 내부 Euler integration의 최대 간격이다. physics dt와 독립적이지만 지나치게 크면 내부 적분이 불안정해질 수 있고, 지나치게 작으면 계산량이 늘어난다.
+`maximum_substep_size`는 RMPflow 내부 오일러 적분의 최대 간격이다. 물리 dt와 독립적이지만 지나치게 크면 내부 적분이 불안정해질 수 있고, 지나치게 작으면 계산량이 늘어난다.
 
-### collision sphere 설계 원칙
+### 충돌 구 설계 원칙
 
-- link mesh 표면을 대략 덮되 과도하게 부풀리지 않는다.
-- 손목, tool, gripper finger처럼 환경과 먼저 닿는 부분을 빠뜨리지 않는다.
-- 인접 link sphere의 자기 충돌 관계와 gripper 열림 범위를 확인한다.
-- visual mesh가 아니라 실제 작업 중 가능한 모든 link pose를 기준으로 검증한다.
-- payload가 달라지면 collision geometry와 dynamics 설정을 함께 갱신한다.
+- 링크 메시 표면을 대략 덮되 과도하게 부풀리지 않는다.
+- 손목, 도구, 그리퍼 손가락처럼 환경과 먼저 닿는 부분을 빠뜨리지 않는다.
+- 인접 링크의 충돌 구의 자기 충돌 관계와 그리퍼 열림 범위를 확인한다.
+- 시각 메시가 아니라 실제 작업 중 가능한 모든 링크 자세를 기준으로 검증한다.
+- 적재물이 달라지면 충돌 형상과 동역학 설정을 함께 갱신한다.
 
-## 10. 제어 loop를 안정적으로 운영하기
+## 10. 제어 루프를 안정적으로 운영하기
 
 ```python
 while simulation_app.is_running():
@@ -442,39 +442,39 @@ while simulation_app.is_running():
     world.step(render=True)
 ```
 
-- planner update rate와 physics rate를 명시한다.
-- target이 거의 변하지 않으면 RRT를 매 frame 다시 실행하지 않는다.
-- RMPflow는 반응형이므로 obstacle과 target update를 누락하지 않는다.
-- reset 뒤 solver의 base pose, obstacle cache, trajectory index와 controller state를 함께 초기화한다.
-- IK/RRT/trajectory가 `None` 또는 실패를 반환했을 때 이전 action을 무기한 계속 보내지 않는다.
-- 목표 오차, minimum obstacle distance, planning time, joint limit margin을 로그로 남긴다.
+- 경로 계획기의 갱신 주기와 물리 주기를 명시한다.
+- 목표가 거의 변하지 않으면 RRT를 매 프레임 다시 실행하지 않는다.
+- RMPflow가 환경 변화에 반응할 수 있도록 장애물과 목표 자세를 계속 갱신한다.
+- 초기화 뒤 솔버의 베이스 자세, 장애물 캐시, 궤적 인덱스와 제어기 상태를 함께 초기화한다.
+- IK, RRT 또는 궤적 생성기가 `None` 또는 실패를 반환했을 때 이전 동작을 무기한 계속 보내지 않는다.
+- 목표 오차, 장애물까지의 최소 거리, 경로 계산 시간, 관절 제한까지의 여유을 로그로 남긴다.
 
 ## 11. cuRobo·cuMotion을 고려할 때
 
-Isaac Sim 5.1은 NVIDIA cuRobo/cuMotion 연동 예제도 제공한다. GPU에서 다수 query를 병렬 처리하거나 collision-aware planning throughput이 중요한 경우 후보가 된다. Lula와 API·설정·지원 GPU 요구가 다르므로 같은 이름의 “planner”로 치환하지 않는다. 먼저 한 robot, 한 scene에서 frame과 collision representation을 검증한 뒤 batch 규모를 늘린다.
+Isaac Sim 5.1은 NVIDIA cuRobo/cuMotion 연동 예제도 제공한다. GPU에서 여러 요청을 병렬 처리하거나 충돌을 고려한 경로 계획의 처리량이 중요할 때 검토할 수 있다. Lula와 API, 설정, 지원 GPU가 다르므로 그대로 교체할 수는 없다. 먼저 로봇 한 대와 장면 하나에서 좌표계와 충돌 모델을 검증한 뒤 실행 규모를 늘린다.
 
 ## 12. 실패 진단표
 
 | 증상 | 먼저 확인할 것 | 다음 조치 |
 |---|---|---|
-| IK가 항상 실패함 | EE frame, target 단위, base pose | 가까운 target과 다른 warm start 시험 |
-| IK는 성공하지만 충돌함 | IK는 path planner가 아님 | RRT/RMPflow와 collision model 추가 |
-| RMPflow가 obstacle을 통과함 | `add_obstacle`, `update_world` | collision sphere와 obstacle shape 시각화 |
-| ghost path는 좋은데 robot이 뒤처짐 | drive gain, effort limit, dt | payload·damping·solver iteration 튜닝 |
-| RRT가 오래 멈춤 | 시작/목표 collision, iteration | sampling limit·metric·tolerance 조정 |
-| trajectory 속도가 틀림 | action sequence의 `physics_dt` | simulation rate와 소비 rate 일치 |
-| tool pose가 일정하게 offset됨 | assembled URDF, EE frame | tool transform과 robot description 재생성 |
+| IK가 항상 실패함 | EE 프레임, 목표 단위, 베이스 자세 | 가까운 목표와 다른 초기 관절 상태로 시험 |
+| IK는 성공하지만 충돌함 | IK는 경로를 계획하지 않음 | RRT/RMPflow와 충돌 모델 추가 |
+| RMPflow가 장애물을 통과함 | `add_obstacle`, `update_world` | 충돌 구와 장애물 형상 시각화 |
+| 내부 경로는 정상인데 로봇이 뒤처짐 | 드라이브 게인, 토크·힘 제한, dt | 적재물·감쇠·솔버 반복 횟수 조정 |
+| RRT가 오래 멈춤 | 시작·목표의 충돌 상태, 반복 횟수 | 샘플링 범위·거리 지표·허용 오차 조정 |
+| 궤적 실행 속도가 틀림 | 명령열의 `physics_dt` | 물리 주기와 명령 적용 주기 일치 |
+| 도구 자세에 일정한 오차가 남음 | 조립한 로봇의 URDF, 말단 프레임 | 도구 변환과 로봇 설명 파일 재생성 |
 
 ## 13. 검증 체크포인트
 
-- [ ] IK, trajectory, RRT, RMPflow의 책임 차이를 설명할 수 있다.
-- [ ] solver가 인식하는 EE frame을 출력하고 확인했다.
-- [ ] IK 실패 flag를 처리하고 FK로 결과 pose를 검증했다.
-- [ ] RMPflow에 obstacle과 robot base pose를 올바르게 갱신했다.
-- [ ] collision sphere와 ignore-state 모드로 planner와 physics 문제를 분리했다.
-- [ ] trajectory action의 생성 dt와 실행 dt를 일치시켰다.
-- [ ] RRT sparse path를 production trajectory로 오해하지 않는다.
-- [ ] custom robot의 USD, URDF, robot description과 tool offset이 일치한다.
+- [ ] IK, 궤적 생성, RRT, RMPflow의 책임 차이를 설명할 수 있다.
+- [ ] 솔버가 인식하는 EE 프레임을 출력하고 확인했다.
+- [ ] IK 실패 여부를 처리하고 FK로 결과 자세를 검증했다.
+- [ ] RMPflow에 장애물과 로봇 베이스 자세를 올바르게 갱신했다.
+- [ ] 충돌 구와 실제 상태를 무시하는 진단 모드로 경로 계획과 물리 문제를 분리했다.
+- [ ] 궤적 명령의 생성 dt와 실행 dt를 일치시켰다.
+- [ ] RRT가 만든 성긴 경유점 경로와 바로 실행할 수 있는 궤적을 구분한다.
+- [ ] 사용자 로봇의 USD, URDF, 로봇 설명 파일과 도구 오프셋이 일치한다.
 
 ## 출처
 

@@ -1,6 +1,6 @@
 # 커스텀 인터페이스, ROS 2 Launch와 Simulation Control
 
-이 장에서는 미리 준비된 카메라·조인트 노드를 넘어 임의의 메시지와 서비스를 Action Graph에 연결하고, Isaac Sim을 ROS 2에서 기동·제어하는 방법을 다룬다. 기준 환경은 Ubuntu 24.04, ROS 2 Jazzy, Isaac Sim 5.1.0이다.
+이 장에서는 미리 준비된 카메라·관절 노드를 넘어 임의의 메시지와 서비스를 Action Graph에 연결하고, Isaac Sim을 ROS 2에서 실행·제어하는 방법을 다룬다. 기준 환경은 Ubuntu 24.04, ROS 2 Jazzy, Isaac Sim 5.1.0이다.
 
 > **버전 경계**  
 > Isaac Sim 5.1의 내장 Python은 3.11이고 Ubuntu 24.04용 ROS 2 Jazzy는 Python 3.12를 사용한다. DDS로 통신하는 별도 ROS 프로세스는 문제가 없지만, Isaac Sim 프로세스 안에서 `rclpy`와 커스텀 Python 메시지를 import하려면 같은 패키지를 Python 3.11용으로 다시 빌드해야 한다.
@@ -14,7 +14,7 @@
 | 진행률·취소가 필요한 작업 | Action | 피드백과 취소를 지원한다 |
 | 임의 메시지를 그래프로 연결 | Generic Publisher/Subscriber | 메시지마다 전용 노드를 만들 필요가 없다 |
 | 임의 서비스를 그래프로 연결 | Generic Server/Client | `.srv` 정의에서 포트를 동적으로 만든다 |
-| 시뮬레이터 상태·월드·entity 제어 | Simulation Control | 표준 `simulation_interfaces`를 사용한다 |
+| 시뮬레이터 상태·월드·엔티티 제어 | Simulation Control | 표준 `simulation_interfaces`를 사용한다 |
 | 복잡한 계산·상태 머신 | 커스텀 Python OmniGraph 노드 | 상태와 수명 주기를 코드로 관리할 수 있다 |
 
 먼저 현재 환경이 인식하는 인터페이스를 확인한다.
@@ -37,18 +37,33 @@ ros2 interface show std_srvs/srv/SetBool
 | `messageSubfolder` | `msg` |
 | `messageName` | `Pose` |
 
-타입이 유효하면 노드의 포트가 자동으로 다시 구성된다. 중첩 메시지는 개별 포트로 펼쳐지고, 중첩 메시지 배열은 JSON 문자열을 담는 token 배열로 노출된다. 타입 변경만으로는 타임라인을 재생할 필요가 없다.
+타입이 유효하면 노드의 포트가 자동으로 다시 구성된다. 중첩 메시지는 개별 포트로 펼쳐지고, 중첩 메시지 배열은 JSON 문자열을 담는 토큰 배열로 노출된다. 타입 변경만으로는 타임라인을 재생할 필요가 없다.
 
 ### 2.1 큐브 자세 발행 실습
 
 1. `Create > Shape > Cube`로 `/World/Cube`를 만든다.
 2. `Window > Graph Editors > Action Graph`에서 그래프를 만든다.
 3. `On Playback Tick`, `ROS2 Context`, `Read Prim Attribute` 두 개, `ROS2 Publisher`를 추가한다.
-4. 두 `Read Prim Attribute`의 prim을 `/World/Cube`로 정하고 속성을 각각 `xformOp:translate`, `xformOp:orient`로 정한다.
-5. Publisher 타입은 `geometry_msgs/msg/Pose`, topic은 `/object_pose`로 정한다.
-6. 위치와 방향 출력을 Publisher의 position·orientation 포트에 연결한다.
+4. 큐브를 만든 직후 아래 Script Editor 코드를 실행해 위치·회전 속성 이름을 명시적으로 만든다. GUI 큐브는 `xformOp:rotateXYZ`를 사용할 수 있어 `xformOp:orient`가 처음부터 있다고 가정하면 안 된다. 두 `Read Prim Attribute`는 `/World/Cube`의 `xformOp:translate`, `xformOp:orient`를 읽도록 설정한다.
+5. Publisher 타입은 `geometry_msgs/msg/Pose`, 토픽은 `/object_pose`로 정한다.
+6. 위치와 방향 출력을 Publisher의 position·방향 포트에 연결한다.
 
-그래프를 재생하고 확인한다.
+이 예제는 물리를 적용하지 않은 정적 큐브의 속성 발행이다. Script Editor에서 다음을 한 번 실행한 뒤 그래프를 연결한다. `Read Prim Attribute`의 쿼터니언 성분 순서를 확인하고 ROS 메시지는 `x`, `y`, `z`, `w`에 맞춰 연결한다.
+
+```python
+import omni.usd
+from pxr import Gf, UsdGeom
+
+prim = omni.usd.get_context().get_stage().GetPrimAtPath("/World/Cube")
+if not prim.IsValid():
+    raise RuntimeError("먼저 /World/Cube를 만든다")
+xform = UsdGeom.Xformable(prim)
+xform.ClearXformOpOrder()
+xform.AddTranslateOp().Set(Gf.Vec3d(0.5, 0.0, 0.5))
+xform.AddOrientOp().Set(Gf.Quatf(1.0, 0.0, 0.0, 0.0))
+```
+
+이미 같은 이름의 xform 속성이 있는 큐브에는 이 코드를 반복 실행하지 않는다. 이 단계의 새 큐브에서만 사용한다. 움직이는 물리 강체의 상태를 읽는 실습에서는 렌더링용 USD 속성 대신 물리 상태 API를 사용해야 할 수 있다. 그래프를 재생하고 확인한다.
 
 ```bash
 ros2 topic info /object_pose --verbose
@@ -56,11 +71,11 @@ ros2 topic echo /object_pose --once
 ros2 topic hz /object_pose
 ```
 
-매 렌더 프레임마다 발행할 이유가 없다면 `Isaac Simulation Gate`를 넣어 발행 주기를 제한한다. 센서와 제어 주기를 독립적으로 설정하면 부하와 지연을 예측하기 쉽다.
+매 렌더링 프레임마다 발행할 이유가 없다면 `Isaac Simulation Gate`를 넣어 발행 주기를 제한한다. 센서와 제어 주기를 독립적으로 설정하면 부하와 지연을 예측하기 쉽다.
 
-### 2.2 JSON token 배열
+### 2.2 JSON 토큰 배열
 
-예를 들어 `geometry_msgs/msg/Polygon`의 `Point32[] points`는 다음과 같은 token 배열로 넣는다.
+예를 들어 `geometry_msgs/msg/Polygon`의 `Point32[] points`는 다음과 같은 토큰 배열로 넣는다.
 
 ```text
 [
@@ -83,7 +98,7 @@ Generic Server는 `ROS2 Service Server Request`와 `ROS2 Service Server Response
 
 - Request의 `serverHandle`을 Response의 `serverHandle`에 연결한다.
 - Request의 `onReceived`를 계산 노드로 연결하고, 계산 완료를 Response의 실행 입력에 연결한다.
-- 두 노드에 동일한 package/subfolder/name을 입력한다.
+- 두 노드에 동일한 패키지/subfolder/이름을 입력한다.
 - 응답은 요청을 받은 뒤에만 보낸다. 프레임 tick에서 응답을 무조건 호출하면 요청-응답 대응이 깨진다.
 
 `std_srvs/srv/SetBool` 예에서는 두 노드 모두 다음처럼 설정한다.
@@ -115,7 +130,7 @@ Generic Client도 `ROS2 Service Client Request`와 `ROS2 Service Client Response
 | `isaac_ros2_messages/srv/GetPrimAttribute` | 속성 한 개 읽기 |
 | `isaac_ros2_messages/srv/SetPrimAttribute` | 속성 한 개 쓰기 |
 
-호출하는 터미널에는 `isaac_ros2_messages`가 있는 워크스페이스를 source해야 한다. 속성 값은 **키가 없는 JSON 값**이다. 벡터·행렬·쿼터니언은 숫자 배열로 표현한다.
+호출하는 터미널에는 `isaac_ros2_messages`가 있는 워크스페이스를 불러와야 한다. 속성 값은 **키가 없는 JSON 값**이다. 벡터·행렬·쿼터니언은 숫자 배열로 표현한다.
 
 ```bash
 source ~/IsaacSim-ros_workspaces/jazzy_ws/install/setup.bash
@@ -135,7 +150,7 @@ ros2 service call /set_prim_attribute \
   "{path: /World/Cube, attribute: xformOp:translate, value: '[1.0, 2.0, 0.5]'}"
 ```
 
-이 기능은 빠른 실험과 원격 디버깅에 유용하지만, 임의 클라이언트가 물리·센서 속성을 바꾸면 재현성과 안전성이 무너질 수 있다. 제품 파이프라인에서는 허용 목록, namespace, 인증된 네트워크, 변경 로그를 둔다.
+이 기능은 빠른 실험과 원격 디버깅에 유용하지만, 임의 클라이언트가 물리·센서 속성을 바꾸면 재현성과 안전성이 무너질 수 있다. 제품 파이프라인에서는 허용 목록, 네임스페이스, 인증된 네트워크, 변경 로그를 둔다.
 
 ## 5. 커스텀 메시지의 이중 빌드
 
@@ -220,10 +235,11 @@ cd ~/IsaacSim-ros_workspaces
 ./build_ros.sh -d jazzy -v 24.04
 ```
 
-빌드가 끝나면 Isaac Sim을 Python 3.11 산출물을 source한 터미널에서 시작한다. 설치 경로는 실제 빌드 출력에 맞춘다.
+빌드가 끝나면 Isaac Sim을 Python 3.11 산출물을 불러온 터미널에서 시작한다. 설치 경로는 실제 빌드 출력에 맞춘다.
 
 ```bash
 source ~/IsaacSim-ros_workspaces/build_ws/jazzy/jazzy_ws/install/local_setup.bash
+source ~/IsaacSim-ros_workspaces/build_ws/jazzy/isaac_sim_ros_ws/install/local_setup.bash
 cd ~/isaacsim
 ./isaac-sim.sh
 ```
@@ -239,7 +255,7 @@ msg.battery_percent = 92.5
 print(msg)
 ```
 
-`ModuleNotFoundError`가 나면 패키지 정의 문제가 아니라 거의 항상 잘못된 Python ABI 산출물을 source한 것이다.
+`ModuleNotFoundError`가 나면 패키지 복사 누락, 빌드 실패, 두 번째 `local_setup.bash` 누락부터 확인한다. `.so` 파일의 Python 버전이나 심볼 오류가 나오면 Python 3.11/3.12 산출물이 섞였는지 확인한다. 에러 종류를 구분해야 필요한 부분만 고칠 수 있다.
 
 ## 6. 커스텀 Python OmniGraph 노드
 
@@ -331,12 +347,12 @@ class OgnRos2HealthMonitor:
         return True
 ```
 
-`spin_once`에 긴 timeout을 주면 렌더·물리 thread가 멈춘다. 콜백에서는 값만 저장하고 무거운 계산은 별도 worker나 그래프 후단에서 처리한다. topic 이름이 바뀌면 기존 subscription을 해제하고 다시 만드는 로직도 넣어야 한다.
+`spin_once`에 긴 타임아웃을 주면 렌더·물리 스레드가 멈춘다. 콜백에서는 값만 저장하고 무거운 계산은 별도 작업 스레드나 그래프 후단에서 처리한다. 토픽 이름이 바뀌면 기존 구독을 해제하고 다시 만드는 로직도 넣어야 한다.
 
 > **C++ 주의**  
 > Isaac Sim 5.1의 공식 “Custom C++ OmniGraph Node” ROS 튜토리얼은 Linux + ROS 2 Humble만을 지원한다고 명시한다. 이 장의 Ubuntu 24.04 + Jazzy 기준에서는 그 예제를 그대로 빌드하지 않고 Python OGN 또는 외부 Jazzy 노드와 DDS 통신을 사용한다.
 
-## 7. ROS 2 Launch로 Isaac Sim 기동하기
+## 7. ROS 2 Launch로 Isaac Sim 실행하기
 
 공식 ROS 워크스페이스의 `isaacsim` 패키지는 `run_isaacsim.launch.py`를 제공한다. Linux에서만 지원되며 WSL2에서는 이 패키지 방식이 지원되지 않는다.
 
@@ -346,7 +362,7 @@ source ~/IsaacSim-ros_workspaces/jazzy_ws/install/setup.bash
 ros2 launch isaacsim run_isaacsim.launch.py --show-args
 ```
 
-일반 GUI와 특정 stage 자동 재생 예는 다음과 같다.
+일반 GUI와 특정 Stage 자동 재생 예는 다음과 같다.
 
 ```bash
 ros2 launch isaacsim run_isaacsim.launch.py \
@@ -369,7 +385,7 @@ ros2 launch isaacsim run_isaacsim.launch.py \
 
 공식 5.1 문서의 매개변수 표에는 `ros_distro` 설명이 Humble만 지원한다고 적혀 있으면서 같은 페이지가 Jazzy용 Python 3.11 경로 예제를 제공한다. 따라서 Ubuntu 24.04에서는 위 공식 Jazzy 경로 패턴을 따르고, `--show-args`로 설치된 `isaacsim` 패키지의 실제 인자를 먼저 확인한다. 최신 배포판의 인자를 추측해서 추가하지 않는다.
 
-통합 launch에서는 Isaac Sim이 stage를 다 읽기 전에 Nav2나 MoveIt을 시작하지 않아야 한다. 공식 예는 “Stage loaded and simulation is playing.” 로그를 기다린다. 더 견고한 시스템은 로그 문자열 대신 준비 완료 topic/service를 별도 노드로 제공한다.
+통합 launch에서는 Isaac Sim이 Stage를 다 읽기 전에 Nav2나 MoveIt을 시작하지 않아야 한다. 공식 예는 “Stage loaded and simulation is playing.” 로그를 기다린다. 더 견고한 시스템은 로그 문자열 대신 준비 완료 토픽/service를 별도 노드로 제공한다.
 
 ## 8. Simulation Control
 
@@ -396,7 +412,7 @@ ros2 service call /get_simulator_features \
   simulation_interfaces/srv/GetSimulatorFeatures
 ```
 
-### 8.1 상태와 결정론적 step
+### 8.1 상태와 결정론적 스텝
 
 ```bash
 # 일시정지한다.
@@ -412,9 +428,9 @@ ros2 action send_goal /simulate_steps \
   simulation_interfaces/action/SimulateSteps "{steps: 20}" --feedback
 ```
 
-`/step_simulation`과 `/simulate_steps`는 PAUSED 상태에서 호출해야 한다. 서비스는 끝날 때까지 block하고, action은 진행 피드백·취소가 필요할 때 적합하다. 한 frame 요청은 내부적으로 두 step을 사용할 수 있으므로 물리 step 수와 렌더 frame 수를 동일하다고 가정하지 않는다.
+`/step_simulation`과 `/simulate_steps`는 PAUSED 상태에서 호출해야 한다. 서비스는 끝날 때까지 대기하고, 액션은 진행 피드백·취소가 필요할 때 적합하다. 한 프레임 요청은 내부적으로 두 스텝을 사용할 수 있으므로 물리 스텝 수와 렌더링 프레임 수를 동일하다고 가정하지 않는다.
 
-### 8.2 entity와 world
+### 8.2 엔티티와 월드
 
 ```bash
 ros2 service call /get_entities \
@@ -431,9 +447,9 @@ ros2 service call /delete_entity \
   simulation_interfaces/srv/DeleteEntity "{entity: '/World/test_robot'}"
 ```
 
-`spawn_entity`의 URI가 있으면 USD를 reference로 추가하고, 비어 있으면 Xform을 만든다. 서비스가 생성한 prim에는 추적 속성이 붙으며 `/reset_simulation`은 이 prim들을 제거한다. 기존 stage의 원본 prim까지 모두 초기화하는 명령이라고 오해하지 않는다.
+`spawn_entity`의 URI가 있으면 USD를 reference로 추가하고, 비어 있으면 Xform을 만든다. 서비스가 생성한 prim에는 추적 속성이 붙으며 `/reset_simulation`은 이 prim들을 제거한다. 기존 Stage의 원본 prim까지 모두 초기화하는 명령이라고 오해하지 않는다.
 
-월드는 stopped 또는 paused 상태에서만 바꾼다.
+월드는 정지 또는 일시 정지 상태에서만 바꾼다.
 
 ```bash
 ros2 service call /set_simulation_state \
@@ -446,20 +462,20 @@ ros2 service call /get_current_world \
   simulation_interfaces/srv/GetCurrentWorld
 ```
 
-5.1의 `/load_world`는 USD 계열 파일만 지원한다. 호출 전에 실험 결과를 저장하고, 상대 경로 대신 절대 경로나 검증된 asset URI를 사용한다.
+5.1의 `/load_world`는 USD 계열 파일만 지원한다. 호출 전에 실험 결과를 저장하고, 상대 경로 대신 절대 경로나 검증된 자산 URI를 사용한다.
 
-## 9. 자동 회귀 시험 패턴
+## 9. 자동 회귀 시험 구성
 
-다음 순서로 episode를 반복하면 GUI 조작 없이 회귀 시험을 만들 수 있다.
+다음 순서로 에피소드를 반복하면 GUI 조작 없이 회귀 시험을 만들 수 있다.
 
 1. `/load_world`로 고정된 USD를 연다.
-2. `/spawn_entity`로 테스트 robot과 장애물을 배치한다.
-3. `/set_simulation_state`로 pause한다.
-4. seed·명령을 기록하고 `/simulate_steps`를 실행한다.
-5. ROS topic과 `/get_entity_state`를 수집한다.
+2. `/spawn_entity`로 테스트 로봇과 장애물을 배치한다.
+3. `/set_simulation_state`로 일시 정지한다.
+4. 시드·명령을 기록하고 `/simulate_steps`를 실행한다.
+5. ROS 토픽과 `/get_entity_state`를 수집한다.
 6. 허용 오차를 검사하고 `/reset_simulation`을 호출한다.
 
-간단한 shell 검증 예이다.
+간단한 셸 검증 예이다.
 
 ```bash
 set -euo pipefail
@@ -470,17 +486,17 @@ ros2 service type /step_simulation | \
 ros2 action info /simulate_steps
 ```
 
-CI에서는 GPU, driver, Isaac Sim build, USD hash, ROS package lock, `ROS_DOMAIN_ID`, RMW 구현, physics/render step을 결과와 함께 저장한다.
+CI에서는 GPU, 드라이버, Isaac Sim 빌드, USD 해시, ROS 패키지의 고정 버전, `ROS_DOMAIN_ID`, RMW 구현, 물리·렌더링 스텝을 결과와 함께 저장한다.
 
 ## 10. 완료 점검표
 
 - `ros2 interface show`에서 커스텀 msg/srv가 보인다.
 - 외부 Jazzy Python 3.12 산출물과 Isaac Sim 내부 Python 3.11 산출물을 섞지 않는다.
-- Generic service의 request와 response가 같은 server handle과 타입을 사용한다.
-- 커스텀 OGN은 타임라인 정지 때 node·subscription을 해제한다.
-- launch는 stage 준비 완료 뒤에 소비자 노드를 시작한다.
-- Simulation Control의 step은 pause 상태에서 호출한다.
-- world 교체·entity 삭제 같은 파괴적 서비스는 허용 목록과 별도 namespace로 보호한다.
+- Generic 서비스의 요청과 응답이 같은 서버 핸들과 타입을 사용한다.
+- 커스텀 OGN은 타임라인 정지 때 노드·구독을 해제한다.
+- launch는 Stage 준비 완료 뒤에 구독 노드를 시작한다.
+- Simulation Control의 스텝은 일시 정지 상태에서 호출한다.
+- 월드 교체·엔티티 삭제 같은 파괴적 서비스는 허용 목록과 별도 네임스페이스로 보호한다.
 
 ## 출처
 
@@ -492,4 +508,4 @@ CI에서는 GPU, driver, Isaac Sim build, USD hash, ROS package lock, `ROS_DOMAI
 - [Isaac Sim 5.1 — ROS 2 Custom C++ OmniGraph Node](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_omnigraph_cpp_node.html)
 - [Isaac Sim 5.1 — ROS 2 Launch](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_launch.html)
 - [Isaac Sim 5.1 — ROS 2 Simulation Control](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_simulation_control.html)
-- [ROS 2 Jazzy — Creating custom msg and srv files](https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Custom-ROS2-Interfaces.html)
+- [ROS 2 Jazzy — Creating 사용자 정의 msg and srv files](https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Custom-ROS2-Interfaces.html)

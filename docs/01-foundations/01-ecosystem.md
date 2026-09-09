@@ -12,13 +12,13 @@
 | pxr | OpenUSD의 C++ 네임스페이스이자 Python 바인딩의 최상위 패키지 이름 | Python/C++에서 Stage와 Prim을 읽고 쓴다 |
 | NVIDIA Omniverse | OpenUSD 데이터 교환, 앱·서비스 개발, 배포를 위한 NVIDIA 플랫폼 | Isaac Sim이 올라가는 공통 3D 플랫폼과 기술 묶음을 제공한다 |
 | Omniverse Kit SDK | 확장 기능을 조립해 OpenUSD 앱과 서비스를 만드는 SDK | Isaac Sim의 창, 메뉴, 확장, Python 런타임, RTX 뷰포트를 구성한다 |
-| Nucleus | OpenUSD 자산을 여러 도구와 사용자가 공유하는 서버·협업 엔진 | 팀 자산 저장소와 단일 기준 원본을 제공한다. 로컬 실습에는 필수가 아니다 |
+| Nucleus | OpenUSD 자산을 여러 도구와 사용자가 공유하는 서버·협업 엔진 | 팀 자산 저장소와 공통 원본을 제공한다. 로컬 실습에는 필수가 아니다 |
 | Isaac Sim | Kit 기반의 로보틱스 시뮬레이션 애플리케이션 | PhysX 물리, RTX 렌더링 센서, 로봇 제어, 합성 데이터, ROS 2 연동을 제공한다 |
 | Isaac Lab | Isaac Sim 위에서 동작하는 오픈 소스 로봇 학습 프레임워크 | 병렬 환경, 강화학습, 모방학습, 모션 플래닝 연구 흐름을 구조화한다 |
 | ROS 2 | 프로세스와 장치 사이의 메시지·서비스·액션 미들웨어 | 실제 로봇용 노드와 Isaac Sim 사이에서 토픽, TF, Clock, 명령을 교환한다 |
 | Isaac ROS | ROS 2용 NVIDIA 가속 패키지 모음 | GPU 가속 인지·매핑 파이프라인을 구성한다. Isaac Sim과 같은 제품은 아니다 |
 
-핵심은 다음과 같다.
+각 이름을 구분할 때는 다음 기준을 사용한다.
 
 - OpenUSD는 파일 확장자 하나가 아니라 장면 데이터 모델과 조합 시스템이다.
 - Omniverse는 시뮬레이터 이름이 아니라 OpenUSD 기반 기술 플랫폼이다.
@@ -28,29 +28,16 @@
 
 ## 계층 구조로 보기
 
-~~~text
-사용자 애플리케이션
-  ├─ ROS 2 Jazzy 노드, Nav2, MoveIt 2, 자체 제어기
-  └─ Isaac Lab의 학습·평가 스크립트
-                 │
-          ROS 2 Bridge / Python API
-                 │
-Isaac Sim 5.1
-  ├─ 로봇·센서·Replicator·OmniGraph 확장
-  ├─ PhysX 물리
-  └─ RTX 렌더링
-                 │
-Omniverse Kit SDK
-  ├─ Extension과 Plugin 시스템
-  ├─ omni.ui, Script Editor, Viewport
-  └─ omni.usd와 Omniverse Client
-                 │
-OpenUSD
-  ├─ Stage, Layer, Prim, Schema, Composition
-  └─ pxr C++/Python API
-                 │
-로컬 파일 시스템 또는 선택적인 Nucleus 서버
-~~~
+```mermaid
+flowchart TD
+    ROS["ROS 2 노드 · Nav2 · MoveIt 2"] --> Bridge["ROS 2 Bridge"]
+    Bridge --> Sim["Isaac Sim 5.1"]
+    Lab["Isaac Lab 학습 스크립트"] --> Sim
+    Sim --> Kit["Omniverse Kit SDK"]
+    Kit --> USD["OpenUSD · pxr"]
+```
+
+화살표는 위의 프로그램이 아래의 기능을 이용한다는 뜻이다. ROS 2는 Bridge를 통해 실행 중인 Isaac Sim과 데이터를 주고받고, Isaac Lab은 Python API로 장면과 로봇 상태를 다룬다. USD 파일은 로컬 디스크에 저장할 수 있으며, 여러 사람이 자산을 공유할 때 Nucleus를 추가로 선택한다.
 
 이 그림은 소프트웨어 의존 관계를 단순화한 것이다. 예를 들어 PhysX 스키마는 USD Prim에 물리 의미를 기록하고, 실행 중에는 PhysX 엔진이 이를 해석한다. RTX 센서는 USD로 배치한 센서 Prim과 장면을 읽어 GPU에서 측정값을 계산한다.
 
@@ -86,7 +73,7 @@ OpenUSD는 일반적인 장면 의미를 정의하고, Isaac Sim은 그 위에 �
 
 Omniverse는 하나의 실행 파일이나 클라우드 서비스만을 뜻하지 않는다. NVIDIA의 현재 개발자 문서는 플랫폼 기능을 크게 다음 세 범주로 구분한다.
 
-1. OpenUSD 데이터를 교환·저작·집계한다.
+1. OpenUSD 데이터를 만들고 수정하며 여러 소스에서 모은다.
 2. OpenUSD 기반 애플리케이션과 서비스를 만든다.
 3. 만든 애플리케이션과 서비스를 배포한다.
 
@@ -123,7 +110,7 @@ Carbonite Plugin은 그보다 낮은 수준의 네이티브 공유 라이브러�
 
 ### Nucleus
 
-Nucleus는 OpenUSD 데이터의 실시간 교환과 협업을 위한 서버·데이터베이스 엔진이다. 여러 사용자가 DCC 도구와 Omniverse 애플리케이션에서 같은 자산을 공유할 때 단일 기준 원본 역할을 한다.
+Nucleus는 OpenUSD 데이터의 실시간 교환과 협업을 위한 서버·데이터베이스 엔진이다. 여러 사용자가 DCC 도구와 Omniverse 애플리케이션에서 같은 자산을 공유할 때 공통 원본 역할을 한다.
 
 Nucleus와 USD를 혼동하지 않아야 한다.
 
@@ -145,7 +132,7 @@ Isaac Sim은 OpenUSD 기반 로보틱스 시뮬레이션 애플리케이션이�
 - GUI, Script Editor, 독립 실행형 Python, Headless 실행
 - ROS 2 Bridge, Nav2, MoveIt 2 연동
 
-Isaac Sim의 가장 중요한 기준 데이터는 Stage다. GUI에서 Prim을 옮기든 Python으로 속성을 바꾸든 결과적으로 USD Stage에 opinion을 저작한다. 단, 플레이 중의 물리 상태처럼 저장되지 않는 런타임 데이터도 있으므로 무엇을 USD에 기록하고 무엇을 매 프레임 계산하는지 구분해야 한다.
+Isaac Sim의 가장 중요한 기준 데이터는 Stage다. GUI에서 Prim을 옮기든 Python으로 속성을 바꾸든 결과적으로 USD Stage에 속성 값과 설정을 기록한다. 단, 플레이 중의 물리 상태처럼 저장되지 않는 런타임 데이터도 있으므로 무엇을 USD에 기록하고 무엇을 매 프레임 계산하는지 구분해야 한다.
 
 ## Isaac Lab
 

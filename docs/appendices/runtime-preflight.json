@@ -1,0 +1,55 @@
+{
+  "status": "NOT_RUN",
+  "scope": [
+    "hello_stage",
+    "drive_jetbot",
+    "camera_imu",
+    "rtx_lidar"
+  ],
+  "complete_suite": true,
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "platform": "Linux-6.18.35-x86_64-with-glibc2.39",
+  "installation": "/root/isaacsim",
+  "timestamp_utc": "2026-09-09T09:02:52.191504+00:00",
+  "git_commit": {
+    "returncode": 0,
+    "stdout": "1ad8e1df2233b062d193e43f2ef12932ecdbc4d3",
+    "stderr": ""
+  },
+  "nvidia_smi": {
+    "returncode": null,
+    "error": "FileNotFoundError: [Errno 2] No such file or directory: 'nvidia-smi'"
+  },
+  "tests": [
+    {
+      "test": "hello_stage",
+      "status": "NOT_RUN"
+    },
+    {
+      "test": "drive_jetbot",
+      "status": "NOT_RUN"
+    },
+    {
+      "test": "camera_imu",
+      "status": "NOT_RUN"
+    },
+    {
+      "test": "rtx_lidar",
+      "status": "NOT_RUN"
+    }
+  ],
+  "source_sha256": {
+    "examples/standalone/hello_stage.py": "ec1187b1021bc344d3769d338059705c8549fd015e95941a193fecd8d61b1e1c",
+    "examples/standalone/drive_jetbot.py": "9a08030a72f367477e364fb709fd52bde51ad6494743be70d72d185b89e407d9",
+    "examples/standalone/camera_imu.py": "ae6c68a630800f26fa616489d62a90ed006dd48659c9506c525a9a2bd5832507",
+    "examples/standalone/rtx_lidar.py": "7b6d7e9b33d9b5bc84f6ff2ba631804f8c070f1d61578d2f93468ffe26925007",
+    "examples/standalone/smoke_common.py": "637e801f0a26eb58aa50c214a94441f8b44ff3093c662a6bddada141b8489451"
+  },
+  "installation_version": null,
+  "reasons": [
+    "실행 가능한 python.sh가 없다: /root/isaacsim/python.sh",
+    "설치 폴더의 VERSION에서 Isaac Sim 5.1.0을 확인하지 못했다",
+    "NVIDIA GPU/드라이버를 nvidia-smi로 확인하지 못했다"
+  ],
+  "note": "Actual environment preflight only. No Isaac Sim or GPU test ran. The git_commit is the pre-edit base; source_sha256 identifies the tested working files."
+}

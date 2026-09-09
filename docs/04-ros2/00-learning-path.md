@@ -2,7 +2,7 @@
 
 이 장의 목표는 Ubuntu 24.04의 ROS 2 Jazzy와 Isaac Sim 5.1을 연결한 뒤, 토픽을 한 번 확인하는 수준을 넘어 이동 로봇과 매니퓰레이터를 실제 ROS 2 스택으로 운용하는 데 있다. 모든 실습은 **Isaac Sim 5.1**, **Ubuntu 24.04**, **ROS 2 Jazzy**를 기준으로 한다.
 
-## 전체 구조를 먼저 이해하다
+## 전체 구조를 먼저 이해한다
 
 Isaac Sim과 ROS 2는 같은 Python 프로세스가 아니다. Isaac Sim 내부의 ROS 2 Bridge가 시뮬레이션 데이터를 ROS 메시지로 직렬화하고, DDS가 외부 Jazzy 노드와 데이터를 교환한다.
 
@@ -18,20 +18,20 @@ Ubuntu 24.04 ROS 2 Jazzy (Python 3.12)
   └─ 사용자 colcon 워크스페이스
 ```
 
-두 Python 버전이 달라도 DDS 통신에는 문제가 없다. 다만 시스템 Jazzy의 Python 3.12용 `rclpy`를 Isaac Sim의 Python 3.11 프로세스에 직접 로드하면 충돌한다. 커스텀 메시지를 Isaac Sim 내부 Python에서 import할 때만 Python 3.11용 별도 빌드가 필요하다.
+두 Python 버전이 달라도 DDS 통신에는 문제가 없다. 다만 시스템 Jazzy의 Python 3.12용 `rclpy`를 Isaac Sim의 Python 3.11 프로세스에 직접 로드하면 충돌한다. 기본 제공 인터페이스는 내장 라이브러리로 처리한다. 추가 메시지·서비스·패키지를 Bridge 또는 Isaac Sim 내부 Python에서 사용하려면 Python 3.11용 별도 빌드가 필요하다. 외부 노드에서만 사용하는 패키지는 시스템 Python 3.12로 빌드한다.
 
 ## 권장 학습 순서
 
-| 순서 | 문서 | 도달 목표 | 완료 검증 |
+| 순서 | 문서 | 학습 목표 | 완료 검증 |
 |---:|---|---|---|
 | 1 | [`01-install-bridge-workspace.md`](01-install-bridge-workspace.md) | Bridge와 공식 워크스페이스를 구성한다. | `/clock`을 한 번 수신한다. |
 | 2 | [`02-time-tf-and-motion.md`](02-time-tf-and-motion.md) | 시간, TF, odometry, QoS를 이해한다. | `view_frames`와 `topic info -v`를 통과한다. |
-| 3 | [`10-control-cookbook.md`](10-control-cookbook.md) | 차동·Ackermann·관절 제어를 구성한다. | `/cmd_vel` 또는 joint command로 robot을 움직인다. |
-| 4 | [`11-sensor-topic-cookbook.md`](11-sensor-topic-cookbook.md) | RGB, depth, camera info, LiDAR, IMU를 발행한다. | RViz2에서 영상과 scan을 확인한다. |
+| 3 | [`10-control-cookbook.md`](10-control-cookbook.md) | 차동·Ackermann·관절 제어를 구성한다. | `/cmd_vel` 또는 관절 명령으로 로봇을 움직인다. |
+| 4 | [`11-sensor-topic-cookbook.md`](11-sensor-topic-cookbook.md) | RGB, 깊이, CameraInfo, LiDAR, IMU를 발행한다. | RViz2에서 영상과 스캔을 확인한다. |
 | 5 | [`12-nav2-workshop.md`](12-nav2-workshop.md) | 점유 지도와 Nav2를 연결한다. | 목표 지점까지 자율주행한다. |
-| 6 | [`13-moveit2-workshop.md`](13-moveit2-workshop.md) | Franka와 MoveIt 2를 연결한다. | 계획 후 실제 joint가 실행된다. |
-| 7 | [`14-custom-interfaces-launch-and-sim-control.md`](14-custom-interfaces-launch-and-sim-control.md) | launch, generic node, 커스텀 인터페이스, simulation control을 다룬다. | 커스텀 메시지와 서비스를 왕복한다. |
-| 8 | [`15-diagnostics-playbook.md`](15-diagnostics-playbook.md) | 계층별로 장애를 분리한다. | 새 shell에서 재현 가능한 진단 기록을 만든다. |
+| 6 | [`13-moveit2-workshop.md`](13-moveit2-workshop.md) | Franka와 MoveIt 2를 연결한다. | 계획 후 실제 관절이 계획대로 움직인다. |
+| 7 | [`14-custom-interfaces-launch-and-sim-control.md`](14-custom-interfaces-launch-and-sim-control.md) | launch, Generic 노드, 커스텀 인터페이스, Simulation Control을 다룬다. | 커스텀 메시지와 서비스를 주고받는다. |
+| 8 | [`15-diagnostics-playbook.md`](15-diagnostics-playbook.md) | 계층별로 장애를 분리한다. | 새 셸에서 재현 가능한 진단 기록을 만든다. |
 
 ## 실습에서 지킬 터미널 규칙
 
@@ -61,12 +61,12 @@ export FASTRTPS_DEFAULT_PROFILES_FILE="$HOME/IsaacSim-ros_workspaces/fastdds.xml
 
 Action Graph의 ROS 2 파이프라인은 대개 다음 네 부분으로 구성된다.
 
-1. `On Playback Tick` 또는 physics step이 실행을 발생시킨다.
-2. `ROS 2 Context`가 Domain ID와 DDS context를 제공한다.
+1. `On Playback Tick` 또는 물리 스텝이 실행을 발생시킨다.
+2. `ROS 2 Context`가 Domain ID와 DDS 컨텍스트를 제공한다.
 3. Isaac 노드가 Stage, articulation 또는 센서 데이터를 읽는다.
-4. ROS 2 publisher/helper가 메시지로 변환해 토픽을 발행한다.
+4. ROS 2 발행 노드/helper가 메시지로 변환해 토픽을 발행한다.
 
-subscriber는 이 흐름을 반대로 수행한다. 메시지가 왔다는 이유만으로 물리 제어가 안전해지는 것은 아니다. 마지막 명령 시각을 추적하고 timeout 때 0 속도를 적용하는 watchdog을 실제 프로젝트에 추가해야 한다.
+구독 노드는 이 흐름을 반대로 수행한다. 메시지가 왔다는 이유만으로 물리 제어가 안전해지는 것은 아니다. 마지막 명령 시각을 추적하고 타임아웃 때 0 속도를 적용하는 watchdog을 실제 프로젝트에 추가해야 한다.
 
 ## 공통 관찰 명령
 
@@ -81,17 +81,17 @@ ros2 action list -t
 
 토픽 이름만 보인다고 데이터가 정상인 것은 아니다. 다음 네 가지를 함께 확인한다.
 
-- publisher와 subscriber 수
+- 발행 노드와 구독 노드 수
 - 메시지 타입
 - QoS 호환성
-- 타임스탬프와 frame ID
+- 타임스탬프와 프레임 ID
 
 ## 5.1 버전 경계
 
-- Isaac Sim 5.1 문서는 지원 종료 버전임을 표시한다. 이 과정은 재현성을 위해 5.1 API와 확장 ID만 사용한다.
+- 이 과정은 재현성을 위해 5.1.0 문서, API, 확장 ID와 공식 `IsaacSim-5.1.0` 워크스페이스 태그를 함께 사용한다.
 - 4.5 이전의 `omni.isaac.*` 이름을 복사하지 않는다. 5.1에서는 `isaacsim.*` 확장 이름을 사용한다.
 - RTX LiDAR는 `OmniLidar` prim 기반이 표준이다. Camera prim과 JSON `sensorModelConfig` 중심 방식은 5.0부터 deprecated이다.
-- 공식 ROS 2 C++ custom OmniGraph 튜토리얼은 Humble 전용이다. Jazzy 실습에서는 Python OGN이나 Generic ROS 2 노드를 사용한다.
+- 공식 ROS 2 C++ 사용자 정의 OmniGraph 튜토리얼은 Humble 전용이다. Jazzy 실습에서는 Python OGN이나 Generic ROS 2 노드를 사용한다.
 
 ## 출처
 

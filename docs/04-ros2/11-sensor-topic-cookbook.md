@@ -1,20 +1,20 @@
 # 카메라, RTX LiDAR, IMU의 ROS 2 토픽
 
-이 장에서는 센서 prim에서 ROS 2 메시지가 나올 때까지의 render/physics pipeline을 구성하고, 메시지 내용·주기·좌표계를 검증한다.
+이 장에서는 센서 prim에서 ROS 2 메시지가 나올 때까지의 렌더링·물리 처리 흐름을 구성하고, 메시지 내용·주기·좌표계를 검증한다.
 
-## 센서별 실행 기반을 구분하다
+## 센서별 실행 기반을 구분한다
 
 | 센서 | 계산 기반 | 대표 ROS 메시지 | 주의점 |
 |---|---|---|---|
-| RGB/depth camera | RTX renderer + render product | `Image`, `CameraInfo`, `PointCloud2` | 렌더 step이 필요하다. |
-| RTX LiDAR | RTX Sensor renderer + `OmniLidar` | `LaserScan`, `PointCloud2` | full scan 주기와 frame 주기가 다르다. |
-| IMU/contact | PhysX step | `Imu` 또는 사용자 메시지 | sensor frequency는 physics rate를 넘지 못한다. |
+| RGB/깊이 카메라 | RTX 렌더러 + Render Product | `Image`, `CameraInfo`, `PointCloud2` | 렌더링 스텝이 필요하다. |
+| RTX LiDAR | RTX Sensor 렌더러 + `OmniLidar` | `LaserScan`, `PointCloud2` | 전체 스캔 주기와 프레임 주기가 다르다. |
+| IMU/contact | PhysX 스텝 | `Imu` 또는 사용자 메시지 | 센서 갱신 빈도는 물리 계산 빈도를 넘지 못한다. |
 
-## 1. 카메라 prim과 render product를 만들다
+## 1. 카메라 prim과 Render Product를 만든다
 
-GUI에서는 `Create > Camera`로 카메라를 만든다. 카메라를 로봇 link 아래로 이동하고 local transform을 설정하면 link 움직임을 따라간다. Viewport 왼쪽 위 Camera 메뉴에서 해당 prim을 선택해 장착 방향을 먼저 확인한다.
+GUI에서는 `Create > Camera`로 카메라를 만든다. 카메라를 로봇 링크 아래로 이동하고 로컬 변환을 설정하면 링크 움직임을 따라간다. Viewport 왼쪽 위 Camera 메뉴에서 해당 prim을 선택해 장착 방향을 먼저 확인한다.
 
-ROS 2 RGB publisher 그래프에는 다음을 둔다.
+ROS 2 RGB 발행 노드 그래프에는 다음을 둔다.
 
 - `On Playback Tick`
 - `ROS 2 Context`
@@ -30,11 +30,11 @@ ROS 2 Camera Helper.topicName = /camera/color/image_raw
 ROS 2 Camera Helper.frameId = camera_color_optical_frame
 ```
 
-`ROS 2 Camera Helper`는 실행 시 `/Render/PostProcessing/SDGPipeline`을 세션에 생성한다. 이 내부 graph는 Stage에 영구 저장되지 않는다. helper의 `type`으로 pipeline이 생성된 뒤 type을 바꿔 재사용하지 말고, 새 helper를 만들거나 Stage를 다시 연다.
+`ROS 2 Camera Helper`는 실행 시 `/Render/PostProcessing/SDGPipeline`을 세션에 생성한다. 이 내부 그래프는 Stage에 영구 저장되지 않는다. helper의 `type`으로 처리 흐름이 생성된 뒤 타입을 바꿔 재사용하지 말고, 새 helper를 만들거나 Stage를 다시 연다.
 
-메뉴 단축 경로 `Tools > Robotics > ROS 2 OmniGraphs > Camera`에서 RGB, depth, point cloud, camera info를 선택할 수도 있다.
+메뉴 단축 경로 `Tools > Robotics > ROS 2 OmniGraphs > Camera`에서 RGB, 깊이, 점군, CameraInfo를 선택할 수도 있다.
 
-## 2. 이미지와 CameraInfo를 검증하다
+## 2. 이미지와 CameraInfo를 검증한다
 
 ```bash
 ros2 topic list -t | grep camera
@@ -50,9 +50,9 @@ ros2 run rqt_image_view rqt_image_view /camera/color/image_raw
 rviz2
 ```
 
-RViz2에서 Image display의 Reliability를 publisher와 맞춘다. 센서 데이터 preset은 보통 Best Effort이므로 RViz2가 Reliable이면 연결되지 않는다.
+RViz2에서 Image 표시 항목의 Reliability를 발행 노드와 맞춘다. 센서 데이터 preset은 보통 Best Effort이므로 RViz2가 Reliable이면 연결되지 않는다.
 
-`CameraInfo`의 내부 파라미터는 해상도와 USD camera aperture/focal length에서 계산된다.
+`CameraInfo`의 내부 파라미터는 해상도와 USD 카메라 aperture/초점 거리에서 계산된다.
 
 \[
 f_x = \frac{W f}{A_h},\qquad
@@ -60,11 +60,11 @@ f_y = \frac{H f}{A_v},\qquad
 c_x = W/2,\qquad c_y = H/2
 \]
 
-5.1 release note에는 `CameraInfo`의 `fy`가 항상 `fx`로 설정되던 문제가 수정되었다. 따라서 실제 출력의 K/P 행렬을 소비 노드에서 다시 확인한다.
+5.1에서는 `CameraInfo`의 `fy`가 항상 `fx`로 설정되던 문제가 수정되었다. 릴리스 노트에 따라 실제 출력의 K/P 행렬을 구독 노드에서 다시 확인한다.
 
-## 3. depth, point cloud, ground truth를 발행하다
+## 3. 깊이, 점군, 정답 데이터를 발행한다
 
-Camera Helper 하나는 한 data type만 담당한다. 동일한 render product에 helper를 여러 개 연결한다.
+Camera Helper 하나는 한 데이터 타입만 담당한다. 동일한 Render Product에 helper를 여러 개 연결한다.
 
 ```text
 type=depth          → /camera/depth/image
@@ -79,27 +79,27 @@ bounding box 출력은 semantic label이 있는 Stage와 `vision_msgs`가 필요
 sudo apt install -y ros-jazzy-vision-msgs
 ```
 
-depth가 흑백 두 덩어리로만 보이면 무한히 먼 배경 때문에 display range가 압축된 경우가 많다. 카메라가 벽과 바닥을 포함하도록 시야를 조정하고 RViz2 depth display 범위를 확인한다.
+깊이가 흑백 두 덩어리로만 보이면 무한히 먼 배경 때문에 표시 범위가 압축된 경우가 많다. 카메라가 벽과 바닥을 포함하도록 시야를 조정하고 RViz2 깊이 표시 범위를 확인한다.
 
-## 4. 카메라 노이즈를 추가하다
+## 4. 카메라 노이즈를 추가한다
 
-공식 5.1 카메라 노이즈 튜토리얼은 Replicator annotator/augmentation을 카메라 pipeline에 추가하는 흐름을 사용한다. 실제 노이즈 모델은 다음 요소를 분리해 설계한다.
+공식 5.1 카메라 노이즈 튜토리얼은 Replicator annotator/augmentation을 카메라 처리 과정에 추가한다. 실제 노이즈 모델은 다음 요소를 분리해 설계한다.
 
-- shot/read noise: 밝기에 따라 달라지는 pixel noise
-- lens distortion: OpenCV pinhole 또는 fisheye 계수
+- shot/read noise: 밝기에 따라 달라지는 픽셀 노이즈
+- 렌즈 왜곡: OpenCV pinhole 또는 fisheye 계수
 - blur/exposure: 움직임과 shutter 시간
-- dropout/quantization: depth 센서의 유효 범위와 양자화
+- dropout/quantization: 깊이 센서의 유효 범위와 양자화
 
-노이즈가 있는 image topic과 ground-truth topic을 서로 다른 이름으로 유지한다.
+노이즈가 있는 영상 토픽과 정답 데이터 토픽을 서로 다른 이름으로 유지한다.
 
 ```text
 /camera/color/image_raw_gt
 /camera/color/image_raw_noisy
 ```
 
-알고리즘 정확도를 평가할 때 두 토픽의 header stamp와 frame ID가 같아야 한다.
+알고리즘 정확도를 평가할 때 두 토픽의 헤더 타임스탬프와 프레임 ID가 같아야 한다.
 
-## 5. RTX LiDAR를 추가하다
+## 5. RTX LiDAR를 추가한다
 
 Isaac Sim 5.1의 표준 RTX LiDAR는 `OmniLidar` prim이다. 구형 Camera prim의 `sensorModelConfig` JSON 방식은 deprecated이다. GUI에서는 다음을 사용한다.
 
@@ -108,7 +108,7 @@ Create > Sensors > RTX Lidar > NVIDIA > Example Rotary 2D
 Create > Sensors > RTX Lidar > NVIDIA > Example Rotary
 ```
 
-LiDAR prim을 robot의 `base_scan` link 아래로 옮기고 local transform을 0으로 만든다. Action Graph에 각각 render product와 helper를 연결한다.
+LiDAR prim을 로봇의 `base_scan` 링크 아래로 옮기고 로컬 변환을 0으로 만든다. Action Graph에 각각 Render Product와 helper를 연결한다.
 
 ```text
 On Playback Tick
@@ -134,7 +134,7 @@ frameId=base_scan
 publishFullScan=true 또는 false를 용도에 맞게 선택한다.
 ```
 
-rotary LiDAR의 `LaserScan`은 한 바퀴가 완성될 때 발행된다. 10 Hz 회전, 60 Hz render step이면 약 6 frame에 한 메시지가 생성된다. point cloud는 helper의 `Publish Full Scan`에 따라 매 frame 또는 누적 full scan 단위로 발행한다.
+회전형 LiDAR의 `LaserScan`은 한 바퀴가 완성될 때 발행된다. 10 Hz 회전, 60 Hz 렌더링 스텝이면 약 6 프레임에 한 메시지가 생성된다. 점군은 helper의 `Publish Full Scan`에 따라 매 프레임 또는 누적 전체 스캔 단위로 발행한다.
 
 ```bash
 ros2 topic hz /scan
@@ -142,11 +142,11 @@ ros2 topic echo /scan --once --field header
 ros2 topic echo /point_cloud --once --field width
 ```
 
-RViz2에서 Fixed Frame을 `base_scan` 또는 연결된 상위 frame으로 설정한 다음 LaserScan과 PointCloud2 display를 추가한다.
+RViz2에서 Fixed Frame을 `base_scan` 또는 연결된 상위 프레임으로 설정한 다음 LaserScan과 PointCloud2 표시 항목를 추가한다.
 
-## 6. Python에서 5.1 RTX LiDAR를 생성하다
+## 6. Python에서 5.1 RTX LiDAR를 생성한다
 
-다음 코드는 Script Editor 또는 `SimulationApp` 생성 이후의 standalone 본문에서 사용한다.
+다음 코드는 Script Editor 또는 `SimulationApp` 생성 이후의 Standalone 스크립트 본문에서 사용한다.
 
 ```python
 import numpy as np
@@ -164,7 +164,7 @@ lidar = LidarRtx(
 print(lidar.get_data())
 ```
 
-저수준 command도 사용할 수 있다.
+저수준 명령도 사용할 수 있다.
 
 ```python
 import omni.kit.commands
@@ -186,9 +186,9 @@ _, sensor = omni.kit.commands.execute(
 
 `force_camera_prim=True`는 deprecated Camera prim 호환 경로이므로 새 자산에서는 사용하지 않는다.
 
-## 7. IMU를 만들고 발행하다
+## 7. IMU를 만들고 발행한다
 
-robot의 `imu_link`를 선택한 뒤 `Create > Sensors > Imu Sensor`를 실행한다. Action Graph에 다음을 연결한다.
+로봇의 `imu_link`를 선택한 뒤 `Create > Sensors > Imu Sensor`를 실행한다. Action Graph에 다음을 연결한다.
 
 ```text
 On Playback Tick → Isaac Simulation Gate(step=N) → Isaac Read IMU
@@ -201,16 +201,16 @@ ROS 2 Publish Imu.topicName=/imu/data
 ROS 2 Publish Imu.frameId=imu_link
 ```
 
-60 Hz physics에서 `step=2`이면 약 30 Hz이다. camera/RTX helper의 `frameSkipCount=N`은 보통 `N+1` frame마다 발행한다. 실제 주기는 반드시 측정한다.
+60 Hz 물리 시뮬레이션에서 `step=2`이면 약 30 Hz이다. 카메라/RTX helper의 `frameSkipCount=N`은 보통 `N+1` 프레임마다 발행한다. 실제 주기는 반드시 측정한다.
 
 ```bash
 ros2 topic hz /imu/data
 ros2 topic echo /imu/data --once
 ```
 
-정지한 IMU에서 linear acceleration z 성분의 부호와 크기는 sensor orientation과 gravity 포함 여부 설정에 따라 달라진다. 기대값을 정하기 전에 frame orientation과 sensor property를 기록한다.
+정지한 IMU에서 선형 가속도 z 성분의 부호와 크기는 센서 방향과 중력 포함 여부 설정에 따라 달라진다. 기대값을 정하기 전에 프레임 방향과 센서 속성을 기록한다.
 
-## 8. 주기, QoS, 대역폭을 함께 설계하다
+## 8. 주기, QoS, 대역폭을 함께 설계한다
 
 ```bash
 ros2 topic bw /camera/color/image_raw
@@ -218,15 +218,15 @@ ros2 topic bw /point_cloud
 ros2 topic info /scan -v
 ```
 
-예를 들어 1920×1080 RGB8 30 Hz 원시 영상은 payload만 약 186 MB/s이다. 해상도, 주기, 활성 helper 수를 줄이고 사용하지 않는 render product는 `enabled=False`로 둔다. sensor QoS는 Best Effort/Volatile을 기본으로 검토하고, 정적 calibration 정보는 Reliable/Transient Local이 적절할 수 있다.
+예를 들어 1920×1080 RGB8 30 Hz 원시 영상은 데이터 본문만 약 186 MB/s이다. 해상도, 주기, 활성 helper 수를 줄이고 사용하지 않는 Render Product는 `enabled=False`로 둔다. 센서 QoS는 Best Effort/Volatile을 기본으로 검토하고, 정적 보정 정보는 Reliable/Transient Local이 적절할 수 있다.
 
 ## 완료 체크
 
-- [ ] 카메라 영상과 `CameraInfo` stamp/frame이 일치한다.
-- [ ] depth의 단위와 invalid value를 확인했다.
+- [ ] 카메라 영상과 `CameraInfo` 타임스탬프/프레임이 일치한다.
+- [ ] 깊이의 단위와 유효하지 않은 값를 확인했다.
 - [ ] RTX LiDAR가 `OmniLidar` prim으로 생성되었다.
 - [ ] `/scan`, `/point_cloud`, `/imu/data`의 실제 Hz를 측정했다.
-- [ ] RViz2 QoS가 publisher와 호환된다.
+- [ ] RViz2 QoS가 발행 노드와 호환된다.
 
 ## 출처
 

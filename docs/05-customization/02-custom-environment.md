@@ -1,8 +1,8 @@
-# 커스텀 환경: USD, mesh, material, collider와 semantics
+# 커스텀 환경: USD, 메시, 재질, 충돌 형상과 의미 정보
 
-이 튜토리얼에서는 CAD/mesh를 보기 좋은 장면이 아니라 robot과 sensor가 신뢰할 수 있는 environment asset으로 만들다. geometry, render material, physics material, collider, semantics와 lighting을 별도 책임으로 다루다.
+이 장에서는 CAD와 메시로 로봇 주행과 센서 검증에 사용할 환경을 만든다. 외형, 렌더링 재질, 물리 재질, 충돌 형상, 의미 정보와 조명이 각각 어떤 역할을 하는지 구분하고 함께 검증한다.
 
-## 1. environment 계층과 layer를 설계하다
+## 1. 환경 계층과 레이어 설계
 
 ```text
 warehouse/
@@ -14,22 +14,22 @@ warehouse/
 └── textures/                     # albedo, normal, roughness 등
 ```
 
-entry file은 여러 layer/reference를 조립하다. geometry source를 다시 변환해도 physics/semantics layer를 재적용할 수 있어야 하다. 작업 Stage에는 environment를 `/World/Environment`에 reference하고 robot/scenario는 별도 prim에 두다.
+사용자가 여는 대표 USD 파일은 여러 레이어와 참조를 조합한다. 형상 원본을 다시 변환해도 물리/의미 정보 레이어를 재적용할 수 있어야 한다. 작업 Stage에는 환경을 `/World/Environment`에 참조하고 로봇/시험 상황은 별도 prim에 둔다.
 
-## 2. source 파일을 준비하다
+## 2. 원본 파일 준비
 
-### 지원 형식을 USD로 변환하다
+### 지원 형식을 USD로 변환하기
 
-`File > Import` 또는 CAD Converter로 OBJ/FBX/GLTF/CAD source를 USD로 변환하다. 변환 전에 다음을 정하다.
+`File > Import` 또는 CAD Converter로 OBJ/FBX/GLTF/CAD 원본을 USD로 변환한다. 변환 전에 다음을 정한다.
 
-- world length unit은 meter이다.
-- Z-up을 기본으로 하다.
-- pivot/origin은 배치에 쓸 수 있는 위치에 두다.
-- 정적 architecture, 이동 가능한 prop과 door를 분리하다.
-- texture는 임시 absolute path가 아니라 asset 폴더 상대 경로로 묶다.
-- 이름 없는 수천 mesh를 공간/기능 단위 Xform 아래 정리하다.
+- 월드의 길이 단위는 미터로 정한다.
+- Z축이 위를 향하는 Z-up 좌표계를 사용한다.
+- 회전 중심(pivot)과 원점은 장면에 배치하기 편한 위치에 둔다.
+- 고정된 건축물과 이동 가능한 소품·문을 분리한다.
+- 텍스처는 임시 절대 경로가 아니라 자산 디렉터리를 기준으로 한 상대 경로로 관리한다.
+- 메시가 많으면 공간이나 기능별 Xform 아래에 묶고 이름을 붙인다.
 
-변환 후 Stage metadata를 확인하다.
+변환 후 Stage 메타데이터를 확인한다.
 
 ```python
 # Isaac Sim Script Editor
@@ -42,11 +42,11 @@ print("meters/unit:", UsdGeom.GetStageMetersPerUnit(stage))
 print("default prim:", stage.GetDefaultPrim().GetPath())
 ```
 
-`metersPerUnit` metadata를 바꾸는 것과 geometry transform을 실제로 scale하는 것은 다르다. 잘못된 unit asset은 root에 임시 scale override를 남기지 말고 변환 pipeline에서 정규화하다.
+`metersPerUnit`은 좌표 값의 단위를 지정한다. 이 메타데이터를 바꾸는 것과 형상 자체의 좌표·크기를 바꾸는 것은 다르다. 단위를 잘못 적용했다면 원본을 변환하는 단계에서 배율을 바로잡는다.
 
-## 3. composition으로 환경을 배치하다
+## 3. USD 참조로 환경 배치
 
-새 Stage에 reference를 추가하는 최소 standalone 예시이다.
+새 Stage에 참조를 추가하는 최소 Standalone 예시이다.
 
 ```python
 from isaacsim import SimulationApp
@@ -72,19 +72,19 @@ app.update()
 app.close()
 ```
 
-대형 environment는 payload로 선택적 load를 검토하고, 반복 pallet/rack/light fixture는 instanceable reference를 사용하다. instance 내부를 개별 수정해야 하면 prototype/source asset에서 수정하거나 instance 밖에 override prim을 두다.
+대형 환경은 필요한 구역만 불러올 수 있도록 Payload를 검토한다. 반복되는 팔레트·선반·조명기구는 instanceable 참조로 공유한다. 인스턴스 내부 형상을 바꾸려면 원본 자산을 수정하거나, 인스턴스별로 달라질 요소를 인스턴스 바깥에 별도로 둔다.
 
-## 4. render material을 구성하다
+## 4. 렌더링 재질 구성
 
-render material은 보이는 색·거칠기·금속성·normal을 정의하다. physics friction과 같은 값이 아니다.
+시각 재질은 보이는 색·거칠기·금속성·법선을 정의한다. 물리 마찰계수와는 별도로 설정한다.
 
 | 목적 | 선택 |
 |---|---|
 | 다른 USD 도구와 교환 | `UsdPreviewSurface` |
 | Omniverse에서 높은 시각 품질 | MDL/OmniPBR |
-| 투명 유리 | 전용 glass material, sensor 영향 별도 검증 |
+| 투명 유리 | 전용 유리 재질, 센서 영향 별도 검증 |
 
-간단한 `UsdPreviewSurface` material을 authoring하다.
+간단한 `UsdPreviewSurface` 재질을 작성한다.
 
 ```python
 import omni.usd
@@ -107,21 +107,21 @@ floor = stage.GetPrimAtPath("/World/Environment/Floor/mesh")
 UsdShade.MaterialBindingAPI.Apply(floor).Bind(material)
 ```
 
-texture file은 USD asset path로 authoring하고 상대 경로 이동 시험을 하다. normal map의 color space, UV scale, tangent와 flipped normal을 여러 광원에서 확인하다.
+텍스처는 USD 자산 경로로 연결하고 디렉터리를 옮긴 뒤에도 열리는지 확인한다. 노멀 맵의 색 공간, UV 배율, 접선 방향과 뒤집힌 법선이 없는지 여러 조명 조건에서 확인한다.
 
-## 5. collider를 별도로 authoring하다
+## 5. 충돌 형상 구성
 
-정적 환경에 collider만 적용하고 Rigid Body API를 적용하지 않으면 static collision이 되다. 움직여야 하는 door/pallet에는 rigid body, mass와 joint를 별도 설정하다.
+움직이지 않는 환경에는 충돌 형상을 추가한다. 강체 API를 적용하지 않은 충돌체는 정적으로 취급한다. 움직이는 문이나 팔레트에는 강체·질량을 추가하고 필요에 따라 관절도 설정한다.
 
-| environment geometry | collision 표현 |
+| 환경 형상 | 충돌 표현 |
 |---|---|
-| 평평한 floor/wall | box 또는 단순 mesh |
-| 복잡한 정적 건축물 | triangle mesh, 공간별 분할 |
-| 이동 가능한 prop | convex hull/decomposition |
-| 얇은 sheet | 실제 두께를 가진 box 권장 |
-| 계단 | 각 step box 또는 목적에 맞춘 단순 ramp |
+| 평평한 바닥·벽 | 상자 또는 단순 메시 |
+| 복잡한 정적 건축물 | 삼각형 메시, 공간별 분할 |
+| 이동 가능한 소품 | 볼록 껍질 또는 볼록 분해 |
+| 얇은 판 | 실제 두께가 있는 상자 형상 권장 |
+| 계단 | 계단별 상자 형상 또는 목적에 맞춘 단순 경사면 |
 
-GUI에서 mesh를 선택하고 `Add > Physics > Collider`를 적용하다. dynamic mesh는 approximation을 `convexHull` 또는 `convexDecomposition`으로 하다. Python으로 primitive collider를 만드는 예시이다.
+GUI에서 메시를 선택하고 `Add > Physics > Collider`를 적용한다. 동적 메시의 충돌 근사(Approximation)는 `convexHull` 또는 `convexDecomposition`으로 한다. 다음은 Python으로 기본 도형을 충돌체로 만드는 예다.
 
 ```python
 import omni.usd
@@ -136,35 +136,35 @@ UsdPhysics.CollisionAPI.Apply(wall.GetPrim())
 wall.GetVisibilityAttr().Set(UsdGeom.Tokens.invisible)
 ```
 
-invisible collider를 render mesh의 child로 묶을 때 transform이 두 번 적용되지 않는지 확인하다. Viewport에서 `Show by Type > Physics > Colliders > All`로 collider만 표시하다.
+보이지 않게 설정한 충돌체를 렌더링 메시의 자식으로 묶을 때 변환이 두 번 적용되지 않는지 확인한다. Viewport에서 `Show by Type > Physics > Colliders > All`로 충돌 형상만 표시한다.
 
-### collider acceptance test
+### 충돌 형상 검증 시험
 
-1. 작은 cube를 여러 floor 위치에서 1 m 높이에서 떨어뜨리다.
-2. wall/door/under-rack을 robot-sized capsule로 sweep하다.
-3. Nav2 경로의 좁은 passage 폭을 collider 기준으로 측정하다.
-4. seam에서 wheel이 걸리거나 바닥을 관통하지 않는지 확인하다.
-5. invisible wall이 의도치 않게 통로를 막지 않는지 검사하다.
+1. 작은 상자를 바닥의 여러 지점 위 1 m 높이에서 떨어뜨린다.
+2. 로봇 크기의 캡슐 형상을 벽 주변, 출입문과 선반 아래로 움직여 충돌 여부를 확인한다.
+3. Nav2가 사용할 경로에서 좁은 통로의 폭을 충돌 형상 기준으로 측정한다.
+4. 바닥 이음매에서 바퀴가 걸리거나 바닥을 관통하지 않는지 확인한다.
+5. 보이지 않는 벽이 의도치 않게 통로를 막지 않는지 검사한다.
 
-## 6. physics material을 render material과 분리하다
+## 6. 물리 재질과 렌더링 재질 구분
 
-`Create > Physics > Physics Material > Rigid Body Material`로 material을 만들고 collider에 bind하다.
+`Create > Physics > Physics Material > Rigid Body Material`로 재질을 만들고 충돌 형상에 적용한다.
 
-| 표면 | static friction | dynamic friction | restitution | 시작값 예시 |
+| 표면 | 정지 마찰계수 | 운동 마찰계수 | 반발계수 | 시작값 예시 |
 |---|---:|---:|---:|---|
-| dry concrete | 높음 | 중간~높음 | 낮음 | `0.9 / 0.8 / 0.05` |
-| smooth metal | 중간 | 낮음~중간 | 낮음 | `0.5 / 0.35 / 0.05` |
-| rubber wheel contact | 조합 검증 | 조합 검증 | 낮음 | robot+floor 함께 튜닝 |
+| 마른 콘크리트 | 높음 | 중간~높음 | 낮음 | `0.9 / 0.8 / 0.05` |
+| 매끄러운 금속 | 중간 | 낮음~중간 | 낮음 | `0.5 / 0.35 / 0.05` |
+| 고무 바퀴 접촉 | 조합 검증 | 조합 검증 | 낮음 | 로봇과 바닥을 함께 조정 |
 
-수치는 정답이 아니라 초기값 예시이다. 실제 tire/floor 조합의 acceleration, braking distance와 lateral slip을 측정해 맞추다. friction을 매우 높여 controller/weight 오류를 숨기지 않다.
+수치는 정답이 아니라 초기값 예시이다. 실제 타이어와 바닥 조합에서 가속도, 제동 거리, 옆 방향 미끄러짐을 측정해 값을 맞춘다. 제어기나 질량 설정이 잘못된 문제를 높은 마찰계수로 덮지 않는다.
 
-physics material은 collider geometry에 직접 bind하거나 rigid body 상위에 override할 수 있다. 자식 binding과 상위 binding의 resolution을 Property에서 확인하다.
+물리 재질은 충돌체에 직접 적용하거나 상위 Prim에서 지정할 수 있다. 부모와 자식에 서로 다른 재질을 지정했다면 Property에서 실제로 어느 재질이 적용되는지 확인한다.
 
-## 7. semantics를 authoring하다
+## 7. 의미 정보 작성
 
-semantic label은 perception ground truth의 class/instance 의미이고 render material이나 physics material이 아니다.
+의미 정보 레이블은 인지 데이터의 정답에 사용할 클래스나 인스턴스를 나타낸다. 렌더링 재질이나 물리 재질과는 별도로 지정한다.
 
-GUI에서 `Tools > Replicator > Semantics Schema Editor`를 열어 prim을 선택하고 label을 추가·수정·삭제하다. label taxonomy를 먼저 문서화하다.
+GUI에서 `Tools > Replicator > Semantics Schema Editor`를 열어 prim을 선택하고 레이블을 추가·수정·삭제한다. 먼저 어떤 클래스 이름을 사용할지 정리한다.
 
 ```yaml
 taxonomy:
@@ -176,7 +176,7 @@ taxonomy:
   person: human
 ```
 
-Python utility를 사용하는 5.1 pattern이다.
+5.1의 Python 유틸리티를 사용하면 다음처럼 레이블을 추가할 수 있다.
 
 ```python
 import omni.usd
@@ -194,13 +194,13 @@ for path, label in {
     add_update_semantics(prim, label, type_label="class")
 ```
 
-상위 prim과 모든 mesh child에 모순되는 class를 중복 authoring하지 않다. Replicator semantic segmentation/bounding-box annotator로 실제 출력 mapping을 확인하다. 이름에 `pallet`이 포함되었다는 사실은 semantic label이 아니다.
+부모 Prim과 자식 메시에 서로 모순되는 클래스를 지정하지 않는다. Replicator의 의미 분할(semantic segmentation)과 경계 상자(bounding box) annotator 출력에서 각 물체의 레이블이 맞는지 확인한다. 이름에 `pallet`이 포함되었다는 사실은 의미 정보 레이블이 아니다.
 
-## 8. RTX sensor의 non-visual material을 구분하다
+## 8. RTX 센서의 비시각 재질 설정
 
-LiDAR/Radar 반사 특성은 RGB material만으로 완전히 결정되지 않다. Isaac Sim 5.1은 Material prim의 USD attribute로 RTX non-visual material을 지정하는 방식을 지원하다. 이전 CSV 기반 mapping은 5.1에서 deprecated이다.
+LiDAR/Radar 반사 특성은 RGB 재질만으로 완전히 결정되지는 않는다. Isaac Sim 5.1은 재질 prim의 USD 속성으로 RTX 비시각 재질을 지정하는 방식을 지원한다. 이전 CSV 기반 재질 매핑은 5.1에서 사용 중단 예정이다.
 
-`isaacsim.sensors.rtx`의 공식 예제를 실행해 attribute와 debug view를 확인하다.
+`isaacsim.sensors.rtx`의 공식 예제를 실행해 속성과 디버그 화면을 확인한다.
 
 ```bash
 # [SIM]
@@ -209,17 +209,17 @@ cd ~/isaacsim
   standalone_examples/api/isaacsim.sensors.rtx/specify_non_visual_materials.py
 ```
 
-Viewport의 `RTX - Real-Time > Debug View > Non-Visual Material ID`로 표면별 ID를 확인하다. retroreflective sign, glass, asphalt와 metal을 실제 sensor 요구에 맞게 구분하다.
+Viewport의 `RTX - Real-Time > Debug View > Non-Visual Material ID`로 표면별 ID를 확인한다. 재귀반사 표지판, 유리, 아스팔트와 금속을 실제 센서 요구에 맞게 구분한다.
 
-## 9. lighting을 sensor 시험의 일부로 만들다
+## 9. 조명을 포함한 센서 시험
 
-| light | 역할 | 주의점 |
+| 조명 | 역할 | 주의점 |
 |---|---|---|
-| Dome Light | HDRI 기반 전체 환경광 | texture license, orientation, exposure |
-| Distant Light | 태양과 같은 평행광 | shadow 방향과 angle |
-| Rect/Disk/Sphere Light | 실내 fixture | 면적, intensity, color temperature |
+| Dome 조명 | HDRI 기반 전체 환경광 | 텍스처 라이선스, 방향, 노출 |
+| Distant 조명 | 태양과 같은 평행광 | 그림자 방향과 광원의 각도 |
+| Rect/Disk/Sphere 조명 | 실내 조명기구 | 면적, 광도, 색 온도 |
 
-조명을 Python으로 만들다.
+조명을 Python으로 만든다.
 
 ```python
 import omni.usd
@@ -237,39 +237,39 @@ fill.CreateIntensityAttr(500.0)
 fill.CreateExposureAttr(0.0)
 ```
 
-intensity 단위와 renderer/exposure 조합을 기록하다. camera auto-exposure 또는 post-processing을 바꾸면서 material만 튜닝하지 않다. 최소한 밝은 낮, 어두운 실내와 역광 세 조건에서 camera histogram, depth, LiDAR/Radar return을 검사하다.
+조명 강도와 렌더러·노출 설정을 함께 기록한다. 재질을 비교할 때는 카메라 자동 노출과 후처리 설정을 고정한다. 최소한 밝은 낮, 어두운 실내와 역광 세 조건에서 카메라 영상의 밝기 분포, 깊이, LiDAR/Radar 반사점을 검사한다.
 
-## 10. environment와 navigation을 함께 검증하다
+## 10. 환경과 로봇 주행 검증
 
-- ground와 ramp의 slope가 robot capability 안에 있는지 확인하다.
-- door width를 render mesh가 아니라 collider 기준으로 측정하다.
-- occupancy map Z slice가 LiDAR 높이의 장애물을 포함하다.
-- glass/얇은 물체가 occupancy와 RTX sensor에 어떻게 보이는지 기록하다.
-- dynamic prop은 static map에는 없더라도 sensor/costmap에서 검출되게 하다.
-- map origin, world origin과 Stage transform을 일치시키다.
+- 바닥과 경사로의 기울기가 로봇이 주행할 수 있는 범위인지 확인한다.
+- 출입문의 폭을 렌더링용 메시가 아니라 충돌 형상 기준으로 측정한다.
+- 점유 지도를 생성하는 Z축 높이 범위가 LiDAR 높이의 장애물을 포함하는지 확인한다.
+- 유리와 얇은 물체가 점유 지도와 RTX 센서에 어떻게 보이는지 기록한다.
+- 움직이는 소품은 정적 지도에 없더라도 센서와 costmap에서 검출되어야 한다.
+- 지도 원점과 월드 원점 사이의 관계를 Stage 좌표 변환과 맞춘다.
 
-## 11. 성능을 측정하고 최적화하다
+## 11. 성능 측정과 최적화
 
-1. 반복 geometry를 instanceable reference로 만들다.
-2. 작은 mesh 수천 개는 Mesh Merge Tool을 검토하다.
-3. invisible/먼 구역은 payload/visibility로 load와 render를 줄이다.
-4. collision은 visual detail보다 훨씬 단순하게 하다.
-5. texture resolution과 unique material 수를 줄이다.
-6. RTX sensor가 필요 없는 frame에는 render product/helper를 끄다.
+1. 반복 형상을 instanceable 참조로 만든다.
+2. 작은 메시가 수천 개라면 Merge Mesh 도구로 병합할 수 있는지 검토한다.
+3. 당장 필요하지 않은 먼 구역은 Payload로 로딩을 조절하고, 화면 표시 여부는 visibility로 관리한다.
+4. 충돌 형상은 렌더링 형상보다 단순하게 만든다.
+5. 텍스처 해상도를 낮추고, 같은 설정의 재질은 공유해 재질 수를 줄인다.
+6. RTX 센서가 필요 없는 프레임에는 렌더 출력(Render Product)/Helper를 끈다.
 
-최적화 전후에 Stage load time, prim/mesh/material/collider 수, GPU memory, FPS와 real-time factor를 같은 camera pose에서 기록하다. merge한 뒤 semantic instance 경계가 사라지는 trade-off를 확인하다.
+최적화 전후에 같은 카메라 자세에서 Stage 로딩 시간, Prim·메시·재질·충돌체 수, GPU 메모리, FPS와 실시간 계수(RTF)를 기록한다. 메시 병합으로 서로 다른 물체의 인스턴스 레이블이 합쳐지지 않았는지도 확인한다.
 
-## 12. environment acceptance checklist
+## 12. 환경 검증 체크리스트
 
-- [ ] Z-up, meter, default prim과 world origin이 맞다.
-- [ ] 모든 reference/texture가 project-relative 또는 배포 가능한 URI이다.
-- [ ] visual material과 physics material을 구분했다.
-- [ ] collider-only view에서 통로·floor·wall이 의도대로 보이다.
-- [ ] drop/sweep/navigation collision test를 통과했다.
-- [ ] semantic taxonomy와 annotator output이 일치하다.
-- [ ] RTX non-visual material ID를 필요한 표면에 설정했다.
-- [ ] 세 lighting 조건에서 camera와 RTX sensor를 검증했다.
-- [ ] reopen/headless 환경에서도 missing asset이 없다.
+- [ ] Z-up, 미터 단위, defaultPrim과 월드 원점이 맞다.
+- [ ] 모든 참조/텍스처가 프로젝트 기준 상대 경로 또는 배포 가능한 URI이다.
+- [ ] 시각 재질과 물리 재질을 구분했다.
+- [ ] 충돌체 표시 모드에서 통로·바닥·벽이 의도대로 보인다.
+- [ ] 낙하·충돌 범위·로봇 주행 시험을 통과했다.
+- [ ] 클래스 분류표와 annotator 출력이 일치한다.
+- [ ] RTX 비시각 재질 ID를 필요한 표면에 설정했다.
+- [ ] 세 조명 조건에서 카메라와 RTX 센서를 검증했다.
+- [ ] 장면을 다시 열거나 창 없이 실행해도 누락된 자산이 없다.
 
 ## 출처
 

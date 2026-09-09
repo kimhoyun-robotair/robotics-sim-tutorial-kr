@@ -2,37 +2,104 @@ site_name: Isaac Sim 5.1 한국어 튜토리얼
 site_description: Ubuntu 24.04 LTS와 ROS 2 Jazzy에서 배우는 NVIDIA Isaac Sim 5.1 실행 중심 과정
 repo_url: https://github.com/kimhoyun-robotair/robotics-sim-tutorial-kr
 edit_uri: edit/IsaacSim5.1/docs/
-
 theme:
   name: material
   language: ko
   features:
-    - navigation.sections
-    - navigation.indexes
-    - navigation.top
-    - content.code.copy
-    - search.suggest
-
+  - navigation.sections
+  - navigation.indexes
+  - navigation.top
+  - content.code.copy
+  - search.suggest
 markdown_extensions:
-  - admonition
-  - attr_list
-  - def_list
-  - footnotes
-  - tables
-  - toc:
-      permalink: true
-  - pymdownx.details
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
-
+- admonition
+- attr_list
+- def_list
+- footnotes
+- tables
+- toc:
+    permalink: true
+- pymdownx.details
+- pymdownx.highlight:
+    anchor_linenums: true
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
 plugins:
-  - search:
-      lang:
-        - ko
-        - en
-
+- search:
+    lang:
+    - ko
+    - en
 strict: true
-
+nav:
+- 시작하기: index.md
+- 36단계 학습 과정: course-guide.md
+- USD와 로봇 파일:
+  - NVIDIA 로보틱스 시뮬레이션 생태계 이해하기: 01-foundations/01-ecosystem.md
+  - USD 핵심 개념과 로봇 포맷 비교: 01-foundations/02-usd-fundamentals.md
+  - USD 도구와 pxr 프로그래밍: 01-foundations/03-usd-tools-and-python.md
+  - URDF·Xacro·MJCF와 USD 사이의 변환: 01-foundations/04-format-conversion.md
+- 설치와 GUI:
+  - Ubuntu 24.04 시스템 요구사항과 사전 점검: 02-getting-started/01-system-requirements.md
+  - Isaac Sim 5.1 워크스테이션 설치와 첫 실행: 02-getting-started/02-workstation-installation.md
+  - Ubuntu 24.04와 ROS 2 Jazzy 연결: 02-getting-started/03-ros2-jazzy-setup.md
+  - Isaac Sim GUI와 핵심 인터페이스: 02-getting-started/04-gui-interface.md
+  - '첫 장면: 상자 떨어뜨리고 저장하기': 02-getting-started/05-first-scene-and-physics.md
+  - Headless, Docker와 클라우드 실행: 02-getting-started/06-headless-container-cloud.md
+  - 설치·실행·GUI·ROS 2 문제 해결: 02-getting-started/07-troubleshooting.md
+- 물리·로봇·센서:
+  - 핵심 시뮬레이션 학습 경로: 03-core/00-core-learning-path.md
+  - GUI, Stage와 자산: 03-core/01-gui-stage-and-assets.md
+  - Python 실행 방식과 Scene API: 03-core/02-python-workflows-and-scene.md
+  - 물리, 재질, 조명과 센서: 03-core/03-physics-material-light-sensors.md
+  - Articulation, 관절과 제어기: 03-core/04-articulation-joints-controllers.md
+  - 로봇 가져오기와 설정: 03-core/05-robot-import-and-setup.md
+  - 모바일 로봇과 매니퓰레이터: 03-core/06-mobile-and-manipulator.md
+  - Lula, RMPflow와 궤적 생성: 03-core/07-motion-generation.md
+  - Cortex 행동 설계, 디버깅과 프로파일링: 03-core/08-cortex-debugging-profiling.md
+- ROS 2 Jazzy:
+  - ROS 2 Jazzy 통합 학습 경로: 04-ros2/00-learning-path.md
+  - ROS 2 Jazzy 연동 학습 경로: 04-ros2/00-ros2-learning-path.md
+  - ROS 2 Bridge, DDS 도메인과 QoS: 04-ros2/01-bridge-and-qos.md
+  - ROS 2 Jazzy 설치, Bridge, 워크스페이스: 04-ros2/01-install-bridge-workspace.md
+  - 시간, TF, odometry와 로봇 명령: 04-ros2/02-time-tf-and-motion.md
+  - Action Graph로 카메라, RTX LiDAR와 IMU 발행: 04-ros2/03-sensors-and-action-graph.md
+  - Nav2, MoveIt 2와 ROS 2 Simulation Control: 04-ros2/04-nav2-moveit-and-sim-control.md
+  - 커스텀 메시지, Generic 노드와 계층별 디버깅: 04-ros2/05-custom-messages-and-debugging.md
+  - 관절, 차동 구동, Ackermann 제어 실전: 04-ros2/10-control-cookbook.md
+  - 카메라, RTX LiDAR, IMU의 ROS 2 토픽: 04-ros2/11-sensor-topic-cookbook.md
+  - Nav2 자율주행 워크숍: 04-ros2/12-nav2-workshop.md
+  - MoveIt 2 매니퓰레이션 워크숍: 04-ros2/13-moveit2-workshop.md
+  - 커스텀 인터페이스, ROS 2 Launch와 Simulation Control: 04-ros2/14-custom-interfaces-launch-and-sim-control.md
+  - ROS 2 연동 문제 진단 절차: 04-ros2/15-diagnostics-playbook.md
+- 내 로봇과 환경:
+  - 커스텀 자산 통합 학습 경로: 05-customization/00-customization-learning-path.md
+  - URDF, Xacro와 MJCF에서 커스텀 로봇 완성하기: 05-customization/01-custom-robot.md
+  - '커스텀 환경: USD, 메시, 재질, 충돌 형상과 의미 정보': 05-customization/02-custom-environment.md
+  - '커스텀 센서: 기존 센서 조립부터 Python 센서 개발까지': 05-customization/03-custom-sensors.md
+  - 커스텀 자산 검증, 성능 최적화와 회귀시험: 05-customization/04-validation-performance.md
+- Python·Extension·심화 개발:
+  - GUI, Script Editor, Extension, standalone Python의 차이: 06-developer/01-python-workflows.md
+  - 설치 가능한 Extension과 OmniGraph 만들기: 06-developer/02-extension-and-omnigraph.md
+  - Replicator로 합성 데이터 생성하기: 06-developer/03-replicator-and-sdg.md
+  - Isaac Lab의 역할과 로봇 학습 입문: 06-developer/04-isaac-lab.md
+  - 디버깅, 성능 측정과 배포: 06-developer/05-debug-performance-deployment.md
+  - 디지털 트윈, Cortex와 창고 응용 실습: 06-developer/06-digital-twin-and-cortex.md
+- 프로젝트:
+  - 미니 프로젝트 운영 방법: 07-projects/00-overview.md
+  - '프로젝트 1: 재현 가능한 USD 물리 실험실': 07-projects/01-usd-physics-lab.md
+  - '프로젝트 2: 이동 로봇을 가져와 ROS 2로 움직인다': 07-projects/02-custom-mobile-robot.md
+  - '프로젝트 3: 창고에서 세 목표를 순서대로 방문한다': 07-projects/03-warehouse-navigation.md
+  - '프로젝트 4: 카메라로 물체 위치를 구하고 집어 옮긴다': 07-projects/04-vision-pick-place.md
+  - '프로젝트 5: Isaac Lab에서 학습하고 정책을 평가한다': 07-projects/05-isaac-lab-policy.md
+- 부록:
+  - Isaac Sim 5.1 · ROS 2 Jazzy 명령 치트시트: appendices/command-cheatsheet.md
+  - 핵심 용어집: appendices/glossary.md
+  - Isaac Sim 5.1.0 공식 문서 목록과 학습 범위: appendices/official-docs-coverage.md
+  - 'Isaac Sim 4.x에서 5.1.0으로: 변경 사항과 코드 이관': appendices/release-notes-4x-to-5-1.md
+  - 튜토리얼 검증 기록: appendices/validation-report.md
+validation:
+  links:
+    not_found: warn
+    unrecognized_links: warn
+    anchors: warn

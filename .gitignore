@@ -117,3 +117,6 @@ ref/
 
 # Local implementation handoff notes
 Handoff.md
+
+# Generated tutorial sensor captures and validation runs
+results/

@@ -18,19 +18,20 @@ Ubuntu 24.04 LTS, ROS 2 Jazzy, NVIDIA Isaac Sim 5.1.0 조합을 처음 설치하
 
 Python 버전이 다른 두 프로세스를 억지로 한 환경에 섞지 않는다. 기본 ROS 메시지는 DDS로 통신하므로 외부 ROS 2 노드는 Python 3.12를 사용해도 된다. Isaac Sim 프로세스에서 `rclpy` 또는 커스텀 인터페이스를 직접 불러올 때만 Python 3.11용 별도 workspace가 필요하다.
 
-## 학습 경로
+## 처음 시작하기
 
-```text
-생태계·USD → 설치·GUI → 물리·로봇·제어 → ROS 2
-→ 커스텀 로봇·환경·센서 → 개발자 API·합성 데이터·Isaac Lab
-→ 난이도별 미니 프로젝트 5개
-```
+1. [36단계 학습 과정](docs/course-guide.md)을 순서대로 따른다. GUI의 마우스 조작부터 시작해 로봇·센서·ROS 2와 심화 프로젝트까지 진행한다.
+2. [첫 물리 장면](docs/02-getting-started/05-first-scene-and-physics.md)에서 상자를 만든 뒤, [실행 방식 비교](docs/06-developer/01-python-workflows.md)에서 같은 장면을 GUI·Script Editor·Extension·standalone Python으로 구성한다.
+3. 이전 버전 코드가 있다면 [4.x→5.0→5.1 변경사항](docs/appendices/release-notes-4x-to-5-1.md)을 함께 읽는다. 기능이 처음 추가된 버전과 5.1에서 수정·제거된 항목을 구분한다.
+4. 각 단계의 완료 기준을 확인한 뒤 [다섯 프로젝트](docs/07-projects/00-overview.md)에서 USD·자체 로봇·창고 주행·비전 집기·학습 정책을 적용한다.
 
-1. [과정 사용법](docs/course-guide.md)에서 지원 범위와 실습 규칙을 확인한다.
-2. [NVIDIA 생태계](docs/01-foundations/01-ecosystem.md)와 USD 네 장을 먼저 읽는다.
-3. `02-getting-started`부터 디렉터리 번호 순서대로 실습한다.
-4. 각 장의 체크포인트를 통과하고 `07-projects`의 결과물을 독립적으로 완성한다.
-5. [공식 문서 전체 커버리지](docs/appendices/official-docs-coverage.md)에서 Isaac Sim 5.1.0 공식 페이지별 요약과 본 과정의 대응 장을 찾는다.
+[공식 문서 대응표](docs/appendices/official-docs-coverage.md)에서 NVIDIA 5.1.0 원문과 관련 실습을 찾을 수 있다.
+
+## 예제와 검증
+
+`examples/standalone/`에는 기본 물리, 이동 로봇, 카메라·IMU, RTX LiDAR 예제를 제공한다. `examples/script_editor/`와 `examples/extensions/`에는 앱 안에서 실행할 예제를 제공한다. 실행 위치와 전체 코드는 각 실습 본문을 따른다.
+
+**이번 수정에서는 정적 검사를 수행했으며, 실제 Isaac Sim·RTX GPU·ROS 2 실행은 검증하지 못했다.** [검증 기록](docs/appendices/validation-report.md)에 검사 결과와 제한을 남겼다. [장비 검증 절차](docs/05-customization/04-validation-performance.md)는 검은 영상·빈 프레임·잘못된 센서 값·로봇 자세를 확인하는 실행 명령과 결과 판정 방법을 설명한다.
 
 ## 빠른 확인
 

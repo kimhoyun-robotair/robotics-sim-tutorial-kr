@@ -1,0 +1,14 @@
+[package]
+version = "0.1.0"
+title = "Course Falling Cube"
+description = "Isaac Sim 5.1: 빈 장면 생성과 Extension 수명 주기 실습"
+category = "Simulation"
+
+[dependencies]
+"omni.kit.uiapp" = {}
+"omni.usd" = {}
+"omni.timeline" = {}
+"omni.physx" = {}
+
+[[python.module]]
+name = "course.falling_cube"
