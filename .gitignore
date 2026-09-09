@@ -117,3 +117,9 @@ ref/
 
 # Local implementation handoff notes
 Handoff.md
+
+# Isaac Sim 6.0.1 experiment outputs and local assets
+artifacts/
+*.usd
+*.usdc
+*.usdz

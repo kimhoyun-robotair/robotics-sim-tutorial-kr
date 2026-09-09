@@ -1,0 +1,42 @@
+{
+  "checked_utc": "2026-09-09T10:06:30.388624+00:00",
+  "environment": {
+    "os": "Ubuntu 24.04.3 LTS",
+    "architecture": "x86_64",
+    "python": "3.12.14"
+  },
+  "static": {
+    "status": "PASS",
+    "counts": {
+      "python_files": 22,
+      "python_blocks": 99,
+      "markdown_files": 44,
+      "bash_blocks": 108,
+      "relative_links": 173,
+      "lessons": 40,
+      "projects": 8,
+      "config_files": 6
+    },
+    "errors": [],
+    "scope": "static syntax, references and authored URDF structure; no Isaac Sim execution"
+  },
+  "unit_tests": {
+    "run": 24,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "status": "PASS"
+  },
+  "official_link_check": {
+    "count": 84,
+    "http_200": 84,
+    "redirects": 0
+  },
+  "runtime": {
+    "isaac_sim": "NOT_RUN: not installed",
+    "ros2": "NOT_RUN: not installed",
+    "nvidia_gpu": "NOT_RUN: nvidia-smi unavailable",
+    "rendering_physics_gui": "NOT_RUN"
+  },
+  "scope": "Unit tests use synthetic data. No recorded GPU/simulation success is asserted."
+}

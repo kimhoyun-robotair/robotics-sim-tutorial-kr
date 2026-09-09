@@ -1,0 +1,19 @@
+name: Isaac Sim 6.0.1 static checks
+on:
+  push:
+    branches: [IsaacSim6.0.1]
+  pull_request:
+    branches: [IsaacSim6.0.1]
+permissions:
+  contents: read
+jobs:
+  static:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python scripts/check_repo.py
+      - run: python -m unittest discover -s tests -v

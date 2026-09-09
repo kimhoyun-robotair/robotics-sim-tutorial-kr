@@ -1,0 +1,810 @@
+{
+  "checked_utc": "2026-09-09T10:03:26.517647+00:00",
+  "method": "HTTP GET and final URL/title; API runtime behavior not tested",
+  "count": 84,
+  "results": [
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/overview/release_notes.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/overview/release_notes.html",
+      "title": "Release Notes &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/core_api_tutorials/tutorial_core_hello_world.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/core_api_tutorials/tutorial_core_hello_world.html",
+      "title": "Hello World &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/13-standalone.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/development_tools/omniverse_script_editor.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/development_tools/omniverse_script_editor.html",
+      "title": "Omniverse Script Editor &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/12-script-editor.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/gui/menu_create.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/gui/menu_create.html",
+      "title": "Create Menu &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/04-gui-basics.md",
+        "docs/lessons/06-ground-light-material.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/gui/reference_keyboard_shortcuts.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/gui/reference_keyboard_shortcuts.html",
+      "title": "Keyboard Shortcuts Reference &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/04-gui-basics.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/gui/reference_user_interface.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/gui/reference_user_interface.html",
+      "title": "User Interface Reference &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/04-gui-basics.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/importer_exporter/ext_isaacsim_asset_importer_mjcf.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/importer_exporter/ext_isaacsim_asset_importer_mjcf.html",
+      "title": "MJCF Importer Extension &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/08-usd-composition.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/importer_exporter/ext_isaacsim_asset_importer_urdf.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/importer_exporter/ext_isaacsim_asset_importer_urdf.html",
+      "title": "URDF Importer Extension &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/08-usd-composition.md",
+        "docs/lessons/19-urdf-inertia.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/importer_exporter/ext_omni_exporter_urdf.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/importer_exporter/ext_omni_exporter_urdf.html",
+      "title": "USD to URDF Exporter Extension &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/08-usd-composition.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/index.html",
+      "title": "What Is Isaac Sim? &#8212; Isaac Sim Documentation",
+      "files": [
+        "README.md",
+        "docs/lessons/01-platforms.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/download.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/download.html",
+      "title": "Download Isaac Sim &#8212; Isaac Sim Documentation",
+      "files": [
+        "README.md",
+        "docs/lessons/03-installation.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/install_python.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/install_python.html",
+      "title": "Python Environment Installation &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/03-installation.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/install_ros.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/install_ros.html",
+      "title": "ROS 2 Installation (Default) &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/03-installation.md",
+        "docs/lessons/35-rosbag-nav2.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/install_workstation.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/install_workstation.html",
+      "title": "Workstation Installation &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/02-preflight.md",
+        "docs/lessons/03-installation.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/manual_livestream_clients.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/manual_livestream_clients.html",
+      "title": "Livestream Clients &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/02-preflight.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/requirements.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/requirements.html",
+      "title": "Isaac Sim Requirements &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/02-preflight.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/introduction/quickstart_isaacsim.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/introduction/quickstart_isaacsim.html",
+      "title": "Isaac Sim Basic Usage Tutorial &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/06-ground-light-material.md",
+        "docs/lessons/09-project-lab.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/introduction/workflows.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/introduction/workflows.html",
+      "title": "Workflows &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/01-platforms.md",
+        "docs/lessons/11-workflows.md",
+        "docs/workflows.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/isaac_lab_tutorials/tutorial_policy_deployment.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/isaac_lab_tutorials/tutorial_policy_deployment.html",
+      "title": "Deploying Policies in Isaac Sim &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/40-capstone-regression-lab.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/ext_isaacsim_replicator_agent_migration_guide.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/ext_isaacsim_replicator_agent_migration_guide.html",
+      "title": "Replicator Agent (IRA) &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/index.html",
+      "title": "Isaac Sim 6.0 &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/mobility_gen_recordings_migration.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/mobility_gen_recordings_migration.html",
+      "title": "MobilityGen Recordings &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/ros2_omnigraph_migration.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/ros2_omnigraph_migration.html",
+      "title": "ROS 2 OmniGraph Nodes &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/31-tf-odometry-joints.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/sensors_camera_to_experimental_rtx.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/sensors_camera_to_experimental_rtx.html",
+      "title": "Camera Sensors &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/23-camera-coordinates.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/sensors_physics_to_experimental_physics.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/sensors_physics_to_experimental_physics.html",
+      "title": "Physics Sensors &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/26-imu-contact.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/sensors_rtx_to_experimental_rtx.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/sensors_rtx_to_experimental_rtx.html",
+      "title": "RTX Sensors &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/surface_gripper_bindings_import.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/migration_guides/isaac_sim_6_0/surface_gripper_bindings_import.html",
+      "title": "Surface Gripper Bindings &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omnigraph/omnigraph_scripting.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omnigraph/omnigraph_scripting.html",
+      "title": "OmniGraph via Python Scripting Tutorial &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/18-omnigraph.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omnigraph/omnigraph_tutorial.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omnigraph/omnigraph_tutorial.html",
+      "title": "Isaac Sim OmniGraph Tutorial &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/18-omnigraph.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omniverse_usd/intro_to_usd.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omniverse_usd/intro_to_usd.html",
+      "title": "Working with USD &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/08-usd-composition.md",
+        "docs/lessons/09-project-lab.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omniverse_usd/open_usd.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omniverse_usd/open_usd.html",
+      "title": "OpenUSD Fundamentals &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/05-transforms-units.md",
+        "docs/lessons/06-ground-light-material.md",
+        "docs/lessons/08-usd-composition.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omniverse_usd/robot_schema.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/omniverse_usd/robot_schema.html",
+      "title": "Robot Schema &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/10-stability-inspection.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/openusd_tuning_tutorials/tutorial_03_inspect_asset.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/openusd_tuning_tutorials/tutorial_03_inspect_asset.html",
+      "title": "Tutorial 3: Inspect Asset &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/10-stability-inspection.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/overview/known_issues.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/overview/known_issues.html",
+      "title": "Known Issues &#8212; Isaac Sim Documentation",
+      "files": [
+        "README.md",
+        "docs/lessons/28-performance-diagnostics.md",
+        "docs/lessons/38-project-dataset.md",
+        "docs/release-notes-5.1-to-6.0.1.md",
+        "docs/validation.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/overview/release_notes.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/overview/release_notes.html",
+      "title": "Release Notes &#8212; Isaac Sim Documentation",
+      "files": [
+        "README.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/physics/new_physics_engine.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/physics/new_physics_engine.html",
+      "title": "Physics Data Flow and Engine Integration &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/05-transforms-units.md",
+        "docs/lessons/07-rigid-body-physics.md",
+        "docs/lessons/39-batch-and-evidence.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/physics/newton_physics.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/physics/newton_physics.html",
+      "title": "Newton Physics Backend &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/40-capstone-regression-lab.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/physics/simulation_fundamentals.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/physics/simulation_fundamentals.html",
+      "title": "Physics Simulation Fundamentals &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/07-rigid-body-physics.md",
+        "docs/lessons/09-project-lab.md",
+        "docs/lessons/14-timing.md",
+        "docs/lessons/21-manipulator-stability.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/docs/overview/experimental.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/docs/overview/experimental.html",
+      "title": "Core Experimental API &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/22-project-joint-rig.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/docs/source/generic_model_output/generic_model_output.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/docs/source/generic_model_output/generic_model_output.html",
+      "title": "GenericModelOutput &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/25-rtx-lidar.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.asset.importer.urdf/docs/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.asset.importer.urdf/docs/index.html",
+      "title": "[isaacsim.asset.importer.urdf] Omniverse URDF Importer Core &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/19-urdf-inertia.md",
+        "docs/lessons/22-project-joint-rig.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.core.experimental.prims/docs/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.core.experimental.prims/docs/index.html",
+      "title": "[isaacsim.core.experimental.prims] Isaac Sim Core (Prims) &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/20-articulation-drives.md",
+        "docs/lessons/21-manipulator-stability.md",
+        "docs/workflows.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.core.simulation_manager/docs/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.core.simulation_manager/docs/index.html",
+      "title": "[isaacsim.core.simulation_manager] Isaac Sim Core Simulation Manager &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/14-timing.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.ros2.bridge/docs/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.ros2.bridge/docs/index.html",
+      "title": "[isaacsim.ros2.bridge] ROS 2 Bridge &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/29-ros2-bridge.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.ros2.nodes/docs/ogn/OgnROS2PublishTransformTree.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.ros2.nodes/docs/ogn/OgnROS2PublishTransformTree.html",
+      "title": "ROS2 Publish Transform Tree &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/29-ros2-bridge.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.ros2.nodes/docs/ogn/OgnROS2RtxLidarHelper.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.ros2.nodes/docs/ogn/OgnROS2RtxLidarHelper.html",
+      "title": "ROS2 RTX Lidar Helper &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/32-ros-sensors.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.sensors.experimental.physics/docs/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.sensors.experimental.physics/docs/index.html",
+      "title": "[isaacsim.sensors.experimental.physics] Isaac Sim Physics Sensor Simulation &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/26-imu-contact.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.sensors.experimental.rtx/docs/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.sensors.experimental.rtx/docs/index.html",
+      "title": "[isaacsim.sensors.experimental.rtx] Isaac Sim RTX Sensor Simulation &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/24-rgbd-validation.md",
+        "docs/lessons/27-project-sensor-lab.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.simulation_app/docs/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/py/source/extensions/isaacsim.simulation_app/docs/index.html",
+      "title": "[isaacsim.simulation_app] Isaac Sim Kit Helpers &#8212; Isaac Sim API",
+      "files": [
+        "docs/lessons/13-standalone.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/python_scripting/core_api_overview.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/python_scripting/core_api_overview.html",
+      "title": "Core API Overview &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/11-workflows.md",
+        "docs/lessons/15-project-drop-test.md",
+        "docs/workflows.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/python_scripting/index.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/python_scripting/index.html",
+      "title": "Python Scripting and Tutorials &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/01-platforms.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/python_scripting/robots_simulation.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/python_scripting/robots_simulation.html",
+      "title": "Robot Simulation Snippets &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/20-articulation-drives.md",
+        "docs/lessons/22-project-joint-rig.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/reference_material/reference_conventions.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/reference_material/reference_conventions.html",
+      "title": "Isaac Sim Conventions &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/05-transforms-units.md",
+        "docs/lessons/23-camera-coordinates.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/reference_material/sim_performance_optimization_handbook.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/reference_material/sim_performance_optimization_handbook.html",
+      "title": "Isaac Sim Performance Optimization Handbook &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/28-performance-diagnostics.md",
+        "docs/lessons/39-batch-and-evidence.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/replicator_tutorials/tutorial_replicator_getting_started.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/replicator_tutorials/tutorial_replicator_getting_started.html",
+      "title": "Getting Started Scripts &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/37-synthetic-data.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/replicator_tutorials/tutorial_replicator_isaac_randomizers.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/replicator_tutorials/tutorial_replicator_isaac_randomizers.html",
+      "title": "Randomization Snippets &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/38-project-dataset.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/replicator_tutorials/tutorial_replicator_sdg_workflows.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/replicator_tutorials/tutorial_replicator_sdg_workflows.html",
+      "title": "SDG Workflows &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/37-synthetic-data.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/asset_structure.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/asset_structure.html",
+      "title": "Asset Structure &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/joint_inspector.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/joint_inspector.html",
+      "title": "Joint Inspector &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/10-stability-inspection.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/robot_inspector.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/robot_inspector.html",
+      "title": "Robot Inspector Window &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/10-stability-inspection.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/troubleshooting.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_setup/troubleshooting.html",
+      "title": "Robot Setup Troubleshooting &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/19-urdf-inertia.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_simulation/articulation_controller.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_simulation/articulation_controller.html",
+      "title": "Articulation Controller &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/20-articulation-drives.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_simulation/robot_simulation_tips.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/robot_simulation/robot_simulation_tips.html",
+      "title": "Robot Simulation Tips &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/07-rigid-body-physics.md",
+        "docs/lessons/21-manipulator-stability.md",
+        "docs/lessons/28-performance-diagnostics.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/ros2_faq.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/ros2_faq.html",
+      "title": "ROS 2 Frequently Asked Questions &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/29-ros2-bridge.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/ros2_reference_architecture.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/ros2_reference_architecture.html",
+      "title": "ROS 2 Reference Architecture &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/36-project7-replay.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_camera.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_camera.html",
+      "title": "ROS 2 Cameras &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/32-ros-sensors.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_clock.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_clock.html",
+      "title": "ROS 2 Clock &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/30-clock-qos.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_custom_message_python.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_custom_message_python.html",
+      "title": "ROS 2 Python Custom Messages &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/29-ros2-bridge.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_drive_turtlebot.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_drive_turtlebot.html",
+      "title": "Driving TurtleBot using ROS 2 Messages &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/34-command-safety.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_generic_publisher_subscriber.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_generic_publisher_subscriber.html",
+      "title": "ROS 2 Generic Publisher and Subscriber &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/33-project6-ros-loop.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_manipulation.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_manipulation.html",
+      "title": "ROS2 Joint Control: Extension Python Scripting &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/31-tf-odometry-joints.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_navigation.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_navigation.html",
+      "title": "ROS 2 Navigation &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/35-rosbag-nav2.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_putting_it_all_together.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_putting_it_all_together.html",
+      "title": "ROS 2 Putting It All Together &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/40-capstone-regression-lab.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_python.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_python.html",
+      "title": "ROS 2 Bridge in Standalone Workflow &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/32-ros-sensors.md",
+        "docs/lessons/33-project6-ros-loop.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_qos.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/ros2_tutorials/tutorial_ros2_qos.html",
+      "title": "ROS 2 Quality of Service (QoS) &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/30-clock-qos.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_camera.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_camera.html",
+      "title": "Camera Sensors &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/23-camera-coordinates.md",
+        "docs/lessons/24-rgbd-validation.md",
+        "docs/lessons/27-project-sensor-lab.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_camera_depth.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_camera_depth.html",
+      "title": "Depth Sensors &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/24-rgbd-validation.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_multitick_rendering.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_multitick_rendering.html",
+      "title": "Multi-Tick Rendering &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/25-rtx-lidar.md",
+        "docs/lessons/32-ros-sensors.md",
+        "docs/release-notes-5.1-to-6.0.1.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_physics_imu.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_physics_imu.html",
+      "title": "IMU sensor &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/26-imu-contact.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_rtx_annotators.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_rtx_annotators.html",
+      "title": "RTX Sensor Annotators &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/25-rtx-lidar.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_rtx_lidar.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/sensors/isaacsim_sensors_rtx_lidar.html",
+      "title": "RTX Lidar Sensor &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/25-rtx-lidar.md",
+        "docs/lessons/28-performance-diagnostics.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/utilities/extension_template_generator.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/utilities/extension_template_generator.html",
+      "title": "Extension Template Generator &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/16-extension-basics.md"
+      ]
+    },
+    {
+      "url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/utilities/extension_templates_tutorial.html",
+      "status": 200,
+      "final_url": "https://docs.isaacsim.omniverse.nvidia.com/6.0.1/utilities/extension_templates_tutorial.html",
+      "title": "Extension Template Generator Explained &#8212; Isaac Sim Documentation",
+      "files": [
+        "docs/lessons/16-extension-basics.md",
+        "docs/lessons/17-project-scene-extension.md"
+      ]
+    },
+    {
+      "url": "https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html",
+      "status": 200,
+      "final_url": "https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html",
+      "title": "Making sure you&#39;re not a bot!",
+      "files": [
+        "docs/lessons/03-installation.md"
+      ]
+    }
+  ]
+}

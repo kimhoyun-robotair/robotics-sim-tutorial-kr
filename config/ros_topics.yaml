@@ -1,0 +1,23 @@
+# Contract for examples/06_ros_clock.py and examples/07_ros_scene.py.
+# Documentation manifest, not a ROS parameter or launch file.
+domain_id: 61
+clock:
+  topic: /clock
+  type: rosgraph_msgs/msg/Clock
+  reliability: best_effort
+  durability: volatile
+scene:
+  command_topic: /tutorial/cmd_vel
+  command_type: geometry_msgs/msg/Twist
+  odometry_topic: /tutorial/odom
+  odometry_type: nav_msgs/msg/Odometry
+  tf_topic: /tf
+  tf_type: tf2_msgs/msg/TFMessage
+  parent_frame: odom
+  child_frame: tutorial_base
+  maximum_linear_velocity_m_s: 0.2
+  maximum_angular_velocity_rad_s: 0.6
+  command_timeout_wall_seconds: 0.5
+  physics_step_seconds: 0.016666666666666666
+  workspace_xy_m: [-2.0, 2.0]
+  geometry: kinematic_cuboid_without_rigid_body_or_joints

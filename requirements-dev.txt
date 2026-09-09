@@ -1,0 +1,4 @@
+# 시스템 Python의 정적/데이터 검사에만 사용한다. Isaac Sim Python에 일괄 설치하지 않는다.
+numpy>=1.26,<3
+Pillow>=10,<13
+PyYAML>=6,<7

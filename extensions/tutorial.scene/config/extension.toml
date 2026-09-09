@@ -1,0 +1,14 @@
+[package]
+version = "0.1.0"
+title = "Tutorial Scene Builder"
+description = "A small, repeatable scene authoring exercise for Isaac Sim 6.0.1"
+category = "Tutorial"
+authors = ["robotics-sim-tutorial-kr"]
+
+[dependencies]
+"omni.ui" = {}
+"omni.usd" = {}
+"omni.timeline" = {}
+
+[[python.module]]
+name = "tutorial.scene"
