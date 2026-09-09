@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.02 |
+| 수정일 | 2026.09.09 |
 
 로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
 특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
@@ -29,7 +29,8 @@
   
 **Isaac Sim (Isaac Lab) 튜토리얼**의 경우 다음 브랜치에 정리한다.
 - `IsaacSim5.1` : Ubuntu 24.04 LTS / ROS2 Jazzy / Isaac Sim 5.1.0 조합의 튜토리얼
-- `IsaacSim6.0.1` : Ubuntu 24.04 LTS / ROS2 Jazzy / Isaac Sim 6.0.0 + Isaac Sim 6.0.1 조합의 튜토리얼
+- `IsaacSim6.0.1` : Ubuntu 24.04 LTS / ROS2 Jazzy / Isaac Sim 6.0.1 조합의 튜토리얼
+- `IsaacLab` : Ubuntu 24.04 LTS / Isaac Lab (2026.09 기준 최신 버젼) / ROS2 Jazzy (Optional) 조합의 튜토리얼
 
 따라서 원하는 버젼의 시뮬레이터 혹은 원하는 버젼의 ROS2 연동 튜토리얼을 보고 싶으면 `git clone`을 할 때 `branch`를 바꿔서 `clone` 하거나 혹은 `main` 브랜치에서 `swtich` 하기를 바란다.
 
