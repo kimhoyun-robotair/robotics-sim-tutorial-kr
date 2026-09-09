@@ -115,7 +115,7 @@ ros2 topic echo /scan --once --qos-reliability best_effort
 source /opt/ros/jazzy/setup.bash
 source examples/ros2_ws/install/setup.bash
 ros2 launch tutorial_bot_bringup simulation.launch.py \
-  world:=training gui:=true rviz:=true nav2:=false
+  world:=training gui:=true rviz:=false nav2:=false
 ```
 
 별도 터미널에서 본체 TF를 확인한다. 이 명령은 계속 출력되므로 확인 후 `Ctrl+C`로 끝낸다.
