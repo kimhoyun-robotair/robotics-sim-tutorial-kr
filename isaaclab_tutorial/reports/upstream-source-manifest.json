@@ -1,0 +1,291 @@
+{
+  "tag": "v3.0.0-beta2.patch1",
+  "commit": "ffff603eafc6b74264a5261cc0183d6a65390d78",
+  "purpose": "Reference source snapshot; hashes identify the source consulted, not simulation test results.",
+  "files": [
+    {
+      "path": "docs/source/setup/installation/asset_caching.rst",
+      "sha256": "c90f7c040acbfdf022c916467de71fcf3b752e83ed051120346f23fc548a6ed2"
+    },
+    {
+      "path": "docs/source/setup/installation/binaries_installation.rst",
+      "sha256": "55ce91c566f2337307f700b0cfa510899dd77594694d7e33a4bfdfd7e5a0cb2b"
+    },
+    {
+      "path": "docs/source/setup/installation/cloud_installation.rst",
+      "sha256": "d92656112822f5dedd16ed351eea221f3a0d62b7176e77a44c2cfdd3dad05219"
+    },
+    {
+      "path": "docs/source/setup/installation/include/bin_verify_isaacsim.rst",
+      "sha256": "0858aa0a33e1a720214edb2cea03b79f420278f24071c4b15e065228d7d16d58"
+    },
+    {
+      "path": "docs/source/setup/installation/include/pip_extras_note.rst",
+      "sha256": "e365069eff2e43aed4451843d093396045b3366acba9172fda29ced8f5b784c4"
+    },
+    {
+      "path": "docs/source/setup/installation/include/pip_python_virtual_env.rst",
+      "sha256": "ae39aa13349c7b55f5bee907d8137f43a7c180dd38ca3650b39810524bbfb510"
+    },
+    {
+      "path": "docs/source/setup/installation/include/pip_verify_isaacsim.rst",
+      "sha256": "37d792d23957097dc78fc89bf78aa0fba2becc193f661ba562af5ebcdc7c3131"
+    },
+    {
+      "path": "docs/source/setup/installation/include/selective_install.rst",
+      "sha256": "497782f20bfdd496b66d1e9b4f67116d1c6a954a856aef3092fa8956257fb86a"
+    },
+    {
+      "path": "docs/source/setup/installation/include/src_build_isaaclab.rst",
+      "sha256": "f4ab9a98e5e08ddc280979181f6ba5ae0f279d987e737cfd907bcb0741a109c5"
+    },
+    {
+      "path": "docs/source/setup/installation/include/src_clone_isaaclab.rst",
+      "sha256": "19bbbbea18f62ea8ac790ea88c737e3b8adc11dd3ac0cbbdbfa329b9215d7dad"
+    },
+    {
+      "path": "docs/source/setup/installation/include/src_python_virtual_env.rst",
+      "sha256": "4db8988fb6416fd8154be2bc2862d8ef73f4e0de4f6165a63254a9181f2609d3"
+    },
+    {
+      "path": "docs/source/setup/installation/include/src_symlink_isaacsim.rst",
+      "sha256": "5c2f88345aad9c44b000e652e152f4af1b79a996a72437429002cb5c8e8e9d07"
+    },
+    {
+      "path": "docs/source/setup/installation/include/src_verify_isaaclab.rst",
+      "sha256": "5959c45ea41b6647981135baa3070319910119507cc09a557372724c174066a4"
+    },
+    {
+      "path": "docs/source/setup/installation/index.rst",
+      "sha256": "ec467d24dc0b0e09fe47f8febce9a01b6a0fd6bb61070f77765dfff234d50da8"
+    },
+    {
+      "path": "docs/source/setup/installation/isaaclab_pip_installation.rst",
+      "sha256": "57106c692b7263cbf1577534a8c6322f1c5220f3e34b7823e50ab1423d27ab28"
+    },
+    {
+      "path": "docs/source/setup/installation/kitless_installation.rst",
+      "sha256": "7d396a5631301cf4e991ab9dc7bbd48795f59f1cba5469f7663f2f4f1150f347"
+    },
+    {
+      "path": "docs/source/setup/installation/pip_installation.rst",
+      "sha256": "2af1a7b8f4ba8407125744d0965905c0571022b483b415fe29aa1f52f54b1896"
+    },
+    {
+      "path": "docs/source/setup/installation/source_installation.rst",
+      "sha256": "0605300fba10dd40173c6fc2dfe275a29804e1dbc4de57e93292871ee4e5d6c9"
+    },
+    {
+      "path": "docs/source/setup/installation/uv_run.rst",
+      "sha256": "6df57ea56778f956e729900a8458f112f42edc50a620fd3908427ba90c1a43d7"
+    },
+    {
+      "path": "docs/source/tutorials/00_sim/create_empty.rst",
+      "sha256": "5178b811262c69b7b1d006ebaa6dcfac13f6bbd6ab3de0c56dcbed6b20d06c54"
+    },
+    {
+      "path": "docs/source/tutorials/00_sim/launch_app.rst",
+      "sha256": "90337a2c76688d1572e02c2c1a8e4767eaf33034f66eb1c83002599413c063ed"
+    },
+    {
+      "path": "docs/source/tutorials/00_sim/spawn_prims.rst",
+      "sha256": "2fba74e2a9852e60c7c691ed72ccbf8c502407691b2149ce541a8a907ec60e9f"
+    },
+    {
+      "path": "docs/source/tutorials/01_assets/add_new_robot.rst",
+      "sha256": "db4f12fc334cf6125db3218ea7300ce0acbc7c7857fd6797b527ae9b4de6bd6f"
+    },
+    {
+      "path": "docs/source/tutorials/01_assets/run_articulation.rst",
+      "sha256": "ccb709d4ed28f9984825c431dda487d5ccbbfb1766a95ceca03e03c4c03cc594"
+    },
+    {
+      "path": "docs/source/tutorials/01_assets/run_deformable_object.rst",
+      "sha256": "ff575989cc4dec19d59138f25241f4c4639fda2968b0850a7be6d130d6368df7"
+    },
+    {
+      "path": "docs/source/tutorials/01_assets/run_rigid_object.rst",
+      "sha256": "6b146e85842a622c851c2dec0fdf67eb87bb82973a09a09c27d4610f8affe551"
+    },
+    {
+      "path": "docs/source/tutorials/01_assets/run_surface_gripper.rst",
+      "sha256": "1fd4199f585acc12c601eae98803d448225bc8ce3ea7c2540ee4b952c23bfc36"
+    },
+    {
+      "path": "docs/source/tutorials/02_scene/create_scene.rst",
+      "sha256": "e021d415405c34afea633cd62177ed1a457710f4c4ab005f893514e5e24aa158"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/configuring_rl_training.rst",
+      "sha256": "5502d96cf08d13a0f88855ec0b36bd15a7f43a1bbcb80375c068d0229613fbe4"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/create_direct_rl_env.rst",
+      "sha256": "91a8dbde88cb9d78a00e09fa1051b4eb42239b6221de7b3886f75d892de8fd9f"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/create_manager_base_env.rst",
+      "sha256": "28491cfda37510e6883893c04043ffd546f975007bb47144ead4ca0cd401eecf"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/create_manager_rl_env.rst",
+      "sha256": "1ee675ab15fc37566493e93a60885485cc6cc81896a6c462534f383260c20e12"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/modify_direct_rl_env.rst",
+      "sha256": "533cb294d8a79609de6a92461d7c2c179d9d5f95a6e166b71e6634d85de19bff"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/policy_inference_in_usd.rst",
+      "sha256": "41c133c78da7183955187fc07c73e6636797b597a2721f63a5f889b5e49caa81"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/register_rl_env_gym.rst",
+      "sha256": "f62371353966b468430a68fcc8a00303f227e5c2bcec2dd148f5c359d55127bb"
+    },
+    {
+      "path": "docs/source/tutorials/03_envs/run_rl_training.rst",
+      "sha256": "e13c6bc3c5db859a3a0ef2bc806b62d1655b88eb87a9f04e03f3b1a880edea01"
+    },
+    {
+      "path": "docs/source/tutorials/04_sensors/add_sensors_on_robot.rst",
+      "sha256": "187541789789372336e95d76088ed148883f09bbe4bd6f4c457254e88b7e35b1"
+    },
+    {
+      "path": "docs/source/tutorials/05_controllers/run_diff_ik.rst",
+      "sha256": "da60ec04f6c36d6c0d56b0069759812b343772f823aa679a018f162f60d2526d"
+    },
+    {
+      "path": "docs/source/tutorials/05_controllers/run_osc.rst",
+      "sha256": "f97cf345113c318f9cffea4b9f51c28f4711fe3e81b688117771a8ec6a80ffb3"
+    },
+    {
+      "path": "docs/source/tutorials/06_exporting/exporting_direct_workflow_policies_with_leapp.rst",
+      "sha256": "4df3b8b74acdfea72fb1ee507de8f352da88fc8bfbd33e82e452da84a4946a1e"
+    },
+    {
+      "path": "docs/source/tutorials/index.rst",
+      "sha256": "4a0aeaea386c090f42f6efe56f7a006df3c80f7dedb67a4516d25314a00d3f3c"
+    },
+    {
+      "path": "scripts/tutorials/00_sim/create_empty.py",
+      "sha256": "5e758f02eeccd8b8a77bccab15c3734253b43f4349f58c3fe7bc5366d8f8e88c"
+    },
+    {
+      "path": "scripts/tutorials/00_sim/launch_app.py",
+      "sha256": "e70e00bd5cd75d4eae21edc597f096acecb9bc639ec9a2244bb51b260ed65129"
+    },
+    {
+      "path": "scripts/tutorials/00_sim/log_time.py",
+      "sha256": "cd25eeea8ed81378fbdc231d5037c2f56d3797425e6414765f62b9a721ac336e"
+    },
+    {
+      "path": "scripts/tutorials/00_sim/set_rendering_mode.py",
+      "sha256": "4557d894c88de66e4ed0bec2e1c905c071ecdd321b7111b0fc71548177b9fbf2"
+    },
+    {
+      "path": "scripts/tutorials/00_sim/spawn_prims.py",
+      "sha256": "1787b458fb7111f5f2eb00ccbcdd7b6646653c7f169e0aca74248c3d1e873430"
+    },
+    {
+      "path": "scripts/tutorials/01_assets/add_new_robot.py",
+      "sha256": "6e5e8ddc1e2e44fc5fcf8f304c6f039bf055624c5fa3f21452e287ab5aef31a2"
+    },
+    {
+      "path": "scripts/tutorials/01_assets/run_articulation.py",
+      "sha256": "80429a751d2e61d6fdf98492ab2c320c168025f4ee21c9f2cb63bb29e2c70de0"
+    },
+    {
+      "path": "scripts/tutorials/01_assets/run_deformable_object.py",
+      "sha256": "1bcb64f3730b7ce04accf796e40c9e9927519d993de74b91d498d5461f6fc3ab"
+    },
+    {
+      "path": "scripts/tutorials/01_assets/run_rigid_object.py",
+      "sha256": "83a07cb64f44140511bd2bcc594315c80c6070a5405c4b7f01bdc19f6c23ace3"
+    },
+    {
+      "path": "scripts/tutorials/01_assets/run_surface_gripper.py",
+      "sha256": "a9dde0258566d6823d2d7a758fc4a40ed93ccbcbc3be846022ccd1861919bfaf"
+    },
+    {
+      "path": "scripts/tutorials/02_scene/create_scene.py",
+      "sha256": "af55160d7b7aadcd48f5ab2cb75a725fc32075f59352f94a2cea4d326bc28344"
+    },
+    {
+      "path": "scripts/tutorials/03_envs/create_cartpole_base_env.py",
+      "sha256": "1fe86092aed252301d5424161d005978ecad570d9c45e5cc8d4f9acc550641f6"
+    },
+    {
+      "path": "scripts/tutorials/03_envs/create_cube_base_env.py",
+      "sha256": "78c3845aea63006117a8bd39c81bc6f9ab73dfab56ce6ddb063c1b40bba934a5"
+    },
+    {
+      "path": "scripts/tutorials/03_envs/create_quadruped_base_env.py",
+      "sha256": "537ca140c66fff85d45aae9300fd3263a65348e02afbb6a403f60b33e5d89911"
+    },
+    {
+      "path": "scripts/tutorials/03_envs/policy_inference_in_usd.py",
+      "sha256": "43bb0ef29252050f7f4505e1751446e0083d39a5bbcdf89f1fc09186990040a2"
+    },
+    {
+      "path": "scripts/tutorials/03_envs/run_cartpole_rl_env.py",
+      "sha256": "f60f079d9482e1937ff750749f53470fcdd6a20e9a50863f338677176255bdd2"
+    },
+    {
+      "path": "scripts/tutorials/04_sensors/add_sensors_on_robot.py",
+      "sha256": "cf19ee16995786d1ae6f4750d443cb0aac556d2d07c71ebf70e1bac68e9a1c3f"
+    },
+    {
+      "path": "scripts/tutorials/04_sensors/run_frame_transformer.py",
+      "sha256": "c2af93c91dc2df2a81045eb1d4e9a8aa1228023b69e834a90e0603358a6b41ee"
+    },
+    {
+      "path": "scripts/tutorials/04_sensors/run_ray_caster.py",
+      "sha256": "d04520476dd5837df8b01d7b967e9cb0509cc775bacf655da6ad1dcab4573e6b"
+    },
+    {
+      "path": "scripts/tutorials/04_sensors/run_ray_caster_camera.py",
+      "sha256": "29a35a1238d52210195d878e38cc28d6045acf169bcaaa97a329bee8c122de02"
+    },
+    {
+      "path": "scripts/tutorials/04_sensors/run_usd_camera.py",
+      "sha256": "c102b557611452da29b45c95c1647ede6396981da6941158421145d38b1f9483"
+    },
+    {
+      "path": "scripts/tutorials/05_controllers/run_diff_ik.py",
+      "sha256": "f3d6d6136b3a0e32231f74d769d20d593f45a3b4019e36c7b5dee3a00734c42e"
+    },
+    {
+      "path": "scripts/tutorials/05_controllers/run_osc.py",
+      "sha256": "4aca1fc8acb921b8180c3626c500e887cbeb29985eb542e332f053c5f748286b"
+    },
+    {
+      "path": "scripts/tutorials/06_deploy/anymal_c_env.py",
+      "sha256": "1e643c60e59d569337752d946b98fcca2851f21bb164e4debd42193948813fee"
+    },
+    {
+      "path": "scripts/tutorials/07_visualizers/run_tiled_camera_visualizer.py",
+      "sha256": "00f7d44a1c6dda37ca8693dd557c46c34f9ce93cccc9924ed1e267cd87f1dfb1"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "e98461884f504be11c5390623fce0a23ec7aa48ba45f99a8fa63ba279a750a9f"
+    },
+    {
+      "path": "isaaclab.sh",
+      "sha256": "c3a6f3111012aa39c5f568012da1ef2cde52a80cbc2277bc59ce295895d7bc68"
+    },
+    {
+      "path": "source/isaaclab/isaaclab/app/app_launcher.py",
+      "sha256": "fb7eef43bdf00ed3af96eaf2d43faf62f31998959967ecb8ee8c8bda3b8a6183"
+    },
+    {
+      "path": "source/isaaclab/isaaclab/sensors/camera/camera_data.py",
+      "sha256": "bfeb897d31572c3105f179b66798dec387232381091f7958503a3caaf844e076"
+    },
+    {
+      "path": "source/isaaclab_assets/isaaclab_assets/robots/franka.py",
+      "sha256": "5db6495e093288357ce6ed17806815f8370bb64071dde2ab957092bcd3f60c21"
+    }
+  ]
+}

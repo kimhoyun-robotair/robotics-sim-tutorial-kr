@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "counts": {
+    "python": 38,
+    "bash": 70,
+    "python_heredoc": 5
+  },
+  "errors": [],
+  "execution": "syntax only; no example commands executed"
+}

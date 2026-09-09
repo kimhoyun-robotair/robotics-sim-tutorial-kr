@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "counts": {
+    "python_files": 12,
+    "shell_files": 1,
+    "markdown_files": 8,
+    "local_links": 64,
+    "pinned_source_links": 102
+  },
+  "errors": [],
+  "runtime_simulation_tested": false,
+  "note": "Syntax and source-link checks only; no simulator imports or GPU runs."
+}

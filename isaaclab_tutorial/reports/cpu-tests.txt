@@ -1,0 +1,20 @@
+test_atomic_json_rejects_nan_and_preserves_previous_file (test_evaluation_summary.EvaluationSummaryTests.test_atomic_json_rejects_nan_and_preserves_previous_file) ... ok
+test_cli_writes_json_and_csv_from_synthetic_fixtures (test_evaluation_summary.EvaluationSummaryTests.test_cli_writes_json_and_csv_from_synthetic_fixtures) ... ok
+test_pair_by_seed_and_retain_early_failure (test_evaluation_summary.EvaluationSummaryTests.test_pair_by_seed_and_retain_early_failure) ... ok
+test_reject_incomplete_nonfinite_and_unpaired_data (test_evaluation_summary.EvaluationSummaryTests.test_reject_incomplete_nonfinite_and_unpaired_data) ... ok
+test_timeout_with_failure_is_not_timeout_only (test_evaluation_summary.EvaluationSummaryTests.test_timeout_with_failure_is_not_timeout_only) ... ok
+test_background_positive_infinity_is_valid (test_image_checks.ImageChecksTest.test_background_positive_infinity_is_valid) ... ok
+test_black_rgb_with_opaque_alpha_fails (test_image_checks.ImageChecksTest.test_black_rgb_with_opaque_alpha_fails) ... ok
+test_empty_zero_and_all_infinite_depth_fail (test_image_checks.ImageChecksTest.test_empty_zero_and_all_infinite_depth_fail) ... ok
+test_normalized_rgb_supported (test_image_checks.ImageChecksTest.test_normalized_rgb_supported) ... ok
+test_rgb_nan_and_out_of_range_fails (test_image_checks.ImageChecksTest.test_rgb_nan_and_out_of_range_fails) ... ok
+test_structured_rgb_and_target_depth_pass (test_image_checks.ImageChecksTest.test_structured_rgb_and_target_depth_pass) ... ok
+test_target_roi_cannot_be_background (test_image_checks.ImageChecksTest.test_target_roi_cannot_be_background) ... ok
+test_uniform_red_is_not_spatial_structure (test_image_checks.ImageChecksTest.test_uniform_red_is_not_spatial_structure) ... ok
+test_wrong_depth_units_fail (test_image_checks.ImageChecksTest.test_wrong_depth_units_fail) ... ok
+test_wrong_image_shapes_fail (test_image_checks.ImageChecksTest.test_wrong_image_shapes_fail) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.081s
+
+OK

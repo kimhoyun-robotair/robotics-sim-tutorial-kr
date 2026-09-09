@@ -1,0 +1,118 @@
+{
+  "status": "prerequisites_failed",
+  "checks": [
+    {
+      "name": "ubuntu_24_04_x86_64",
+      "passed": true,
+      "detail": {
+        "NAME": "Ubuntu",
+        "ID": "ubuntu",
+        "PRETTY_NAME": "Ubuntu 24.04.3 LTS",
+        "VERSION_ID": "24.04",
+        "VERSION": "24.04.3 LTS (Noble Numbat)",
+        "VERSION_CODENAME": "noble",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "UBUNTU_CODENAME": "noble",
+        "LOGO": "ubuntu-logo"
+      }
+    },
+    {
+      "name": "python_3_12",
+      "passed": true,
+      "detail": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]"
+    },
+    {
+      "name": "isaaclab_commit",
+      "passed": true,
+      "detail": {
+        "returncode": 0,
+        "stdout": "ffff603eafc6b74264a5261cc0183d6a65390d78",
+        "stderr": ""
+      }
+    },
+    {
+      "name": "isaaclab_tracked_source_unmodified",
+      "passed": true,
+      "detail": {
+        "returncode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "name": "isaacsim_6_0_1",
+      "passed": false,
+      "detail": {
+        "isaacsim": null,
+        "isaaclab": null,
+        "isaaclab-physx": null,
+        "isaaclab-rl": null,
+        "torch": null,
+        "torchvision": null,
+        "rsl-rl-lib": null
+      }
+    },
+    {
+      "name": "torch_2_10_0",
+      "passed": false,
+      "detail": null
+    },
+    {
+      "name": "torchvision_0_25_0",
+      "passed": false,
+      "detail": null
+    },
+    {
+      "name": "lab_learning_packages",
+      "passed": false,
+      "detail": {
+        "isaacsim": null,
+        "isaaclab": null,
+        "isaaclab-physx": null,
+        "isaaclab-rl": null,
+        "torch": null,
+        "torchvision": null,
+        "rsl-rl-lib": null
+      }
+    },
+    {
+      "name": "rsl_rl_5_0_1",
+      "passed": false,
+      "detail": null
+    },
+    {
+      "name": "isaaclab_internal_package_version",
+      "passed": false,
+      "detail": {
+        "expected_from_checkout": "6.1.14",
+        "installed": null
+      }
+    },
+    {
+      "name": "isaaclab_editable_source",
+      "passed": false,
+      "detail": "No package metadata was found for isaaclab"
+    },
+    {
+      "name": "nvidia_driver_visible",
+      "passed": false,
+      "detail": {
+        "returncode": -1,
+        "error": "[Errno 2] No such file or directory: 'nvidia-smi'"
+      }
+    },
+    {
+      "name": "cuda_available",
+      "passed": false,
+      "detail": "No module named 'torch'"
+    }
+  ],
+  "python_executable": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+  "display_available": false,
+  "free_disk_gib": 29.01,
+  "note": "This does not certify RTX support, visual quality, robot stability, or trained-policy performance."
+}

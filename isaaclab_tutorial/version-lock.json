@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-09-09",
+  "platform": "Ubuntu 24.04 LTS x86_64",
+  "isaaclab_tag": "v3.0.0-beta2.patch1",
+  "isaaclab_commit": "ffff603eafc6b74264a5261cc0183d6a65390d78",
+  "release_published_at": "2026-07-02T04:21:18Z",
+  "release_status": "beta (release title and notes; GitHub prerelease flag is false)",
+  "isaacsim_distribution_version": "6.0.1.0",
+  "python": "3.12",
+  "torch": "2.10.0",
+  "torchvision": "0.25.0",
+  "torch_cuda_wheel": "cu128",
+  "physics": "PhysX",
+  "camera_renderer": "Isaac RTX",
+  "gui_visualizer": "Kit",
+  "optional_ros": "ROS 2 Jazzy",
+  "sources": [
+    "https://github.com/isaac-sim/IsaacLab/releases/tag/v3.0.0-beta2.patch1",
+    "https://github.com/isaac-sim/IsaacLab/blob/v3.0.0-beta2.patch1/docs/source/setup/installation/pip_installation.rst",
+    "https://github.com/isaac-sim/IsaacLab/blob/v3.0.0-beta2.patch1/pyproject.toml"
+  ]
+}
