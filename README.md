@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.09 |
+| 수정일 | 2026.09.10 |
 
 로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
 특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
@@ -50,7 +50,7 @@
 | [**awesome-urdf**](https://github.com/gbionics/awesome-urdf) | URDF에 관련된 교육자료, 라이브러리, Extension 등을 모아놓은 자료집 |
 | [**awesome-open-source-robots**](https://github.com/stephane-caron/awesome-open-source-robots) | 다양한 오픈소스 로봇 하드웨어 + 소프트웨어 자료링크를 모아둔 자료집 |
 
-### 시뮬레이션용 Asset 모음집
+### 시뮬레이션용 Asset + 프로그램 모음집
 | 이름 | 내용 |
 | --- | --- |
 | [**robot_descriptions.py**](https://github.com/robot-descriptions/robot_descriptions.py) | MuJoCo, PyBullet 등 다양한 시뮬레이터에 호환되는 robot description을 바로 뽑을 수 있는 패키지 + URDF 파일 예시 다수 보유 |
@@ -64,6 +64,8 @@
 | [**infigen**](https://github.com/princeton-vl/infinigen) | Accepted to CVPR 2023/2024. 블렌더 기반으로 엄청나게 다양한 Photorealistic 3D asset을 생성할 수 있는 패키지 |
 | [**MOGI-ROS**](https://github.com/MOGI-ROS) | ROS2 + Gazebo 기반 (내가 본 것 중에는) 가장 완벽한 튜토리얼을 제공하는 리포지터리 모음집 |
 | [**Dynamic_World_Generator**](https://github.com/ali-pahlevani/Dynamic_World_Generator) | PyQt5 기반 Gazebo에 호환되는 다양한 Dynamic World를 쉽게 만들 수 있게 도와주는 도구 |
+| [**mjbatch**](https://github.com/kevinzakka/mjbatch) | CPU에서 동시에 MuJoCo 시뮬레이션 수천개 병렬화 가능하게 해주는 파이썬 라이브러리 |
+| [**InSpace**](https://kookie12.github.io/InSpace-Project-Page/) | Accepted to ECCV 2026. 360도 Structure-Aware한 3D Indoor Scene 생성하기 |
 
 ### 이런저런 시뮬레이터들 (추후 확장되면 분류 추가 예정)
 | 이름 | 내용 |
@@ -80,6 +82,7 @@
 | [**car_sim**](https://github.com/CihatAltiparmak/car_sim) | Gazebo Classic에서 Ackermann 기반의 차량 시뮬레이션 |
 | [**rmf_demo**](https://github.com/open-rmf/rmf_demos) | Gazebo 기반 Multi-Floor 등 다양한 환경 시뮬레이션을 제공하는 패키지 |
 | [**ProjectAirSim**](https://github.com/iamaisim/ProjectAirSim) | UE5 기반, 드론 시뮬레이션 GOAT |
+| [**WareTwin**](https://github.com/WayneChou-bot/WareTwin) | 웹 기반 100 x 70m 창고 환경 디지털 트윈 시뮬레이터 |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
