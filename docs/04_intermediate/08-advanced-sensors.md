@@ -457,7 +457,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 
 ## 계산 예제: 발행 빈도와 노이즈
 
-<div class="course-worked" data-worked-example="sensor-statistics">
+<div class="course-worked" data-worked-example="sensor-statistics" markdown="1">
 10초 동안 30 Hz 센서를 검사하면 기대 표본은 300개이고 95% 기준은 285개이다. 수집한 유효 표본이 296개, 첫·끝 타임스탬프 차가 9.84초면 관측 발행 빈도는 \((296-1)/9.84=29.98\,\mathrm{Hz}\)이다. 노이즈 \(\sigma=0.01\), \(n=296\)이면 평균 오차 허용항 \(5\sigma/\sqrt n=0.00291\)이며 표본 표준편차도 \([0.005,0.015]\) 안이어야 한다.
 </div>
 

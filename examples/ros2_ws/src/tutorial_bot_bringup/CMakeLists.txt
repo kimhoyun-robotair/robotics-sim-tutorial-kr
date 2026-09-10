@@ -9,12 +9,8 @@ install(DIRECTORY config launch rviz
 )
 
 install(PROGRAMS
-  scripts/activate_localization
+  scripts/wait_localization
   scripts/odom_to_path
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(FILES scripts/localization_transition.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -1,0 +1,105 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: nav2_rviz_plugins/Navigation 2
+    Name: Navigation 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+    - Class: rviz_default_plugins/Map
+      Name: Map
+      Enabled: true
+      Alpha: 0.8
+      Topic:
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+        Value: /map
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+        Value: /robot_description
+    - Class: rviz_default_plugins/LaserScan
+      Name: LiDAR
+      Enabled: true
+      Size (m): 0.04
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /scan
+    - Class: nav2_rviz_plugins/ParticleCloud
+      Name: AMCL Particles
+      Enabled: false
+      Color: 0; 180; 0
+      Topic:
+        Reliability Policy: Best Effort
+        Value: /particle_cloud
+    - Class: rviz_default_plugins/Map
+      Name: Global Costmap
+      Enabled: false
+      Alpha: 0.3
+      Color Scheme: costmap
+      Topic:
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+        Value: /global_costmap/costmap
+    - Class: rviz_default_plugins/Map
+      Name: Local Costmap
+      Enabled: false
+      Alpha: 0.3
+      Color Scheme: costmap
+      Topic:
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+        Value: /local_costmap/costmap
+    - Class: rviz_default_plugins/Path
+      Name: Nav2 Plan
+      Enabled: true
+      Color: 0; 190; 255
+      Line Style: Lines
+      Line Width: 0.04
+      Topic:
+        Reliability Policy: Reliable
+        Value: /plan
+    - Class: rviz_default_plugins/Path
+      Name: Wheel Odom Trajectory
+      Enabled: true
+      Color: 255; 140; 0
+      Line Style: Lines
+      Line Width: 0.03
+      Topic:
+        Reliability Policy: Reliable
+        Value: /wheel_odom_path
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: map
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/SetInitialPose
+      Topic:
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        Value: /initialpose
+    - Class: nav2_rviz_plugins/GoalTool
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Invert Z Axis: false
+      Scale: 65
+      Target Frame: <Fixed Frame>
+      X: 0.0
+      Y: 0.0
+Window Geometry:
+  Height: 900
+  Width: 1400

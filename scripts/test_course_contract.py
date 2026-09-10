@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import subprocess
@@ -312,67 +311,24 @@ class CourseContractTests(unittest.TestCase):
                 )
                 self.assertNotEqual(completed.returncode, 0, checker)
 
-    def test_localization_transition_recovers_after_delayed_service_response(
-        self,
-    ) -> None:
-        transition_module = (
-            ROOT
-            / "examples/ros2_ws/src/tutorial_bot_bringup/scripts/localization_transition.py"
-        )
-        spec = importlib.util.spec_from_file_location(
-            "localization_transition_test", transition_module
-        )
-        if spec is None or spec.loader is None:
-            self.fail("localization transition module could not be loaded")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-
-        class DelayedBoundary:
-            def __init__(self) -> None:
-                self.state = 1
-                self.requests = 0
-                self.elapsed = 0.0
-
-            def current_state(self, _: str) -> int:
-                return self.state
-
-            def request_transition(self, _: str, transition_id: int) -> None:
-                self.requests += 1
-                self.state = {1: 2, 3: 3}[transition_id]
-
-            def idle(self, seconds: float) -> None:
-                self.elapsed += seconds
-
-        boundary = DelayedBoundary()
-        reached = module.reach_state(
-            boundary,
-            "map_server",
-            1,
-            2,
-            10.0,
-            clock=lambda: boundary.elapsed,
-        )
-        self.assertTrue(reached)
-        self.assertEqual(boundary.requests, 1)
-        self.assertEqual(boundary.state, 2)
-
     def test_evidence_auditor_rejects_stale_source_sha(self) -> None:
-        completed = subprocess.run(
-            [
-                sys.executable,
-                "scripts/audit_course_evidence.py",
-                "--evidence-index",
-                "scripts/fixtures/evidence/stale-sha/index.json",
-                "--fixture",
-                "scripts/fixtures/evidence/stale-sha",
-                "--output",
-                "/tmp/task-1-stale-sha.json",
-            ],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory() as temporary:
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/audit_course_evidence.py",
+                    "--evidence-index",
+                    "scripts/fixtures/evidence/stale-sha/index.json",
+                    "--fixture",
+                    "scripts/fixtures/evidence/stale-sha",
+                    "--output",
+                    str(Path(temporary) / "stale-sha.json"),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
         self.assertEqual(completed.returncode, 1)
         self.assertIn("stale_sha", completed.stdout)
 

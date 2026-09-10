@@ -14,6 +14,7 @@ from launch.actions import (
     OpaqueFunction,
     RegisterEventHandler,
 )
+from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
 from launch.events.process import ProcessExited
@@ -194,6 +195,7 @@ def _robot_actions(
 
 
 def _launch_stack(context: LaunchContext) -> list[Action]:
+    gui_enabled = IfCondition(LaunchConfiguration("gui")).evaluate(context)
     world_name = _validated_launch_argument(
         LaunchConfiguration("world").perform(context),
         "world",
@@ -258,7 +260,10 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
         PythonLaunchDescriptionSource(
             str(Path(get_package_share_directory("ros_gz_sim")) / "launch" / "gz_sim.launch.py")
         ),
-        launch_arguments={"gz_args": f"-s -r --headless-rendering {world_path}", "on_exit_shutdown": "true"}.items(),
+        launch_arguments={
+            "gz_args": f"{'-r' if gui_enabled else '-s -r --headless-rendering'} {world_path}",
+            "on_exit_shutdown": "true",
+        }.items(),
     )
     parameter_bridge = Node(
         package="ros_gz_bridge",
@@ -285,6 +290,9 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription(
         [
             DeclareLaunchArgument("world", default_value="sensor-test"),
+            DeclareLaunchArgument(
+                "gui", default_value="false", description="Start the Gazebo GUI."
+            ),
             DeclareLaunchArgument("robot1_name", default_value="robot1"),
             DeclareLaunchArgument("robot2_name", default_value="robot2"),
             DeclareLaunchArgument("robot1_namespace", default_value="/robot1"),

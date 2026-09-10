@@ -225,7 +225,7 @@ for ((run=1; run<=repeat; run++)); do
     "$(uname -srvmo)" 'jazzy+disposable-local-deb-overlay' 'gz-sim8' \
     "$ROS_DOMAIN_ID" "$GZ_PARTITION" "$temp_root" > "$run_dir/environment.log"
   run_partitions+=("$GZ_PARTITION")
-  launch_command=(ros2 launch tutorial_bot_bringup simulation.launch.py)
+  launch_command=(ros2 launch tutorial_bot_bringup simulation.launch.py gui:=false rviz:=false nav2:=true amcl:=true)
   printf '%q ' "${launch_command[@]}" > "$run_dir/launch.command"; printf '\n' >> "$run_dir/launch.command"
   setsid "${launch_command[@]}" > "$run_dir/launch.log" 2>&1 & launch_pid=$!
   printf '%s\n' "$launch_pid" > "$run_dir/pids.log"
@@ -233,7 +233,7 @@ for ((run=1; run<=repeat; run++)); do
   ready=false
   for _ in {1..900}; do
     if grep -q 'map_to_odom=ready' "$run_dir/launch.log" && \
-      grep -q 'navigation=ready' "$run_dir/launch.log" && \
+      grep -q '\[lifecycle_manager_navigation\].*Managed nodes are active' "$run_dir/launch.log" && \
       grep -q 'Creating navigator id navigate_to_pose' "$run_dir/launch.log"; then
       ready=true
       break
@@ -319,10 +319,10 @@ for ((run=1; run<=repeat; run++)); do
     final_w=$(awk '/orientation:/{q=1;next} q && $1=="w:" {print $2; exit}' "$run_dir/amcl-pose.log")
     awk -v x="$final_x" -v y="$final_y" -v gx="$goal_x" -v gy="$goal_y" -v z="$final_z" -v w="$final_w" -v gyaw="$goal_yaw" -v pt="$position_tolerance" -v yt="$yaw_tolerance" 'BEGIN {d=sqrt((x-gx)^2+(y-gy)^2); yaw=atan2(2*w*z,1-2*z*z); e=yaw-gyaw; while(e>3.141592653589793)e-=6.283185307179586; while(e< -3.141592653589793)e+=6.283185307179586; if(e<0)e=-e; printf "final_x=%.6f\nfinal_y=%.6f\nposition_error=%.6f\nyaw_error=%.6f\n",x,y,d,e; exit !(d<=pt && e<=yt)}' > "$run_dir/final-error.log"
   else
-    timeout 50 ros2 run tutorial_bot_bringup activate_localization \
-      --phase deactivate --deadline 45 --call-timeout 4 \
+    timeout 50 ros2 service call /lifecycle_manager_navigation/manage_nodes \
+      nav2_msgs/srv/ManageLifecycleNodes '{command: 1}' \
       > "$run_dir/lifecycle-manage.log" 2>&1
-    grep -q '^navigation=inactive$' "$run_dir/lifecycle-manage.log"
+    grep -q 'success=True' "$run_dir/lifecycle-manage.log"
     timeout 10 ros2 topic echo --once /scan sensor_msgs/msg/LaserScan > "$run_dir/post-abort-scan.log" 2>&1
     grep -q 'frame_id:' "$run_dir/post-abort-scan.log"
   fi

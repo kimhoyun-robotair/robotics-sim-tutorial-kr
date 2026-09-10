@@ -130,8 +130,8 @@ Physics 시스템 플러그인은 중력·접촉·조인트 운동을 갱신한�
 
 ## 계산 예제: 관성과 접촉 한계
 
-<div class="course-worked" data-worked-example="inertia-contact">
-질량 \(m=8\,\mathrm{kg}\), 크기 \(a=0.40\), \(b=0.30\), \(c=0.20\,\mathrm{m}\)인 균일 직육면체라면 \(I_{xx}=m(b^2+c^2)/12=0.0867\,\mathrm{kg\,m^2}\)이다. 마찰계수 \(\mu=0.8\)이고 평지에서 \(N=mg\)라면 접선력 한계는 \(|F_t|\leq\mu N=62.8\,\mathrm{N}\)이다. 충돌 형상 크기만 바꾸고 이 관성을 그대로 두면 회전 응답이 물리 형상과 어긋난다.
+<div class="course-worked" data-worked-example="inertia-contact" markdown="1">
+질량 $m=8\,\mathrm{kg}$, 크기 $a=0.40$, $b=0.30$, $c=0.20\,\mathrm{m}$인 균일 직육면체라면 $I_{xx}=m(b^2+c^2)/12=0.0867\,\mathrm{kg\,m^2}$이다. 마찰계수 $\mu=0.8$이고 평지에서 $N=mg$라면 접선력 한계는 $|F_t|\leq\mu N=62.8\,\mathrm{N}$이다. 충돌 형상 크기만 바꾸고 이 관성을 그대로 두면 회전 응답이 물리 형상과 어긋난다.
 </div>
 
 ## 모델 재사용

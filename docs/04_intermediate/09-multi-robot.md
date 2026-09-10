@@ -173,13 +173,23 @@ Jazzy DiffDrive는 기본적으로 네임스페이스를 TF 프레임 앞에 자
 
 ## 실행
 
-두 로봇을 GUI가 없는 월드에 띄운다.
+`gui:=true`로 Gazebo GUI와 서버를 함께 실행한다. 두 로봇을 보기 쉬운 `training` 월드를 사용한다.
 
 ```bash
 source /opt/ros/jazzy/setup.bash
 source examples/ros2_ws/install/setup.bash
-ros2 launch tutorial_bot_bringup multi_robot.launch.py
+ros2 launch tutorial_bot_bringup multi_robot.launch.py gui:=true world:=training
 ```
+
+Gazebo에서 `robot1`은 월드의 y=1.0 m, `robot2`는 y=-1.0 m에 생성된다. 아래 키보드 조종 실습에서 명령한 로봇만 움직이는지 GUI로도 확인한다.
+
+??? note "GUI 없이 실행할 때"
+
+    GUI가 필요 없는 환경에서는 위 명령 대신 다음 명령을 사용한다. `gui`의 기본값은 `false`이며, `world`를 생략하면 기존 센서 검사용 `sensor-test` 월드를 사용한다.
+
+    ```bash
+    ros2 launch tutorial_bot_bringup multi_robot.launch.py gui:=false
+    ```
 
 다른 터미널에서 실행 목록을 확인한다.
 
@@ -227,7 +237,7 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard \
 
 ## 계산 예제: 교차 영향 판정
 
-<div class="course-worked" data-worked-example="namespace-isolation">
+<div class="course-worked" data-worked-example="namespace-isolation" markdown="1">
 robot1 명령 전후 변위를 \(d_1\), 명령하지 않은 robot2 변위를 \(d_2\)라 두고 \(d_1\ge0.60\,\mathrm{m}\), \(d_2\le0.02\,\mathrm{m}\)를 요구한다. 관측값이 각각 0.69 m와 0.004 m라면 이동과 격리가 동시에 합격한다. TF에서도 `robot1/base_link`와 `robot2/base_link`가 서로의 트리에 섞이지 않아야 한다.
 </div>
 

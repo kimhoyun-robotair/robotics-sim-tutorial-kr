@@ -87,6 +87,7 @@ def _after_success(
 def _launch_stack(context: LaunchContext) -> list[Action]:
     world_name = LaunchConfiguration("world").perform(context)
     nav2_enabled = _enabled(LaunchConfiguration("nav2").perform(context), "nav2")
+    amcl_enabled = _enabled(LaunchConfiguration("amcl").perform(context), "amcl")
     gui_enabled = _enabled(LaunchConfiguration("gui").perform(context), "gui")
     rviz_enabled = _enabled(LaunchConfiguration("rviz").perform(context), "rviz")
     if WORLD_NAME_PATTERN.fullmatch(world_name) is None:
@@ -126,7 +127,7 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
     xacro_path = description_share / "urdf" / "tutorial_bot.urdf.xacro"
     controller_config = control_share / "config" / "controllers.yaml"
     bridge_config = bringup_share / "config" / "bridge-intermediate.yaml"
-    rviz_config = bringup_share / "rviz" / "tutorial_bot.rviz"
+    rviz_config = bringup_share / "rviz" / ("nav2.rviz" if nav2_enabled else "tutorial_bot.rviz")
     map_path = gazebo_share / "maps" / "training.yaml"
     nav2_params = bringup_share / "config" / "nav2_params.yaml"
     if nav2_enabled and world_name != DEFAULT_WORLD:
@@ -251,53 +252,12 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
         name="wait_navigation_inputs",
         output="screen",
     )
-    localization = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            str(
-                Path(get_package_share_directory("nav2_bringup"))
-                / "launch"
-                / "localization_launch.py"
-            )
-        ),
+    navigation = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(str(bringup_share / "launch" / "nav2.launch.py")),
         launch_arguments={
             "map": str(map_path),
             "params_file": str(nav2_params),
-            "use_sim_time": "true",
-            "autostart": "false",
-            "use_composition": "False",
-        }.items(),
-    )
-    localization_ready = ExecuteProcess(
-        cmd=[
-            "timeout",
-            "60",
-            "ros2",
-            "run",
-            "tutorial_bot_bringup",
-            "activate_localization",
-            "--phase",
-            "startup",
-            "--deadline",
-            "55",
-            "--call-timeout",
-            "4",
-        ],
-        name="wait_localization",
-        output="screen",
-    )
-    navigation = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            str(
-                Path(get_package_share_directory("nav2_bringup"))
-                / "launch"
-                / "navigation_launch.py"
-            )
-        ),
-        launch_arguments={
-            "params_file": str(nav2_params),
-            "use_sim_time": "true",
-            "autostart": "false",
-            "use_composition": "False",
+            "amcl": "true" if amcl_enabled else "false",
         }.items(),
     )
     rviz = Node(
@@ -372,7 +332,7 @@ def _launch_stack(context: LaunchContext) -> list[Action]:
                 )
             )
         )
-        navigation_actions: list[Action] = [localization, navigation, localization_ready]
+        navigation_actions: list[Action] = [navigation]
         if rviz_enabled:
             navigation_actions.append(rviz)
         actions.append(
@@ -408,6 +368,10 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("gui", default_value="true"),
             DeclareLaunchArgument("rviz", default_value="true"),
             DeclareLaunchArgument("nav2", default_value="true"),
+            DeclareLaunchArgument(
+                "amcl", default_value="true",
+                description="Use AMCL with Nav2; false uses a fixed map-to-odom transform for the simulation.",
+            ),
             OpaqueFunction(function=_launch_stack),
         ]
     )

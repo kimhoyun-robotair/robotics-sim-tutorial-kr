@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+import argparse
+import time
+
+import rclpy
+from nav_msgs.msg import OccupancyGrid
+from rclpy.parameter import Parameter
+from rclpy.qos import DurabilityPolicy, QoSProfile
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformListener
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--deadline", type=float, default=55.0)
+    arguments = parser.parse_args()
+    if arguments.deadline <= 0:
+        parser.error("--deadline must be positive")
+
+    rclpy.init()
+    node = rclpy.create_node(
+        "wait_localization",
+        parameter_overrides=[Parameter("use_sim_time", value=True)],
+    )
+    buffer = Buffer(node=node)
+    listener = TransformListener(buffer, node)
+    map_received = False
+
+    def receive_map(message: OccupancyGrid) -> None:
+        nonlocal map_received
+        map_received = message.info.width > 0 and message.info.height > 0
+
+    node.create_subscription(
+        OccupancyGrid,
+        "/map",
+        receive_map,
+        QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL),
+    )
+    deadline = time.monotonic() + arguments.deadline
+    try:
+        while rclpy.ok() and time.monotonic() < deadline:
+            rclpy.spin_once(node, timeout_sec=0.1)
+            if map_received and buffer.can_transform("map", "base_link", Time()):
+                print("map_to_odom=ready", flush=True)
+                return 0
+        node.get_logger().error(
+            f"Localization timed out: map_received={map_received}, "
+            f"map_to_base_ready={buffer.can_transform('map', 'base_link', Time())}"
+        )
+        return 1
+    finally:
+        listener.unregister()
+        node.destroy_node()
+        rclpy.try_shutdown()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

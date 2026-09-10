@@ -157,7 +157,7 @@ v=\frac{r}{2}(\omega_r+\omega_l),\qquad
 
 ## 계산 예제: 바퀴 속도에서 차체 속도로
 
-<div class="course-worked" data-worked-example="controller-kinematics">
+<div class="course-worked" data-worked-example="controller-kinematics" markdown="1">
 반지름 \(r=0.06\,\mathrm{m}\), 바퀴 간격 \(L=0.38\,\mathrm{m}\), \(\omega_r=8\), \(\omega_l=4\,\mathrm{rad/s}\)이면 \(v=r(\omega_r+\omega_l)/2=0.36\,\mathrm{m/s}\), \(\Omega=r(\omega_r-\omega_l)/L=0.632\,\mathrm{rad/s}\)이다. 이 예제의 DiffDrive는 속도를, 궤적 컨트롤러는 위치를 명령한다. 인터페이스 이름이 달라도 같은 바퀴에 서로 다른 방식으로 명령하지 않도록 한 번에 한 컨트롤러만 활성화한다.
 </div>
 

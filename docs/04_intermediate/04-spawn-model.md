@@ -73,7 +73,7 @@ gz sim -s -r \
   "$(ros2 pkg prefix --share tutorial_bot_gazebo)/worlds/training.sdf"
 ```
 
-두 번째 터미널에서 로봇 설명 발행 노드를 실행한다.
+두 번째 터미널에서 로봇 description 발행 노드를 실행한다.
 
 ```bash
 robot="$(ros2 pkg prefix --share tutorial_bot_description)/urdf/tutorial_bot.urdf.xacro"
@@ -116,7 +116,7 @@ ros2 run ros_gz_sim create \
 
 ## 계산 예제: 바닥과 겹치지 않는 높이
 
-<div class="course-worked" data-worked-example="spawn-pose">
+<div class="course-worked" data-worked-example="spawn-pose" markdown="1">
 이 로봇은 `base_link` 아래 0.06 m에 반지름 0.06 m의 바퀴가 달려 있다. 가장 낮은 점은 \(z=-0.06-0.06=-0.12\,\mathrm{m}\)이다. 캐스터의 최저점도 \(-0.085-0.035=-0.12\,\mathrm{m}\)이므로 `-z 0.12`에 놓으면 바퀴와 캐스터가 바닥에 닿는다. 여유 0.01 m를 두고 떨어뜨리려면 `-z 0.13`을 사용한다. 요 각도 \(\psi\)에서 로봇의 전방 단위 벡터는 \((\cos\psi,\sin\psi)\)이다. 예를 들어 `-Y 1.5708`은 +x 전방을 +y 방향으로 돌린다.
 </div>
 

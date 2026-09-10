@@ -68,7 +68,7 @@ Nav2를 켜면 위치 추정이 `map → odom`을 추가한다. `odom → base_l
 
 ## 계산 예제: 두 변환 합성
 
-<div class="course-worked" data-worked-example="tf-composition">
+<div class="course-worked" data-worked-example="tf-composition" markdown="1">
 2차원에서 로봇 몸체가 `odom` 기준 \((1.0,0.5,30°)\), 센서가 몸체 기준 \((0.2,0,0°)\)라면 센서 위치는 \((1+0.2\cos30°,\ 0.5+0.2\sin30°)=(1.173,0.600)\,\mathrm{m}\)이다. 이는 \(T^{odom}_{sensor}=T^{odom}_{base}T^{base}_{sensor}\)의 평면 예이다. 같은 자식 좌표계를 두 발행 노드가 소유하면 이 합성이 하나로 정해지지 않는다.
 </div>
 

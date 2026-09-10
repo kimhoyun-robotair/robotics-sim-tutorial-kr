@@ -1,4 +1,6 @@
 # 🚗 Gazebo Harmonic Rover
+개인 홈 절대경로가 들어 있던 예시는 현재 사용자 홈을 참조하도록 바꾸었다.
+
 This repository contains two ROS 2 Humble packages for testing simple rovers in Gazebo Harmonic:
 
 - 🦾 simple_rover: simulate a basic rover with various sensors
@@ -90,8 +92,10 @@ def generate_launch_description():
     pkg_ros_gz_sim   = get_package_share_directory('ros_gz_sim')
 
     # Add your own Gazebo models path below
-    gazebo_models_path = "/home/kimhoyun/gazebo_models"
-    os.environ["GZ_SIM_RESOURCE_PATH"] += os.pathsep + gazebo_models_path
+    gazebo_models_path = os.path.expanduser("~/gazebo_models")
+    os.environ["GZ_SIM_RESOURCE_PATH"] = os.pathsep.join(
+        filter(None, [os.environ.get("GZ_SIM_RESOURCE_PATH"), gazebo_models_path])
+    )
 ```
 Replace gazebo_models_path with your local directory.
 

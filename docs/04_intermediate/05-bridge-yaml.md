@@ -219,7 +219,7 @@ gz topic -i -t /model/rover/odometry
 
 ## 계산 예제: 큐 지연과 방향
 
-<div class="course-worked" data-worked-example="bridge-qos">
+<div class="course-worked" data-worked-example="bridge-qos" markdown="1">
 30 Hz 데이터를 큐 5칸에 보관하면 가장 오래된 표본과 최신 표본 사이 시간차는 대략 \((5-1)/30=0.133\,\mathrm{s}\)이다. 이것이 통신 전체의 최대 지연을 보장하는 값은 아니다. 센서 구독에서는 작은 큐와 Best Effort를 사용해 오래된 데이터가 쌓이는 것을 줄인다. `ros2 topic info /scan -v`로 발행·구독 양쪽 QoS를 확인한다.
 </div>
 

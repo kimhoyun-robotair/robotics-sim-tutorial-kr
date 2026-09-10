@@ -25,6 +25,7 @@ def _simulation_context(**overrides: str) -> LaunchContext:
             "namespace": "/",
             "tf_prefix": "",
             "nav2": "false",
+            "amcl": "true",
             "gui": "false",
             "rviz": "false",
             **overrides,
@@ -38,6 +39,7 @@ def _multi_robot_context(**overrides: str) -> LaunchContext:
     context.launch_configurations.update(
         {
             "world": "sensor-test",
+            "gui": "false",
             "robot1_name": "robot1",
             "robot2_name": "robot2",
             "robot1_namespace": "/robot1",
@@ -100,6 +102,28 @@ def test_multi_robot_accepts_installed_training_world() -> None:
 
 
 @pytest.mark.parametrize(
+    ("gui", "expected_flags"),
+    [("true", ["-r"]), ("false", ["-s", "-r", "--headless-rendering"])],
+)
+def test_multi_robot_selects_gazebo_gui_or_headless_mode(
+    gui: str, expected_flags: list[str]
+) -> None:
+    from launch.actions import IncludeLaunchDescription
+
+    launch_module = _load_launch_module("multi_robot.launch.py")
+    actions = launch_module._launch_stack(_multi_robot_context(gui=gui))
+    gazebo = next(action for action in actions if isinstance(action, IncludeLaunchDescription))
+    arguments = dict(gazebo.launch_arguments)
+    gz_args = arguments["gz_args"]
+    assert isinstance(gz_args, str)
+    command = gz_args.split()
+
+    assert command[:-1] == expected_flags
+    assert Path(command[-1]).name == "sensor-test.sdf"
+    assert arguments["on_exit_shutdown"] == "true"
+
+
+@pytest.mark.parametrize(
     "world_name",
     [
         "../worlds/sensor-test",
@@ -142,3 +166,33 @@ def test_simulation_rejects_unconfigured_namespaced_graph(overrides: dict[str, s
     launch_module = _load_launch_module("simulation.launch.py")
     with pytest.raises(launch_module._LaunchContractError, match="multi_robot.launch.py"):
         launch_module._launch_stack(_simulation_context(**overrides))
+
+
+@pytest.mark.parametrize("amcl", ["true", "false"])
+def test_nav2_starts_map_server_with_exactly_one_localization_source(amcl: str) -> None:
+    from launch.actions import DeclareLaunchArgument
+    from launch.utilities import normalize_to_list_of_substitutions, perform_substitutions
+    from launch_ros.actions import Node
+
+    launch_module = _load_launch_module("nav2.launch.py")
+    context = LaunchContext()
+    for action in launch_module.generate_launch_description().entities:
+        if isinstance(action, DeclareLaunchArgument):
+            action.execute(context)
+    context.launch_configurations["amcl"] = amcl
+    actions = launch_module._launch_stack(context)
+    executables = [
+        perform_substitutions(context, normalize_to_list_of_substitutions(action.node_executable))
+        for action in actions if isinstance(action, Node)
+    ]
+
+    assert executables.count("map_server") == 1
+    assert executables.count("amcl") == (1 if amcl == "true" else 0)
+    assert executables.count("static_transform_publisher") == (0 if amcl == "true" else 1)
+    assert executables.count("lifecycle_manager") == 1
+
+
+def test_simulation_rejects_invalid_amcl_option() -> None:
+    launch_module = _load_launch_module("simulation.launch.py")
+    with pytest.raises(launch_module._LaunchContractError, match="amcl"):
+        launch_module._launch_stack(_simulation_context(amcl="maybe"))

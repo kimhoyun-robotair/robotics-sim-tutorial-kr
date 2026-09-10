@@ -163,7 +163,7 @@ RegisterEventHandler(
 
 ## 계산 예제: 준비 시간의 상한
 
-<div class="course-worked" data-worked-example="launch-readiness">
+<div class="course-worked" data-worked-example="launch-readiness" markdown="1">
 단계별 준비 시간을 \(t_g,t_s,t_c,t_b\)라 하면 직렬 임계 경로는 \(T=t_g+t_s+t_c+t_b\)이다. 측정값이 각각 6, 2, 4, 1초라면 13초이다. 모든 단계에 무조건 10초 고정 대기를 넣은 40초와 달리 준비 상태 확인 방식은 빠른 환경에서 즉시 진행하고 어느 단계가 제한 시간 초과인지도 보존한다.
 </div>
 

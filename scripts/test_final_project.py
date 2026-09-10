@@ -214,7 +214,7 @@ def test_no_personal_paths_or_legacy_ros_interfaces_in_launch():
     for package in ['simple_rover', 'f1tenth_sim', 'nav2_programming']:
         for f in (SRC / package).rglob('*.py'):
             text = f.read_text()
-            assert '/home/kimhoyun' not in text
+            assert all(prefix not in text for prefix in ('/home/', '/Users/'))
             assert 'ros_ign_' not in text
         manifest = ET.parse(SRC / package / 'package.xml').getroot()
         assert manifest.findtext('license') == 'Apache-2.0'
