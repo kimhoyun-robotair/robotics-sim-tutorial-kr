@@ -1,5 +1,4 @@
 # 🚗 Gazebo Harmonic Rover
-개인 홈 절대경로가 들어 있던 예시는 현재 사용자 홈을 참조하도록 바꾸었다.
 
 This repository contains two ROS 2 Humble packages for testing simple rovers in Gazebo Harmonic:
 

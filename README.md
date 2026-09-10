@@ -101,7 +101,7 @@ ros2 topic echo /scan --once --field header --qos-reliability best_effort
 ros2 launch simple_rover spawn_robot.launch.py
 ```
 
-기본 월드는 저장소에 포함되어 있다. 외부 모델을 별도로 받지 않아도 첫 실습을 시작할 수 있다. 설치부터 센서 확인, 지도 저장, 경로 주행까지는 [파이널 프로젝트 안내](docs/07_final-project/index.md)를 따른다. 원본 커밋·라이선스·달라진 기능은 [이식 기록](docs/07_final-project/05_porting-notes.md)에 정리했다.
+기본 월드는 저장소에 포함되어 있다. 외부 모델을 별도로 받지 않아도 첫 실습을 시작할 수 있다. 설치부터 센서 확인, 지도 저장, 경로 주행까지는 [파이널 프로젝트 안내](docs/07_final-project/index.md)를 따른다. 원본 커밋·라이선스·달라진 기능은 [이식 기록](examples/ros2_ws/src/simple_rover/UPSTREAM.md)에 정리했다.
 
 ## 문서 보기
 

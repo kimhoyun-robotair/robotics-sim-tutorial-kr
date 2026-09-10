@@ -4,7 +4,7 @@
 처음에는 키보드로 로봇을 움직이고, 센서가 올바른 위치에 보이는지 확인한 뒤,
 지도를 만들고 Nav2로 목적지까지 이동시킵니다.
 
-이 프로젝트는 [Gazebo_Harmonic_Rover](https://github.com/kimhoyun-robotair/Gazebo_Harmonic_Rover)의
+이 프로젝트는 이전에 `kimhoyun-robotair` 가 개발한 **Gazebo_Harmonic_Rover** 리포지터리의
 `simple_rover`, `f1tenth_sim`, `nav2_programming`을 **Ubuntu 24.04 + ROS 2 Jazzy + Gazebo Harmonic**에 맞게 이식한 코드입니다.
 완성된 패키지는 이 저장소의 `examples/ros2_ws/src/`에 있으므로 원본 저장소를 따로 복사할 필요가 없습니다.
 
@@ -16,7 +16,7 @@
 | 2 | [센서와 RViz 확인하기](02_sensors-and-rviz.md) | 라이다와 점군이 월드의 벽 위치에 맞는다 |
 | 3 | [지도 작성과 자율주행](03_mapping-and-navigation.md) | 지도를 저장하고 재실행한 뒤 목표 위치까지 이동한다 |
 | 4 | [F1Tenth 차량으로 확장하기](04_f1tenth.md) | 전진하면서 조향하고 차동구동과의 차이를 설명한다 |
-| 5 | [포팅 내용과 검증 범위](05_porting-notes.md) | 원본에서 무엇을 바꿨는지 확인하고 결과를 기록한다 |
+| 5 | 포팅 내용과 검증 범위 | 원본에서 무엇을 바꿨는지 확인하고 결과를 기록한다 |
 
 ## 만들게 될 시스템
 
@@ -40,7 +40,7 @@ Gazebo 구동 플러그인은 `odom → base_link`를 발행합니다. 지도 �
 2. `/scan`, `/camera/points`, `/imu`, `/odom`의 토픽 타입과 `frame_id` 확인 결과.
 3. 직접 저장한 지도 YAML/PGM과 Nav2 목표 도달 결과.
 4. 센서 위치 또는 주행 속도를 하나 바꾼 뒤 달라진 결과와 이유.
-5. [검증 기록 양식](05_porting-notes.md#runtime-results)에 따른 실행 환경과 성공/실패 내역.
+5. 검증 기록 양식에 따른 실행 환경과 성공/실패 내역.
 
 코드의 정적 검사와 실제 물리·렌더링 검사는 구분합니다. 정적 검사가 통과해도 GPU,
 드라이버와 설치된 ROS/Gazebo 패치 버전에 따른 실행 확인은 필요합니다.

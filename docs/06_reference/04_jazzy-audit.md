@@ -115,4 +115,4 @@ python3 scripts/check_final_project_runtime.py \
 
 내비게이션 검사 도구는 기본 월드의 실제 충돌 형상으로 임시 지도를 만들고, AMCL·Nav2가 활성화된 뒤 `(0.6, 0, 0)` 목표를 보낸다. `nav2_programming`의 성공 종료, ROS action 성공 상태, 실제 이동량과 최종 위치를 함께 검사한다. 이 지도는 검사 조건을 일정하게 만드는 용도다. SLAM으로 지도를 작성하는 실습은 [파이널 프로젝트 3장](../07_final-project/03_mapping-and-navigation.md)의 절차로 별도 확인한다.
 
-원본 Rover 커밋과 이식한 기능의 범위는 [이식 기록](../07_final-project/05_porting-notes.md)을 참고한다.
+원본 Rover 커밋과 이식한 기능의 범위는 이식 기록을 참고한다.

@@ -88,7 +88,6 @@ final_project:
     - 07_final-project/02_sensors-and-rviz.md
     - 07_final-project/03_mapping-and-navigation.md
     - 07_final-project/04_f1tenth.md
-    - 07_final-project/05_porting-notes.md
   static_check: python3 -m pytest -q scripts/test_final_project.py scripts/test_sensor_rendering_contract.py
   runtime_check: python3 scripts/check_final_project_runtime.py --package simple_rover --evidence /tmp/rover-check
   ci_workflow: .github/workflows/jazzy-validation.yml

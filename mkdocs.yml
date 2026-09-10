@@ -104,7 +104,6 @@ nav:
       - 센서와 RViz: 07_final-project/02_sensors-and-rviz.md
       - 지도 작성과 자율주행: 07_final-project/03_mapping-and-navigation.md
       - F1Tenth 차량: 07_final-project/04_f1tenth.md
-      - 이식 기록: 07_final-project/05_porting-notes.md
   - 참고:
       - 명령어: 06_reference/01_commands.md
       - 용어: 06_reference/02_terminology.md
