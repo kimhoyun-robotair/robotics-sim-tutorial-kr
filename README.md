@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.10 |
+| 수정일 | 2026.09.12 |
 
 로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
 특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
@@ -43,6 +43,7 @@
 | 이름 | 내용 |
 | --- | --- |
 | [**MarsLab**](https://kimhoyun-robotair.github.io/MarsLab/) | Accepted to [iSapRo 2026](https://www.isairas-isparo.de/).<br> 화성 로봇 Navigation 시뮬레이터 |
+| [**aprl_robot_sim**](https://github.com/kimhoyun-robotair/aprl_robot_sim) | APRL이 보유하고 있는 로봇 2종류에 대해서 Isaac Sim에서 활용 가능하도록 Real2Sim 해버린 패키지 |
 
 ### URDF, 오픈소스 로봇 관련 유용한 자료집
 | 이름 | 내용 |
@@ -66,6 +67,7 @@
 | [**Dynamic_World_Generator**](https://github.com/ali-pahlevani/Dynamic_World_Generator) | PyQt5 기반 Gazebo에 호환되는 다양한 Dynamic World를 쉽게 만들 수 있게 도와주는 도구 |
 | [**mjbatch**](https://github.com/kevinzakka/mjbatch) | CPU에서 동시에 MuJoCo 시뮬레이션 수천개 병렬화 가능하게 해주는 파이썬 라이브러리 |
 | [**InSpace**](https://kookie12.github.io/InSpace-Project-Page/) | Accepted to ECCV 2026. 360도 Structure-Aware한 3D Indoor Scene 생성하기 |
+| [**LiteReality-Agent**](https://github.com/LiteReality/LiteReality-Agent) | RGBD 이미지를 AI Agent를 활용해서 MuJoCo에서 사용 가능한 포맷(MJCF)로 변환해주는 Real2Sim Asset Generation 패키지 |
 
 ### 이런저런 시뮬레이터들 (추후 확장되면 분류 추가 예정)
 | 이름 | 내용 |
