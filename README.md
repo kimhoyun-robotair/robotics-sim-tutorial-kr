@@ -68,6 +68,7 @@
 | [**mjbatch**](https://github.com/kevinzakka/mjbatch) | CPU에서 동시에 MuJoCo 시뮬레이션 수천개 병렬화 가능하게 해주는 파이썬 라이브러리 |
 | [**InSpace**](https://kookie12.github.io/InSpace-Project-Page/) | Accepted to ECCV 2026. 360도 Structure-Aware한 3D Indoor Scene 생성하기 |
 | [**LiteReality-Agent**](https://github.com/LiteReality/LiteReality-Agent) | RGBD 이미지를 AI Agent를 활용해서 MuJoCo에서 사용 가능한 포맷(MJCF)로 변환해주는 Real2Sim Asset Generation 패키지 |
+| [**awesome-astra-prompts**](https://github.com/TripoGrowthLab/awesome-astra-prompts) | GPT6 아스트라를 활용한 3D 모델링 관련 프롬프트 |
 
 ### 이런저런 시뮬레이터들 (추후 확장되면 분류 추가 예정)
 | 이름 | 내용 |
