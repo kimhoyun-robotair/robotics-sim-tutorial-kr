@@ -112,6 +112,5 @@ playwright-report/
 test-results/
 site/
 
-# Local documentation and generated artifacts
-*.md
-!README.md
+# Simulation runs and generated USD/datasets
+outputs/

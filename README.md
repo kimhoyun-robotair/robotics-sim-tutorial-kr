@@ -1,1 +1,23 @@
-# Hello, World!
+# Isaac Sim 5.1 튜토리얼
+
+본 `IsaacSim5.1` 브랜치는 Ubuntu 24.04 LTS + ROS2 Jazzy 환경에서 **Isaac Sim 5.1** 버젼의 튜토리얼을 작성하는 페이지이다.  
+왜 Deprecated된 Isaac Sim 5.1 버젼에 대해서 튜토리얼을 작성햐나고 물으신다면, 이 문서(`README.md`)를 처음으로 작성하는 2026년 9월 14일 기준으로 컴퓨터에 Isaac Sim 5.1 버젼이 설치되어있어서 ..  
+Isaac Sim 6.0.1 버젼에 대한 튜토리얼은 `main` 브랜치의 `README`에서 얘기하는 것처럼, `IsaacSim6.0.1` 브랜치에서 별개로 다루게 될 것이다. 다만, Isaac Sim의 버젼만 달라지는 것이고 Ubuntu 24.04 LTS + ROS2 Jazzy 환경에서 활용하는 것은 동일하다.
+  
+아무튼 간에, 보통 로봇 하는 사람들이 시뮬레이션 얘기를 하면 대충 다음과 같이 대답할 것이다.
+
+| 순서 | 시뮬레이션 이름 | 간단한 설명 |
+|---|---|---|
+| 01 | **Gazebo Classic** | ROS랑 붙여서 사용하기 가장 좋은 시뮬레이터. 근데 EOL. |
+| 02 | **Gazebo Ignition** | Gazebo Classic이 EOL 됐으니 Migration 해야지. ROS2랑 붙여쓰기 좋은 시뮬레이터. |
+| 03 | **MuJoCo** | 물리적으로 정밀하고, 강화학습이나 극한의 환경 조건을 테스트 하기 좋은 시뮬레이터 |
+| 04 | **Isaac Sim** | 합성 데이터 생성 + 로봇 학습 + 기업에서 밀어줌 + 요새 너도나도 다씀 |
+
+그 외에 Unity나 Unreal Engine, AirSim 같은 것들도 있겠지만, 그런 자잘자잘한 것들은 넘어가겠다.  
+아무튼 간에 Gazebo와 비교한다면, 사실 개인적으로 생각했을 때 Isaac Sim의 진입장벽은 정말 높다고 생각한다.  
+URDF에다가 각종 플러그인을 `XML` 형식으로 끼워서 빠르게 쓰기만 하면 되는 Gazebo랑 다르게,   
+USD는 뭐고, Core API는 뭐고, OmniGraph는 뭐고, GUI / Extension / Standalone Python은 또 왜 구분을 해놨고..  
+Replicator는 뭐고, Omniverse / Isaac Sim / Isaac Lab / Isaac Groot의 차이는 또 뭐고 ..  
+  
+솔직히 처음 봤을 때 뭐라는지 하나도 이해를 못했달까.  
+그래서 나도 편하고 남들도 편하라고 튜토리얼을 작성해본다.
