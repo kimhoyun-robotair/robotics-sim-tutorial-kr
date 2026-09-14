@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.12 |
+| 수정일 | 2026.09.14 |
 
 로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
 특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
@@ -85,6 +85,8 @@
 | [**rmf_demo**](https://github.com/open-rmf/rmf_demos) | Gazebo 기반 Multi-Floor 등 다양한 환경 시뮬레이션을 제공하는 패키지 |
 | [**ProjectAirSim**](https://github.com/iamaisim/ProjectAirSim) | UE5 기반, 드론 시뮬레이션 GOAT |
 | [**WareTwin**](https://github.com/WayneChou-bot/WareTwin) | 웹 기반 100 x 70m 창고 환경 디지털 트윈 시뮬레이터 |
+| [**Magi**](https://github.com/ali-pahlevani/Magi) | ROS2 Humble + Gazebo Harmonic 기반 g2o 로봇의 야외 환경 시뮬레이터 |
+| [**bcr_bot**](https://github.com/blackcoffeerobotics/bcr_bot) | ROS2 Jazzy/Noetic 환경에서 Gazebo11/Harmonic, Isaac Sim, MuJoCo에서 활용 가능한 AMR 시뮬레이터 |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
