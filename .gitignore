@@ -112,11 +112,6 @@ playwright-report/
 test-results/
 site/
 
-# Read-only external reference repositories
-ref/
-
-# Local implementation handoff notes
-Handoff.md
-
-# Generated tutorial sensor captures and validation runs
-results/
+# Local documentation and generated artifacts
+*.md
+!README.md
