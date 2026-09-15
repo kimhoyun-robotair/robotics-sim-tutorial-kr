@@ -4,9 +4,22 @@
 
 공식 인덱스 **t127** · Isaac Sim **5.1.0**
 
-## 결과와 준비
+## 이 실습의 의도
 
-이 패키지는 공식 최종 manipulator 튜토리얼의 네 동작을 `--exercise`로 각각 실행합니다. **UR10e+Robotiq**를 사용하며 Franka나 일반 큐브 이동으로 대체하지 않습니다. 필요한 motion 설정을 `config/`에 포함하여 다른 로컬 패키지에서 생성한 파일에 의존하지 않습니다.
+UR10e+Robotiq의 그리퍼 연동, IK 목표 pose 추종, RMPflow 연속 제어, 물리 기반 pick-and-place를 `--exercise`로 나누어 실행합니다. 기본 모드는 `pick`이며 파란 block을 실제로 잡아 옮기는 시퀀스를 진행합니다. 로컬 `config/`의 운동학·motion 설정과 공식 USD의 물리 모델을 함께 사용하여, controller가 명령을 끝낸 것과 손끝·물체가 실제 목적지에 도달한 것을 별도로 측정하는 것이 핵심입니다.
+
+## 실행 후 확인할 것
+
+- **그리퍼 모드:** `--exercise gripper`에서는 `/ur/ee_link`의 손가락이 함께 닫혔다 열려야 합니다. 800 step 주기로 `finger_joint` 목표가 0→0.7→0 rad로 변하므로 `samples[].finger_rad`의 증가·감소를 비교합니다. 120 step 같은 짧은 실행은 한 번의 닫기·열기를 모두 보여 주지 않습니다.
+- **IK·RMPflow 모드:** 빨간 `/World/Target`은 기본 `(0.5,0,0.5)` m 목표입니다. 충분히 진행한 뒤 그리퍼 base가 접근하는지 화면과 `target_error_m`로 확인합니다. IK에서는 `ik_failures`도 보며, 이 오차는 위치 거리만 기록하므로 목표 orientation 일치까지 수치로 검증하지는 않습니다.
+- **pick의 실제 물체:** `/World/Cube`의 파란 block이 초기 높이에서 바닥으로 내려온 뒤 잡혀 올라가고 `(-0.3,0.6,0.05)` m 부근에 놓이는지 관찰합니다. `samples[].cube_m`과 최종 `cube_target_error_m`를 함께 봅니다. pick의 빨간 표식은 놓기 위치이며 `--target` 값 대신 고정된 place goal을 사용합니다.
+- **시퀀스와 성공 구분:** pick에서 `controller_done=true`와 함께 실제 큐브가 목표 3 cm 이내에 안정적으로 놓였는지 확인합니다. 이 3 cm는 본 실습의 관찰 기준이며 실행기가 자동 합격 판정을 하지는 않습니다. `target_error_m`는 그리퍼 base와 표식의 거리이므로 pick의 물체 놓기 성공 기준으로 사용하지 않습니다.
+- **완료 후와 파일:** pick 시퀀스가 끝나도 GUI를 열어 둔 동안 물리는 계속 진행하며 다음 집기를 자동으로 재시작하지 않습니다. `result.json`은 창을 닫거나 지정한 step 수를 마칠 때 저장되고, pick 외 모드의 `controller_done`·`cube_target_error_m`는 `null`인 것이 정상입니다.
+- **기존 확인 범위:** 아래 실행 기록은 `--exercise ik --headless --steps 120` 조건입니다. 기록의 오차를 모든 목표·모드의 고정 정답으로 삼거나, 그 기록으로 gripper·RMPflow·pick 성공까지 확인했다고 해석하지 않습니다.
+
+## 준비와 실행
+
+필요한 motion 설정을 `config/`에 포함하여 다른 로컬 패키지에서 생성한 파일에 의존하지 않습니다.
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, 설치에 포함된 `isaacsim.robot.manipulators`와 Lula/RMPflow 확장, 다음 공식 실제 로봇 에셋이 필요합니다.
 `/Isaac/Samples/Rigging/Manipulator/configure_manipulator/ur10e/ur/ur_gripper.usd`
@@ -23,7 +36,7 @@ python3 run.py --help
 
 `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 6000회 한도를 사용한다. 실행 중에도 물리·제어가 계속 진행되며, 결과 요약은 실행을 마칠 때 기록한다.
 
-`--headless`는 창을 숨깁니다. 물리/GPU 요구사항은 그대로입니다. default output은 이 폴더 `output/<고유번호>/result.json`이며 `--output`은 새 경로만 허용합니다. 모든 실행은 bounded이며 끝나면 SimulationApp을 닫습니다. pick은 물리 **200 Hz**, 나머지는 **60 Hz**입니다. 따라서 6000 pick steps는 시뮬레이션 시간 30초입니다.
+`--headless`는 창을 숨깁니다. 물리/GPU 요구사항은 그대로입니다. default output은 이 폴더 `output/<고유번호>/result.json`이며 `--output`은 새 경로만 허용합니다. 양수 `--steps` 또는 headless 기본 한도를 사용하면 지정 횟수 후 종료하며, step 한도 없는 GUI는 창을 닫을 때까지 유지됩니다. pick은 물리 **200 Hz**, 나머지는 **60 Hz**입니다. 따라서 6000 pick steps는 시뮬레이션 시간 30초입니다.
 
 ## 파일과 원문에서 조정한 부분
 

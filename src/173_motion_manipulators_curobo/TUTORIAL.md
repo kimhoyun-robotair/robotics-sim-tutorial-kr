@@ -4,6 +4,18 @@
 
 Isaac Sim **5.1.0** 공식 튜토리얼은 외부 cuRobo 설치 및 native 예제로 연결하는 통합 안내다. 이 패키지는 설치된 **실제 cuRobo checkout**의 충돌 검사·IK·motion generation·MPPI·multi-arm 예제를 선택 실행하고 각 관찰 과제를 제공한다. cuRobo를 임의의 Lula 코드로 바꾸지 않는다. `launch.py` 자체가 planner를 구현하거나 vendor하지는 않는다.
 
+## 이 실습의 의도
+
+동일한 시뮬레이터 안에서도 충돌 거리 검사, 역기구학(IK), 전체 궤적 계획, 반복 제어가 서로 다른 질문에 답한다는 점을 실제 cuRobo 예제로 비교한다. 목표 cube와 장애물을 직접 옮겨 장면 변화가 planner의 world 표현과 계산 결과에 반영되는지 살펴본다. 기본 `--example motion`은 외부 checkout의 Franka MotionGen 예제를 실행하며, 이 launcher가 cuMotion ROS 2나 depth/nvblox 통합을 함께 시작하지는 않는다.
+
+## 실행 후 확인할 것
+
+- **MotionGen:** 목표 cube를 이동한 뒤 멈추고, 궤적 생성과 Franka 말단의 실제 목표 추종을 확인한다. 장애물을 추가한 경우 world 갱신 로그까지 본 뒤 다시 계획시켜 새 장애물이 반영되는지 살펴본다.
+- **충돌·IK 비교:** `collision`에서는 검사 sphere와 장애물 사이 거리 시각화가 이동에 반응하는지, `ik`에서는 목표 주변의 도달 가능/불가능 표본이 구분되는지 확인한다. IK의 순간 자세 배치는 모터가 그 궤적을 동적으로 추종했다는 증거가 아니다.
+- **반복 제어·양팔:** `mpc`에서는 움직이는 목표에 대한 응답과 rollout을, `multi-arm`에서는 두 목표를 놓고 마지막 red cube를 멈춘 뒤 양팔의 반응을 관찰한다. 장애물 뒤 정체나 계획 실패도 기록할 결과이며 무조건 모든 목표에 도달해야 하는 실습은 아니다.
+- **모델과 좌표:** 기본 Franka 또는 dual UR10e 설정과 화면의 로봇이 일치하는지 확인하고, 목표는 planner의 로봇 base 좌표와 USD world 좌표를 구분해 읽는다. USD에 물체가 보이는 것과 planner가 장애물로 읽은 것은 별도 확인 사항이다.
+- **실행 범위:** 파일 경로 검사나 native 창 실행만으로 GPU 계획 호환성이 검증되지는 않는다. 이 launcher는 결과 JSON을 저장하지 않으므로 선택한 checkout·예제·목표·계획 결과를 직접 기록한다.
+
 ## 준비와 버전 경계
 
 x86_64 Linux, Isaac Sim 5.1, RTX GPU/드라이버, Isaac Python과 호환되는 CUDA/PyTorch 및 별도의 cuRobo 설치가 필요하다. **5.1 원문은 이 튜토리얼을 aarch64에서 지원하지 않는다고 명시하며 NvBlox 예제의 알려진 문제를 명시한다.**

@@ -4,6 +4,18 @@
 
 이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다. `run_scheduler.py`는 별도의 headless 배치 도구이며 GUI 유지 대상이 아닙니다.
 
+## 이 실습의 의도
+
+창고의 사람 두 명, 카메라 한 대, IRABasicWriter를 연결하여 actor 명령이 RGB와 객체 주석으로 기록되는 전체 절차를 익힙니다. 기본 명령은 `Idle`과 `LookAround`만 사용하므로 위치가 거의 고정된 채 자세가 바뀌는 것이 정상이며, 보행과 로봇 카메라는 별도 설정 변경으로 실습합니다. `prepare.py`는 설정과 명령 파일을 만들고 종료하므로 자산 로딩·NavMesh 준비·데이터 생성은 Actor SDG GUI 또는 준비가 끝난 설정의 scheduler 실행에서 확인합니다.
+
+## 실행 후 확인할 것
+
+- **준비 파일:** 출력의 `config.yaml`에서 사람 2명, 카메라 1대, 로봇 0대, `simulation_length=90`과 `capture`의 절대 경로를 확인합니다. `prepare.py`가 capture 경로를 출력해도 RGB가 이미 생성된 것은 아닙니다.
+- **실제 actor 명령:** **Set Up Simulation** 후 `/World/Characters`의 실제 이름과 명령 파일 이름을 맞춥니다. 기본 3초 구간에서 Character_01은 `Idle 1 → LookAround 2`, Character_02는 `LookAround 3`을 수행하는지 보고, 걷지 않는 것을 명령 실패로 판단하지 않습니다.
+- **영상과 주석:** **Start Data Generation** 완료 후 `capture`의 RGB와 같은 프레임 `object_detection.json`에서 actor id·bbox가 보이는 배우와 대응하는지 확인합니다. actor 수는 장면 구성값이고 bbox는 카메라 안에 잡힌 대상의 주석이므로 단순히 모든 프레임에 두 박스가 있는지만 보지 않습니다.
+- **확장 실습의 경계:** 무작위 `GoTo`는 NavMesh 위 목적지와 **Save Commands**가 준비된 경우에 확인합니다. Nova Carter는 기본값 0이므로 별도로 1대로 설정해야 나타나고, `write_data=true`를 켜야 로봇 카메라 출력까지 비교할 수 있습니다.
+- **배치 실행:** `run_scheduler.py --save-usd`를 사용한 경우에도 새 출력의 실제 RGB·actor 주석·setup USD를 확인합니다. GUI에서 확인하지 않은 NavMesh나 자산 문제가 scheduler 호출 자체로 해결되지는 않습니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim 5.1 GUI, NVIDIA RTX GPU/드라이버, Isaac Sim 5.1 Assets 접근이 필요합니다. GUI는 설치 디렉터리의 `./isaac-sim.sh`로 실행합니다. `Window > Extensions`에서 `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`를 켜고 요구되는 재시작을 마칩니다. 사람 애니메이션은 `omni.anim.people`, `omni.anim.graph`, 경로 탐색은 `omni.anim.navigation`, 로봇은 `isaacsim.anim.robot`가 담당하며 IRA 의존성으로 활성화됩니다. 클라우드 LLM·ROS·별도 Python 설치는 필요하지 않습니다.

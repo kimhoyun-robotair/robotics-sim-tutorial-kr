@@ -2,19 +2,27 @@
 
 권장 학습 순서 **09** · Python 실행 환경과 USD 기초 · 출처 ID `t093`
 
+## 이 실습의 의도
+
+원시 USD/Physics API로 속성을 하나씩 붙인 큐브와 `DynamicCuboid`로 만든 큐브가 같은 종류의 물리 결과를 내는지 비교한다. 두 큐브의 한 변·질량·시작 높이를 0.4 m·1 kg·2 m로 맞추고 위치만 벌려, Core API가 장면과 물리 설정을 감싸는 편의 도구라는 점에 집중한다. 기본 실행은 실제 스키마 목록, 초기 장면, 매 스텝의 높이를 각각 `schemas.json`, `scene.usda`, `heights.csv`로 남긴다.
+
+## 실행 후 확인할 것
+
+- Stage에서 X=−0.5 m의 `/World/RawCube`와 X=+0.5 m의 `/World/WrappedCube`를 구분한다. 색 대신 Prim 경로로 확인하고 두 큐브가 모두 낙하하는지 본다.
+- `schemas.json`에서 두 경로에 `PhysicsRigidBodyAPI`, `PhysicsCollisionAPI`, `PhysicsMassAPI`가 있는지 확인한다. 편의 API가 추가 스키마를 붙일 수 있으므로 전체 목록이 완전히 같을 필요는 없다.
+- 충분히 실행한 `heights.csv`의 `raw_z_m`, `wrapped_z_m`이 모두 약 0.2 m로 정착하는지 확인한다. 초기 낙하 추이도 함께 비교하며 수치가 모든 스텝에서 완전히 일치해야 한다고 가정하지 않는다. 짧은 `--steps`는 접촉 전일 수 있다.
+- `scene.usda`는 reset과 낙하 이전에 저장한 장면이다. 재개방했을 때 큐브가 높이 2 m에 있어도 정상이며, Property의 강체·충돌·질량 설정과 CSV의 실행 결과를 구분해서 읽는다.
+- 종료 시 `Scene registry: raw wrapped` 출력이 나오는지 보고 코드의 `get_object("raw")`와 Prim 경로 `/World/RawCube`를 대응시킨다. Python Scene의 등록 이름과 USD Stage 주소는 서로 다른 조회 기준이다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
 이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
 
-## 목표와 예상 결과
-
-같은 0.4 m 큐브를 원시 USD/Physics API와 `DynamicCuboid`로 각각 만들고 낙하 높이를 비교한다. 원문의 “Core API is a Wrapper” 예제를 나란히 실행하도록 구성했다. `schemas.json`에는 실제 부착된 스키마, `heights.csv`에는 두 큐브의 높이, `scene.usda`에는 초기 장면이 저장된다.
-
 ## 순서대로 실습
 
-1. `~/isaacsim/python.sh run.py`을 실행한다. 노란 기본 재질 큐브 두 개가 동시에 낙하한다. 각 큐브는 X=−0.5 m와 +0.5 m에 놓인다.
+1. `~/isaacsim/python.sh run.py`을 실행한다. 두 큐브가 동시에 낙하한다. 각 큐브는 X=−0.5 m와 +0.5 m에 놓이며 원시 큐브에는 별도 색을 지정하지 않는다.
 2. `run.py`에서 `/World/RawCube`에 `UsdGeom.Cube`, `RigidBodyAPI`, `CollisionAPI`, `MassAPI`를 적용하는 부분을 읽는다. 원시 API는 필요한 속성을 각각 작성한다.
 3. `/World/WrappedCube`의 `DynamicCuboid(size=0.4, mass=1.0)`가 같은 기능을 짧게 구성하는지 비교한다.
 4. `World.scene.add`는 Python 객체를 등록한다. 원시 USD Prim은 이미 장면에 존재하지만 `RigidPrim` view를 등록해야 이 실습에서 reset 이후의 물리 상태를 일관되게 읽을 수 있다.

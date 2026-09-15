@@ -4,6 +4,18 @@
 
 네 생성 템플릿의 callback과 timeline 상태를 분석한다. 독립 starter 확장으로 UI callback을 먼저 확인하고 공식 생성물의 Load/Reset/Run, generator, 동적 관절 UI를 실험한다.
 
+## 이 실습의 의도
+
+공식 템플릿의 버튼과 callback을 따라가며 초기화된 물리 객체를 언제 사용할 수 있고, Run/Stop/Reset마다 어떤 갱신이 시작되거나 해제되는지 이해한다. Scripting 템플릿에서는 `yield`로 Kit에 제어권을 돌려주는 과정과 실제 관절 도착 판정을 연결한다. 제공 starter는 Cube 버튼과 창 종료만 구현하며, `bounded_wait.py`도 함수 정의만 제공하므로 생성한 scenario에 연결하고 관절 명령을 보내야 대기 동작을 관찰할 수 있다.
+
+## 실행 후 확인할 것
+
+- 생성한 Loaded Scenario의 `ui_builder.py`에 넣은 함수명 출력과 버튼 동작을 대조한다. Load 후 초기화된 객체를 쓰는 post-load가 호출되고 timeline이 timestep 0에서 pause되어 Run을 기다리는지 확인한다.
+- **Run**에서 StateButton이 Stop 상태로 바뀌고 물리 callback이 반복 호출되며 로봇·물체가 움직이는지 본다. **Stop** 뒤에는 그 callback 출력이 멈추는지, Reset 후 시나리오가 다시 초기 상태로 시작하는지 확인한다. 버튼 색이나 글자만 바뀐 상태로 완료를 판단하지 않는다.
+- Scripting에서 목표 이동과 gripper 개폐가 실제로 순서대로 진행되면서 GUI 입력에 응답하는지 본다. `wait_for_target`을 연결한 경우 `[7,8]`의 실제 관절 위치가 목표에 tolerance 이내로 도달해야 다음 단계로 진행하며, 기본 300회 검사 안에 도착하지 않으면 `TimeoutError`가 기대되는 실패 경로다.
+- Configuration은 Play한 articulation을 dropdown에서 선택했을 때 해당 관절 UI가 생성되고 목표 변경이 실제 관절에 전달되는지 확인한다. Play 전 물리 handle이 없는 상태에서 조작이 막히는 것은 초기화 순서의 제약이다.
+- 생성 확장을 종료하면 추가한 callback 출력이 더 이상 이어지지 않는지 본다. 제공 starter에서는 **Create Cube** 뒤 `/World/ExtensionCube`가 생기고 disable 시 창만 사라지는 것이 확인 범위이며, 물리 callback이나 로봇 시나리오는 포함되어 있지 않다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -70,7 +82,7 @@ Create Cube callback과 `on_shutdown`의 window.destroy를 보고 생성기 boil
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

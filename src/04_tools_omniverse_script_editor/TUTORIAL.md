@@ -4,6 +4,17 @@
 
 Script Editor의 탭들이 같은 Python 환경을 공유한다는 점을 Cube 생성과 크기 변경으로 확인한다.
 
+## 이 실습의 의도
+
+첫 탭에서 만든 USD 큐브를 두 번째 탭의 `cube` 변수로 그대로 편집하여, Script Editor 탭 사이의 Python 상태 공유를 익힌다. 생성과 변경을 두 파일로 나눈 이유는 다시 장면을 만들지 않고 기존 Prim 속성을 바꿀 수 있음을 보여주기 위해서다. 기본 실습은 실행 중인 GUI에서 도형을 작성·수정하며, 강체나 물리 시뮬레이션은 추가하지 않는다.
+
+## 실행 후 확인할 것
+
+- 새 Stage에서 `tab1_create.py`를 Run한 뒤 Stage의 `/World/EditorCube`를 선택한다. 푸른 큐브가 Z=0.5에 있고 출력이 `created /World/EditorCube size 0.5`인지 확인한다.
+- 다른 탭에서 `tab2_resize.py`를 Run하면 같은 큐브의 크기가 커지고 콘솔에 `before 0.5`, `after 1.0`이 나와야 한다. Stage에 큐브가 하나 더 생기는 동작은 이 실습의 목표가 아니다.
+- 두 번째 탭에서 재실행하면 이미 변경된 값 때문에 `before`도 `1.0`이다. 첫 실행의 숫자를 기대하려면 새 Stage에서 첫 탭부터 다시 진행한다.
+- Play를 눌러도 큐브가 떨어지지 않는 것이 정상이다. Size 속성 편집만 수행했으며 강체·충돌 속성을 붙이지 않았다. 첫 탭 재실행의 `already exists` 오류도 같은 경로의 중복 생성을 막는 보호다.
+
 ## 실행 환경
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더를 어디로 복사해도 다른 로컬 튜토리얼 없이 실행한다. 아래처럼 시작한 뒤 **Window > Script Editor**를 연다.
@@ -28,7 +39,7 @@ Script Editor의 **File > Open**으로 본문의 Python 파일을 열고 **Run**
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 확인해야 한다.
 
 ## 출처
 

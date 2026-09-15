@@ -4,6 +4,23 @@
 
 `extension/`에는 `KR Cortex World Lab`이라는 작은 **실제 Kit extension**을 포함했다. LOAD/RESET 비동기 lifecycle, CortexWorld 생성, physics callback, 두 손끝 target 전환을 구현한다. 공식 문서가 설명하는 큰 Franka/UR10 GUI 예제도 아래에서 별도로 실습한다. 외부 standalone process를 GUI 버튼으로 실행하는 방식이 아니다.
 
+## 이 실습의 의도
+
+실행 중인 Isaac Sim 앱 안에서 UI 버튼, 비동기 World 초기화, Cortex physics callback을 연결하는 최소 extension 구조를 배운다. Franka의 두 목표는 y만 다르게 두어 같은 behavior의 command parameter 변경이 실제 손끝 운동으로 이어지는지 확인하도록 했다. 확장을 켜면 UI만 생기고 LOAD NEW WORLD가 장면과 행동을 만드는 구조지만, 현재 로컬 구현에는 아래에 설명한 context reset 결함이 있다. 로컬 목표 전환과 뒤에서 다루는 공식 GUI의 behavior 교체는 별도 관찰 대상이다.
+
+## 실행 후 확인할 것
+
+- **현재 LOAD 제한:** 아래 결함이 남은 로컬 구현은 network 등록 중 `NotImplementedError`로 중단될 수 있다. 창이나 Franka가 보이더라도 로드 완료가 아니다. 수정 후 기대 기준은 `Running: left target` 문구와 `(0.5,0.25,0.5)`를 향하는 실제 손끝 운동이다. 아래 로컬 목표·RESET 확인도 이 초기화가 완료된 상태를 전제로 한다.
+- **목표 버튼:** TARGET RIGHT는 `(0.5,-0.25,0.5)`, TARGET LEFT는 `(0.5,0.25,0.5)`를 명령한다. `Goal: [...]` 상태 문구뿐 아니라 손끝의 y 방향 이동도 확인한다. LOAD 전 목표 버튼은 context가 없어 동작하지 않는다.
+- **RESET 의미:** 목표를 오른쪽으로 바꾼 뒤 RESET하면 `Reset complete`와 재생 재시작을 확인한다. reset 함수는 목표 값을 왼쪽으로 다시 쓰지 않으므로 마지막으로 선택한 목표를 계속 사용한다. 이미 로드한 상태에서 LOAD를 다시 누르면 같은 reset 경로를 실행한다.
+- **비동기 상태:** LOAD/RESET 작업 중 중복 클릭은 pending 작업이 끝날 때까지 무시된다. 새 세션이 아닌 곳에 기존 World가 있으면 `Failed: ... existing World ...`가 나타나는 것은 중복 World 생성을 막는 조건이다.
+- **확장 종료:** 초기화가 완료되어 `kr_cortex_step` callback이 등록된 상태에서 확장을 끄면 해당 callback을 제거하고 world를 Pause한다. LOAD가 그 전에 실패한 경우에는 이 정리 분기를 실행하지 않는다. Stage에 Franka와 지면이 남는 것은 정상이며 이 shutdown은 장면 삭제 기능이 아니다.
+- **공식 GUI 비교:** Robotics Examples의 Cortex 예제에서는 START 뒤 behavior dropdown을 바꿔 집기/peck 정책 자체가 바뀌는지 별도로 본다. 로컬 LEFT/RIGHT 버튼의 좌표 전환만으로 policy hot swap을 검증한 것은 아니다.
+
+## 현재 코드에서 확인된 제한
+
+`extension/kr_cortex_lab/__init__.py`는 `DfRobotApiContext(robot)`를 직접 생성한다. 설치된 5.1 SDK의 이 클래스에는 `reset()` 구현이 없고, 상속한 `DfLogicalState.reset()`은 `NotImplementedError`를 낸다. `CortexWorld.add_decider_network()`가 즉시 `reset_cortex()`를 호출하면서 이 reset에 도달하므로 LOAD가 정상 완료되려면 reset을 구현한 context가 필요하다. 이는 버튼 사용 순서로 해결되는 정상 대기가 아닌 **별도 코드 수정이 필요한 제한**이다. 이 문서 수정에서는 코드를 변경하거나 GPU 실행으로 재현하지 않았으며, 아래 절차는 의도한 동작을 확인할 기준으로 남긴다.
+
 ## 로컬 extension 실행
 
 1. 새 Isaac Sim 5.1 세션을 연다. 이 실습은 새 stage를 만들므로 먼저 진행 중인 장면을 Save As한다.

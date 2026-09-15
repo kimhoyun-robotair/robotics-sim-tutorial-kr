@@ -4,6 +4,18 @@
 
 외부 로봇 없이 한 관절 팔을 만들어 정지 상태의 Physics Inspector로 축·한계·관절 동작을 검사합니다. GUI 도구가 주제이며 run.py는 조작 가능한 articulation을 실제 생성합니다.
 
+## 이 실습의 의도
+
+월드에 고정된 Base와 Y축으로 회전하는 Link 하나를 직접 만들어 Physics Inspector에서 관절 연결·회전축·제한각을 편집하는 법을 익힙니다. 단순한 한 관절 구조는 로봇 에셋의 복잡한 계층 없이 잘못된 축이나 limit를 눈으로 구분하기 위한 구성입니다. 기본 스크립트는 팔을 초기화하고 Stop한 상태로 두므로, 처음에 팔이 가만히 있는 것이 정상이며 Inspector 조작은 사용자가 수행합니다.
+
+## 실행 후 확인할 것
+
+- Stage의 `/World/Arm/FixedRoot`가 월드와 Base를 묶고 ArticulationRootAPI를 가지며, `/World/Arm/Joint`의 body0/body1이 Base와 Link를 가리키는지 확인합니다. `arm.usda`에도 이 초기 연결이 저장되어야 합니다.
+- Physics Inspector에서 `/World/Arm`을 선택하면 조절할 회전 관절 하나가 나타나는지 봅니다. 위치를 조금 바꿨을 때 Base는 고정되고 Link가 Base 중심의 관절 위치를 기준으로 Y축 회전하는지 관찰합니다.
+- 초기 lower/upper limit가 -80°/80°인지 확인하고, 해당 값만 -30°/30°로 줄였을 때 허용 범위도 줄어드는지 비교합니다. 화면의 움직임과 속성 값이 대응해야 관절 편집을 확인한 것입니다.
+- 일반 Play 동작을 볼 때는 Inspector를 닫고 실행합니다. 이 관절에는 목표 0°의 angular drive가 있으므로 중력과 drive가 만드는 자세를 보되, Inspector의 부분 초기화 상태를 일반 시뮬레이션 결과로 해석하지 않습니다.
+- 변경한 limit를 보존하려면 **File > Save As**로 저장하고 새 파일에서 다시 확인합니다. 기본 `arm.usda` 생성이나 headless 종료만으로 Inspector의 관절 조작이 검증되지는 않습니다.
+
 ## 이 패키지만으로 준비하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.

@@ -4,6 +4,21 @@
 
 공식 UR10 bin-stacking main과 behavior를 이 폴더 안에 포함했다. `run.py`가 conveyor 작업대, warehouse, UR10 suction gripper를 준비하고 새 bin을 공급한다. `bin_stacking_behavior.py`가 집기·뒤집기·놓기의 결정을 수행한다.
 
+## 이 실습의 의도
+
+임의 자세로 공급되는 bin을 suction으로 집고, 방향에 따라 flip station을 거쳐 pallet에 놓는 결정을 관찰한다. 작업대와 네 개의 숨겨진 동작 생성 장애물은 이동 중 회피와 집기·뒤집기 때의 접근 허용을 구분하기 위한 구성이다. 기본 실행은 bin 공급과 behavior를 자동 실행하며 3×3 위치의 4층, 총 36개 적재 좌표를 갖지만, 고정 step 한도가 그 전체 작업 완료를 보장하지는 않는다.
+
+## 실행 후 확인할 것
+
+- **공급과 대기:** `/World/Ur10Table/ur10` 및 작업대가 로드되고 `/World/Ur10Table/bins/bin_0`부터 bin이 생성되는지 본다. bin은 y=1.5에서 시작하며 활성 영역은 `0<y<0.7`, `-0.4<x<0.4`다. 처음의 `<no active bin>`과 home 대기는 공급된 물체가 작업 영역에 들어오기 전 정상 상태다.
+- **집기 판단:** 콘솔의 bin 이름과 `is_grasp_reached`, `is_attached`, `needs_flip`를 실제 집는 bin과 대응시킨다. `is_attached`는 grasp pose 근접성과 gripper 닫힘을 조합한 논리 판단이므로, bin이 손끝과 함께 올라오는 실제 운동도 확인해야 한다.
+- **분기 차이:** 부착 전에는 pick, 부착 후 `needs_flip=true`이면 flip station 이동·해제·재집기, 뒤집기가 필요 없으면 place로 이어지는지 본다. 공급 방향이 무작위이므로 짧은 한 실행에서 두 경우가 모두 나오지 않을 수 있다.
+- **적재 결과:** 손끝의 접근이나 `<open gripper>` 출력 이후 실제 bin이 pallet의 다음 위치에 남아 지지되는지 확인한다. 논리상 완료는 36개 좌표 수를 채웠다는 뜻이며, 전체 성공 판단에는 실제 각 층의 배치와 지지 상태도 필요하다.
+- **장애물 표시:** `/World/Ur10Table/Obstacles`의 네 prim을 표시해 회피 영역을 확인한다. 기본 visibility=false라 화면에 구·capsule이 보이지 않아도 등록된 동작 생성 장애물로 쓰이며, 표시 여부와 obstacle monitor의 활성 상태는 별개다.
+- **종료 해석:** 현재 conveyor bin이 공급 영역을 벗어나면 다음 bin을 생성한다. 적재 완료 뒤 robot가 home으로 가더라도 공급 task와 앱을 자동 종료하는 별도 완료 처리는 없으므로 관찰 뒤 창을 닫거나 `--steps`를 사용한다.
+
+## 장면 준비와 행동 관찰
+
 필요한 5.1 자산은 `/Isaac/Samples/Leonardo/Stage/ur10_bin_stacking_short_suction.usd`, `/Isaac/Props/KLT_Bin/small_KLT.usd`, `/Isaac/Environments/Simple_Warehouse/warehouse.usd`다. asset root 접근이 끊기면 로봇/그리퍼 없는 화면에서 동작 검증을 계속하지 않는다.
 
 1. `run.py --interactive`을 실행하고 Play를 누른다. bin이 conveyor 끝으로 오면 UR10이 집고, 필요한 bin은 flip station에서 뒤집어 pallet에 놓는지 본다.

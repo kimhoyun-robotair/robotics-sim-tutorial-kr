@@ -4,9 +4,19 @@
 
 공식 원문: **Multiple Tasks** · Isaac Sim **5.1.0** · 인덱스 **t103**
 
-## 만들 결과와 실행 방식
+## 이 실습의 의도
 
-한 Stage 안에 독립적인 Jetbot–Franka 인계 작업 세 개를 배치합니다. 각 작업의 좌표, 이벤트, 로봇 이름, 제어기 상태가 서로 섞이지 않도록 구성합니다.
+한 Stage에 Jetbot–Franka 작업을 기본 세 벌 배치해, 같은 작업 클래스를 고유 이름·좌표 offset·별도 controller 상태로 확장하는 방법을 익힙니다. 각 lane의 Jetbot 이동 목표 x를 시드 기반으로 달리해 작업 진행 시점이 달라도 관찰과 명령이 섞이지 않도록 구성합니다. 각 작업은 동일한 DRIVE→RETREAT→PICK을 시도하며, lane 분리는 같은 물리 세계 안의 배치이므로 실제 큐브 운반·배치 결과는 작업마다 따로 확인합니다.
+
+## 실행 후 확인할 것
+
+- 기본 `--tasks 3 --spacing 2`에서 작업 기준 y offset은 -2,0,2 m입니다. 각 lane의 Jetbot과 큐브 시작 y는 그 offset에 0.3 m를 더한 값이며, 세 Franka·세 Jetbot·세 큐브가 한쪽으로 두 번 이동하거나 겹쳐 있지 않은지 봅니다.
+- 시작 시 출력되는 `lane_0`, `lane_1`, `lane_2`의 parameters에서 robot/cube/Jetbot 이름이 서로 구별되는지 확인합니다. `world.get_observations()`에서도 작업별 event 키를 사용해 다른 lane의 제어 상태를 덮어쓰지 않아야 합니다.
+- 터미널 event 딕셔너리에서 lane별 0→1→2 전환을 추적합니다. 목표 x가 1.2~1.6 m에서 달라지므로 모든 작업의 동시 전환을 요구하지 않습니다. 같은 seed는 목표 생성 조건을 재현하지만 물리 궤적의 완전 일치까지 보장하는 것은 아닙니다.
+- `result.json` 배열 길이가 지정한 tasks 수와 같고 각 `task` 이름이 유일한지 확인합니다. 모든 항목의 `controller_done`, `cube_target_error_m`, `within_3cm`를 읽어 실제 목표 3 cm 이내 배치를 lane별로 판정합니다. 한 lane의 완료나 event=2만으로 전체 성공을 판단하지 않습니다.
+- GUI 무제한 실행의 저장 시점은 모든 pick controller 완료 후 120단계이며, headless/명시한 `--steps`는 정해진 길이에서 부분 상태를 남길 수 있습니다. 충분히 실행해도 큐브가 밀려나거나 집기를 놓쳤다면 그 lane의 실제 실패로 기록하고, 목표 시드·후퇴 단계·배치 간격을 함께 비교합니다.
+
+## 실행 방식
 
 이 패키지는 `Multiple Tasks` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
 
@@ -23,7 +33,7 @@ python3 run.py --help
 "$ISAAC_SIM_ROOT/python.sh" run.py --headless --tasks 1 --seed 7 --steps 2400
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 2400단계를 사용합니다. 모든 작업의 집기·놓기가 끝나고 120단계 안정화한 뒤 결과를 저장하며, 이후에도 물리 시뮬레이션과 GUI를 유지합니다. 실행 중 GUI의 Stop/Play로 초기화를 시도하는 대신 프로그램을 다시 실행하세요. 기본 출력은 이 폴더의 `output/<고유번호>/`이며 `--output`으로 지정한 경로가 이미 있으면 덮어쓰지 않고 오류를 냅니다.
+`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 2400단계를 사용합니다. `--steps`를 생략한 GUI에서는 모든 pick controller가 끝나고 120단계 뒤 결과를 저장한 다음 물리 시뮬레이션과 창을 유지합니다. headless 또는 `--steps N` 실행에서는 정해진 길이까지 진행한 시점의 결과를 저장하므로 모든 작업의 완료와 안정화가 보장되지는 않습니다. 실행 중 GUI의 Stop/Play로 초기화를 시도하는 대신 프로그램을 다시 실행하세요. 기본 출력은 이 폴더의 `output/<고유번호>/`이며 `--output`으로 지정한 경로가 이미 있으면 덮어쓰지 않고 오류를 냅니다.
 
 ## 파일 안내
 
@@ -54,10 +64,6 @@ python3 run.py --help
 | 제어 단계 혼동 | 작업마다 별도 controller 인스턴스와 reset |
 
 USD Stage는 하나지만 논리적 Task가 여러 개일 수 있습니다. offset은 새 세계를 만드는 것이 아니라 같은 세계 안에서 좌표를 이동하는 것입니다. 이 실습은 물리 격리나 병렬 학습 환경을 보장하지 않습니다. lane 간격을 너무 줄이면 다른 작업 물체와도 충돌할 수 있습니다.
-
-## 관찰과 성공 판정
-
-세 lane이 각자 DRIVE→RETREAT→PICK을 진행하고 결과 배열에 서로 다른 task 이름이 있어야 합니다. 실제 cube_target_error_m로 lane별 성공을 판단합니다. 무작위 운반 거리 때문에 시간 기반 집기 controller가 놓칠 수 있으며 이를 결과에 그대로 남깁니다.
 
 ## 한 변수만 바꾸는 실험
 

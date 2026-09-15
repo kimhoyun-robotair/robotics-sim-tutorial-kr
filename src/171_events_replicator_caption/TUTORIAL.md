@@ -4,9 +4,19 @@
 
 이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다.
 
-## 기대 결과와 준비
+## 이 실습의 의도
 
-카메라에 보이는 객체/공간 관계를 실제 annotator로 읽어 `full_scene_graph.json`, `pruned_scene_graph.json`, 관계를 그린 이미지를 만듭니다. 선택적으로 외부 모델에 그래프를 전달해 brief/global/QA caption을 추가합니다. **기본 실습은 그래프 생성**이고 AI 문장 생성 성공을 의미하지 않습니다.
+카메라에 보이는 객체와 공간 관계를 실제 annotator로 읽어 이미지의 내용을 장면 그래프의 node와 edge로 표현합니다. full graph와 pruned graph를 함께 저장하는 이유는 같은 장면에서 관계를 얼마나 남기는지 비교하기 위해서입니다. 기본 실습은 그래프와 시각화 생성까지이며, brief/global/QA 문장 생성은 별도 NIM 모델 연결과 설정을 켠 선택 단계입니다.
+
+## 실행 후 확인할 것
+
+- **설정 준비와 실행 구분:** `prepare.py` 후에는 `output/graph_01/config.yaml`의 장면·카메라·output 경로를 확인한다. 이 단계에서 그래프나 caption이 없는 것은 정상이며, GUI에서 `run_caption_config()`를 실행해야 데이터가 생성된다.
+- **실제 그래프:** 비동기 작업 완료 후 `caption_task.result()`로 오류가 없는지 확인하고, capture 아래의 `full_scene_graph.json`, `pruned_scene_graph.json`과 관계 시각화를 연다. 파일 존재에 더해 node가 카메라에 보이는 의미 라벨 객체와, edge가 그 객체들의 관계와 맞는지 비교한다.
+- **관계 가지치기:** 같은 장면에서 `pruning_ratio`만 1.0에서 0.5로 바꿔 full/pruned 그래프의 남은 관계를 비교한다. 1.0도 최소 신장 트리(MST)를 만든 결과이므로 원래 모든 edge가 보존되는 조건은 아니다.
+- **문장이 없는 경우:** 기본 `global_caption`, `brief_caption`, `qa_caption`은 모두 false다. 그래프만 생기는 것이 의도이며, `--captions`를 켰을 때만 모델 URL·이름·키를 준비해 `scene_graph_caption.json`을 별도로 확인한다.
+- **선택 통합:** IRA에서는 `scene_graph_interval=10`에 맞는 frame id를 RGB와 대조한다. IRO는 `patch_iro.py`가 만든 YAML을 다시 로드하고 실제 생성해야 결과가 생기므로 설정 수정 완료를 데이터 생성 완료로 세지 않는다.
+
+## 준비
 
 Isaac Sim 5.1 GUI, RTX GPU, `isaacsim.replicator.caption.core` 확장을 `Window > Extensions`에서 활성화합니다. 그래프만 만들 때 API key는 필요 없습니다. 공식 Assets의 `/Isaac/Samples/Replicator/Captioning/test_caption.usda`를 사용하며 인터넷 Assets 접근 또는 해당 경로의 로컬 5.1 자산팩이 필요합니다. GUI에서 기본 샘플이 다른 URL을 표시하면 Content Browser에서 실제 샘플 경로를 복사해 `--scene`으로 지정합니다. 패키지 외 공통 모듈은 사용하지 않습니다.
 

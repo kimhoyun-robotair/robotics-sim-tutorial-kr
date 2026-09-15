@@ -6,6 +6,17 @@
 
 이 패키지는 이미 실행한 Isaac Sim GUI에서 실습합니다. 로컬 검사·설정 도구가 GUI 수명을 제한하지 않으며, 사용자가 창을 직접 닫을 때까지 유지됩니다.
 
+## 이 실습의 의도
+
+시뮬레이터의 H1 센서·관절 상태를 ROS 2로 보내고, 외부 정책 프로세스가 계산한 관절 위치 목표를 다시 로봇에 적용하는 왕복 제어를 익힌다. 완성된 H1 창고 장면을 먼저 쓰는 이유는 rig·IMU·물리 주기·ROS 그래프가 맞춰진 조건에서 통신과 보행을 함께 관찰하기 위해서다. 이 폴더의 `inspect_stage.py`는 열린 장면의 설정을 읽을 뿐이며, 정책 실행은 별도로 준비한 `h1_fullbody_controller`가 담당한다.
+
+## 실행 후 확인할 것
+
+- **Play 전 장면 설정:** Script Editor의 검사 출력에서 PhysicsScene의 `Hz=200`, `gpu_dynamics=False`, `broadphase=MBP`와 pelvis 아래 IMU, ROS 그래프의 실제 토픽 이름을 확인한다. 출력이 다르면 현재 장면 설정을 조사해야 하며, 검사기가 이를 자동으로 고쳐 주지는 않는다.
+- **왕복 메시지:** 정책을 먼저 실행하고 Play한 뒤 `ros2 topic echo ... --once`로 `/imu`, `/joint_states`, `/joint_command`의 실제 메시지를 각각 읽는다. 발행 토픽이 목록에 있다는 사실만으로 관절 명령의 회신까지 확인된 것은 아니다.
+- **시간과 관절 대응:** `/clock`이 진행하고 `/joint_command`가 반복 수신되는지 확인한다. 상태와 명령의 관절 이름·배열 대응을 살펴본다. `ros2 topic hz`의 수신 빈도는 실행 환경의 지연 영향을 받으므로 신경망 추론 50 Hz와 무조건 같아야 하는 값으로 쓰지 않는다.
+- **몸체 반응:** 무명령 상태에서 서 있는지, 작은 전진 명령을 주면 넘어지지 않고 움직이는지, 정지 명령 후 보행이 줄어드는지 GUI에서 본다. 정지 중 작은 drift와 정책 시작 전 낙하를 구분하며, 후진·옆걸음은 이 flat 정책의 성공 기준으로 삼지 않는다.
+
 ## 이 폴더에서 시작하기
 
 다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
@@ -20,7 +31,7 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export ISAAC_SIM="$HOME/isaacsim"
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. Standalone `run.py`는 이 확장을 직접 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. 이 폴더에는 standalone `run.py`가 없으므로 GUI에서 확장을 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
 
 Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
 
@@ -103,4 +114,4 @@ rig를 수정한다면 YAML의 gain도 비교한다. hip yaw/roll stiffness=150,
 - [공식 5.1 환경·시계](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html#publish-ros-clock-and-set-up-environment)
 - [공식 5.1 실행](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html#run-ros-2-policy)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 앞의 실행 후 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.

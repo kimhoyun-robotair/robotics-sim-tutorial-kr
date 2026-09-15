@@ -4,6 +4,18 @@
 
 UI로 Cube를 생성·이동한 기록을 Python command로 복원한다. Commands 창이 UI 작업과 `omni.kit.commands` 호출 사이를 연결한다는 것을 실제 재생으로 확인한다.
 
+## 이 실습의 의도
+
+GUI에서 큐브를 만들고 변환한 작업을 Commands 창에서 Python 호출로 복사해, 빈 Stage에서 같은 결과를 재현한다. 생성과 위치·스케일 변경만 골라 기록하는 이유는 UI 조작을 필요한 명령과 인자로 읽고 재사용하는 연습을 하기 위해서다. 이 패키지는 자동 실행 파일 없이 GUI 절차를 제공하며, 사용자가 만든 `output/replay.py`와 재생된 장면이 실습 결과다. 물리 주행이나 낙하 대신 명령 기록·재생·Undo/Redo를 확인한다.
+
+## 실행 후 확인할 것
+
+- 큐브 생성과 Property 편집 후 Commands 목록에 해당 생성·변환 작업과 인자가 남는지 확인한다. **Clear History**는 이 기록만 지우며 Stage의 큐브가 사라지지 않는 것이 정상이다.
+- 선택한 생성·변환 명령이 `output/replay.py`에 저장되어 있는지 읽는다. 이 파일은 실행 전에 제공되는 산출물이 아니라 사용자가 기록을 복사해 만드는 파일이며, 실제 Prim 경로와 transform 인자가 담겨야 한다.
+- 빈 Stage의 Script Editor에서 재생한 뒤 큐브를 선택한다. Property의 Translate가 `(1, 0, 0.5)`, Scale이 `(0.5, 0.5, 0.5)`이고 원래 GUI 작업과 같은 형상인지 확인한다. 복사 성공이나 코드 출력만으로 재현을 판정하지 않는다.
+- Ctrl+Z로 마지막으로 기록된 변환만 이전 값으로 돌아가고 Ctrl+Y로 다시 복원되는지 확인한다. 위치와 스케일이 여러 명령으로 기록되면 한 번의 Undo로 전체 변환이 취소되지 않을 수 있다.
+- X 위치만 바꾼 재생 사본은 새 Stage에서 X만 달라져야 한다. 같은 Stage의 `prim already exists` 오류나 중복 도형은 기록 재생 위치·선택 범위를 다시 확인할 신호다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -38,7 +50,7 @@ Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+manifest와 제공된 GUI 절차를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 GUI 조작 후 확인해야 한다.
 
 ## 출처
 

@@ -4,6 +4,18 @@
 
 처음에 겹쳐 있는 두 큐브가 물리적으로 분리되는 동안 proximity wrapper의 overlap 기록을 저장합니다. 단순 원거리 거리계와 구별하는 실습입니다.
 
+## 이 실습의 의도
+
+한 변 1 m인 두 큐브를 중심 간격 0.8 m로 일부러 겹치게 놓아, PhysX가 분리시키는 동안 overlap 진입·유지·이탈을 관찰한다. 센서는 `/World/Cube1`의 영역에 겹치는 prim만 추적하므로 여기서 distance는 멀리 있는 모든 물체를 향한 거리계 출력이 아니다. 기본 실행은 각 물리 step 뒤 overlap 사전을 저장하며, 초기 겹침이 해소되어 상대 큐브 항목이 사라지는 것도 관찰하려는 결과다.
+
+## 실행 후 확인할 것
+
+- **의도된 초기 겹침**: GUI에서 `/World/Cube1`과 `/World/Cube2`가 서로 밀려 분리되고 낙하하는지 본다. 시작부터 일부가 포개진 배치는 overlap을 만들기 위한 입력이며, 계속 서로 관통하는 것이 목표는 아니다.
+- **상대 물체를 지정해 확인**: `proximity.json` 앞부분의 `overlaps`에서 `/World/Cube2`의 등장과 분리 후 이탈을 확인한다. 코드가 자기 자신을 제외하지 않으므로 `/World/Cube1` 항목이 보일 수 있고, 나중의 바닥 항목이나 콘솔 `frames_with_overlap`만으로 두 큐브 검출을 판정하지 않는다.
+- **distance의 뜻**: 각 항목의 `distance`는 두 prim의 월드 원점 사이 거리이며 이 장면에서는 m다. 큐브 표면 사이의 간격이나 겹침 깊이가 아니므로, 겹쳐 있어도 양수인 것이 자연스럽다.
+- **duration의 시계**: `duration`은 overlap 이후의 벽시계 초이며 행의 `simulation_time_s`와 다른 시계다. GUI 속도나 컴퓨터 부하가 바뀌면 값도 달라지므로 정확한 실시간 배수나 고정 숫자를 성공 기준으로 삼지 않는다.
+- **비교 실행과 기록 한계**: `--separation 1.5`에서는 두 큐브 사이 초기 overlap이 없어야 한다. 자기 자신/바닥 항목까지 모두 비어야 하는 것은 아니며, 기본 240스텝 뒤 GUI에서 생긴 추가 overlap은 저장된 JSON에 반영되지 않는다.
+
 ## 이 패키지만으로 준비하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.
@@ -31,13 +43,13 @@ run.py는 standalone 실행용이므로 Script Editor에 전체를 붙이지 않
 
 1. 기본 separation=0.8 m로 1 m 큐브 두 개를 배치합니다. 중심 간격이 크기보다 작으므로 처음 겹칩니다.
 2. 실행 후 `proximity.json`의 overlaps에 `/World/Cube2`가 나타나는지 보고 분리 후 사라지는지 확인합니다. 나중에는 ground plane과의 overlap 정보가 포함될 수 있습니다.
-3. 각 항목의 distance와 duration을 기록합니다. duration은 설치 구현의 `time.time()`을 사용하는 **벽시계 시간**이므로 simulation_time_s와 같은 시계로 가정하지 않습니다.
+3. 각 항목의 distance(두 prim 원점 사이 거리, m)와 duration을 기록합니다. duration은 설치 구현의 `time.time()`을 사용하는 **벽시계 시간**이므로 simulation_time_s와 같은 시계로 가정하지 않습니다.
 4. `--separation 1.5 --output output/separated`로 초기 간격만 바꾸고 두 큐브 사이 overlap이 사라지는지 비교합니다.
 5. GUI 실행에서 큐브가 떨어져 바닥에 놓이는 것을 확인합니다. 센서가 `get_data()`에 반환하지 않은 물체까지 distance 측정이 있다고 해석하지 마세요.
 
 ## API와 USD 개념
 
-`ProximitySensor(cube.prim)`은 PhysX scene query로 해당 prim 영역의 overlap을 확인하고 `register_sensor`가 매 프레임 갱신에 등록합니다. `get_data()`의 key는 상대 prim 경로이며 distance와 duration은 그 overlap 기록의 속성입니다. 원거리 모든 물체의 최소 표면 거리를 제공하는 센서가 아닙니다.
+`ProximitySensor(cube.prim)`은 PhysX scene query로 해당 prim 영역의 overlap을 확인하고 `register_sensor`가 매 프레임 갱신에 등록합니다. `get_data()`의 key는 overlap된 prim 경로이며 distance는 두 prim 원점 사이 거리, duration은 벽시계 기준 체류 시간입니다. 이 코드에는 자기 prim을 제외하는 설정이 없어 자기 경로의 기록도 반환될 수 있습니다. 원거리 모든 물체의 최소 표면 거리를 제공하는 센서가 아닙니다.
 
 각 cube는 USD prim이고 DynamicCuboid는 rigid body와 collider를 갖춥니다. 초기 interpenetration은 예제의 의도이며 실제 로봇 초기화에서는 피해야 합니다. callback 등록과 해제를 같은 실행이 소유하고 finally에서 `clear_sensors`를 호출합니다.
 

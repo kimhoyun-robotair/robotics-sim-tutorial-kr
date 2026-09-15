@@ -4,6 +4,18 @@
 
 이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다.
 
+## 이 실습의 의도
+
+같은 actor 장면에서 writer 선택과 매개변수가 저장 주석·스테레오 데이터·스트리밍 출력을 어떻게 바꾸는지 비교합니다. 기본 실행 구성은 카메라 한 대의 IRABasicWriter로 RGB·카메라 파라미터·tight bbox만 활성화하며, `writer_presets.json`에 있는 다른 writer와 추가 주석은 직접 설정을 교체해야 적용됩니다. `prepare.py`는 설정 파일만 만들고, 스테레오는 카메라 쌍 생성과 새 설정이, RTSP는 별도 FFmpeg·수신 서버가 준비되어야 실제 출력을 확인할 수 있습니다.
+
+## 실행 후 확인할 것
+
+- **기본 출력:** GUI 데이터 생성 후 `capture`의 RGB와 같은 프레임 `object_detection.json`에서 actor와 tight bbox를 비교합니다. 기본 `lesson.json`은 skeleton·3D bbox를 켜지 않으므로 해당 데이터가 필요하면 IRABasicWriter preset의 옵션을 적용한 새 실행을 사용합니다.
+- **TaoWriter 비교:** `output_dir`을 유지하면서 preset을 적용하고 배우 앞에 가림 물체를 놓은 결과를 확인합니다. 높이·폭 threshold를 만족하는 bbox의 포함 여부를 영상과 대조하고, 카메라 경계에서 잘린 경우와 물체에 가린 경우를 따로 비교합니다.
+- **스테레오 구성:** `make_stereo(left_path,0.12)` 실행 후 원래 카메라와 `_R` 카메라가 실제로 존재하는지 확인합니다. 두 카메라의 중심 간 거리는 stage 단위를 m로 환산해 0.12 m이어야 하고, 오른쪽 이동 방향은 왼쪽 카메라의 로컬 +X입니다.
+- **스테레오 출력:** 저장한 USD와 두 `camera_list` 경로로 StereoWriter를 실행한 뒤 좌우 RGB, `fx_fy_cx_cy`, `stereo_baseline`, PFM 깊이를 확인합니다. 카메라를 복사한 것만으로 IRA가 두 뷰를 기록하지 않으므로 `camera_num`을 삭제한 새 설정까지 확인합니다.
+- **RTSP를 선택한 경우:** FFmpeg·서버를 준비하고 RTSPWriter의 실제 stream URL을 플레이어로 열어 배우 장면이 수신되는지 확인합니다. 기본 실행에 스트림이 없는 것은 정상이며 파일 writer 성공은 RTSP 수신 성공을 대신하지 않습니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim 5.1 GUI, NVIDIA RTX GPU/드라이버, Isaac Sim 5.1 Assets 접근이 필요합니다. GUI는 설치 디렉터리의 `./isaac-sim.sh`로 실행합니다. `Window > Extensions`에서 `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`를 켜고 요구되는 재시작을 마칩니다. 사람 애니메이션은 `omni.anim.people`, `omni.anim.graph`, 경로 탐색은 `omni.anim.navigation`, 로봇은 `isaacsim.anim.robot`가 담당하며 IRA 의존성으로 활성화됩니다. 클라우드 LLM·ROS·별도 Python 설치는 필요하지 않습니다.

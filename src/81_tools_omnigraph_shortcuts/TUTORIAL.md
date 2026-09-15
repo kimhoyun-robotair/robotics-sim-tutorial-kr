@@ -4,6 +4,18 @@
 
 네 종류의 controller shortcut을 생성하고 각 입력이 무엇을 바꾸는지 확인하는 GUI 실습이다. 단축 메뉴는 생성만 도우며 같은 로봇을 이미 제어하는 그래프가 있는지 자동 검사하지 않는다.
 
+## 이 실습의 의도
+
+Joint Position, Joint Velocity, Differential, Open Loop Gripper 네 shortcut이 어떤 명령 배열과 실행 연결을 만드는지 로봇 동작으로 구분한다. Franka의 한 관절, Jetbot의 두 바퀴, Franka의 두 finger를 따로 다루어 관절 이름·배열 순서·단위가 제어 대상에 따라 달라짐을 확인한다. 이 패키지는 GUI 절차만 제공하며, shortcut으로 그래프를 생성한 뒤 사용자가 Play하고 명령값이나 키를 입력해야 실제 움직임이 시작된다.
+
+## 실행 후 확인할 것
+
+- Franka의 생성 그래프에서 `JointNameArray`와 `JointCommandArray`의 같은 인덱스가 대응하는지 확인한다. `panda_joint1`에 대응하는 위치 목표만 `0.2` rad로 바꾼 뒤 해당 관절이 목표 자세로 움직이는지 본다. 초기 구동 목표에 맞추는 움직임과 사용자가 변경한 명령의 효과를 구분한다.
+- Position 그래프를 제거하고 Velocity 그래프에서 같은 관절에 `0.1` rad/s를 주면 시간에 따라 각도가 계속 변하는지 확인한다. 이어 0으로 바꾸어 정지 명령을 확인한다. 위치의 `0.2`와 속도의 `0.1`은 서로 다른 물리량이다.
+- Jetbot에서는 명령 방식과 WASD 방식을 각각 생성해 직진·회전을 확인한다. WASD 그래프의 `ScaleLinear`, `ScaleAngular`가 키 입력을 속도로 바꾸는 연결에 들어가는지 보고, 수동 입력 그래프가 동시에 남아 있지 않게 한다.
+- Gripper에서는 `panda_finger_joint1`, `panda_finger_joint2`가 O로 열리고 C로 닫히며 N으로 멈추는지 확인한다. `0.04`/`0.0` m는 손가락 관절별 열림·닫힘 위치이므로 회전 관절의 rad 값으로 해석하지 않는다.
+- arm과 gripper를 함께 제어할 때 arm의 명령·이름 배열에서 finger 둘을 제외했는지 확인한다. shortcut 생성 성공은 다른 그래프까지 포함한 중복 제어가 없다는 보장이 아니며, **Python Script for Graph Generation**에서 실제 생성 연결을 대조한다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -38,15 +50,15 @@ Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 
 
 ## 생성 API와 해설
 
-각 popup의 **Python Script for Graph Generation** 아이콘은 설치된 생성 코드를 연다. `make_graph()`에서 node 생성·값 설정·연결을 찾아 현재 그래프와 대조한다. Add to Existing Graph는 tick을 재사용할 수 있지만 controller를 항상 추가하므로 중복 제어를 막아주지 않는다. 같은 Graph Path가 있으면 숫자를 붙여 새 경로를 만들 수 있다.
+각 popup의 **Python Script for Graph Generation** 아이콘은 설치된 생성 코드를 연다. `make_graph()`에서 node 생성·값 설정·연결을 찾아 현재 그래프와 대조한다. Add to Existing Graph는 tick을 재사용할 수 있지만, 다른 그래프에서 같은 관절을 제어하는지까지 검사하는 기능은 아니다. 같은 Graph Path가 있으면 숫자를 붙여 새 경로를 만들 수 있다.
 
 USD prim은 로봇/graph의 장면 경로, articulation은 관절 강체 묶음이다. 회전 관절은 rad/rad·s⁻¹, 직선 finger 관절은 m/m·s⁻¹다. Open/Close limit을 비우면 USD joint limit을 쓰고 shortcut은 open 값이 close보다 큰 방향을 가정한다. 손가락마다 다른 속도/한계가 필요하면 생성된 그래프의 speed/limit 입력에 배열을 연결한다.
 
-성공 기준은 지정 관절만 이동, Jetbot 직진/회전, finger 개폐/정지다. 한 변수 실험: ScaleLinear만 절반으로 바꾸어 W 직진 속도 변화를 본다. 메뉴가 없으면 controller 관련 robotics extensions, 움직임이 튀면 중복 graph와 USD에 저장된 초기 drive target을 확인한다.
+한 변수 실험: ScaleLinear만 절반으로 바꾸어 W 직진 속도 변화를 본다. 메뉴가 없으면 controller 관련 robotics extensions, 움직임이 튀면 중복 graph와 USD에 저장된 초기 drive target을 확인한다.
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

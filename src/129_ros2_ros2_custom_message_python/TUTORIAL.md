@@ -4,6 +4,18 @@
 
 **목표:** 로컬 `.msg`에서 ROS 인터페이스를 빌드하고 Isaac Sim 내부 Python에서 가져와 실제로 발행합니다. `ros_ws/src/custom_message`에 CMake, package.xml, SampleMsg 정의를 모두 포함합니다. Linux 실습이며 원문 기준 Windows/WSL custom Python workflow는 지원되지 않습니다.
 
+## 이 실습의 의도
+
+같은 사용자 메시지 정의를 Isaac Sim의 Python 3.11 환경과 외부 시스템 ROS 환경에서 각각 사용할 수 있게 빌드하고 DDS로 교환하는 실습입니다. `SampleMsg`의 중첩 문자열과 정수 두 필드로 타입 생성·import·발행·수신을 단계별로 구분합니다. 기본 `run.py`는 메시지를 구성해 30 app update마다 반복 발행하며 로봇이나 USD 물체를 만들지 않습니다. 메시지 빌드와 외부 echo는 실행기가 자동 처리하지 않으므로 아래 두 환경 준비가 필요합니다.
+
+## 실행 후 확인할 것
+
+- **양쪽 메시지 정의:** 외부 ROS의 `ros2 interface show custom_message/msg/SampleMsg`에서 `std_msgs/String my_string`과 `int64 my_num`을 확인합니다. 시뮬레이터용 빌드도 같은 `.msg`를 사용해야 합니다.
+- **로컬 구성과 실제 수신:** Isaac Sim 터미널의 `Constructed custom message:`는 import와 필드 대입 결과입니다. 별도 ROS 터미널의 `/custom_sample` echo에 `my_string` 안의 `data`가 `hello from Isaac Sim 5.1`, 기본 `my_num`이 23으로 도착해야 통신까지 확인한 것입니다.
+- **한 필드 변경:** `--number 24`로 새로 실행하면 수신 문자열은 유지되고 정수만 24로 바뀌는지 확인합니다. `.msg` 자체의 구조를 바꾸었다면 양쪽 workspace를 다시 빌드·source해야 합니다.
+- **화면과 발행 주기:** GUI에 로봇이나 물체가 없어도 이 예제에서는 정상입니다. 발행 간격은 30 app update 기준이므로 고정 30 Hz 또는 고정 벽시계 주기로 해석하지 않습니다.
+- **관찰 시간:** 제한 없는 GUI는 창을 닫을 때까지 메시지를 보내며, 짧은 `--steps` 실행은 DDS discovery 전에 끝날 수 있습니다. 외부 수신기를 준비하고 실제 메시지를 받은 뒤 종료 여부를 판단합니다.
+
 
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 앱 업데이트와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 지정하면 해당 횟수 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1200회를 사용합니다. 이전 `--frames` 옵션은 `--steps` 없는 headless 실행의 횟수만 정하며, GUI 종료에는 영향을 주지 않습니다. `--steps`를 지정하면 `--frames`보다 우선하며 0과 음수는 허용하지 않습니다.
 

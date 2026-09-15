@@ -4,6 +4,19 @@
 
 **목표:** Leatherback의 두 조향 관절과 네 바퀴 관절을 `AckermannDriveStamped` 메시지로 구동하고, `Twist`의 선속도/각속도를 조향각으로 바꿉니다. 로컬 `setup_stage.py`가 실제 그래프를 만들며 `drive.py`가 명령을 발행합니다. 차량 USD는 공식 5.1 asset을 사용합니다.
 
+## 이 실습의 의도
+
+Ackermann 명령의 중심 조향각·차체 속도를 좌우 앞바퀴의 조향 위치와 네 바퀴의 회전 속도로 나누어 적용하는 과정을 확인한다. 실제 Leatherback의 관절 이름과 치수를 사용하는 것은 계산 출력이 알맞은 물리 관절에 전달되어야 하기 때문이다. `setup_stage.py`는 미리 배치한 차량에 그래프를 추가하며, Play와 외부 `drive.py` 실행은 아래 절차에서 수행한다.
+
+## 실행 후 확인할 것
+
+- `/Leatherback`과 `/AckermannLab`을 확인하고 Steer에는 앞왼쪽·앞오른쪽 조향 관절, Wheels에는 앞왼쪽·앞오른쪽·뒤왼쪽·뒤오른쪽 바퀴가 순서대로 지정되었는지 본다. 그래프 생성만으로 차량이나 바닥이 자동 추가되는 것은 아니다.
+- 기본 `drive.py`는 약 20 Hz 타이머로 `/ackermann_cmd`에 `ackermann_msgs/msg/AckermannDriveStamped`를 보낸다. 외부 echo에서 `header.frame_id=base_link`, speed=0.4 m/s, steering_angle=0.3 rad를 확인한다.
+- Play 중 앞바퀴가 조향되고 네 바퀴가 회전하며 차량이 좌회전하는지 viewport와 그래프의 `wheelAngles`·`wheelRotationVelocity`에서 함께 본다. Ackermann 기하 때문에 좌우 조향각과 바퀴 속도를 모두 같은 값으로 기대하지 않는다.
+- `--steering`만 0.15로 줄여 같은 속도에서 회전 반경이 커지는지 비교한다. `/ackermann_cmd` 수신만 성공해도 접지나 관절 적용이 잘못되면 차량 운동은 실패할 수 있다.
+- `--mode twist`에서 `/cmd_vel`의 `geometry_msgs/msg/Twist`를 보내 변환을 확인한다. `linear.x=0`일 때 순수 `angular.z` 명령만으로 제자리 회전하지 않는 것은 이 차량과 변환기의 의도된 동작이다.
+- Twist 입력을 끊으면 기본 0.5초 timeout 뒤 속도·조향 0 명령이 발행되고, 송신기 정상 종료 시에도 마지막 0 명령을 보낸다. 실제 차량은 가속·조향 속도 제한을 따라 감속하므로 즉시 정지 수치보다 0 명령 수신과 감속 결과를 함께 확인한다.
+
 ## 실행 환경: 이 폴더만으로 시작하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Linux, ROS 2 Humble(이 문서의 명령 기준)이 필요합니다. ROS를 통해 다른 프로세스와 통신하므로 시뮬레이터와 ROS 터미널을 구분합니다. `ISAAC_SIM`은 실제 설치 디렉터리로 바꾸세요.

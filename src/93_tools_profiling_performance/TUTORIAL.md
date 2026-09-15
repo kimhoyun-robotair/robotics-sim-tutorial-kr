@@ -4,6 +4,18 @@
 
 Tracy로 실제 CPU 계산과 Kit 프레임을 관찰한다. 제공 script의 zone은 실제 sin 합계를 계산하며 preset 시간이나 가짜 성능값을 출력하지 않는다.
 
+## 이 실습의 의도
+
+매 Kit 업데이트 전에 수행하는 sin 합계 계산을 계측해 Python 함수 시간과 주변 앱 프레임 시간을 Tracy에서 구분한다. `--items`는 한 번의 계산량, `--frames`는 체크섬을 출력할 배치 크기라서 한 변수만 바꾼 비교를 만들기 쉽다. 기본 실행은 측정을 반복하고 콘솔에 연산 체크섬을 출력하며, trace 파일 저장은 연결한 Tracy UI에서 직접 수행한다.
+
+## 실행 후 확인할 것
+
+- **실제 계측 구간:** 실행 중인 프로세스에 Tracy를 연결하고 `lesson_cpu_batch` 내부에 `compute_values` 범위가 나타나는지 확인한다. `app.update()`는 이 CPU zone 뒤에 호출되므로 zone 시간과 전체 프레임 시간을 따로 읽는다.
+- **배치 출력:** 기본 설정에서는 600번 업데이트마다 `frames 600 items 20000 checksum ...`이 출력되는지 본다. 체크섬은 계산 실행 확인용이며 초당 프레임 수나 소요 시간이 아니다.
+- **계산량 비교:** 같은 `--frames`에서 `--items`만 20000과 40000으로 바꿔 시작 로딩 이후의 CPU zone 시간 분포를 비교한다. 더 많은 연산의 영향을 관찰하되 특정 ms나 정확한 2배를 합격 기준으로 두지 않는다.
+- **저장 결과:** Tracy에서 Stop/Save trace를 수행한 뒤 `output/items20000.tracy`, `output/items40000.tracy`에 각각 해당 실행의 zone이 보존되어 있는지 다시 열어 확인한다. 스크립트 종료만으로 이 파일들이 생성되지는 않는다.
+- **종료 조건:** GUI에서는 `--frames` 한 배치가 끝나도 다음 배치를 계속 측정한다. 짧은 headless 실행이 연결 전에 끝나면 trace가 비어 있을 수 있으므로 연결 시점과 `--steps`로 준 전체 업데이트 한도를 함께 확인한다.
+
 ## 준비와 GUI 연결
 
 Isaac Sim 5.1.0과 GPU, 그래픽 화면이 있는 컴퓨터가 필요하다. 이 폴더는 외부 자산 없이 실행한다. Isaac Sim을 켜고 `Window > Extensions`에서 **omni.kit.profiler.tracy**를 검색해 켠다. registry에서 extension을 가져오는 최초 실행에는 인터넷이 필요할 수 있다.

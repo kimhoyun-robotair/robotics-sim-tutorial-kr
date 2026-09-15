@@ -4,6 +4,18 @@
 
 공식 Asset Optimization 수업의 **GUI native** 실습이다. Isaac Sim 5.1의 `/Isaac/Samples/Rigging/Jetbot/Jetbot_Base/Jetbot_base.usd`를 로컬 편집 layer에 sublayer로 넣고 시작한다. `inspect_meshes.py`는 실제 mesh 수, face 수, instance proxy, prototype을 출력하므로 변경 전후 구조를 비교할 수 있다. FPS 향상 수치는 이 패키지에서 측정하지 않았다.
 
+## 이 실습의 의도
+
+같은 rigid link 안의 mesh를 합치고 좌우 바퀴가 같은 visual 자료를 공유하도록 구성해 USD 장면 구조를 최적화한다. `run.py`는 원본 Jetbot을 참조하는 로컬 편집 layer와 초기 물리 목록을 준비하며, mesh merge와 internal reference/Instanceable 설정은 사용자가 GUI에서 수행한다. 완성 여부는 구조 변경과 외관·물리 보존을 함께 확인하며 성능 향상은 별도 측정한다.
+
+## 실행 후 확인할 것
+
+- 실행 직후 `stage.usda`가 원본 Jetbot을 sublayer로 참조하고 `initial_inventory.json`에 rigid body, joint, articulation root 경로가 기록됐는지 확인한다. 이 파일들이 생긴 시점에는 아직 최적화 작업을 수행하지 않은 상태다.
+- Script Editor에서 `inspect_meshes.py`를 편집 전후 실행하고 `meshes`의 경로·face 수와 `mesh_occurrences`를 비교한다. merge는 한 rigid link 안에서 수행하고 서로 다른 물리 링크의 geometry를 합치지 않는다.
+- 수동 작업 후 좌우 wheel의 `Visuals` reference가 공유 `/Visuals/wheel`을 가리키는지 확인한다. 숨긴 `/Visuals`는 원본 visual 자료를 보관하는 곳이며, 실제 바퀴 위치의 참조 geometry가 유지되어야 한다.
+- Instanceable을 켠 뒤 Stage의 인스턴스 표시와 검사 출력의 `instance_roots`, `prototypes`, `instance_proxy`를 확인한다. 일반 Traverse에서 mesh가 덜 보이는 현상만으로 geometry가 없어졌다고 판단하지 않는다.
+- 저장한 결과를 다시 열어 바퀴 위치·재질과 joint의 body target을 확인하고 Play에서 물리 동작을 비교한다. mesh 수 감소만으로 FPS나 메모리 개선을 통과 판정하지 않는다.
+
 ## 준비와 실행
 
 Isaac Sim **5.1.0**, RTX GPU와 GUI, 위 Jetbot asset에 접근할 수 있는 assets root, Mesh Merge Tool이 필요하다. **Prim**은 장면 노드, **Mesh**는 렌더링 기하, **Rigid body/link**는 같이 움직이는 물리 묶음, **reference**는 USD 구성을 재사용하는 연결이다. 다른 로컬 튜토리얼을 먼저 읽을 필요가 없다.

@@ -4,6 +4,18 @@
 
 같은 Cube 위치 변수를 standalone, Docker, 실행 중인 GUI 세 환경에서 breakpoint로 관찰한다. 제공 run.py는 `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI를 유지한다.
 
+## 이 실습의 의도
+
+작은 USD Cube 생성 과정을 멈춰 보면서 실행 인자, Python 변수, 장면에 기록된 Transform이 같은 값을 가리키는지 추적한다. 복잡한 로봇 제어 없이 standalone 시작과 기존 프로세스 attach의 차이, Docker의 소스 경로 대응을 확인하도록 구성했다. 기본 `run.py`는 Cube와 Kit 업데이트 루프만 만들며 debugger 연결은 별도 설정이고, 강체·충돌·물리 낙하는 구현하지 않는다.
+
+## 실행 후 확인할 것
+
+- **standalone 중단 지점:** `print("breakpoint position:", position)`에 둔 breakpoint에서 실제 실행이 멈추는지 확인한다. 기본값에서는 `position=(0,0,1)`, `cube.GetPath()`는 `/World/DebugCube`이고 Cube 크기는 0.2다.
+- **입력에서 장면까지:** `--height 2.0`으로 다시 실행하면 변수의 z와 `/World/DebugCube`의 Translate Z가 모두 2인지 확인한다. Continue 후 Cube가 공중에 고정된 것은 이 장면에 rigid body를 넣지 않았기 때문이다.
+- **attach 연결:** `--wait-for-client` 실행이 debugger 연결 후 진행되고, 해당 소스의 breakpoint와 F10 stepping이 동작하는지 본다. Attached 표시만으로 올바른 소스 파일에서 중단된 것을 대신하지 않는다.
+- **GUI 내부 스크립트:** GUI에 attach한 뒤 `attached_scene.py`의 print 줄에서 `/World/EditorCube`, 크기 0.5, z=0.5를 확인한다. 이 파일의 Cube는 청록색이며 `run.py`의 `--height`를 사용하지 않는다. 같은 prim이 있는 stage에서 재실행하면 의도적으로 오류를 낸다.
+- **수명과 원격 경로:** GUI 기본 실행은 창을 닫을 때까지 유지되고 `--steps`는 `app.update()` 횟수를 제한한다. Docker에서 회색 breakpoint가 보이면 `${workspaceFolder}`와 `/lesson`의 파일 대응을 먼저 확인한다.
+
 ## 준비와 standalone 실행
 
 Linux, Isaac Sim 5.1.0, 지원 GPU, VS Code의 Python/Python Debugger 확장이 필요하다. 이 폴더를 VS Code로 연다. Python 인자 도움말은 일반 Python으로도 된다.

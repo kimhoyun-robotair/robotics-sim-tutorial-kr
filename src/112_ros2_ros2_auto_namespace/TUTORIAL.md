@@ -4,6 +4,19 @@
 
 **목표:** 로봇 USD 계층에 `isaac:namespace`를 붙여 String, TF, 카메라, Lidar의 ROS 토픽 이름이 어떻게 생성되는지 확인합니다. 로컬 코드는 원문처럼 물리 로봇이 아닌 **계층 실습용 Xform**과 String/TF 그래프를 만듭니다. 센서는 아래 GUI 단계로 추가합니다.
 
+## 이 실습의 의도
+
+USD 계층의 `isaac:namespace` 속성이 일반 ROS 노드와 센서 Helper의 토픽 이름에 어떻게 반영되는지 비교한다. `mock_robot`은 물리 로봇 대신 주소 관계를 보기 위한 Xform 묶음이므로 바퀴 주행이나 로봇 형상은 기본 결과가 아니다. `setup_stage.py`는 계층과 String/TF 그래프까지 만들며, Hawk·LiDAR 추가와 두 로봇 복제는 GUI에서 이어서 수행한다.
+
+## 실행 후 확인할 것
+
+- Script Editor 실행 후 Stage에서 `/mock_robot/base_link` 아래 센서·바퀴 Xform과 `wheel_left/String_graph`, `wheel_left/TF_graph`를 확인한다. 센서 자체와 물리 articulation이 생성되지 않은 것은 이 단계의 정상 범위다.
+- 초기 계층을 Play하면 `/wheel_left/topic`의 `std_msgs/msg/String`을 실제 수신해 `wheel namespace lesson`을 확인한다. String publisher는 playback tick에 연결되어 있으며, 별도 센서 추가 전 카메라/LiDAR 토픽이 없는 것은 정상이다.
+- 아래 GUI 단계를 마친 뒤에는 `/lidar_link/laser_scan`과 Hawk 좌·우 RGB/CameraInfo를 수신한다. 타입은 각각 `sensor_msgs/msg/LaserScan`, `Image`, `CameraInfo`인지 확인하고, 토픽 존재와 실제 센서 데이터 수신을 구별한다.
+- root namespace 추가와 복제 후 `/mock_robot/wheel_left/topic`, `/mock_robot_01/wheel_left/topic`을 각각 echo한다. 복제된 prim 이름뿐 아니라 root의 namespace **속성값**을 직접 바꾸어야 두 로봇의 통신 이름이 분리된다.
+- `/mock_robot/tf`, `/mock_robot_01/tf`의 `tf2_msgs/msg/TFMessage`를 읽어 실제 frame 이름도 확인한다. TF 토픽 namespace와 메시지 내부 좌표계 이름을 동일한 문자열 규칙으로 추측하지 않는다.
+- String publisher의 `nodeNamespace`만 `manual_test`로 설정한 뒤 `/manual_test/topic`으로 바뀌고 센서 토픽은 유지되는지 본다. 이 속성 변경으로 Xform 위치나 물리 좌표가 바뀌어야 하는 것은 아니다.
+
 ## 실행 환경: 이 폴더만으로 시작하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Linux, ROS 2 Humble(이 문서의 명령 기준)이 필요합니다. ROS를 통해 다른 프로세스와 통신하므로 시뮬레이터와 ROS 터미널을 구분합니다. `ISAAC_SIM`은 실제 설치 디렉터리로 바꾸세요.

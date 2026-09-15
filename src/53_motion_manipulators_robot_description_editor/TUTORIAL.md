@@ -4,6 +4,18 @@
 
 Isaac Sim **5.1.0**의 native **Lula Robot Description Editor**로 Franka의 제어 관절과 충돌 구를 정하고 Lula YAML 및 cuMotion XRDF를 내보낸다. 이 패키지의 `run.py`는 편집할 non-instanceable 로봇 reference를 준비한다. 파일 작성·구 편집은 공식 UI에서 사용자가 수행한다. 내보낸 파일이 없는 상태에서 모션 계획 완료로 표시하지 않는다.
 
+## 이 실습의 의도
+
+로봇의 USD 물리 구성과 별도로 planner가 사용할 제어 관절·기본 자세·충돌 근사 형상을 작성한다. 편집 가능한 `/World/Franka`에서 팔 7축을 Active로, 손가락을 Fixed로 정하고 링크 외곽을 collision sphere로 덮어 Lula YAML과 XRDF에 내보낸다. 기본 스크립트는 로봇과 편집 확장만 준비하므로 파일 작성·내보내기·다시 불러오기가 이 GUI 실습의 완료 단계다.
+
+## 실행 후 확인할 것
+
+- Lula Robot Description Editor의 articulation 목록에서 `/World/Franka`를 선택하고 관절·링크가 편집 가능한지 확인한다. `run.py`를 종료하거나 headless 업데이트를 마친 것만으로 description 파일이 자동 생성되지는 않는다.
+- Set Joint Properties에서 `panda_joint1`~`panda_joint7`이 Active이고 손가락은 Fixed인지 확인한다. 여기의 Fixed는 planner가 고정값으로 취급한다는 의미이며 USD의 관절 타입을 fixed joint로 바꾸는 작업이 아니다.
+- `panda_link4`부터 구를 추가한 뒤 로봇 표시를 숨겨 링크별 구의 위치·반지름과 외곽 빈틈을 살펴본다. 이 구는 Lula의 충돌 근사이며 USD의 PhysX collider와 별개다.
+- 직접 Export한 `output/franka_description.yaml`과 `output/franka.xrdf`가 실제로 존재하는지 확인하고, 팔 7축의 이름·순서와 기본 자세, 손가락 고정값, 링크별 sphere 좌표/반지름을 읽는다.
+- 내보낸 YAML을 다시 Import하여 active joint와 sphere 배치가 복원되는지 확인한다. 구 하나의 반지름만 바꿔 새 파일로 내보낸 비교에서는 해당 링크의 값이 의도대로 달라져야 하며, export 성공 자체가 모션 계획·충돌 회피 성공은 아니다.
+
 ## 준비와 시작
 
 Isaac Sim 5.1, RTX GPU/드라이버와 5.1 자산 팩이 필요하다. 사용하는 로봇은 `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`다. extension 이름은 `isaacsim.robot_setup.xrdf_editor`다. 기존 다른 패키지나 root asset을 참조하지 않는다.

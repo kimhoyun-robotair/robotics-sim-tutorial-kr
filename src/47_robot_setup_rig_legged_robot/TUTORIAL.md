@@ -4,6 +4,18 @@
 
 공식 Rigging a Legged Robot for Locomotion Policy의 핵심은 **이미 학습된 policy가 가정한 초기 자세·gain·한도와 USD 로봇을 일치시키는 것**이다. 이 패키지는 H1의 19개 관절을 실제 USD API로 설정하고 radians/degrees 변환표를 저장한다. locomotion policy 추론이나 학습을 실행하는 수업은 아니다. Isaac Sim 내부 Policy Controller는 이 설정을 런타임에 처리할 수 있지만 외부 ROS 같은 프로세스가 policy를 구동할 때는 asset 설정 일치가 필요하다.
 
+## 이 실습의 의도
+
+H1 policy 입력의 초기 자세와 actuator 값을 USD의 관절 상태·drive·한도에 옮겨, 같은 로봇 설정을 서로 다른 단위 체계로 표현하는 방법을 익힌다. 19개 revolute joint의 이름을 정규식과 매칭하고 각도·각속도는 rad에서 deg로, gain은 rad당 값에서 deg당 값으로 변환한다. 기본 실행은 로컬 override와 변환 보고서를 작성한 뒤 장면을 열어 두며 Play나 policy 추론을 자동 실행하지 않는다.
+
+## 실행 후 확인할 것
+
+- `joint_configuration.json`에 19개 관절이 있고 초기 위치, USD 위치, rad 기반 gain, deg 기반 gain, effort/velocity limit가 함께 기록됐는지 확인한다. 관절 누락·중복 매칭 또는 19개가 아닌 입력은 코드가 오류로 처리한다.
+- `h1_policy.usda`를 연 Property에서 knee의 Joint State Position과 Drive Target Position이 모두 약 45.26°인지 확인한다. 두 값은 입력 0.79 rad에서 변환한 시작 상태와 목표를 각각 뜻한다.
+- left_hip_yaw의 USD stiffness≈2.61799와 damping≈0.0872665가 입력 150과 5에 대응하는지 비교한다. 각도와 gain의 변환 방향을 반대로 적용해야 하므로 숫자가 같은 것을 기대하지 않는다.
+- `/h1`의 시작 위치가 `(0, 0, 1.05)` m인지 확인한다. 장면이 정지해 있거나 관절 초기 자세가 아직 물리 상태로 반영되지 않은 것만으로 설정 실패라 판단하지 말고 작성된 Property를 먼저 확인한다.
+- 런타임 값은 GUI에서 직접 Play한 뒤 `inspect_runtime.py`의 DOF 이름과 rad 기반 값을 대조한다. 이 실습에는 균형 제어 policy가 없으므로 Play 후 서 있기·걷기·넘어지지 않기를 성공 기준으로 삼지 않는다.
+
 ## 준비와 실행
 
 Isaac Sim **5.1.0**, RTX GPU, `/Isaac/Robots/Unitree/H1/h1.usd`를 읽을 수 있는 assets root가 필요하다. `h1_policy.json`은 공식 **5.1**의 `h1_env.yaml` 중 초기 joint pose와 legs/feet/arms actuator의 숫자만 담은 로컬 입력이다. 다른 패키지 또는 Isaac Lab 설치 없이 USD 설정 실습을 할 수 있다.

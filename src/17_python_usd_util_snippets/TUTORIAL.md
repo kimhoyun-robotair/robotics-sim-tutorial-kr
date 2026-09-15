@@ -2,15 +2,23 @@
 
 권장 학습 순서 **17** · Python 실행 환경과 USD 기초 · 출처 ID `t096`
 
+## 이 실습의 의도
+
+같은 난수 시드로 만든 위치들을 USD Points, Cube PointInstancer, viewport DebugDraw로 표현해 **화면에 보이는 것과 USD에 저장되는 것**의 차이를 비교합니다. 기본 `points` 모드는 200개 점을 사인파로 움직이고 최초 120프레임 구간의 마지막 위치를 저장하며, 중력이나 충돌에 의한 움직임을 만들지는 않습니다. 계산용 카메라의 내부 파라미터와 별도 비동기 예제를 통해 렌더링 설정·앱 업데이트도 물리 상태와 구분합니다.
+
+## 실행 후 확인할 것
+
+- GUI에서 기본 `points`는 자홍색 점, `instancer`는 청록색 작은 큐브, `debug`는 주황색 점으로 나타나며 높이가 주기적으로 변하는지 봅니다. 동일한 `--count`와 실행 길이로 비교하면 같은 위치 데이터를 서로 다른 방식으로 그리는 실험이 됩니다.
+- `rendering.json`의 `mode`, `point_count`, `final_positions`를 확인합니다. 위치 수는 지정한 count와 같아야 하며, GUI를 계속 켜 두어도 저장한 최초 구간 이후의 움직임이 이 파일에 추가되지는 않습니다.
+- `geometry.usda`를 다시 열면 Points/Instancer의 저장된 점·큐브 위치는 남지만 DebugDraw 점은 없어야 합니다. DebugDraw의 점은 USD geometry가 아니므로 이 차이는 의도된 결과이며 `--mode debug --headless`는 지원하지 않습니다.
+- `focal_x_px`, `focal_y_px`, `principal_point_px`는 `/World/CalibrationCamera` 속성과 가정한 960×640 해상도의 계산 결과인지 확인합니다. 현재 viewport에서 촬영한 영상의 보정 결과나 자동 성능 측정값으로 읽지 않습니다.
+- 별도 `pause_after_update.py`를 Script Editor에서 실행하면 Play 후 Pause되고 `Paused after one application update`가 출력되는지 봅니다. 기다린 대상은 앱 업데이트 한 번이며 정확히 물리 한 스텝을 실행했다는 판정은 아닙니다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
 이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 120단계를 사용합니다. 기본 120프레임의 위치와 USD를 저장한 뒤에도 점 애니메이션은 계속 움직입니다. 저장 파일은 최초 관찰 구간의 스냅샷입니다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
-
-## 목표와 예상 결과
-
-같은 점 위치 데이터를 세 표현으로 갱신한다. USD Points, cube PointInstancer, viewport DebugDraw가 저장·렌더링·물리에서 어떻게 다른지 확인한다. `rendering.json`에는 실제 작성한 위치와 카메라 속성에서 계산한 내부 파라미터가 기록되고 `geometry.usda`에는 USD 장면이 저장된다.
 
 ## 순서대로 실습
 

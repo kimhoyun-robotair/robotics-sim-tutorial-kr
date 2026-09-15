@@ -2,7 +2,19 @@
 
 권장 학습 순서 **175** · 사용 중단 문서와 레거시 참고 · 출처 ID `t114`
 
-Isaac Sim **5.1.0**의 이 공식 페이지는 `omni.isaac.shapenet`이 deprecated이며 ShapeNet 모델을 일반 OBJ처럼 가져오라고 안내한다. 따라서 이 패키지는 현재 지원되는 OBJ→USD 변환 경로를 구현한다. 포함한 `sample.obj`는 직접 작성한 오각 면 구성의 피라미드 예제이며 **ShapeNet에서 내려받은 데이터가 아니다**.
+Isaac Sim **5.1.0**의 이 공식 페이지는 `omni.isaac.shapenet`이 deprecated이며 ShapeNet 모델을 일반 OBJ처럼 가져오라고 안내한다. 따라서 이 패키지는 현재 지원되는 OBJ→USD 변환 경로를 구현한다. 포함한 `sample.obj`는 직접 작성한 사각뿔(면 5개) 예제이며 **ShapeNet에서 내려받은 데이터가 아니다**.
+
+## 이 실습의 의도
+
+사용 중단된 ShapeNet 전용 importer에 의존하지 않고, 일반 OBJ의 꼭짓점·면을 USD mesh로 변환해 장면에서 재사용하는 흐름을 익힌다. 작은 피라미드를 사용하는 이유는 dataset 접근 없이도 원본 형상과 변환 결과를 직접 비교할 수 있기 때문이다. 기본 실행은 `sample.obj` 변환과 `/World/Imported` 아래 reference 표시까지이며, 물리 속성이나 ShapeNet 데이터 다운로드를 추가하지 않는다.
+
+## 실행 후 확인할 것
+
+- **원본 형상:** `sample.obj`의 꼭짓점 5개와 면 5개가 사각형 밑면·삼각형 옆면 네 개를 이루는지 확인한다. 정점 좌표상 밑면 폭과 높이는 각각 0.2지만 실제 단위 적용은 변환된 USD에서 확인한다.
+- **실제 변환물:** 종료 코드뿐 아니라 `output/converted.usd`와 콘솔의 `Converted mesh prims:` 목록을 확인한다. GUI의 `/World/Imported`를 선택하고 F로 맞춰 피라미드가 보이는지 본다.
+- **형상 변화:** 꼭대기 z만 0.2에서 0.4로 바꿔 새 output에 변환했을 때 밑면 폭은 유지되고 높이가 커지는지 비교한다. 파일 크기가 특정 바이트 수와 같아야 하는 것은 아니다.
+- **물리 범위:** 이 실행기는 timeline을 재생하거나 rigid body·collider를 붙이지 않으므로 피라미드가 떨어지지 않는 것이 정상이다. 화면 표시 성공과 동역학 모델 준비 완료를 구분한다.
+- **기존 실행 근거:** `RUNTIME_CHECK.md`는 지정된 headless 조건의 종료와 변환 파일 존재를 확인한 기록이다. GUI 모양, 사용자 OBJ의 재질·텍스처, 다른 옵션은 해당 기록의 보장 범위에 포함되지 않는다.
 
 ## 준비와 실행
 
@@ -32,7 +44,7 @@ cd src/175_importers_shapenet_importer
 
 `AssetConverterContext`는 변환 설정, `create_converter_task()`는 입력/출력 파일을 지정한 비동기 작업이다. `wait_until_finished()`의 실제 결과를 기다린 다음 USD를 stage에 reference한다. `UsdGeom.Mesh`는 vertex/face topology를 가진 prim이다. OBJ에는 articulated robot joint나 PhysX rigid body가 없으므로 **시각 mesh import가 자동 물리 모델 생성은 아니다**. rigid body/collider가 필요하면 가져온 USD에 별도로 작성한다.
 
-자산이 흰색이면 MTL/texture 경로를 확인하고, 보이지 않으면 scale·위치와 frame selection을 확인한다. timeout은 `--timeout`을 늘려 파일 크기에 맞출 수 있다. dataset 접근권한/다운로드는 사용자가 준비해야 하며 이 패키지는 전용 downloader를 되살리지 않는다. CLI/문법은 확인했지만 OBJ converter runtime과 렌더 결과는 미검증이다.
+자산이 흰색이면 MTL/texture 경로를 확인하고, 보이지 않으면 scale·위치와 frame selection을 확인한다. timeout은 `--timeout`을 늘려 파일 크기에 맞출 수 있다. dataset 접근권한/다운로드는 사용자가 준비해야 하며 이 패키지는 전용 downloader를 되살리지 않는다. 기존 headless 변환 실행의 파일 생성은 아래 `RUNTIME_CHECK.md`에 기록되어 있다. GUI 렌더 결과와 사용자 OBJ 변환은 별도 확인이 필요하다.
 
 ## 출처
 

@@ -6,6 +6,18 @@
 
 이 패키지는 이미 실행한 Isaac Sim GUI에서 실습합니다. 로컬 검사·설정 도구가 GUI 수명을 제한하지 않으며, 사용자가 창을 직접 닫을 때까지 유지됩니다.
 
+## 이 실습의 의도
+
+물류 문제를 장면의 시각적 배치, 통행 가능한 graph, 주문 수요, 차량 용량으로 나누어 표현하고 실제 cuOpt 서비스가 돌려준 경로를 해석한다. 사각형 network부터 cost matrix·waypoint graph·창고 운송으로 확장하면서 직선 거리와 통로 연결, semantic zone의 비용 효과를 비교한다. `lab_cases.json`은 수동 입력할 실험 명세이며 자동 실행기나 서비스 응답이 아니다. 서버 없이도 network 구성과 입력 보정은 살펴볼 수 있지만 SOLVE 결과는 실제 서비스 연결이 필요하다.
+
+## 실행 후 확인할 것
+
+- **Network 구조:** 네 꼭짓점을 `(0,0)`, `(4,0)`, `(4,4)`, `(0,4)`에 놓고 0–1–2–3–0의 닫힌 연결을 확인한다. `output/network.usd`를 다시 열어 node와 edge가 유지되는지 본다.
+- **기본 수요·용량:** Simple Cost Matrix에서 차량 2대, capacity 4, 방문지 6을 설정한 뒤 depot cone과 방문 sphere 6개를 확인한다. 실제 SOLVE 응답에서는 모든 방문지 포함 여부와 차량별 수요 합이 4 이하인지 텍스트 route와 화면을 대조한다.
+- **용량 부족 시 GUI 보정:** capacity만 2로 낮추고 SETUP PROBLEM을 누르면 설치된 5.1 UI는 `NOTE : AUTOMATIC VALUE CHANGE`를 표시하고 방문지를 6개에서 4개로 줄인다. 이는 고정된 6개 수요의 infeasible 응답이 아니므로, SOLVE 전에 바뀐 입력과 sphere 수를 확인한다.
+- **Waypoint 경로:** Orders·Vehicles를 로드한 뒤 반환 경로가 graph edge를 따라가는지 확인한다. 녹색 주문 지점과 Node_0 시작점을 연결해 읽으며 차량 mesh가 없어도 graph 기반 실습은 진행할 수 있다.
+- **Semantic zone:** 창고 통로의 한 edge에 zone을 놓고 UPDATE → SOLVE한 결과를 zone 이동 후 결과와 비교한다. zone은 비용 페널티이므로 경로가 반드시 바뀌거나 완전히 통행 금지되는 것은 아니며 반환 cost와 함께 판단한다.
+
 ## 추가 준비
 
 [cuOpt server quickstart](https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-server/quick-start.html)에 따라 실제 endpoint를 준비한다. Isaac Sim 5.1의 `omni.cuopt.service`와 호환되는 서버 API/인증 설정이 필요하다. 외부 `latest` 문서는 5.1에 고정되지 않으므로 사용하는 server 버전을 기록한다. 자격 증명은 UI에 입력하며 이 저장소에 저장하지 않는다. 작성 과정에서 서버 설치나 요청을 수행하지 않았다.
@@ -24,7 +36,7 @@
 1. 새 stage에서 `cuOpt > Simple Cost Matrix`를 연다. 실제 service credentials/endpoint를 UI에서 설정한다.
 2. Fleet Size=2, Vehicle Capacity=4, Number of Locations=6, Solver Time Limit=5초를 넣고 SETUP PROBLEM을 누른다. cone은 depot, sphere는 demand 1의 방문지다.
 3. SOLVE를 누른 뒤 텍스트 route와 viewport route를 비교한다. 모든 방문지가 포함되고 차량별 방문 수가 capacity를 넘지 않는지 수작업으로 센다. fleet size는 최대 수이므로 반드시 두 대를 써야 하는 것은 아니다.
-4. Capacity만 2로 바꾸고 같은 6개 demand 조건을 다시 구성한다. 총 capacity 4로 demand 6을 처리할 수 없으므로 infeasibility를 어떻게 보고하는지 확인한다. 무조건 성공 route를 출력하는 것은 올바른 검증이 아니다.
+4. Capacity만 2로 바꾸고 SETUP PROBLEM을 누른다. 설치된 5.1 UI의 `problem_setup_validation()`은 총 capacity 4보다 많은 방문지를 4개로 자동 줄이고 `NOTE : AUTOMATIC VALUE CHANGE`를 표시한다. Number of Locations와 실제 sphere 수를 확인한 뒤 SOLVE한다. `lab_cases.json`의 `expected_feasibility`는 **6개 수요를 고정했을 때** 불가능하다는 수학적 설명이며, 이 GUI가 그대로 infeasible 문제를 서비스에 보낸다는 뜻은 아니다.
 
 ## 3. Simple Waypoint Graph
 

@@ -4,6 +4,18 @@
 
 **목표:** Action Graph 없이 ROS 서비스/액션으로 timeline과 USD entity를 조작합니다. `control.py`는 로컬 `cube.usda`를 spawn하고 위치를 쓰고 다시 읽은 뒤, 유한 step 후 PAUSED 상태를 확인합니다. 다른 프로세스가 시뮬레이터를 제어하는 native ROS workflow입니다.
 
+## 이 실습의 의도
+
+외부 ROS 클라이언트가 시뮬레이터의 실행 상태와 장면 객체를 명시적으로 바꾸고, 응답을 다시 조회해 적용 여부를 확인하는 실습입니다. `cube.usda`에는 강체를 넣지 않아 중력 운동과 위치 쓰기를 섞지 않고 서비스 동작을 관찰합니다. `control.py`의 기본 작업은 객체 생성→world 위치 설정·조회→지정 step 실행→PAUSED 확인까지이며, 시뮬레이터와 `sim_control` 확장은 먼저 별도로 실행해야 합니다.
+
+## 실행 후 확인할 것
+
+- **객체 생성:** ROS 터미널의 `Spawned entity:`와 Stage의 `/ControlLessonCube`를 비교합니다. 그 아래 `Geometry`가 크기 0.5 m의 녹색 Cube이고, 기본 실행 후에도 장면에 남아 있어야 합니다.
+- **쓰기와 읽기 일치:** `Verified world position:` 응답의 x/y/z가 `(1,2,3)`인지 확인하고 GUI에서 해당 객체를 프레이밍합니다. 이는 쓰기 요청만 보낸 것이 아니라 `GetEntityState`로 다시 읽은 결과입니다.
+- **step 이후 상태:** `Verified PAUSED after stepping`과 `/get_simulation_state`의 state=2를 확인합니다. step 수를 늘려도 Cube가 떨어지지 않는 것은 강체 없는 로컬 자산의 의도된 동작입니다.
+- **재실행과 삭제:** 같은 이름의 entity가 남아 있으면 자동 덮어쓰지 않습니다. 새 `--name`을 사용하거나 `--delete` 실행의 마지막 삭제 로그와 Stage에서 해당 entity가 사라진 것을 확인합니다.
+- **확장 실습의 경계:** `/simulate_steps`의 피드백·취소와 world 로드/제거는 아래 명령을 직접 수행할 때 확인하는 항목입니다. 기본 `control.py`의 성공이 모든 서비스·액션의 검증을 뜻하지는 않습니다.
+
 ## 실행 환경: 이 폴더만으로 시작하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Linux, ROS 2 Humble(이 문서의 명령 기준)이 필요합니다. ROS를 통해 다른 프로세스와 통신하므로 시뮬레이터와 ROS 터미널을 구분합니다. `ISAAC_SIM`은 실제 설치 디렉터리로 바꾸세요.

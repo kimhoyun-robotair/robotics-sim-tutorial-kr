@@ -4,6 +4,20 @@
 
 로컬 `block_stacking_behavior.py`에는 공식 5.1의 전체 reactive block-stacking behavior가 있다. `run.py`는 Franka와 폭 0.0515m인 Red/Blue/Yellow/Green 네 블록, 지면을 생성하고 해당 behavior를 연결한다. 다른 튜토리얼에서 로봇 설정을 복사할 필요가 없다.
 
+## 이 실습의 의도
+
+블록 위치와 gripper의 점유 상태를 계속 관찰해 집기·놓기·home을 선택하는 반응형 탑 쌓기를 해부한다. 네 블록은 색 이름으로 쌓기 순서를 정하고 물리적으로 집어 옮기도록 구성했으며, 목표 탑이 흐트러지면 현재 배치를 다시 판단하는 과정을 확인한다. 기본 실행은 탑 쌓기를 자동 시작하고 완료 뒤 home 행동을 선택하지만 앱은 창을 닫거나 지정한 step 한도에 도달할 때까지 유지한다.
+
+## 실행 후 확인할 것
+
+- **초기 장면:** `/World/Franka` 앞 `/World/Obs/`의 Red/Blue/Yellow/GreenCube가 x=0.3~0.7, y=-0.4에 나란히 있는지 본다. 화면에 네 블록이 존재하는 것에서 더 나아가 실제 gripper가 하나씩 집고 놓는지 확인한다.
+- **목표 탑:** `(x,y)=(0.25,0.3)` 부근에 아래부터 **Blue → Yellow → Green → Red** 순서의 네 층이 물리적으로 지지되는지 확인한다. 색 순서가 다른 네 블록 탑은 `is_complete` 조건을 충족하지 않는다.
+- **회복 반응:** 아직 집지 않은 블록을 도달 가능한 빈 위치로 옮겨 추종을 확인하고, 완성한 탑의 위 블록을 옮겨 다시 쌓는지 본다. 블록이 base에서 너무 가깝거나 멀 때 출력되는 `block too close to robot base`/`block too far away`와 home 선택은 명시된 작업영역 제한이다.
+- **진단과 실제 물리:** `<placing block>` 로그는 손끝이 놓기 목표에 가까워졌다는 표시다. 놓은 후 블록이 남아 지지되는지 화면으로 확인한다. `in tower` 등의 상세 문자열은 `diagnostics_message`에 저장되며 이 로컬 실행기에 자동 표시하는 UI는 없다.
+- **선점과 접촉의 경계:** 잡기·놓기의 lock 구간에서는 외부 변화에 즉시 행동이 바뀌지 않을 수 있다. 선택한 블록의 RMPflow avoidance를 억제하는 것은 접촉을 허용하기 위한 동작 생성 설정이며 물리 collider 삭제가 아니다. 짧은 step 종료를 네 층 완성으로 해석하지 않는다.
+
+## 탑 쌓기 관찰과 코드 읽기
+
 1. `run.py --interactive`으로 시작하고 Play를 누른다. 블록을 모아 지정된 순서의 tower를 만드는지 관찰한다. 최초 배치는 x=0.3~0.7, y=-0.4이다. 목표 tower의 위치는 behavior 끝의 `make_decider_network()`에서 확인한다.
 2. robot가 아직 집지 않은 블록을 Move 도구로 조금 옮긴다. 현재 world의 위치를 다시 읽어 추적하는지 확인한다. 이후 이미 쌓은 위 블록 하나를 tower 옆으로 옮겨 재정렬 반응을 확인한다.
 3. `BlockPickAndPlaceDispatch`를 읽는다. tower가 완성되면 home, gripper가 비었으면 pick, 블록이 있으면 place를 선택한다. 어떤 블록을 집을지와 어디에 놓을지는 다음 계층에서 결정하고 atomic action에 parameters로 전달한다.

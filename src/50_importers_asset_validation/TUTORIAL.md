@@ -4,6 +4,18 @@
 
 Isaac Sim **5.1.0**의 `isaacsim.asset.validation` 규칙을 실제로 실행한다. 작은 body에 질량/관성/주축 quaternion/숨겨진 collider purpose 결함을 넣고 두 공식 규칙의 before/after 결과를 기록한다. validator 전체 통과와 선택한 두 규칙 통과를 구분한다.
 
+## 이 실습의 의도
+
+`/World/DefectiveBody`에 의도적으로 잘못된 질량·관성·주축 quaternion과 숨긴 collider의 purpose를 작성해 공식 validator가 무엇을 지적하는지 확인한다. 기본 실행은 선택한 두 규칙으로 결함을 찾은 뒤 속성을 수리하고 같은 규칙으로 다시 검사한다. `--keep-defects`는 수리를 생략해 사용자가 Asset Validator와 Property에서 결함을 직접 살펴볼 수 있게 한다.
+
+## 실행 후 확인할 것
+
+- `before.usda`의 `/World/DefectiveBody`에서 mass=0, diagonal inertia=(0,0,0), principal axes=(2,0,0,0), invisible/default purpose를 확인한다. 화면에 cube가 보이지 않는 것은 의도된 검사 입력이며, invisible은 collision을 끄는 설정이 아니다.
+- `validation.json`의 `enabled_rules`가 `RigidBodyHasMassAPI`, `InvisibleCollisionMeshHasPurposeGuide`이고 `before`가 비어 있지 않은지 확인한다. issue 문자열을 읽어 어떤 속성이 지적됐는지 연결한다.
+- 기본 실행의 `after.usda`에서 질량 1 kg, 대각 관성 `(1/600,1/600,1/600)`, 단위 quaternion, purpose=guide를 확인하고 `validation.json`의 `after`가 빈 목록인지 본다. 수리 뒤에도 visibility는 invisible로 유지된다.
+- `--keep-defects` 실행은 `before.usda`와 `validation.json`을 남기고 `after.usda` 및 JSON의 `after` 항목을 생성하지 않는다. GUI에서 두 규칙을 직접 실행해 같은 결함을 확인한 뒤 속성을 하나씩 수정한다.
+- 두 규칙의 통과는 이 fixture의 선택 속성 수리가 끝났다는 뜻이다. 전체 robot 규칙 통과나 Play 중 물리 안정성은 이 실행의 판정 범위에 포함되지 않는다. 기존 실행 예시는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에 기록돼 있다.
+
 ## 준비와 실행
 
 Isaac Sim 5.1, RTX GPU/드라이버, 기본 제공 `isaacsim.asset.validation` 및 asset validator가 필요하다. fixture stage는 코드에서 작성하므로 다른 package나 외부 asset이 필요 없다.
@@ -17,7 +29,7 @@ cd src/50_importers_asset_validation
 
 `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 120회 한도를 사용한다. 기존 `--frames`는 `--steps` 없는 headless 실행의 한도로만 쓰며 GUI를 닫지 않는다.
 
-기본은 `before.usda`, `after.usda`, `validation.json`을 새 output 폴더에 쓴다. 실제 공식 checker가 의도한 결함을 찾지 못하거나 수리 후 선택 규칙 issue가 남으면 실패한다. GUI 모드는 결함을 유지한 stage를 열어 둔다. invisible fixture가 안 보이는 것은 오류가 아니라 이번 검사 대상 속성이다.
+기본은 `before.usda`, `after.usda`, `validation.json`을 새 output 폴더에 쓴다. 실제 공식 checker가 의도한 결함을 찾지 못하거나 수리 후 선택 규칙 issue가 남으면 실패한다. GUI에서 결함을 유지한 stage를 살펴보려면 `--keep-defects`를 지정한다. invisible fixture가 안 보이는 것은 오류가 아니라 이번 검사 대상 속성이다.
 
 ## 두 규칙을 직접 비교하기
 
@@ -65,7 +77,7 @@ Asset Validator에서 다음 세 category를 선택해 개별/전체 규칙을 �
 
 USD schema는 prim에 붙이는 기능 묶음이다. MassAPI/CollisionAPI/RigidBodyAPI는 다른 역할이다. visibility는 화면 표시, purpose는 geometry의 용도를 나타내며 invisible이라고 collision이 꺼지지 않는다. RobotAPI의 관계는 링크/관절 목록이고 default prim은 파일을 reference할 때 기본으로 가져올 루트다. physics layer 분리는 속성의 **출처 layer**를 검사하는 규칙이므로 값만 맞춰서는 통과하지 않는다.
 
-문제 해결: validator 메뉴가 없으면 extension 활성화, 규칙이 안 보이면 IsaacSim category 필터를 확인한다. Physics 실행을 포함하는 규칙은 static 검사만으로 검증했다고 할 수 없다. 이 변경은 문법/CLI와 API 소스를 확인했지만 실제 validator/GUI/physics 실행은 미검증이다.
+문제 해결: validator 메뉴가 없으면 extension 활성화, 규칙이 안 보이면 IsaacSim category 필터를 확인한다. Physics 실행을 포함하는 규칙은 static 검사만으로 검증했다고 할 수 없다. 기본 headless 실행에서 두 규칙의 수리 전후 결과를 확인한 기록은 아래 RUNTIME_CHECK.md에 있으며, GUI 조작과 다른 물리 규칙 실행은 그 기록의 검증 범위가 아니다.
 
 ## 출처
 

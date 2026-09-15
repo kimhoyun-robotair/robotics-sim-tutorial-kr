@@ -4,6 +4,19 @@
 
 예상 결과는 `/joint_states`에 실제 Franka 관절 위치가 나타나고, 이 폴더의 `send_command.py`가 첫 번째 관절을 0.3rad로 움직이는 것이다. 공식 GUI/Script Editor 실습을 독립 실행 진입점으로 옮겼고, 외부 isaac_tutorials 패키지 대신 이 폴더에 최소 ROS 노드를 포함했다.
 
+## 이 실습의 의도
+
+Franka의 실제 관절 상태를 ROS로 읽는 방향과 외부 목표 위치를 물리 articulation에 적용하는 방향을 함께 확인한다. 한 관절에 하나의 position만 보내는 최소 송신기를 사용해 관절 이름과 명령 배열의 대응을 쉽게 관찰한다. `run.py`만 실행하면 상태 발행·명령 수신이 준비되며, 0.3 rad 목표나 원위치 복귀는 별도 `send_command.py` 실행으로 요청한다.
+
+## 실행 후 확인할 것
+
+- 콘솔 `actual_joint_names`와 `/joint_states`의 `sensor_msgs/msg/JointState.name` 배열에서 `panda_joint1`을 찾는다. 실제 위치는 같은 인덱스의 position이며 배열의 첫 항목이라고 추측하지 않는다.
+- 외부 `ros2 topic echo /joint_states`에서 position·velocity·effort와 진행하는 stamp를 확인한다. 이 값은 명령 송신 내용을 그대로 되돌린 것이 아니라 `/panda`의 상태를 발행한 것이다.
+- `send_command.py --joint panda_joint1 --position 0.3 --seconds 10` 실행 중 `/joint_command`가 `sensor_msgs/msg/JointState`로 수신되고 해당 관절 position이 0.3 rad 쪽으로 접근하는지 본다. 콘솔 위치와 viewport의 관절 회전을 함께 확인해야 명령 적용까지 확인한 것이다.
+- `send_command.py --position 0.0 --seconds 5`를 실행하면 같은 관절이 0 rad 쪽으로 복귀해야 한다. 송신기 종료 자체는 복귀 명령이 아니며, 목표에 즉시 수치상 완전히 일치할 필요는 없다.
+- `/JointGraph`에서 Subscribe의 이름·position 출력이 Actuator로 연결되고 상태 publisher는 playback tick마다 실행되는지 확인한다. 콘솔은 120스텝 간격, 외부 송신기는 약 0.1초 대기 루프이므로 서로 다른 빈도를 구별한다.
+- 기본 그래프에는 `/clock`과 TF 발행기가 없다. 이 송신기는 wall-clock으로 동작하며, 짧은 `--headless --steps 120` 실행만으로 외부 DDS 발견·수신·관절 이동까지 확인했다고 판단하지 않는다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 3600스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
 
 ## 이 폴더에서 시작하기
@@ -31,7 +44,7 @@ Isaac 5.1 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`에 접근해야 �
 1. 터미널 A: `"$ISAAC_SIM/python.sh" run.py`
 2. 터미널 B: `ros2 topic echo /joint_states --once`로 관절 목록, position, velocity, effort 배열을 확인한다.
 3. 터미널 B: `python3 send_command.py --joint panda_joint1 --position 0.3 --seconds 10`
-4. 다른 ROS 터미널에서 `ros2 topic echo /joint_states --field position`을 실행한다. 첫 관절이 목표로 접근하는지와 viewport의 회전을 함께 확인한다.
+4. 다른 ROS 터미널에서 `ros2 topic echo /joint_states`를 실행한다. name 배열에서 `panda_joint1`을 찾고 같은 인덱스의 position이 목표로 접근하는지와 viewport의 회전을 함께 확인한다. 인덱스를 확인한 뒤에는 `ros2 topic echo /joint_states --field position`으로 위치 배열만 관찰할 수도 있다.
 5. `python3 send_command.py --position 0.0 --seconds 5`로 복귀한다. GUI 창을 직접 닫으면 시뮬레이션이 종료된다. `--steps N`을 명시한 경우에는 N스텝에 도달해도 종료된다. `--headless --steps 120`은 짧은 환경 점검에 사용할 수 있지만 DDS 명령 수신 테스트는 충분한 실행 시간이 필요하다.
 
 ## GUI 실습과 Script Editor에서 같은 구조 만들기
@@ -63,4 +76,4 @@ Isaac 5.1 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`에 접근해야 �
 - [공식 5.1 제어 모드](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_manipulation.html#position-and-velocity-control-modes)
 - [공식 5.1 메뉴 shortcut](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_manipulation.html#graph-shortcut)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.

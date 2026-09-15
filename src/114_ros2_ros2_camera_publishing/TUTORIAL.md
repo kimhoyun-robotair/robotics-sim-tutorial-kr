@@ -4,6 +4,19 @@
 
 이 패키지는 Isaac Sim 5.1 **Publishing Camera’s Data**의 분리된 함수 예제를 하나의 실행 가능한 프로그램으로 구성했다. 같은 카메라에서 RGB, 깊이, 깊이 기반 PointCloud2, CameraInfo를 발행하고 `/clock`과 `/tf`도 만든다. 원문의 창고 자산은 직접 생성한 벽·바닥·큐브로 바꾸었다. 다른 패키지, 공통 모듈, 로봇 파일은 필요 없다.
 
+## 이 실습의 의도
+
+Python에서 카메라의 Render Product에 ROS writer를 붙이고, 영상·점군·CameraInfo·TF·시계를 함께 발행하는 흐름을 확인한다. 큐브와 벽은 같은 표면을 RGB, 깊이, TF로 world에 표시한 점군으로 비교하기 위한 기준물이다. 기본 실행은 네 가지 카메라 데이터의 발행 간격을 Gate로 조절하며, 카메라 pose와 축 변환 및 `/clock`은 별도 playback tick 그래프에서 발행한다.
+
+## 실행 후 확인할 것
+
+- `/camera_rgb`와 `/camera_depth`를 Image 표시로 실제 수신하고 같은 큐브·벽의 색과 깊이 표현을 비교한다. 타입은 `sensor_msgs/msg/Image`이며 `/camera_pointcloud`는 `sensor_msgs/msg/PointCloud2`다.
+- `/camera_camera_info`의 `sensor_msgs/msg/CameraInfo`에서 width=640, height=480, `header.frame_id=camera`, K/R/P 배열을 확인한다. 콘솔 fx·fy는 카메라에서 읽은 내부 파라미터이므로 다른 예제의 고정값을 정답으로 쓰지 않는다.
+- 기본 `--frequency 30`에서 콘솔 `Gate step=2`와 이론값 30 Hz를 확인한 뒤 ROS 수신 Hz를 별도로 측정한다. `--frequency 25`도 정수 간격 때문에 step=2가 되며, 요청값 25 Hz를 그대로 구현한 것으로 해석하지 않는다.
+- `/clock`의 `rosgraph_msgs/msg/Clock`을 수신하고 RViz를 `use_sim_time=true`로 설정한다. `/tf`의 `tf2_msgs/msg/TFMessage`와 `tf2_echo world camera`로 카메라 pose를 확인한 뒤 Fixed Frame=`world`에서 점군 표면이 보이는지 본다.
+- RViz TF에서 `camera → camera_world`는 위치가 같고 축 방향이 다른 변환이어야 한다. PointCloud의 frame은 `camera`이므로 두 frame을 물리적으로 떨어진 두 센서로 해석하지 않는다.
+- RGB·깊이·점군·CameraInfo의 Gate와 별개로 Clock/TF는 매 playback tick에 연결된다. 깊이와 점군은 같은 Gate를 공유하므로 서로 독립적인 주기를 설정하는 실습으로 해석하지 않는다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 시뮬레이션 스텝과 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 지정하면 해당 횟수 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1800회를 사용합니다. 이전 `--frames` 옵션은 `--steps` 없는 headless 실행의 횟수만 정하며, GUI 종료에는 영향을 주지 않습니다. `--steps`를 지정하면 `--frames`보다 우선하며 0과 음수는 허용하지 않습니다.
 
 ## 준비와 실행

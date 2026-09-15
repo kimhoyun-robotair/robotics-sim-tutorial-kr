@@ -4,6 +4,18 @@
 
 기존 Franka용 template을 6축 Cobotta에 맞추고, 그리퍼 중심 frame을 URDF에 추가하고, self-collision 근사 모델을 개선합니다. 이 패키지는 **원문의 native Lula Test Widget 실습**과 실제 URDF/YAML 생성 도구를 제공합니다. 완성 robot USD를 대체하는 간이 모델은 만들지 않습니다.
 
+## 이 실습의 의도
+
+6축 Cobotta의 관절 수와 말단 frame에 맞게 RMPflow 입력을 준비하고 제한적인 self-collision 근사의 크기가 작업공간에 주는 영향을 비교합니다. `prepare_config.py`는 그리퍼 중심 frame을 추가한 URDF와 descriptor·정책 YAML 세 파일을 생성하며 시뮬레이터나 controller를 실행하지 않습니다. 이후 실제 Cobotta USD를 Lula Test Widget에서 선택해 basic과 conservative 설정의 추종·접근 범위를 사용자가 직접 시험합니다.
+
+## 실행 후 확인할 것
+
+- 생성한 각 output에 `cobotta_gripper_frame.urdf`, `robot_description.yaml`, `rmpflow.yaml`이 있는지 확인합니다. 파일 생성 성공과 콘솔의 `설정 생성:` 출력은 설정 작성 완료이며 로봇이 움직였다는 결과가 아닙니다.
+- URDF에서 `gripper_center_joint`가 `onrobot_rg6_base_link`와 새 `gripper_center`를 fixed로 연결하고 offset이 `(0, 0, 0.24)` m인지 확인합니다. 제어 DOF는 6개로 유지되며 추가한 frame은 계산 기준점입니다.
+- 생성 YAML에서 cspace 길이와 `joint_limit_buffers`가 각각 6개이고 velocity cap=1.0, damping region=0.3인지 확인합니다. basic과 conservative의 `body_cylinders`, `body_collision_controllers`만 달라지는 비교 구성을 읽습니다.
+- Lula Test Widget에 생성 파일을 직접 로드하고 `gripper_center`를 선택한 뒤 Follow Target을 실행합니다. target을 옮겼을 때 손가락 한쪽이 아닌 그리퍼 중심이 추종하는지 보고, `right_inner_finger`를 선택한 결과와 비교합니다.
+- 같은 target 이동을 basic과 conservative에서 반복해 base와 손가락 주변 접근 여유를 관찰합니다. 더 큰 근사가 정상 자세의 접근도 제한할 수 있으며, 이 두 설정이 모든 링크 쌍의 self-collision을 검사하거나 실제 접촉 부재를 보장하지는 않습니다.
+
 ## 준비
 
 Isaac Sim **5.1.0**, GUI 화면, 지원 GPU/드라이버가 필요합니다. [공식 Cobotta_Pro_900_Assets.zip](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/_downloads/43f1f07841f3ef71cc54f320218ced44/Cobotta_Pro_900_Assets.zip)을 이 패키지의 `input/` 아래 풀어 둡니다. 실제 5.1 다운로드 zip에는 `robot_description.yaml`, Cobotta URDF, `rmpflow_configs/template_rmpflow_config.yaml`이 들어 있습니다. 원문 본문은 USD도 제공한다고 설명하지만 현재 다운로드 archive에는 USD가 없으므로, **5.1 Assets의 `Isaac/Robots/Denso/CobottaPro900/cobotta_pro_900.usd`를 별도로 사용합니다.** Content Browser의 해당 경로에서 로드하며 이 USD의 mesh/재질 참조도 접근 가능해야 합니다. 원본을 보존하며 출력 폴더를 따로 만듭니다. URDF가 참조하는 mesh는 원래 자산의 상대 구조를 유지합니다. 이 패키지 이외의 로컬 학습 모듈은 필요 없습니다.

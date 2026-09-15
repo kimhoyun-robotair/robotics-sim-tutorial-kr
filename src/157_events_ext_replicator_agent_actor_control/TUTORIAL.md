@@ -4,6 +4,18 @@
 
 이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다.
 
+## 이 실습의 의도
+
+사람의 행동을 고정 명령, 무작위 전이표, 실행 중 명령 주입, trigger 반응으로 제어하는 차이를 비교합니다. 기본 설정은 사람 두 명의 `Idle`/`LookAround`만 포함하므로 Queue·자동 반응·커스텀 애니메이션은 각 보조 파일을 아래 절차로 적용해야 시작됩니다. `prepare.py`는 `lesson.json`과 기본 사람·로봇 명령 파일만 출력에 복사하며 GUI 실행이나 보조 JSON의 자동 등록을 수행하지 않습니다.
+
+## 실행 후 확인할 것
+
+- **기본 명령:** Setup 후 실제 actor 이름을 확인하고 저장한 명령대로 Character_01의 `Idle 1 → LookAround 2`, Character_02의 `LookAround 3`이 보이는지 관찰합니다. 초기 로봇 수는 0이며 사람 둘이 보행하지 않는 것이 기본 결과입니다.
+- **전이표를 적용한 경우:** `transition_map.json`을 로드한 후 **Generate Random Commands → Save Commands**로 생성된 문자열을 확인합니다. 첫 명령은 Idle이고 Idle/LookAround가 번갈아 나와야 합니다. GoTo의 초기 weight는 0이고 이 기본 전이에는 GoTo로 가는 연결이 없습니다.
+- **Queue를 적용한 경우:** 통로에 맞춘 Queue_Spot과 전체 `queue_commands.txt`를 사용했을 때 각 actor가 Queue 진입, LookAround, Dequeue 출구 이동을 차례로 하는지 봅니다. 기본 90프레임은 3초이므로 줄 대기와 출구 이동 전체를 확인하려면 아래 600프레임 실행처럼 시간을 늘립니다.
+- **주입·반응을 적용한 경우:** Play 중 `Idle 2`를 Inject하면 진행 중인 명령이 중단되는지 봅니다. `time_response.json`을 `lesson.json`의 `response`에 넣은 새 실행에서는 1초에 모든 actor가 `Idle 1`을 수행하고 `resume=true`에 따라 복귀하는지 확인합니다.
+- **사용자 동작의 별도 조건:** Sit에는 접근·착석 Xform이 있는 의자, 커스텀 애니메이션에는 Biped에 맞춘 자산과 재Setup, behavior 교체에는 실제 Python 구현이 필요합니다. 설정 경로나 파일 등록만 성공한 상태를 그 동작의 재생 성공으로 보지 않습니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim 5.1 GUI, NVIDIA RTX GPU/드라이버, Isaac Sim 5.1 Assets 접근이 필요합니다. GUI는 설치 디렉터리의 `./isaac-sim.sh`로 실행합니다. `Window > Extensions`에서 `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`를 켜고 요구되는 재시작을 마칩니다. 사람 애니메이션은 `omni.anim.people`, `omni.anim.graph`, 경로 탐색은 `omni.anim.navigation`, 로봇은 `isaacsim.anim.robot`가 담당하며 IRA 의존성으로 활성화됩니다. 클라우드 LLM·ROS·별도 Python 설치는 필요하지 않습니다.

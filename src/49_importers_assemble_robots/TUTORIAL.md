@@ -4,6 +4,18 @@
 
 Isaac Sim **5.1.0**의 native `RobotAssembler`로 실제 두 로봇 reference를 fixed joint로 연결한다. 이 패키지는 단순 부모 Xform 재배치를 조립이라고 부르지 않는다. 조립된 물리 연결은 Play 중에만 작동하며 solver가 양쪽의 상대 pose를 유지한다.
 
+## 이 실습의 의도
+
+UR10e의 말단 frame과 Allegro hand의 mount frame을 정렬하고 native assembler가 만든 fixed joint로 물리적으로 연결한다. 기본 실행은 조립·물리 preview·mount 거리 측정·조립 마무리와 stage 저장까지 수행하며, `--prepare-only`는 같은 조립을 GUI에서 직접 할 출발 장면을 준비한다. 프레임을 연결한 결과와 취소한 session-layer 변경을 비교해 로봇 조립의 저장 범위를 이해한다.
+
+## 실행 후 확인할 것
+
+- 기본 실행의 Play preview에서 `/World/ur10e/ee_link`와 `/World/allegro_hand/allegro_mount`가 떨어지거나 hand가 튀지 않는지 본다. hand의 방향도 정렬 상태에 맞는지 확인한다.
+- preview가 끝나면 터미널의 `Measured mounting-frame separation, meters:`를 확인한다. 작은 분리 거리는 연결 유지의 관찰 근거이며, 코드가 허용 오차를 정해 자동 합격시키거나 모든 자세의 안정성을 시험하지는 않는다.
+- 종료 전 저장된 `assembled.usda`와 `report.json`의 `fixed_joint_paths`를 확인하고 새 조립 연결이 어느 경로에 생겼는지 살펴본다. 원본 로봇의 fixed joint도 목록에 포함되므로 목록이 비어 있지 않다는 사실만으로 조립을 판정하지 않는다.
+- `--prepare-only`는 두 reference 준비 후 사용자가 Begin Assembly부터 수행해야 한다. `--cancel`에서는 `report.json`의 `cancelled=true`와 조립 변경이 되돌아간 stage를 확인하며, 완성 hand 연결을 기대하지 않는다.
+- 저장 결과를 다시 열어 Play하고 mount 연결이 유지되는지 확인한다. 기본 GUI는 preview와 저장 뒤 정지한 장면을 계속 열어 두므로 그 시점의 정지를 물리 연결 실패로 해석하지 않는다.
+
 ## 준비와 실행
 
 Isaac Sim 5.1, RTX GPU/드라이버, `isaacsim.robot_setup.assembler`, 5.1 자산 루트가 필요하다. 입력은 `/Isaac/Robots/UniversalRobots/ur10e/ur10e.usd` 및 `/Isaac/Robots/WonikRobotics/AllegroHand/allegro_hand_instanceable.usd`다. 원래 로봇 asset을 수정하지 않고 새 stage에서 reference한다.

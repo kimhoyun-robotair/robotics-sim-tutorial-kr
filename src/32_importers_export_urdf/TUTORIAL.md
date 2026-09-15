@@ -2,7 +2,19 @@
 
 권장 학습 순서 **32** · 로봇 자산 가져오기와 제작 · 출처 ID `t112`
 
-이 패키지는 Isaac Sim **5.1.0** URDF exporter backend로 같은 로봇을 **visual-only / visual+collision / collision-only** 세 번 내보낸다. 코드에서 만드는 작은 2-link 로봇은 외부 mesh 없이 독립적이며 질량·관성을 명시한다. 공식 Franka GUI 실습은 아래에 별도로 재현한다.
+이 패키지는 Isaac Sim **5.1.0** URDF exporter backend로 같은 로봇의 실험 구를 **visual-only / visual+collision / collision-only**로 바꾸며 세 번 내보낸다. 코드에서 만드는 작은 2-link 로봇은 외부 mesh 없이 독립적이며 질량·관성을 명시한다. 공식 Franka GUI 실습은 아래에 별도로 재현한다.
+
+## 이 실습의 의도
+
+USD의 보이는 형상과 접촉 형상이 URDF의 `visual`·`collision`으로 각각 어떻게 내보내지는지 비교한다. 같은 2-link 로봇 옆의 작은 구에 CollisionAPI와 visibility만 차례로 바꿔, 차이가 export 조건에서 왔는지 추적할 수 있게 했다. 기본 실행은 세 변환 결과와 XML 개수를 저장하며 물리 재생이나 URDF 재import는 자동 수행하지 않는다.
+
+## 실행 후 확인할 것
+
+- **세 출력 세트:** `output/visual`, `output/both`, `output/collision` 각각에 `source.usda`와 `robot.urdf`가 있고, 최상위 `counts.json`에 같은 세 키의 `link`, `joint`, `visual`, `collision` 개수가 기록되는지 확인한다.
+- **실험 구의 역할:** 각 `source.usda`의 `/Robot/link/experiment_sphere`를 비교한다. `visual`에서는 보이지만 collider가 없고, `both`에서는 보이면서 collider가 있으며, `collision`에서는 숨겨져도 collider가 있어야 한다. 두 링크의 기본 cube에는 세 경우 모두 collider가 있으므로 `visual`이라는 폴더명이 로봇 전체의 collision이 없다는 뜻은 아니다.
+- **재import 결과:** 각 URDF를 따로 가져와 collider 표시를 켠 뒤, 링크 옆 반지름 0.03 m 구가 의도한 표시·충돌 쪽에 남았는지 본다. exporter가 geometry를 합칠 수 있어 XML element 개수만으로 구의 보존 여부를 판정하지 않는다.
+- **관절과 위치:** `/Robot/hinge`에 해당하는 URDF joint의 두 링크 연결, Y축, 구의 링크 기준 위치를 원본과 비교한다. 단순히 XML을 읽을 수 있다는 것과 올바른 로봇 구조가 내보내졌다는 것은 별도 확인이다.
+- **기본 창의 상태:** 실행 창에는 마지막 `collision` 조건이 남아 구가 보이지 않을 수 있다. 앞선 두 조건은 저장된 파일을 열어 비교하며, 가만히 있는 장면은 이 변환 실습에서 정상이다.
 
 ## 준비와 실행
 

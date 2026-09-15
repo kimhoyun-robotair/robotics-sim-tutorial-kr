@@ -4,6 +4,18 @@
 
 C++ extension의 startup/shutdown을 실제 native plugin으로 빌드한다. 로컬 파일은 공식 template의 Hello World 구현을 대체하며 복잡한 observer 없이 extension lifecycle 자체를 학습한다.
 
+## 이 실습의 의도
+
+작은 C++ `omni::ext::IExt` 구현을 공식 template의 plugin target에 넣어, 소스 파일이 native binary가 되고 host의 활성화·비활성화 이벤트를 받는 과정을 확인한다. 출력 메시지만 남기도록 구현해 USD 장면이나 UI와 관계없이 startup/shutdown을 관찰할 수 있게 했다. 제공 `HelloWorldExtension.cpp`만으로 실행 가능한 확장은 아니며, 고정 template 준비·소스 복사·빌드·확장 활성화를 사용자가 수행해야 한다. template Kit 앱에서의 로드와 Isaac Sim 5.1에서의 로드는 각각 확인한다.
+
+## 실행 후 확인할 것
+
+- 고정 template의 `omni.example.cpp.hello_world` source 경로에 제공 파일을 복사했는지 확인하고 빌드 로그에서 해당 target의 컴파일·링크가 성공했는지 본다. 최초 template 빌드와 로컬 파일을 적용한 재빌드를 구분한다.
+- template Kit 앱에서 `omni.example.cpp.hello_world`를 활성화할 때 Console/터미널에 `Korean C++ extension started: <실제 ext id>`가 나타나는지 확인한다. `.so`나 `.dll` 파일이 생긴 것만으로는 이 lifecycle이 실행된 것이 아니다.
+- 비활성화할 때 `Korean C++ extension stopped`가 한 번 나오고 다시 활성화하면 새 startup 메시지가 나오는지 확인한다. 각 enable/disable 전환과 로그가 대응해야 하며 별도 도형이나 창이 생성되지 않는 것은 의도한 동작이다.
+- 같은 빌드의 `_build/.../release/exts` 경로를 Isaac Sim 5.1에 연결하여 동일한 startup/shutdown을 확인한다. template 앱에서 성공했어도 Isaac Sim host의 ABI·dependency·로드 성공까지 자동으로 확인되는 것은 아니다.
+- startup 문자열만 바꾼 실험에서는 재빌드·재시작 후 새 문자열이 출력되는지 확인한다. 이전 문자열이 계속 보이면 extension 검색 경로와 실제 로드한 binary를 대조한다.
+
 ## 고정한 외부 build 환경
 
 원문이 연결하는 C++ template 저장소는 현재 최신 Kit로 바뀔 수 있다. 여기서는 **Kit 107.3.0 업데이트 커밋 `e8b660c96183f4a35f12f5ff75e37756ae6aee3b`**를 고정한다. Linux x86_64에서 Git, C++ build 도구, template dependency 다운로드를 위한 인터넷과 디스크 공간이 필요하다. Windows는 대응 `build.bat`와 Visual Studio C++ toolchain을 사용한다. C++ binary의 Isaac Sim 5.1 호환성은 실제 로드로 최종 확인해야 한다.
@@ -45,7 +57,7 @@ git checkout e8b660c96183f4a35f12f5ff75e37756ae6aee3b
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

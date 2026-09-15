@@ -4,6 +4,18 @@
 
 **목표:** 타입을 지정하면 포트가 자동으로 생기는 Generic Publisher/Subscriber를 익힙니다. 로컬 그래프는 Cube의 **위치와 방향**을 `/object_pose`로 받아 적용하고 실제 pose를 `/object_pose_observed`로 발행합니다. 아래에는 방향을 표현하는 포트와 원문의 JointState 실습도 포함합니다.
 
+## 이 실습의 의도
+
+`geometry_msgs/msg/Pose`의 중첩 필드가 Generic 노드의 동적 포트로 펼쳐지고 USD transform과 왕복하는 과정을 배우는 실습입니다. 명령 토픽과 관측 토픽을 분리해, 수신한 값을 적용한 뒤 실제 Cube 속성을 읽어 보내는 경로를 확인합니다. 기본 Cube에는 강체가 없어 중력으로 떨어지지 않으며 ROS 명령으로 위치와 방향을 직접 바꿉니다. `setup_stage.py`는 이미 실행 중인 Kit에 장면·그래프만 만들고, Play와 외부 ROS 명령 전송은 사용자가 수행합니다.
+
+## 실행 후 확인할 것
+
+- **타입과 초기 상태:** `/GenericPose`의 Pub/Sub에 `geometry_msgs / msg / Pose`와 `position:x/y/z`, `orientation:x/y/z/w` 포트가 생성되는지 봅니다. 처음 `/World/Cube`의 위치는 `(0,0,0.5)`, 회전은 항등이며 정지 상태를 유지합니다.
+- **위치 왕복:** Play 후 `/object_pose`에 `(1,2,3)`과 `orientation.w=1`을 보내고 Cube의 Translate와 `/object_pose_observed`의 위치가 모두 갱신되는지 확인합니다. 실행 순서 때문에 관측값은 다음 프레임에 반영될 수 있습니다.
+- **방향 왕복:** Z축 90° 명령의 ROS quaternion `(x,y,z,w)=(0,0,0.70710678,0.70710678)`이 관측 토픽과 USD `xformOp:orient`에 맞게 반영되는지 봅니다. 정육면체는 90° 회전 전후 외형이 같을 수 있으므로 화면 모양만으로 회전을 판단하지 않습니다.
+- **수치 순서:** 방향 연결에서 ROS의 `w,x,y,z`가 Make/Break 4-Vector의 X/Y/Z/W 슬롯에 대응하는지 확인합니다. 모든 quaternion 성분이 0인 명령은 항등 회전이 아니므로 `w`를 생략하지 않습니다.
+- **확장 실습 구분:** 낙하 관측은 강체를 추가하고 Write 경로를 제거한 별도 장면, JointState 발행은 Franka와 새 그래프를 준비한 별도 장면에서 확인합니다. 기본 Pose 왕복만 실행해서는 이 두 동작이 나타나지 않습니다.
+
 ## 실행 환경: 이 폴더만으로 시작하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Linux, ROS 2 Humble(이 문서의 명령 기준)이 필요합니다. ROS를 통해 다른 프로세스와 통신하므로 시뮬레이터와 ROS 터미널을 구분합니다. `ISAAC_SIM`은 실제 설치 디렉터리로 바꾸세요.

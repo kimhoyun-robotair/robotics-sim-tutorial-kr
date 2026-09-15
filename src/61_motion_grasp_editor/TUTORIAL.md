@@ -4,6 +4,18 @@
 
 이 패키지는 Isaac Sim **5.1.0**의 native Grasp Editor에서 Panda hand와 머그의 파지를 직접 작성하고, `compute_pose.py`에서 **실제로 export한** 파일을 공식 API로 읽어 world 목표 자세를 계산한다. grasp 목표 계산과 팔의 충돌 없는 경로 계획은 별개다. 이 실습은 motion planner를 실행하지 않는다.
 
+## 이 실습의 의도
+
+머그 기준의 손 자세와 손가락 관절값을 Grasp Editor에서 직접 작성하고, 그 상대 자세를 다른 물체 월드 자세에 재사용하는 방법을 익힌다. Panda hand와 mug의 기준 frame을 먼저 고정하는 이유는 파지 데이터를 저장한 뒤에도 같은 상대 관계로 복원하기 위해서다. `run.py`는 stage와 편집기를 열어 두는 launcher이며, 사용자의 Simulate·Export 조작 후 `compute_pose.py`를 별도로 실행해야 목표 자세 JSON이 생성된다.
+
+## 실행 후 확인할 것
+
+- **편집 대상과 기준**: Grasp Editor에서 실제 Panda hand articulation과 `/World/mug`를 선택하고, gripper frame이 `panda_hand`를 가리키는지 확인한다. 창만 열거나 headless 업데이트를 끝낸 상태에서는 파지가 작성되지 않는다.
+- **물리 파지의 결과**: `Author a Grasp > Simulate` 후 손가락이 머그에 닿아 닫히고, 외력을 가하는 동안 머그가 유지되는지 본다. `Skip Sim`으로 저장한 자세와 사용자가 입력한 `Confidence`만으로 물리 파지 성공을 판정하지 않는다.
+- **내보내기와 복원**: 직접 만든 `output/authored_grasps.yaml`에 파지 이름, 물체 기준 `position`/`orientation`, 열린/닫힌 관절값이 들어 있는지 확인한다. 같은 frame을 선택해 Import했을 때 작성한 손 자세가 복원되어야 한다.
+- **좌표 변환**: 같은 `grasp_0`에 대해 object x를 0.5 m에서 0.6 m로만 바꾼 두 계산 결과를 비교한다. `target.json`과 `shifted.json`의 gripper `position[0]` 차이는 0.1 m이고, 물체 회전이 같으면 출력 `quaternion_wxyz`도 같아야 한다.
+- **결과의 범위**: `compute_pose.py`의 `position`은 월드 위치, quaternion은 WXYZ 순서다. 이 출력은 그리퍼의 목표 자세이며, 로봇 팔이 그곳까지 충돌 없이 도달하거나 물체를 들어 올렸다는 실행 기록은 아니다.
+
 ## 준비: 독립적인 실습 stage
 
 Isaac Sim 5.1, RTX GPU/드라이버, `isaacsim.robot_setup.grasp_editor` extension이 필요하다. 공식 [Grasp_Editor_Tutorial_Stage.zip](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/_downloads/4d1aeb9e29208ad4bf35f0a38d105e49/Grasp_Editor_Tutorial_Stage.zip)(약 3 MB)을 **이 패키지의 `input/`에** 내려받고 압축을 푼다. ZIP 안의 `Isaac/`와 `Library/` 상대 경로를 유지한다. 자산은 재배포하지 않으며 원본 공식 stage가 입력이다.

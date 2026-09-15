@@ -4,6 +4,18 @@
 
 count로 생성한 네 큐브와 라벨을 수집하지 않는 구를 비교하고, 별도 설정에서는 패키지 안의 텍스처 메시에 셰이더 무작위화를 적용한다.
 
+## 이 실습의 의도
+
+하나의 mutable 기술서에서 여러 객체를 만들 때 개체 번호·무작위 속성·라벨 수집 여부가 각각 어떤 역할을 하는지 배우는 실습이다. 기본 장면은 네 큐브의 간격을 고정하고 색·회전만 바꾸며, 녹색 구는 보이지만 라벨 대상에서 제외해 가시성과 tracked 설정을 구분한다. `shader.yaml`과 `shader_image.yaml`은 별도 재질 실험이며, 기본 `run.py`는 선택한 YAML을 준비할 뿐 실제 렌더링에는 native 실행 또는 GUI Simulate가 필요하다.
+
+## 실행 후 확인할 것
+
+- **기본 객체 구성:** IRO 초기화 후 `/World/Shapes`의 `subject_0`부터 `subject_3`에 대응하는 네 큐브를 찾는다. index 식에 따른 X 위치는 -195, -65, 65, 195 cm로 130 cm 간격이며, 난수화 후에도 이 간격이 유지되어야 한다.
+- **달라지는 속성:** Randomize scene과 저장 description을 비교해 큐브의 색 성분은 0–1, Y 회전은 -45–45도 범위에서 선택되는지 확인한다. 매번 네 색이 모두 다르거나 구간 끝값이 나올 필요는 없으며, `simulation_time=0`이므로 물리 낙하도 요구하지 않는다.
+- **보이지만 추적하지 않는 구:** 녹색 `untracked` 구가 시야 안에 있을 때 RGB에는 나타나지만 객체 라벨의 수집 대상에서 제외되는지 확인한다. 구는 다른 물체를 가릴 수 있고 바닥은 tracked 대상이므로 전체 라벨 개수를 네 큐브 수와 같다고 요구하지 않는다.
+- **셰이더 설정 선택 시:** `shader.yaml`의 `subject`는 네 기본 큐브가 아닌 `models/textured.usda` 메시 하나다. 생성된 description과 재질에서 `texture_rotate` -90–90도, `texture_scale` 각 성분 0.5–2, `diffuse_tint` 각 성분 0.2–1을 대조하고 고정 형상 위의 체크무늬만 바뀌는지 본다.
+- **이미지 변환 선택 시:** `shader_image.yaml`은 같은 셰이더 무작위화에 `diffuse_texture: <invert_color>`를 추가한다. 원본 `checker.png`와 생성 이미지의 색 반전 효과를 비교한다. `prepared.yaml`에서 로컬 USD 경로가 해소된 것과 실제 텍스처가 렌더링된 것은 따로 확인한다.
+
 ## 준비와 실행 방식
 
 Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
@@ -39,9 +51,7 @@ mutable의 type은 camera/geometry/light 중 하나다. count: 4는 같은 기�
 
 IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
 
-## 관찰과 성공 기준
-
-네 큐브는 서로 다른 색을 가질 수 있지만 일정한 간격을 유지한다. shader 실행에서는 형상은 고정되고 표면의 체크무늬만 변한다. tracked:false도 occluder가 될 수 있다.
+## 한 변수만 바꾸는 실험
 
 scene.yaml에서 count만 4에서 2로 바꿔 subject_0, subject_1만 생성되는지 확인한다. 식의 중앙 기준 1.5는 그대로이므로 두 객체가 왼쪽에 남는 이유를 설명한다.
 

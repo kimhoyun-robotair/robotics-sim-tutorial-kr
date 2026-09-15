@@ -2,15 +2,23 @@
 
 권장 학습 순서 **11** · Python 실행 환경과 USD 기초 · 출처 ID `t174`
 
+## 이 실습의 의도
+
+Cube 몸체와 Cylinder 바퀴 두 개로 만든 시각적 모형을 사용해, USD 자산에서 재사용할 루트를 `defaultPrim`으로 지정하는 이유를 익힌다. 환경은 로봇과 나란한 `/World`에 두고 `/mock_robot`만 두 번 참조하여, 로봇을 가져올 때 조명·물리 설정이 함께 중복되는 일을 피한다. 기본 실행은 `robot.usda`, 두 배치와 색 override를 담은 `assembly.usda`, 합성 결과인 `flattened.usda`, 구조 보고서 `composition.json`을 만든다. 관절·강체 제어를 만들지 않으므로 이 모형은 주행하지 않는다.
+
+## 실행 후 확인할 것
+
+- `robot.usda`와 `composition.json`의 `asset_default_prim`을 확인한다. 기본 Prim은 `/mock_robot`이며 그 아래 `body`, `wheel_left`, `wheel_right`가 있고, 환경의 `/World/PhysicsScene`과 `/World/Light`는 별도 루트 아래에 있어야 한다.
+- `assembly.usda`를 열어 `/World/RobotA`, `/World/RobotB` 아래에 각각 같은 몸체와 바퀴가 생겼는지 본다. 두 루트의 X 위치는 −1과 +1이며 각 로봇 아래에 원본의 `/World` 환경 계층이 따라오지 않아야 한다.
+- `/World/RobotB/body`만 파란색인지 확인하고 원본 `robot.usda`를 따로 열어 비교한다. 파란 `displayColor` 의견은 assembly에 작성되므로 RobotA와 원본 body까지 같은 색으로 바뀌는 것이 목표가 아니다.
+- `composition.json`의 `assembly_prims`와 `flattened_prims`를 비교한다. 평탄화한 파일에서도 두 로봇과 각 body/wheel Prim 구조가 유지되어야 한다. Flatten은 참조 합성 결과를 저장하며 여러 도형을 하나의 메시로 병합하지 않는다.
+- 화면에서 모형이 움직이지 않아도 정상이다. 기본 실행은 장면 작성·재개방 후 `app.update()`로 표시를 유지하며, `--steps`를 늘린다고 주행 제어가 추가되지 않는다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
 이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
-
-## 목표와 예상 결과
-
-몸체 Cube와 두 Cylinder 바퀴로 시각적 mock robot을 만든다. 물리적으로 주행하는 로봇이 아니라 **파일 구성과 reference 실습용 모델**이다. 환경과 로봇을 나란한 루트에 두고 defaultPrim으로 로봇만 재사용한다. 결과는 `robot.usda`, `assembly.usda`, `flattened.usda`, `composition.json`이다.
 
 ## 순서대로 실습
 

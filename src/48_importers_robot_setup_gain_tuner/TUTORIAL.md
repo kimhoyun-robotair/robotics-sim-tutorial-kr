@@ -4,6 +4,18 @@
 
 Isaac Sim **5.1.0**에서 하나의 실제 articulation joint에 step/sine 위치 목표를 보내고 CSV로 측정한다. native Gain Tuner의 UI 실험도 동일한 로컬 `arm.urdf`로 수행한다. fake response나 미리 계산한 곡선을 simulator 결과처럼 표시하지 않는다.
 
+## 이 실습의 의도
+
+질량과 관성이 정의된 2-link URDF의 `shoulder` 관절 하나를 구동해 gain이 실제 회전 추종에 미치는 영향을 읽는다. 기본 실행은 base를 고정하고 0.5초 뒤 위치 목표를 0에서 0.5 rad로 바꾸며, 목표와 실제 상태를 120 Hz로 기록한다. `--interactive`에서는 목표 입력을 native Gain Tuner에 맡겨 같은 관절을 GUI로 시험한다.
+
+## 실행 후 확인할 것
+
+- 자동 실행의 `response.csv`에서 `time_s=0.5`부터 `target_rad`가 0.5로 바뀌는지 확인한다. 60스텝 이하로 짧게 종료하면 목표 변화 이후의 응답을 측정하지 못한다.
+- `actual_rad`, `velocity_rad_s`, `error_rad`를 함께 그려 overshoot·잔류 오차·진동을 읽는다. 팔이 움직였거나 CSV가 생성된 것만으로 목표 추종이 충분하다고 판정하지 않는다.
+- `--kp 20`을 유지하고 `--kd 1`과 `--kd 2`를 같은 실행 길이로 비교한다. damping 변경의 효과는 측정 곡선에서 판단하고 어느 쪽이 더 좋을지 고정된 성공값으로 정하지 않는다.
+- `--wave sine`에서는 목표가 진폭 0.3 rad, 주파수 0.5 Hz로 바뀌며 실제 위치의 위상 지연과 진폭 차이를 본다. 코드가 목표 속도를 0으로 보내므로 속도 feedforward를 포함한 궤적 추종과 구분한다.
+- `--interactive`에서는 Gain Tuner에서 `shoulder`를 선택하고 Test Results의 command/actual graph를 확인한다. 이 분기는 스크립트 위치 목표를 보내거나 `response.csv`를 만들지 않으므로 UI 시험과 파일 생성을 별개로 확인한다.
+
 ## 준비와 실행
 
 Isaac Sim 5.1, RTX GPU/드라이버, `isaacsim.asset.importer.urdf`, `isaacsim.robot_setup.gain_tuner`가 필요하다. 2-link/1-joint URDF와 inertia가 패키지 안에 있으므로 별도 로봇 asset은 필요 없다.

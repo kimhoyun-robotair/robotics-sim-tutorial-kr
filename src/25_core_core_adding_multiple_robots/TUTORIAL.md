@@ -4,9 +4,19 @@
 
 공식 원문: **Adding Multiple Robots** · Isaac Sim **5.1.0** · 인덱스 **t102**
 
-## 만들 결과와 실행 방식
+## 이 실습의 의도
 
-Jetbot이 큐브를 Franka 쪽으로 밀어 운반하고 후퇴한 뒤 Franka가 큐브를 집어 놓습니다. 로봇 두 대를 추가하는 것에 더해 상태 전환과 두 제어기의 책임을 구현합니다.
+Jetbot의 이동·후퇴와 Franka의 집기·놓기를 하나의 Task 상태로 연결해 두 제어기의 작업 인계를 구현합니다. 큐브는 Jetbot 앞에 두어 실제 접촉으로 밀리게 하고, 후퇴 단계는 Franka가 접근할 공간을 비우기 위해 둡니다. 기본 실행은 DRIVE→RETREAT→PICK을 시도하지만 상태 전환 조건은 Jetbot의 위치와 경과 단계이므로, 큐브가 제대로 운반됐는지는 따로 관찰해야 합니다.
+
+## 실행 후 확인할 것
+
+- 초기 장면에서 Jetbot은 (0,0.3,0), 큐브는 (0.1,0.3,0.05), Franka base는 (1,0,0) m 부근인지 봅니다. DRIVE 중에는 Jetbot이 (1.3,0.3) m로 가면서 실제 접촉으로 큐브를 미는지 확인합니다.
+- 터미널의 event가 0에서 `event=1 RETREAT`, `event=2 PICK`으로 바뀌는지 봅니다. RETREAT는 Jetbot의 평면 목표 오차가 0.04 m 미만일 때 시작하며, 큐브 도착을 센서로 확인한 신호는 아닙니다.
+- RETREAT에서는 기본 200단계 동안 좌우 바퀴에 -8 rad/s를 적용해 뒤로 가고, PICK에서는 0 속도 명령으로 멈춰 Franka가 실제 큐브 위치에 접근하는지 확인합니다. `--retreat-steps`를 바꿨다면 후퇴 구간도 그 조건으로 해석합니다.
+- `result.json`은 한 작업의 결과를 담은 배열입니다. `event=2`, `controller_done`, `cube_position_m`, `target_m`을 함께 보고, `cube_target_error_m < 0.03` 및 `within_3cm=true`로 실제 최종 배치를 구분합니다. event=2만으로 운반·집기가 성공한 것은 아닙니다.
+- GUI에서 `--steps`를 생략하면 controller 완료 뒤 120단계 후 결과를 저장합니다. headless나 명시한 `--steps` 실행은 정해진 길이에서 측정하므로 아직 인계 중일 수 있고, GUI에서 event=0에 머무르면 완료 결과 파일도 아직 생기지 않을 수 있습니다.
+
+## 실행 방식
 
 이 패키지는 `Adding Multiple Robots` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
 
@@ -23,7 +33,7 @@ python3 run.py --help
 "$ISAAC_SIM_ROOT/python.sh" run.py --headless --steps 2400 --retreat-steps 150
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 2400단계를 사용합니다. 작업 인계와 집기·놓기가 끝나고 120단계 안정화한 뒤 결과를 저장하며, 이후에도 물리 시뮬레이션과 GUI를 유지합니다. 실행 중 GUI의 Stop/Play로 초기화를 시도하는 대신 프로그램을 다시 실행하세요. 기본 출력은 이 폴더의 `output/<고유번호>/`이며 `--output`으로 지정한 경로가 이미 있으면 덮어쓰지 않고 오류를 냅니다.
+`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 2400단계를 사용합니다. `--steps`를 생략한 GUI에서는 pick controller가 끝나고 120단계 뒤 결과를 저장한 다음 물리 시뮬레이션과 창을 유지합니다. headless 또는 `--steps N` 실행에서는 정해진 길이까지 진행한 시점의 결과를 저장하므로 controller 완료와 안정화가 보장되지는 않습니다. 실행 중 GUI의 Stop/Play로 초기화를 시도하는 대신 프로그램을 다시 실행하세요. 기본 출력은 이 폴더의 `output/<고유번호>/`이며 `--output`으로 지정한 경로가 이미 있으면 덮어쓰지 않고 오류를 냅니다.
 
 ## 파일 안내
 
@@ -51,10 +61,6 @@ python3 run.py --help
 `BaseTask`가 작업 상태를 소유하고 `get_observations()`가 이동 로봇과 내장 PickPlace 관찰을 하나로 합칩니다. `run.py`의 제어 루프는 그 관찰을 읽어 각 로봇에 action을 보냅니다. `pre_step`은 물리 단계 직전에 상태를 갱신하므로 제어 루프에서 새 상태를 보는 시점에는 한 단계 차이가 있을 수 있습니다.
 
 USD Prim 주소는 `/World/Jetbot`처럼 Stage에서 유일해야 하고 Scene의 이름도 유일해야 합니다. 여기서는 공식 `find_unique_string_name`을 사용합니다. 관절 속도 목표는 다음 action까지 남으므로 PICK 상태의 0 명령을 생략하면 Jetbot이 계속 후퇴합니다. `post_reset`은 그리퍼와 event를 함께 복구합니다.
-
-## 관찰과 성공 판정
-
-터미널에 DRIVE→RETREAT→PICK 전환이 실제로 나타나고, Jetbot은 최종 상태에서 멈춰야 합니다. controller_done과 실제 큐브 목표 오차를 별도로 확인합니다. 큐브가 밀리지 않았거나 흘러나간 경우에도 이벤트 진행은 가능하므로 event=2만으로 운반 성공이라 하지 않습니다.
 
 ## 한 변수만 바꾸는 실험
 

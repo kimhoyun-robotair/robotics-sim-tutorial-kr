@@ -5,6 +5,18 @@
 **목표:** ROS C API를 쓰는 C++ OmniGraph 노드를 빌드해 사용자 정의 `tutorial_interfaces/msg/Sphere`를 발행합니다. Linux + ROS 2 Humble 전용 공식 workflow입니다. 로컬 파일은 **새로 작성한 Sphere 노드 구현/OGN, 메시지 패키지, 빌드 연결 도구**입니다. Kit 템플릿과 NVIDIA 예제 확장의 공통 plugin loader는 외부 빌드 전제입니다.
 
 
+## 이 실습의 의도
+
+사용자 ROS 메시지의 C 타입 지원을 C++ OmniGraph 노드와 연결해, 그래프 입력을 외부 ROS 메시지로 전달하는 실습입니다. `.ogn`의 중심·반지름 입력을 `ROS2CustomMessageNode.cpp`가 `Sphere`에 담고 발행 성공 횟수를 출력합니다. `prepare_build.py`는 외부 템플릿의 소스와 의존성 경로를 준비하는 도구이며 컴파일, 확장 로드, 그래프 생성은 아래 절차로 따로 수행해야 합니다. Sphere는 중심과 반지름을 표현하는 메시지 데이터로, 이 노드는 USD 구체를 생성하지 않습니다.
+
+## 실행 후 확인할 것
+
+- **메시지와 빌드 준비:** `ros2 interface show tutorial_interfaces/msg/Sphere`에서 `center`와 `radius`를 확인합니다. prepare 도구의 `Prepared local Sphere implementation...` 출력은 파일 교체·경로 설정 완료만 뜻하며, 이어서 외부 `./build.sh`의 실제 컴파일 성공을 확인합니다.
+- **노드 로딩:** 빌드된 확장을 Isaac Sim에서 활성화하고 Action Graph 검색에 `ROS2 Publish Custom Message`가 나타나는지 봅니다. 입력을 center `(1,2,3)`, radius `0.5`로 설정하고 Tick을 연결한 뒤 Play합니다.
+- **발행과 수신:** 노드의 `publishedCount`가 늘고 별도 ROS echo의 `/custom_node/sphere_msg`에 같은 center/radius가 오는지 확인합니다. count는 `rcl_publish` 성공 횟수이므로 수신 횟수와 같다고 가정하지 않습니다.
+- **입력 변경과 거절:** radius만 `0.5→0.8`로 바꾸면 echo 값도 바뀌는지 봅니다. 음수 radius에서는 오류가 기록되고 그 입력으로 새 발행 count가 늘지 않아야 합니다.
+- **추가 노드의 출처:** `/custom_node/my_string`은 함께 추가하는 외부 공식 `ROS2 Publish String` 노드의 출력입니다. 로컬 Sphere 노드만 만든 상태에서 문자열 토픽이나 Viewport 구체가 생기기를 기대하지 않습니다.
+
 ## 실행 전제와 원문 이름 정리
 
 Isaac Sim 5.1.0, Ubuntu 22.04, ROS 2 Humble 개발 환경, C++17 toolchain, colcon, Kit Extension C++ template의 `release/107.3.0`가 필요합니다. 원문 본문에는 SphereMsg 언급도 있지만 실제 다운로드 예제는 `tutorial_interfaces/msg/Sphere`와 `sphere.h`를 사용합니다. 이 폴더는 실제 코드와 같은 **Sphere.msg**를 제공합니다.

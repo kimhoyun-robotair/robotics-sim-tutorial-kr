@@ -2,15 +2,23 @@
 
 권장 학습 순서 **29** · 로봇 자산 가져오기와 제작 · 출처 ID `t176`
 
+## 이 실습의 의도
+
+로봇 루트에 Robot API, 두 Cube 링크에 Link API, shoulder 관절에 Joint API, 도구 장착점에 ReferencePoint API를 붙여 로봇의 의미와 연결 구조를 USD에 기록합니다. 물리 형상은 `robot.usda`에 두고 로봇 메타데이터는 별도 `configuration/robot_schema.usda`에 작성해, 구조와 설명을 레이어로 나누는 방법을 보여줍니다. 기본 실행은 링크 트리를 파싱하고 보고서를 저장한 뒤 Stage를 열어 보여주며, 물리 Play나 관절 제어를 자동 수행하지 않습니다.
+
+## 실행 후 확인할 것
+
+- GUI Stage에서 `/Robot/base_link`, `/Robot/arm_link`, `/Robot/shoulder`, `/Robot/arm_link/ToolMount`를 찾습니다. Cube 링크 두 개가 가만히 보이는 것은 이 구조 검사 실습의 정상 시작 상태이며, 관절이 자동으로 움직일 필요는 없습니다.
+- `schema_report.json`의 `links`가 base_link, arm_link 순서이고 `joints`가 shoulder를 가리키는지 확인합니다. `joint_body0`과 `joint_body1`도 각각 base와 arm을 가리켜야 하며, 콘솔의 트리는 base_link 아래에 arm_link를 연결해야 합니다.
+- `robot_schemas`와 `reference_point_schemas`에서 root와 ToolMount의 API를 확인합니다. 링크·관절 API는 보고서에 별도 배열로 실리지 않으므로 GUI 속성 또는 스키마 레이어에서 직접 확인합니다. ToolMount의 forward axis는 Z입니다.
+- `robot.usda`의 subLayerPaths에 `configuration/robot_schema.usda`가 있고, 해당 파일에 Robot/Link/Joint/ReferencePoint API와 `tutorial_robot` namespace가 작성됐는지 봅니다. 출력 폴더를 옮길 때 이 상대경로 관계를 유지해야 다시 열어도 속성이 합성됩니다.
+- 두 링크는 USD에서는 `/Robot`의 형제 prim이지만 기구학 트리에서는 shoulder의 body 관계로 연결됩니다. namespace만 바꾼 복사본을 다시 조사했을 때 이 연결이 유지되는지 비교하면 이름용 메타데이터와 기구학 관계의 차이를 확인할 수 있습니다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
-이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 120단계를 사용합니다. 스키마와 USD 결과를 먼저 저장하고, 생성한 Stage를 GUI에서 계속 관찰·편집할 수 있습니다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
-
-## 목표와 예상 결과
-
-두 링크와 한 관절로 된 로컬 USD에 Isaac Robot/Link/Joint/ReferencePoint API를 적용한다. 스키마는 `configuration/robot_schema.usda`에 따로 작성한다. `robot.usda`를 재개방하고 실제 링크 트리를 파싱해 콘솔과 `schema_report.json`에서 구조를 확인한다. **이 패키지는 구조 작성/검사 실습이며 구동되는 로봇 제어 예제가 아니다.**
+이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 Stage를 연 뒤 앱 업데이트를 최대 N번 수행하고 종료합니다. `--headless`에서 생략하면 120번 업데이트합니다. 이 횟수는 물리 시뮬레이션 단계가 아닙니다. 스키마와 USD 결과를 먼저 저장하고, 생성한 Stage를 GUI에서 계속 관찰·편집할 수 있습니다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
 
 ## 순서대로 실습
 
@@ -19,7 +27,7 @@
 3. RevoluteJoint의 body0/body1 관계는 각각 base/arm을 가리킨다. localPos0와 localPos1은 연결되는 양쪽 링크 좌표에서 관절 위치를 나타낸다. 여기서 USD Joint limit는 도 단위로 ±90이다.
 4. root의 subLayerPaths에 `configuration/robot_schema.usda`가 있는지 확인한다. `Usd.EditContext` 안에서 API를 적용했으므로 스키마 의견이 별도 파일에 남는다.
 5. Robot API의 ordered links는 base_link부터 시작하고 joints는 shoulder를 가리킨다. Link API를 링크 모두에, Joint API를 관절에, ReferencePoint API를 ToolMount에 붙인다.
-6. 보고서에서 네 종류의 AppliedSchemas와 실제 relationship target을 확인한다. 콘솔 트리가 base_link 아래 arm_link로 출력되는지 확인한다.
+6. 보고서의 `robot_schemas`와 `reference_point_schemas`, 실제 relationship target을 확인한다. Link/Joint API 적용은 `configuration/robot_schema.usda` 또는 GUI 속성에서 확인한다. 콘솔 트리가 base_link 아래 arm_link로 출력되는지 확인한다.
 7. GUI **File > Open**으로 robot 파일을 연다. root 선택 후 **Property > + Add > Edit API Schema**에서 RobotAPI를 검색한다. 링크/관절/관심점도 같은 방법으로 해당 API를 검사한다. API 속성 섹션은 보라색으로 표시된다.
 8. Robot Links/Joints의 **+ Add Target**으로 대상을 편집할 수 있다. 이 실습에서는 base 링크가 첫 번째이고 각 target Prim이 유효해야 한다. 수정은 출력 파일 복사본에서 수행한다.
 

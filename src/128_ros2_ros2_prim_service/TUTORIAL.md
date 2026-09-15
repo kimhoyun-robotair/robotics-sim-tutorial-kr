@@ -4,6 +4,18 @@
 
 **목표:** ROS 서비스로 USD prim과 attribute를 탐색하고 Cube의 위치를 실제로 읽기→쓰기→다시 읽기로 확인합니다. `setup_stage.py`는 원문의 ROS2 Service Prim 그래프를 만들고, `attribute_client.py`는 별도 ROS 프로세스에서 왕복 검증합니다.
 
+## 이 실습의 의도
+
+ROS에서 USD 객체 경로와 속성 이름을 지정해 장면 값을 탐색·수정하고, 다시 읽어 반영 여부를 확인하는 실습입니다. 파란 Cube는 변환 속성만 가진 도형이므로 이동은 중력이나 힘의 결과가 아니라 `xformOp:translate`를 쓴 결과입니다. `setup_stage.py`는 Kit 안에 서비스 그래프를 준비하고, 외부 ROS 환경의 `attribute_client.py`가 위치 읽기→쓰기→읽기를 수행합니다. 위치는 USD의 로컬 변환이며 기본 `/World`에 추가 변환이 없어 이 장면에서는 world 위치와도 일치합니다.
+
+## 실행 후 확인할 것
+
+- **초기 객체와 속성:** Stage의 `/World/Cube`가 크기 0.5 m의 파란 상자이고 Translate `(0,0,0.25)`인지 확인합니다. `/get_prim_attributes`에서 `xformOp:translate`와 `xformOp:orient`를 찾습니다.
+- **실제 조회:** Play 후 `/get_prims`로 Cube 경로를 찾고 `/get_prim_attribute`로 현재 translation을 읽습니다. 그래프가 생성되었거나 서비스 이름이 보이는 것만으로 요청 처리까지 확인한 것은 아닙니다.
+- **쓰기 형식과 화면:** `/set_prim_attribute`의 `value`에 JSON 문자열 `"[1, 2, 3]"`을 전달한 뒤 Cube가 그 위치로 옮겨지는지 봅니다. 공중에서 그대로 유지되는 것은 강체 없는 이 장면의 정상 동작입니다.
+- **클라이언트 read-back:** 기본 `attribute_client.py`는 `[1,2,3]`, 본문 예제 `--position 0 0 1`은 `[0,0,1]`을 기대합니다. 터미널의 `before:`와 `verified translation:`을 비교하고 후자는 서비스 재조회 결과임을 확인합니다.
+- **오류 해석:** 없는 prim·attribute는 응답의 `success: false`와 `message`로 확인합니다. Stop 상태에서는 Tick 기반 서비스 처리가 완료되지 않을 수 있으므로 시간 초과를 위치 값의 오류와 구분합니다.
+
 ## 실행 환경: 이 폴더만으로 시작하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Linux, ROS 2 Humble(이 문서의 명령 기준)이 필요합니다. ROS를 통해 다른 프로세스와 통신하므로 시뮬레이터와 ROS 터미널을 구분합니다. `ISAAC_SIM`은 실제 설치 디렉터리로 바꾸세요.

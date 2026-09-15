@@ -4,6 +4,18 @@
 
 Python Controller API로 두 그래프를 만들고, 속성 편집/노드 추가/연결/수동 평가를 차례로 수행한다. 그래프 화면과 Console 출력이 함께 확인 대상이다.
 
+## 이 실습의 의도
+
+같은 PrintText 동작을 일반 playback 그래프와 명시적으로 평가하는 on-demand 그래프에 넣어, **그래프를 만들거나 값을 바꾸는 일**과 **평가를 실행하는 일**을 구별한다. `create_graphs.py`는 실행 중인 Kit에 `/LessonGraph`, `/LessonDemand`를 생성하고 연결·초기 문자열을 설정하는 단계까지만 수행한다. 이후 Play, 속성 변경, ConstantString 연결, `evaluate()` 호출은 Script Editor에서 직접 진행하며 로봇이나 물리 장면을 만들지는 않는다.
+
+## 실행 후 확인할 것
+
+- 새 Stage에서 파일을 Run한 뒤 `Created /LessonGraph and /LessonDemand`와 두 Graph prim을 확인한다. 각 그래프에 `tick`, `print`가 있는지 Action Graph에서 열어 보고, 생성 로그와 PrintText의 실행 로그를 구분한다.
+- Play 중 `/LessonGraph`가 Warning 수준으로 `normal playback graph`를 반복 출력하고 Stop하면 멈추는지 확인한다. 반복 출력은 프레임마다 평가되는 의도한 동작이다.
+- 속성을 직접 편집한 다음 Play 시 `edited text`가 나오는지, ConstantString을 연결한 다음에는 `connected message`가 나오는지 확인한다. 세 번째 `message` 노드의 존재뿐 아니라 실제 PrintText 입력을 바꾸는 데이터 연결을 함께 본다.
+- `/LessonDemand`는 Play만으로 `one demand evaluation`을 반복 출력하지 않아야 한다. 생성 스크립트의 변수가 있는 환경에서 `demand_graph.evaluate()`를 한 번 호출해 해당 메시지 한 번과 대응시키며, 입력 수정만으로 실행되었다고 판단하지 않는다.
+- 일반 그래프도 `GRAPH_PIPELINE_STAGE_ONDEMAND`로 바꾸면 Play 중 자동 출력이 멈추는지 확인한다. 같은 장면에서 생성 파일을 다시 실행할 때 기존 경로 오류가 나는 것은 두 그래프를 덮어쓰지 않도록 만든 보호 동작이다.
+
 ## 실행 환경
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더를 어디로 복사해도 다른 로컬 튜토리얼 없이 실행한다. 아래처럼 시작한 뒤 **Window > Script Editor**를 연다.
@@ -46,7 +58,7 @@ og.Controller.connect("/LessonGraph/message.inputs:value", "/LessonGraph/print.i
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

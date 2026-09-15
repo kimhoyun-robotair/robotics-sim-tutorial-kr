@@ -2,9 +2,19 @@
 
 권장 학습 순서 **167** · 병렬 환경과 학습 정책 활용 · 출처 ID `t076`
 
-## 기대 결과와 준비
+## 이 실습의 의도
 
-H1 로봇을 키보드로 이동시켜 실제 궤적을 기록하고 같은 기록을 RGB·segmentation·depth로 다시 렌더링합니다. Occupancy Map은 평면에서 막힌 칸/이동 가능한 칸을 표현하며 이동 경로 선택과 충돌 종료에 쓰입니다. 궤적 기록과 센서 렌더링은 두 단계로 분리됩니다.
+H1 로봇을 키보드로 이동시켜 실제 궤적을 기록하고 같은 기록을 RGB·segmentation·depth로 다시 렌더링합니다. Occupancy Map은 평면에서 막힌 칸/이동 가능한 칸을 표현하며 이동 경로 선택과 충돌 종료에 쓰입니다. 궤적 기록과 센서 렌더링은 두 단계로 분리되어, 같은 움직임을 유지한 채 저장할 센서 종류와 표본 간격을 바꿀 수 있습니다. 기본 흐름은 GUI에서 실제 지도와 recording을 만든 다음 `replay.py`로 그 기록을 재생하는 것입니다.
+
+## 실행 후 확인할 것
+
+- **지도와 장면의 대응:** Occupancy Map에서 창고 통로와 막힌 영역이 실제 장면과 맞는지 보고, `prepare_map.py` 결과 `map.yaml`의 `image: map.png`, `origin`, `resolution`을 원본 export와 대조한다. `map_recipe.json`만으로 지도가 생성되는 것은 아니다.
+- **실제 기록:** Start/Stop recording 후 단일 기록 폴더의 `config.json`, `stage.usd`, `occupancy_map/`, `state/common/*.npy`를 확인한다. `inspect_recording.py`의 `state_count`, `first_step`, `last_step`과 함께 로봇이 실제로 이동한 화면을 확인한다.
+- **재생 표본:** `summary.json`의 `rendered_samples`와 `source_step_ids`를 읽는다. `--frames 30 --render-interval 40`은 기록 인덱스 40개마다 최대 30표본을 뽑는 조건이며, 짧은 원 기록에서는 30보다 적게 나오는 것이 정상이다.
+- **센서 결과:** `sensor_file_counts`에서 선택한 RGB·segmentation·depth 출력이 모두 존재하는지 확인하고 같은 원본 step 번호의 영상을 서로 대조한다. depth PNG는 inverse-depth 인코딩이므로 픽셀 정수를 미터 거리로 읽지 않는다.
+- **마지막 장면 유지:** 재생 완료 후 GUI의 마지막 자세가 멈춰 있어도 정상이다. 기록 상태를 복원해 렌더링하는 실습이므로 창을 오래 열어 둔다고 새 주행 궤적이나 추가 샘플이 생기지 않는다.
+
+## 준비
 
 Isaac Sim 5.1 GUI, RTX GPU, `isaacsim.replicator.mobility_gen`, `isaacsim.replicator.mobility_gen.examples`, `isaacsim.replicator.mobility_gen.ui`가 필요합니다. H1/Spot은 설치된 `isaacsim.robot.policy.examples`의 보행 policy와 robot Assets에 접근할 수 있어야 합니다. 창고는 다음 5.1 Assets 파일입니다.
 

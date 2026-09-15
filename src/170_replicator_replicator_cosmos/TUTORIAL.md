@@ -6,6 +6,18 @@
 
 공식 튜토리얼의 standalone 방식을 로컬 실행 코드로 구현했다. 카메라·창고·Carter 경로와 Writer API는 Isaac Sim **5.1.0**을 따른다. 다른 로컬 패키지나 공통 모듈이 필요 없다.
 
+## 이 실습의 의도
+
+Carter의 같은 주행 시점을 RGB·깊이 시각화·분할·음영 분할·edge라는 다섯 표현으로 저장하고, 이들이 Cosmos Transfer에 넘길 제어 입력으로 어떻게 대응하는지 익힌다. 여러 clip으로 나누어도 로봇 위치를 초기화하지 않아 연속 주행의 구간을 비교할 수 있다. 기본 실행은 시뮬레이션 캡처와 영상 인코딩까지이며, `prepare_transfer.py`도 입력 JSON만 만들고 Cosmos 모델 추론을 시작하지 않는다.
+
+## 실행 후 확인할 것
+
+- **주행 장면:** GUI에서 `/NavWorld/CarterNav`와 그 아래 `targetXform`, 전방 카메라가 존재하고 목표 방향으로 장면이 변하는지 본다. 기본 두 clip × 10프레임은 짧은 캡처이므로 목표 도달까지 요구하지 않는다.
+- **프레임 대응:** 각 `clip_0000`, `clip_0001`에서 같은 번호의 `rgb`, `depth`, `segmentation`, `shaded_seg`, `edges` PNG를 열어 물체 위치와 경계가 대응하는지 확인한다. depth는 미터값 원본 배열이 아니라 시각화 영상이다.
+- **clip 저장:** 각 clip의 다섯 MP4가 존재하고 실제 재생되는지 본다. 번호는 다음 clip에서 다시 시작하지만 주행은 이어지므로, clip 경계에서 첫 로봇 위치로 되돌아가야 하는 것은 아니다.
+- **시간 해석:** `capture_times.json`의 `clip`, `frame`, `timeline_seconds`를 비교한다. 파일의 시뮬레이션 시각을 기준으로 표본 간격을 읽고, MP4 재생 FPS를 물리 진행 속도로 대신 해석하지 않는다.
+- **Transfer 준비 범위:** `prepare_transfer.py`가 같은 PNG 번호 집합을 확인한 뒤 만든 JSON의 `input_video_path`, `depth.input_control`, `seg.input_control`이 실제 clip 파일을 가리키는지 확인한다. 이 검사는 영상 디코딩이나 생성형 모델 결과를 검증하지 않는다.
+
 ## GUI 실행과 종료
 
 GUI에서 `--steps`를 생략하면 정해진 데이터 생성과 저장을 마친 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 양수 `--steps N`은 **생성 완료 후 GUI를 관찰하는 app update 횟수**입니다. 생성 작업 자체나 데이터 프레임 수를 제한하는 값은 아니며, `--frames` 등으로 요청한 데이터가 무한히 늘어나지 않습니다. `--headless`는 관찰 대기 없이 기존 유한 작업을 마치면 종료합니다.

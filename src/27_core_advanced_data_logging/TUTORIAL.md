@@ -4,9 +4,19 @@
 
 공식 원문: **Data Logging** · Isaac Sim **5.1.0** · 인덱스 **t105**
 
-## 만들 결과와 실행 방식
+## 이 실습의 의도
 
-Franka가 움직이는 목표를 따라가는 동안 DataLogger가 실제 관절 위치, 적용한 관절 목표, 목표 물체 pose를 저장합니다. 저장한 action만 재생하는 모드와 목표 물체까지 복원하는 모드를 제공합니다.
+Franka의 목표 추종 중 실제 관절 상태와 적용한 관절 목표를 따로 기록해, 센서처럼 읽은 값과 제어 명령의 차이를 익힙니다. 기본 `record` 모드는 y축 사인파로 움직이는 목표를 600단계 기록하며, 재생 모드는 그 로그가 있어야 실행할 수 있습니다. `trajectory`는 관절 action만, `scene`은 action과 목표 물체 pose를 복원하므로 재생 범위를 화면과 기록 필드로 비교할 수 있습니다.
+
+## 실행 후 확인할 것
+
+- record 실행에서 목표 물체의 x,z는 0.45 m이고 y는 기본 진폭 0.1 m로 움직이며 Franka가 따라가는지 봅니다. `trajectory.json`의 `Isaac Sim Data` 아래에 실제 프레임이 저장되어야 합니다.
+- `python3 inspect_log.py <기록 경로>`가 실제 로그를 끝까지 읽는지 확인합니다. 각 프레임의 시간은 증가하고 `joint_positions`/`applied_joint_positions`는 각각 9개, `target_position`은 3개, `target_orientation`은 4개의 유한한 숫자여야 합니다. 이 검사는 파일 구조를 검증하며 추종 정확도를 판정하지는 않습니다.
+- 같은 프레임에서 측정 `joint_positions`와 명령 `applied_joint_positions`를 비교합니다. drive 응답이 있으므로 두 배열의 완전 일치를 성공 조건으로 삼지 않습니다. record의 `result.json`에서 `replayed_frames=0`, `mean_joint_state_L2_error=null`인 것은 아직 재생하지 않은 정상 결과입니다.
+- 같은 입력 로그를 trajectory와 scene으로 각각 재생합니다. 두 모드 모두 관절 목표를 적용하지만, 목표 시각 물체는 trajectory에서 기본 위치에 남고 scene에서 기록된 pose를 따라야 합니다. scene도 전체 물리 세계나 모든 센서를 복원하지는 않습니다.
+- 재생 `result.json`의 `data_frames`는 입력 전체 길이이고 `replayed_frames`는 이번에 실제 재생한 길이입니다. `--steps` 또는 headless 기본 600단계 제한으로 둘이 다를 수 있습니다. `mean_joint_state_L2_error`는 실제 재생 상태 차이로 해석하고 0을 강제하지 않습니다.
+
+## 실행 방식
 
 이 패키지는 `Data Logging` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
 
@@ -59,10 +69,6 @@ python3 inspect_log.py output/record_a/trajectory.json
 USD Stage는 로봇과 목표 물체의 구조를 담습니다. JSON은 전체 USD 장면이 아니라 선택한 상태/명령의 시간 기록입니다. scene 모드도 임의의 모든 물체·센서·충돌 상태를 복원하는 기능은 아니며 이 실습에서 기록한 목표 pose와 관절 action을 복원합니다. 리스트로 바꾸는 `.tolist()`는 NumPy 배열을 JSON에 저장하기 위한 변환입니다.
 
 재생 반복문의 index는 저장 프레임 배열의 0부터 시작합니다. 원문의 시뮬레이션 단계 인덱스와 배열 인덱스를 그대로 같다고 가정하면 중간에 시작한 로그에서 어긋날 수 있어 여기서는 분리했습니다. 프레임의 실제 기록 시간은 출력에 따로 표시합니다.
-
-## 관찰과 성공 판정
-
-record 결과에 비어 있지 않은 trajectory.json이 생겨야 하며 inspect_log가 시간 증가와 필드 길이를 검사합니다. scene 재생에서는 목표 물체가 기록처럼 움직이고 trajectory 재생에서는 움직이지 않습니다. 관절 상태 오차는 실제 측정값이며 0으로 고정하거나 성공 여부를 대체하지 않습니다.
 
 ## 한 변수만 바꾸는 실험
 

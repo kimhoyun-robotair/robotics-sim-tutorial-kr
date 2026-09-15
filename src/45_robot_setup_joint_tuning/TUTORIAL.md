@@ -4,6 +4,18 @@
 
 공식 Tuning Joint Drive Gains 수업의 원리를 **자체 1 kg prismatic 시험 장치**에 적용한다. 외부 로봇 asset 없이 실제 PhysX 관절을 시뮬레이션하고 위치·속도 CSV를 기록한다. 동시에 Robot Schema를 붙여 GUI Gain Tuner에서도 같은 joint를 찾을 수 있게 한다. 질량-스프링 계산을 시뮬레이터 대신 출력하는 모형이 아니다.
 
+## 이 실습의 의도
+
+고정 base와 X축으로만 움직이는 slider를 사용해 환경 접촉의 영향 없이 stiffness, damping, 질량이 관절 응답에 미치는 영향을 비교한다. 기본 실행은 1 kg slider에 0.5 m 위치 목표를 보내고, 240 Hz PhysX 계산 뒤 실제 위치와 속도를 읽는다. Gain Tuner에서 gain을 편집하는 실습과 CLI 입력이 고정된 응답 비교를 구분해 수행한다.
+
+## 실행 후 확인할 것
+
+- GUI에서 회색 `/GainRig/base`는 고정되고 파란 `/GainRig/slider`가 X축 방향으로 움직이는지 본다. visual cube에는 충돌을 추가하지 않았으므로 바닥에 떨어뜨리거나 물체와 접촉시키는 실험으로 해석하지 않는다.
+- 기본 headless 실행을 끝낸 뒤 `response.csv`의 720개 측정 행에서 `position_m`이 목표 0.5 m에 접근하는지, `velocity_m_s`가 어떻게 줄어드는지 확인한다. 짧게 실행하면 아직 수렴 중일 수 있다.
+- `metrics.json`의 `final_position_error_m`와 `overshoot_m`를 함께 읽고 damping=20과 5의 CSV를 같은 시간축으로 비교한다. 최종 위치만 같더라도 중간 진동과 목표 초과량은 다를 수 있다.
+- 속도 모드 예제에서는 stiffness=0인 상태에서 `velocity_m_s`가 0.2 m/s에 접근하는지 확인한다. 이때 위치가 0에 머무르지 않는 것은 속도 목표로 움직이기 때문이다.
+- GUI Gain Tuner에서 `GainRig`의 `slider_joint`를 선택하고 시험 완료 후 command/measured graph를 비교한다. GUI에서 바꾼 target은 CSV의 최초 CLI target 열에 반영되지 않으므로 그 열로 UI 시험 오차를 계산하지 않는다.
+
 ## 준비와 실행
 
 Isaac Sim **5.1.0**, 지원 GPU, `usd.schema.isaac`와 Gain Tuner 확장이 필요하다. GUI는 240 Hz 물리 실습을 창을 닫을 때까지 계속한다. `--headless` 기본 실행은 720 step(시뮬레이션 시간 3초) 뒤 종료한다. 다른 패키지/공통 코드가 필요 없다.

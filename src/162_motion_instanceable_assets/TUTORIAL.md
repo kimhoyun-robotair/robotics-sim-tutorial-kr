@@ -4,6 +4,17 @@
 
 geometry 정의 파일과 이를 참조하는 Stage를 직접 만들고, 네 개의 로봇 링크가 동일 USD prototype을 공유하는지 출력합니다. 공식 문서의 계층 제약과 importer 설정을 설명하고 재현 가능한 작은 USD 실습을 제공합니다.
 
+## 이 실습의 의도
+
+동일한 Cube 정의를 여러 링크에서 참조하면서 geometry만 하나의 USD prototype으로 공유하는 구조를 직접 만듭니다. 링크의 변환을 공유 root 밖에 두어 위치는 개별적으로 바꿀 수 있고, 공유 자식인 instance proxy의 직접 편집 제한을 `--no-instancing` 결과와 비교합니다. 기본 실행은 새 USD 두 파일을 만들고 화면 업데이트만 수행하는 예이므로 상자의 낙하·관절 구동·GPU 메모리 절감량 측정은 포함하지 않습니다.
+
+## 실행 후 확인할 것
+
+- **참조 구조:** 새 출력의 `meshes.usda`는 `/Geometry/Cube` 크기 0.5를 정의하고 `instances.usda`는 각 `/World/Robot_i/Link/Geometry`에서 `./meshes.usda`의 `/Geometry`를 참조해야 합니다. 두 파일을 함께 보존해야 상대 참조가 유지됩니다.
+- **공유 상태 기록:** 실행을 종료한 뒤 생성되는 `instances.json`에서 기본 4행 모두 `is_instance=true`, `child_is_instance_proxy=true`이고 `prototype` 값이 같은지 확인합니다. 이 기록은 장면을 생성할 때 수집한 상태이며 GUI에서 나중에 편집한 상태를 다시 측정한 값은 아닙니다.
+- **독립적인 위치:** Stage에서 Link의 translate가 `(i*0.8,0,0.25)`(m)인지 확인하고 하나의 Link를 옮겼을 때 다른 Link가 따라 움직이지 않는지 봅니다. 고정된 큐브가 공중 또는 지면 높이에 유지되는 것은 이 예제에 물리 시뮬레이션이 없기 때문입니다.
+- **편집 제한과 비교 실행:** 기본 실행의 `Geometry/Cube` 직접 편집이 제한되는 것은 instance proxy의 정상 동작입니다. `--no-instancing`을 새 출력으로 실행하면 reference는 남지만 JSON의 `is_instance`와 `child_is_instance_proxy`는 false, `prototype`은 null이어야 합니다. prototype의 구체적인 경로 문자열은 성공 기준으로 고정하지 않습니다.
+
 ## 준비와 실행
 
 이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
@@ -48,9 +59,9 @@ python3 run.py --help
 
 원본을 복사한 작업 파일에서 mesh/primitive마다 부모 Xform을 추가하고, mesh가 가진 reference를 새 부모에 옮깁니다. 공통 geometry USD를 만든 뒤 그 부모가 외부 geometry prim을 참조하도록 작성하고 instanceable을 켭니다. 원문 `create_parent_xforms()`/`convert_asset_instanceable()`은 출발점이지만 임의 자산에 대한 안전한 일괄 변환기를 제공하는 것은 아닙니다. material binding, physics material, filtered collision 관계가 원래 Stage 밖 대상을 가리키면 참조 후 유효하지 않을 수 있습니다. 부모 Xform 또는 공유 파일 안의 유효 경로로 관계를 옮긴 뒤 검사해야 합니다. 이 패키지의 새 장면 생성 방식은 사용자 자산을 덮어쓰지 않고 그 최종 계층을 직접 보여 줍니다.
 
-## 관찰 기준과 한 변수 실험
+## 공유 수와 원본 변경 비교
 
-기본 4개 geometry의 prototype이 같아야 하며, Link 위치는 서로 달라야 합니다. `--count`만 4에서 20으로 바꾸고 여전히 공유되는지 확인합니다. 원본 Cube 크기를 바꾸면 모든 참조에서 변경이 보이는 것이 기대 결과입니다.
+`--count`만 4에서 20으로 바꾸고 여전히 공유되는지 확인합니다. 원본 Cube 크기를 바꾸면 모든 참조에서 변경이 보이는 것이 기대 결과입니다.
 
 ## 문제 해결
 
@@ -58,7 +69,7 @@ python3 run.py --help
 
 ## 검증 범위
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 아래 관찰 기준으로 직접 결과를 확인합니다.
+이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 앞의 **실행 후 확인할 것** 기준으로 직접 결과를 확인합니다.
 
 ## 출처
 

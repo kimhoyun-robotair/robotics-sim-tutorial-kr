@@ -4,6 +4,17 @@
 
 폴더에서 로컬 USD를 뽑고, 이산 회전 집합과 연속 위치 범위를 조합한다. 별도 frustum 설정은 카메라가 보는 공간 안에서 객체 중심을 샘플링한다.
 
+## 이 실습의 의도
+
+같은 `subject` 정의에서 USD 파일 선택(`folder`), 회전 선택(`set`), 위치 샘플링(`range`)을 독립적으로 바꾸며 각 분포가 실제 장면의 무엇을 바꾸는지 구분합니다. 비교 설정 `frustum.yaml`은 카메라 시야를 기준으로 중심 위치를 뽑는 예이며, 두 설정 모두 중력과 물리 진행 시간이 0이어서 물체가 공중에 유지되는 것이 의도입니다. `run.py`만 실행하면 경로를 치환한 `prepared.yaml`을 만들고 종료하며, 실제 영상·description은 Object SDG의 **Simulate** 또는 `--launch --headless` 실행에서 생성합니다.
+
+## 실행 후 확인할 것
+
+- **설정 준비:** 콘솔의 `configuration:` 경로를 열어 기본 `subject.count=4`, `models`의 절대 경로, 요청한 `num_frames`를 확인합니다. 이 파일에 `$[...]`가 남아 있는 것은 정상이며 IRO가 실행할 때 해석합니다.
+- **기본 장면의 선택값:** native 생성 후 `descriptions/`에서 각 subject의 `usd_path`가 `box.usda` 또는 `pyramid.usda`인지, `rotateY`가 -45·0·45 중 하나인지 확인합니다. 같은 파일이나 회전이 여러 번 선택되어도 정상이며 세 프레임에 모든 선택지가 나올 필요는 없습니다.
+- **위치와 영상의 대응:** 기본 subject의 초기 `translate`가 X -160..160, Y 50..150, Z -100..100(cm)에 있는지 확인하고 같은 프레임 RGB와 비교합니다. 위치와 모양뿐 아니라 `dome_light.intensity`도 300..900에서 바뀌므로 밝기 변화가 예상됩니다.
+- **시야 안 샘플링 비교:** `--config frustum.yaml`로 별도 생성하면 빨간 큐브 10개의 중심이 `distance_min=250`, `distance_max=650`, `screen_space_range=0.65`로 제한된 영역에 배치됩니다. 카메라 뷰와 description을 함께 보고, 큰 물체의 외곽 전체가 영상 안에 들어온다는 보장으로 해석하지 않습니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
@@ -39,9 +50,7 @@ GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action a
 
 IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
 
-## 관찰과 성공 기준
-
-folder 결과는 box.usda 또는 pyramid.usda이고 회전은 지정한 세 값 중 하나여야 한다. frustum은 중심 위치의 분포를 제한하므로 큰 물체의 전체 외곽이 항상 화면 안이라는 보장은 아니다.
+## 한 변수 실험
 
 frustum.yaml의 screen_space_range만 0.65에서 0.25로 바꾸어 중심 분포가 화면 중앙으로 좁아지는지 비교한다.
 

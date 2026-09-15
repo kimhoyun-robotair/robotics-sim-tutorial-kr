@@ -2,15 +2,23 @@
 
 권장 학습 순서 **13** · Python 실행 환경과 USD 기초 · 출처 ID `t177`
 
+## 이 실습의 의도
+
+Cube 색을 바꾸는 작은 작업으로 이름 있는 Action 호출과 되돌릴 수 있는 Command의 역할을 구분한다. 등록한 `make_blue` Action 안에서 `ChangeProperty` Command를 실행하여, 색 변경 뒤 Undo/Redo가 실제 USD 속성을 복원하는지 확인한다. 기본 실행은 빨강→파랑→빨강→파랑을 순서대로 읽어 검사한 뒤 `command_history.json`과 최종 `commands.usda`를 저장한다. Action은 Python 프로세스에 등록되는 기능이고 USD 파일의 일부로 저장되지 않는다.
+
+## 실행 후 확인할 것
+
+- `command_history.json`의 `prim_path`로 실제 생성된 큐브를 찾는다. 생성 명령이 경로를 정하므로 `/World/Cube`라는 고정 경로를 기대하지 않는다.
+- 보고서의 `before`, `after_action`, `after_undo`, `after_redo`가 각각 `[1,0,0]`, `[0,0,1]`, `[1,0,0]`, `[0,0,1]`인지 확인한다. 코드는 각 단계의 속성을 다시 읽고 이 순서가 다르면 오류를 낸다.
+- 화면과 `commands.usda`에서 최종 큐브는 파란색이어야 한다. 네 상태 변경은 표시용 앱 반복문 전에 연속 수행되므로 중간의 빨강·파랑 전환이 눈에 보이지 않아도 정상이다. 중간 상태의 확인 대상은 JSON이다.
+- `--steps` 없는 독립 실행 중 Registered Actions에서 `tutorial.commands.local` / `make_blue`를 찾아본다. 프로세스가 끝나면 해제되며, 저장된 USD만 다시 열어서 Action이 생기지 않는 것이 정상이다.
+- 수동 Undo/Redo 실습에서는 `ChangeProperty`가 색을 복원하는지 관찰한다. 직접 USD 값을 `Set`한 모든 작업이 같은 이력을 남긴다고 일반화하지 않으며, Action 등록만으로 Undo가 제공되는 것도 아니다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
 이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
-
-## 목표와 예상 결과
-
-Cube 생성 명령을 실행하고 파란색으로 바꾸는 action을 등록한다. action이 `ChangeProperty` command를 호출하도록 구성한 뒤 undo/redo를 실제로 수행해 빨강→파랑→빨강→파랑 순서를 검증한다. `commands.usda`와 `command_history.json`이 결과다.
 
 ## 순서대로 실습
 

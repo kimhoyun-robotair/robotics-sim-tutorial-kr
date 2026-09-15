@@ -4,6 +4,19 @@
 
 예상 결과는 ROS TurtleBot3 description에서 생성한 URDF가 USD reference로 열리고, 두 바퀴에 velocity drive가 있으며, Play 시 로봇이 바닥에 내려앉는 것이다. 원문의 URDF Importer GUI를 사용하는 완전한 실습이다. `preprocess_urdf.py`는 xacro 전처리, `inspect_robot.py`는 실제 USD drive 점검을 돕는다.
 
+## 이 실습의 의도
+
+ROS 로봇 description을 시뮬레이터가 사용할 USD articulation으로 가져오고, 움직일 수 있는 base와 두 바퀴 velocity drive를 확인한다. 전처리와 실제 stage 검사를 분리해 URDF 파일 생성 성공, 가져오기 성공, 물리 접지 성공을 각각 판단하도록 구성했다. 로컬 파일은 이 두 보조 스크립트뿐이며 USD 가져오기와 drive 편집은 GUI에서 수행한다. ROS 메시지 발행·구독 그래프나 자율주행은 아직 만들지 않는다.
+
+## 실행 후 확인할 것
+
+- **전처리 결과:** `preprocess_urdf.py` 실행 후 지정한 URDF가 생기고 `expanded robot= ... joints= ...`에 `wheel_left_joint`, `wheel_right_joint`가 포함되는지 확인한다. 출력 파일이 이미 있으면 중단하는 것이 의도된 동작이며, 이 단계는 USD나 로봇 운동을 생성하지 않는다.
+- **USD reference와 base:** Import 후 Stage에 TurtleBot mesh가 보이고 References의 Asset Path가 새 `output/import_01` 아래 생성물로 연결되는지 본다. Moveable Base로 가져와 몸체가 world에 고정되지 않았는지 확인한다.
+- **drive 수치:** Script Editor에서 `inspect_robot.py`를 실행해 두 wheel 경로에 angular drive가 있고, 설정 후 `stiffness=0.0`, `damping=10000000.0`, 시험 전 `target_velocity=0`인지 출력과 Property를 대조한다. `articulation_roots` 목록도 비어 있지 않은지 직접 확인한다.
+- **접지와 정지:** 로봇을 바닥 바로 위에 놓고 Play하면 중력으로 내려와 지지되는지 본다. 속도 목표를 주지 않은 상태에서 스스로 전진하지 않는 것은 정상이다.
+- **바퀴 시험:** 아래 선택적 시험에서 한 바퀴에 작은 Target Velocity를 주면 해당 바퀴가 구동되는지 관찰하고, 시험 뒤 0으로 복구한다. 바퀴 회전, 몸체가 움직일 수 있는지, 미끄러짐은 함께 확인하되 ROS topic 수신을 이 실습의 완료 조건으로 두지 않는다.
+- **검사 범위:** `inspect_robot.py`는 stage 전체에서 이름이 맞는 wheel을 찾고 angular drive와 개수를 검사한다. 값과 articulation root의 적절성은 출력만 하므로 스크립트가 오류 없이 끝났다는 사실만으로 모든 물리 설정이 맞다고 판단하지 않는다.
+
 ## 이 폴더에서 시작하기
 
 다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
@@ -18,9 +31,9 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export ISAAC_SIM="$HOME/isaacsim"
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. Standalone `run.py`는 이 확장을 직접 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 이후 DDS 통신에 사용할 그룹 번호다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. 이 폴더에는 standalone `run.py`가 없으며, `preprocess_urdf.py`는 ROS 설정을 source한 시스템 `python3`에서, `inspect_robot.py`는 열린 Isaac Sim의 Script Editor에서 실행한다. 이 가져오기 단계에서는 외부 ROS 노드와 DDS 통신을 시험하지 않는다.
 
-Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
+Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. 이 실습은 가져온 link, joint, articulation root와 drive를 확인하는 단계이며 Action Graph나 메시지 발행 노드를 생성하지 않는다.
 
 ## 로봇 파일 준비
 
@@ -62,4 +75,4 @@ USD reference는 외부 USD를 현재 Stage에 합성하는 연결이다. Stage 
 - [공식 5.1 URDF 가져오기](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_turtlebot.html#importing-turtlebot-urdf)
 - [공식 5.1 물리 조정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_turtlebot.html#tune-the-robot)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 ROS 환경의 전처리부터 GPU·GUI의 가져오기와 물리 동작까지 실제 통합 실행을 아직 확인하지 않았다는 뜻이다. 앞의 확인 기준을 실제 환경에서 관찰해야 완료한 것이며 외부 ROS 통신은 이 실습 범위에 포함하지 않는다.

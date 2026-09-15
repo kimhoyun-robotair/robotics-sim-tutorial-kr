@@ -4,6 +4,18 @@
 
 예상 결과는 `/topic`의 QoS를 실제로 확인하고, 한 번만 보낸 String을 나중에 시작한 두 subscriber가 각각 받을 수 있는 것이다. 원문의 Generic Publisher/Countdown GUI 실습에 `qos_profile.json`과 시간 제한이 있는 실제 ROS 수신기 `listen.py`를 포함했다.
 
+## 이 실습의 의도
+
+같은 String 토픽도 QoS 요청에 따라 현재 메시지만 받거나 늦게 접속해도 보존된 메시지를 받을 수 있음을 비교한다. 반복 발행 그래프와 초기 카운트다운 뒤 새 발행이 없는 그래프를 나누어, 전달 정책과 발행 시점의 역할을 확인한다. 이 폴더의 JSON은 정책 값이고 `listen.py`는 수신기이므로, publisher와 Countdown은 GUI에서 직접 구성해야 한다.
+
+## 실행 후 확인할 것
+
+- Sensor Data 단계에서는 `/topic`이 `std_msgs/msg/String`이고 `ros2 topic info /topic -v`에 실제 publisher의 best effort/volatile 정책이 나타나는지 본다. `listen.py --volatile --best-effort`로 `qos_lesson`을 수신해야 전달 경로를 확인한 것이다.
+- 정적 발행 단계에서는 기존 Tick → Publisher 연결을 제거하고 Countdown 실행 연결을 확인한다. QoS JSON만 붙여 놓으면 발행 횟수까지 줄어들지 않는다.
+- Custom 정책을 적용하고 초기 Countdown이 끝난 뒤에도 Play와 publisher를 유지한다. 이후 서로 다른 터미널에서 기본 `listen.py`를 실행해 두 수신기 모두 `received_data= 'qos_lesson'`을 출력하는지 확인한다.
+- 같은 조건에서 늦게 시작한 `listen.py --volatile --timeout 3`이 새 메시지를 못 받아 `TimeoutError`로 끝나는 것은 의도한 비교 결과다. Countdown 중에 시작하거나 다른 publisher가 계속 발행하면 이 조건을 검사한 것이 아니다.
+- 시뮬레이터를 닫은 뒤에도 데이터가 남아야 하는 실습은 아니다. `transientLocal` 샘플의 보존 범위는 살아 있는 publisher이며, 수신기 성공은 실제 출력으로 판단하고 topic 목록만으로 판단하지 않는다.
+
 ## 이 폴더에서 시작하기
 
 다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
@@ -18,7 +30,7 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export ISAAC_SIM="$HOME/isaacsim"
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. Standalone `run.py`는 이 확장을 직접 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
 
 Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
 
@@ -74,4 +86,4 @@ publisher의 durability만 transientLocal에서 volatile로 바꾸고 새로 Pla
 - [공식 5.1 QoS 설정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_qos.html#setting-qos-profile-for-ros-2-omnigraph-nodes)
 - [공식 5.1 정적 발행](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_qos.html#creating-static-publishers)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.

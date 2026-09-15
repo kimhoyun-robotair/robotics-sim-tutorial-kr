@@ -4,6 +4,18 @@
 
 한 관절 팔의 Python 측정 기록과 GUI 상태 그래프를 함께 관찰합니다. 외부 Cortex Franka 대신 로컬 articulation을 사용하고 physics residual reporting을 켭니다.
 
+## 이 실습의 의도
+
+고정 Base에 연결된 한 관절 Link를 실제로 시뮬레이션하면서, Python의 관절 상태 기록과 Simulation Data Visualizer의 강체 상태 표시를 대응시킵니다. 목표 0°의 angular drive와 중력이 함께 작용하는 팔을 사용하므로 별도 왕복 동작 명령 없이도 초기 응답과 정착 과정을 관찰할 수 있습니다. 기본 실행은 첫 240프레임의 관절 각도·속도를 저장하고 Physics Scene의 residual reporting을 켜며, GUI 그래프와 residual 읽기는 사용자가 수행합니다.
+
+## 실행 후 확인할 것
+
+- GUI에서 `/World/Arm/Link`를 선택하고 Visualizer를 켜 위치·회전·선속도·각속도가 표시되는지 봅니다. `/World/Arm`은 묶음용 Xform이므로 같은 물리 항목이 표시되지 않는 차이를 확인합니다.
+- `joint_motion.json`의 각 행에 증가하는 `time_s`와 한 자유도에 대응하는 `joint_angle_rad`, `joint_velocity_rad_s`가 있는지 봅니다. 초기 변화와 이후 상태를 비교하며, 일정 주기로 계속 왕복하거나 정확히 0 rad에 멈추는 것을 필수 결과로 삼지 않습니다.
+- JSON의 rad/rad/s와 Visualizer의 degree/degree/s를 구분합니다. 이 장면의 Y축 회전 성분과 관절 값을 비교할 때 단위를 변환하고, 위치 그래프를 관절 각도와 직접 비교하지 않습니다.
+- Physics Scene에서 Residual Reporting과 enable 상태를 확인한 뒤 실행 중 RMS/Max를 관찰합니다. `joint_motion.json`에는 residual이 저장되지 않으므로 GUI에서 따로 확인해야 하며, 작은 residual은 제약 수렴의 지표입니다.
+- `--mass 2`로 Link 질량만 바꾼 실행의 초기 응답을 비교합니다. 기본 파일은 최초 기록 구간만 담으므로 기록 후 GUI Stop/Play로 본 변화는 기존 JSON에 추가되지 않습니다.
+
 ## 이 패키지만으로 준비하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.

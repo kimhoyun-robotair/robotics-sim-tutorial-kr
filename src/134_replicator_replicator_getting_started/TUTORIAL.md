@@ -4,6 +4,19 @@
 
 공식 Getting Started Scripts의 네 시나리오를 `--example`으로 선택합니다. 각 실행은 자기 장면, 라벨, 카메라와 writer를 새로 만듭니다. 앞 예제의 상태나 다른 패키지를 먼저 실행할 필요가 없습니다. 결과는 모두 실제 annotator/writer가 반환한 데이터입니다.
 
+## 이 실습의 의도
+
+동일한 라벨 있는 Cube를 사용해 정지 캡처, 여러 카메라, 속성 무작위화, 물리 이벤트 캡처의 실행 시점을 비교하는 실습입니다. 기본 `basic`은 물체를 움직이지 않고 네 번 촬영하므로 이미지 배치가 그대로인 것이 정상입니다. `events`에서만 강체와 중력을 추가하며 바닥은 만들지 않아, 낙하 높이 변화로 촬영을 시작하고 같은 상태의 보이는/숨긴 이미지 쌍을 만듭니다. GUI는 캡처 완료 후 장면을 유지하지만 파일을 계속 추가하지 않습니다.
+
+## 실행 후 확인할 것
+
+- **basic:** 출력 폴더의 RGB, semantic segmentation, tight box에서 `/World/Cube`의 `carton` 정답을 확인합니다. `observations.json`의 position은 기본 네 프레임 모두 `[0,0,0]`이며 고정 배치 반복 촬영이 의도입니다.
+- **multi:** front RGB는 512×512, side는 320×240인지 확인하고 `rgb_shapes`의 높이·너비 순서가 각각 `[512,512,...]`, `[240,320,...]`인지 봅니다. `camera_metadata_*.json`에는 각 render product의 camera_params와 3D box가 들어 있어야 하며 `pose/`는 `--pose-writer`를 지정했을 때 확인합니다.
+- **randomize:** `observations.json`에서 x/y는 [-1,1] 범위로 바뀌고 z는 0을 유지하는지 봅니다. 조명 custom event는 0부터 센 짝수 프레임에만 전송되므로 물체 위치와 조명 변화가 서로 다른 주기를 가집니다. seed가 같아도 렌더 픽셀의 완전한 동일함을 성공 기준으로 두지 않습니다.
+- **events:** `observations.json`의 height가 이전 이벤트보다 0.4 m 이상 낮아지고 `pair`가 두 연속 캡처 번호를 가리키는지 확인합니다. 각 쌍은 보이는 Cube와 숨긴 Cube를 같은 물리 상태에서 촬영하므로 숨긴 프레임의 carton 정답이 빠지는 것은 정상입니다.
+- **종료와 개수:** events의 `--frames`는 최대 이벤트 수이고 이벤트 하나에 두 캡처가 생깁니다. z<0 또는 `--steps` 상한 때문에 요청 수보다 일찍 끝날 수 있으므로 실제 개수는 `observations.json`과 `Capture steps:`로 확인합니다. 이벤트가 하나도 없으면 코드는 오류로 종료합니다.
+- **기존 검증의 범위:** [RUNTIME_CHECK.md](RUNTIME_CHECK.md)의 기록은 `basic --headless --frames 2`에서 RGB 두 장과 비어 있지 않은 정답을 확인한 사례입니다. multi/randomize/events 및 GUI는 해당 모드의 위 결과를 별도로 확인해야 합니다.
+
 ## GUI 실행과 종료
 
 GUI 실행에서 `--steps`를 생략하면 정해진 캡처와 파일 저장을 끝낸 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 추가 이미지를 무한히 생성하지 않습니다. `--steps`는 events 모드의 물리 update 상한이며 생략 시 캡처에는 기존 300회를 사용합니다. 양수 `--steps N`을 명시하면 해당 설정으로 작업을 마치고 GUI 대기 없이 종료합니다. `--headless`는 기존 유한 작업을 마치면 종료합니다.

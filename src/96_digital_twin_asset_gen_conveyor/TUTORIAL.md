@@ -4,6 +4,18 @@
 
 컨베이어는 장면 전체가 이동하는 rigid body와 다르다. belt 표면 속도로 위 물체에 접촉 운동을 전달하고 texture animation은 움직이는 벨트를 시각적으로 표현한다. 이 패키지의 `conveyor_lab.usda`는 3m belt 표면과 0.5kg parcel, PhysX scene, 조명을 포함한 작은 독립 실험 장면이다. 아직 Conveyor OmniGraph를 붙이지 않았으므로 아래 단계가 실제 기능 구현 과정이다.
 
+## 이 실습의 의도
+
+정지한 belt의 표면 속도가 접촉한 parcel을 운반하는 원리를 작은 장면에서 확인한 뒤 Track Builder의 모듈 연결로 확장한다. 파란 belt와 갈색 parcel을 분리해 벨트 자체의 위치, 물체의 이동, texture animation을 각각 관찰하도록 구성했다. 제공 USDA에는 collider와 parcel 강체만 있으므로 컨베이어 graph 생성과 속도 설정을 GUI에서 마쳐야 운반 기능이 생긴다.
+
+## 실행 후 확인할 것
+
+- **설정 전 장면:** `/World/Belt`는 길이 3m인 충돌 표면이고 `/World/Parcel`은 크기 0.2m, 질량 0.5kg의 강체다. graph 추가 전에 Play하면 parcel이 belt에 떨어져도 자동으로 +X 운반되지는 않는 것이 정상이다.
+- **graph 대상:** 생성한 conveyor node의 `conveyorPrim`이 `/World/Belt`이며 `Direction=(1,0,0)`, `Curved=false`, `Enabled=true`인지 확인한다. parcel을 conveyor 대상으로 선택하지 않는다.
+- **접촉 운반:** 속도를 0.2로 설정한 뒤 Play하면 parcel이 belt 위에 착지하고 +X로 움직이며 belt의 위치는 유지되어야 한다. parcel이 공중에 있는 순간에는 아직 표면 속도의 접촉 효과를 볼 수 없다.
+- **속도 반전:** parcel이 belt 위에 있는 동안 speed를 -0.2로 바꿔 이동이 -X로 전환되는지 본다. 이미 끝에서 떨어졌다면 Stop 후 초기 배치에서 다시 시험한다. 제공 단색 belt에 texture가 흐르지 않아도 parcel 운반을 확인할 수 있다.
+- **Track Builder 결과:** 별도 stage에서 시작·직선·회전·끝 조각의 endpoint가 이어지는지 위에서 확인한다. 작은 lab 성공과 외부 conveyor asset pack을 사용하는 조립 단계의 성공은 각각 확인하고, 편집한 장면은 `output/conveyor.usd`에 직접 저장한다.
+
 ## 작은 belt부터 움직이기
 
 1. `File > Open`에서 `conveyor_lab.usda`를 연다. `Window > Extensions`에서 `conveyor`를 검색하고 `isaacsim.asset.gen.conveyor.ui`를 Enable한다.

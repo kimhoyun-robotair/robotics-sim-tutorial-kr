@@ -4,6 +4,18 @@
 
 **목표:** `std_srvs/srv/SetBool`의 request/response를 OmniGraph 포트로 다루고, 외부 CLI와 내부 Client 양쪽에서 실제 응답을 확인합니다. 로컬 그래프는 원문의 서버/클라이언트 구성을 재현합니다. 내부 Client는 실험 시점이 분명하도록 수동 impulse로 동작합니다.
 
+## 이 실습의 의도
+
+하나의 서비스 요청이 Request 노드에 도착하고 같은 `serverHandle`을 가진 Response 노드에서 응답하는 연결을 배우는 실습입니다. 외부 CLI와 그래프 내부 Client가 같은 `/service_name`을 호출해 요청 경로 두 가지를 비교합니다. 기본 서버는 bool에 따라 물체나 시뮬레이션 상태를 바꾸지 않고 항상 정해진 수락 응답을 반환합니다. `setup_stage.py` 실행은 그래프 준비까지이며, Play 후 외부 요청 또는 수동 impulse가 있어야 왕복 통신이 발생합니다.
+
+## 실행 후 확인할 것
+
+- **서버 응답:** Play 후 `data: true`를 CLI로 요청하면 `success=True`, `message='Accepted by Isaac Sim SetBool lab'`가 실제 응답으로 돌아오는지 확인합니다. 그래프 생성 로그만으로 서비스 수신을 확인할 수는 없습니다.
+- **입력과 동작의 구분:** `data: false` 요청 후 Request의 `Request:data` 출력은 바뀌지만 기본 응답은 그대로인지 봅니다. 이는 bool 제어 기능을 구현하지 않은 이 실습의 의도된 구성입니다.
+- **동적 응답 필드:** Response의 `Response:message`를 `second response`로 바꾸고 다시 요청하여 바뀐 문자열이 CLI 응답에 나타나는지 확인합니다.
+- **내부 호출 시점:** `/ServiceLab/Impulse.state:enableImpulse=True`를 한 번 설정한 후 Client의 `Response:success`와 `Response:message`를 확인합니다. 기본 Client는 Play만으로 매 프레임 요청하지 않습니다.
+- **거절과 통신 실패 구분:** Response의 success를 False로 바꿔도 그 응답을 받았다면 왕복 통신은 된 것입니다. 응답이 아예 오지 않는 경우에는 `serverHandle`·`onReceived` 연결과 Play 상태를 확인합니다.
+
 ## 실행 환경: 이 폴더만으로 시작하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Linux, ROS 2 Humble(이 문서의 명령 기준)이 필요합니다. ROS를 통해 다른 프로세스와 통신하므로 시뮬레이터와 ROS 터미널을 구분합니다. `ISAAC_SIM`은 실제 설치 디렉터리로 바꾸세요.

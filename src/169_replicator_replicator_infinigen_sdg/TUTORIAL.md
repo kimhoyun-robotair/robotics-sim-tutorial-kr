@@ -6,6 +6,18 @@
 
 이 패키지는 공식 설치본의 `standalone_examples/replicator/infinigen/infinigen_sdg.py`를 실행하는 **native workflow**다. `run.py`가 설정·경로를 검사하고 이 패키지의 `sdg_config.json`을 전달한다. 원본의 복잡한 충돌 처리, 단위 조정, 카메라 무작위화 코드를 다른 로컬 튜토리얼에 의존하지 않고 사용할 수 있다. 사용자 저장소의 공통 모듈은 사용하지 않는다. Infinigen 생성기나 NVIDIA 샘플 자산을 패키지에 포함한 것은 아니다.
 
+## 이 실습의 의도
+
+식탁이 있는 방과 카메라 배치를 바꾸면서, 학습 대상의 위치·조명·배경 변화가 RGB와 정답 라벨에 어떻게 함께 반영되는지 익힌다. 부유 상태 촬영과 물리 낙하 후 촬영을 나누고 라벨이 있는 wood block·pudding box에 라벨 없는 도형·책을 섞어, 보이는 물체와 학습 대상의 차이를 비교한다. 기본 실행은 제공된 Infinigen 방을 읽어 6회 촬영하며, 방 자체를 새로 생성하는 작업은 `generate_rooms.py`를 별도 실행할 때 수행한다.
+
+## 실행 후 확인할 것
+
+- **촬영 단위:** `resolved_config.json`에서 `total_captures=6`, `num_cameras=2`를 확인한다. 정상 저장을 마치면 `00_BasicWriter`의 카메라별 RGB 합계는 12장이며, segmentation·시각화까지 센 전체 파일 수와 구분한다.
+- **방과 물리 단계:** 콘솔의 `Loading environment`, floating/dropped 진행과 이미지를 비교한다. 기본은 방 배치마다 부유 촬영 1회와 낙하 후 촬영 2회이며, 방을 하나만 공급했다면 같은 방 재사용이 정상이다.
+- **부유 물체:** `gravity_disabled_chance=0.25` 때문에 일부 물체는 낙하 단계 후에도 공중에 남을 수 있다. 모든 물체가 식탁에 내려앉는 것을 성공 조건으로 삼지 않고, 같은 카메라에서 낙하 가능한 물체의 배치 변화를 본다.
+- **라벨과 시각화:** RGB와 semantic segmentation에서 `wood_block`, `pudding_box`를 연결하고, `01_DataVisualizationWriter`의 2D/3D 상자가 해당 대상과 맞는지 살펴본다. 방해 도형·책에는 target class를 붙이지 않는 설정이다.
+- **관찰 뷰:** Stage의 `/Environment`, `/Cameras/cam_0`, `/Cameras/cam_1`을 확인한다. debug 뷰에서 천장이 가려지는 것은 관찰 편의 설정이며, 자유 viewport와 저장용 카메라 영상은 서로 다른 시점이다.
+
 ## 준비
 
 - Linux의 Isaac Sim **5.1.0** 설치 경로에 `python.sh`와 위 standalone example 및 `infinigen_sdg_utils.py`가 있어야 한다. RTX GPU와 지원 드라이버, GUI 표시 환경이 필요하다. 공식 예제는 창을 생성한다.
@@ -23,7 +35,7 @@ python3 run.py --isaac-root "$HOME/isaacsim" --check
 python3 run.py --isaac-root "$HOME/isaacsim" --output output/first
 ```
 
-`--check`는 JSON·설치 파일 검사다. GPU와 원격 자산 접근 성공을 의미하지 않는다. 마지막 명령은 실제 GPU 작업을 시작한다. 이미 존재하는 출력 경로는 거부한다. 실행 설정의 완전한 사본을 `output/first/resolved_config.json`에 남기며 writer 별 디렉터리를 분리한다. `--steps`를 생략하면 설정한 촬영과 파일 저장을 끝낸 뒤 사용자가 닫을 때까지 GUI를 유지한다. `--steps 120`은 저장 후 GUI를 120회 업데이트하고 종료하며. `--steps`에는 양의 정수를 지정한다. 촬영 수는 `--captures`로 별도 지정하므로 창을 오래 열어도 이미지가 계속 생성되지 않는다. `--headless`는 창 없이 설정한 촬영만 끝내고 종료한다. 기존 `--keep-open`은 호환용으로 남아 있으며 명시한 `--steps`가 우선한다.
+`--check`는 JSON·설치 파일 검사다. GPU와 원격 자산 접근 성공을 의미하지 않는다. 마지막 명령은 실제 GPU 작업을 시작한다. 이미 존재하는 출력 경로는 거부한다. 실행 설정의 완전한 사본을 `output/first/resolved_config.json`에 남기며 writer 별 디렉터리를 분리한다. `--steps`를 생략하면 설정한 촬영과 파일 저장을 끝낸 뒤 사용자가 닫을 때까지 GUI를 유지한다. `--steps 120`은 저장 후 GUI를 120회 업데이트하고 종료한다. `--steps`에는 양의 정수를 지정한다. 촬영 수는 `--captures`로 별도 지정하므로 창을 오래 열어도 이미지가 계속 생성되지 않는다. `--headless`는 창 없이 설정한 촬영만 끝내고 종료한다. 기존 `--keep-open`은 호환용으로 남아 있으며 명시한 `--steps`가 우선한다.
 
 ## 단계별 실습
 

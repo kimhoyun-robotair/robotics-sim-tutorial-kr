@@ -4,6 +4,19 @@
 
 예상 결과는 `/tf`에 센서·로봇 링크의 부모/자식 관계가, `/odom`에는 시작 자세 기준 위치와 3차원 속도가 나타나는 것이다. 원문 완성 TurtleBot scene을 시작점으로 삼고 각 그래프를 실제로 수정한다. `inspect_tf.py`는 외부 ROS 메시지를 읽어 odometry의 부모/자식 frame이 TF에도 있는지 검사한다.
 
+## 이 실습의 의도
+
+로봇·센서의 좌표계 관계를 담는 TF와 시작 자세 기준 운동을 담는 Odometry를 함께 읽어 같은 로봇 상태를 일관되게 표현하는지 확인한다. 카메라를 부모 좌표계로 바꾸는 실험은 실제 물체 이동과 좌표 표현의 변경을 구별하기 위한 것이다. 이 폴더는 GUI에서 sample Stage와 그래프를 준비하는 실습이며, `inspect_tf.py`는 이미 발행되는 ROS 데이터를 관찰할 뿐 장면이나 발행기를 생성하지 않는다.
+
+## 실행 후 확인할 것
+
+- GUI에서 아래 그래프를 준비하고 Play한 뒤 `/tf`의 `tf2_msgs/msg/TFMessage`와 `/odom`의 `nav_msgs/msg/Odometry`를 실제 수신한다. 카메라만 발행한 단계에서는 `/odom`이 없어 관찰기 전체 검사가 실패할 수 있으므로 오도메트리 단계까지 구성한 뒤 검사한다.
+- 아래 설정을 사용했다면 `/odom.header.frame_id=odom`, `child_frame_id=base_link`이고 `/tf`에도 `odom → base_link`가 있어야 한다. `python3 inspect_tf.py --seconds 10`의 `observed_tf_edges`, `odom_frame`, `child`를 대조한다.
+- `tf2_echo odom base_link`를 켜고 전진 명령을 보내면 변환의 위치와 `/odom`의 pose·twist가 운동을 반영해야 한다. 로봇 시작 world 위치와 odometry의 상대 위치를 같은 값으로 기대하지 않는다.
+- 카메라 `parentPrim`을 바꾸고 Stop/Play하면 해당 TF의 기준 frame과 translation/rotation 표현이 바뀌는지 본다. 이 변경만으로 viewport의 물리 로봇이 이동해야 하는 것은 아니다.
+- TF Viewer나 `view_frames`에서 로봇 링크의 연결을 확인하고 각 child의 부모가 하나인지 살핀다. 관찰기는 TF edge의 존재만 검사하므로 중복 publisher, 전체 트리의 정확성, TF의 시간 일관성까지 자동 판정하지 않는다.
+- 아래 그래프의 TF/Odometry 발행은 playback tick에 연결된다. `inspect_tf.py`는 10초 동안 받은 edge의 집합과 마지막 odometry를 출력하므로 발행 빈도나 모든 샘플의 수치 일치를 검증한 것으로 해석하지 않는다.
+
 ## 이 폴더에서 시작하기
 
 다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
@@ -18,7 +31,7 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export ISAAC_SIM="$HOME/isaacsim"
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. Standalone `run.py`는 이 확장을 직접 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
 
 Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
 
@@ -84,4 +97,4 @@ TF의 parentPrim만 World에서 Camera_1으로 바꾸고 같은 pose의 수치 �
 - [공식 5.1 shortcut](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_tf.html#graph-shortcuts)
 - [공식 5.1 TF Viewer](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_tf.html#viewing-the-transform-tree-in-isaac-sim)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.

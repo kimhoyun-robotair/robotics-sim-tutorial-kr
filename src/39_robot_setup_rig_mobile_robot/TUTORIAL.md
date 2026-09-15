@@ -4,6 +4,18 @@
 
 공식 Rig a Mobile Robot의 **GUI native** 실습이다. `run.py`는 Isaac Sim 5.1 asset `/Isaac/Samples/Rigging/Forklift/forklift_b_unrigged_cm.usd`를 새 로컬 편집 layer로 연다. 원본은 **cm 단위**이며 m 단위 숫자를 그대로 입력하면 안 된다. 완성 비교 asset은 같은 폴더의 `forklift_b_rigged_cm.usd`다.
 
+## 이 실습의 의도
+
+외형만 있는 지게차를 8개 강체와 7개 가동 joint로 나누고, 수동 roller·구동 뒷바퀴·조향·lift가 맡는 운동을 직접 설계한다. cm 단위 asset을 그대로 사용하여 geometry 크기, 직선 이동 범위, 중력을 같은 단위로 맞추는 것도 핵심이다. `run.py`는 unrigged 원본을 로컬 layer로 열고 초기 목록만 저장하므로, rigging과 주행·lift 조작은 아래 GUI 단계에서 수행한다.
+
+## 실행 후 확인할 것
+
+- **단위와 링크:** 초기 `initial_inventory.json`의 `meters_per_unit=0.01`을 확인한다. 제작 후 body·lift·back_wheel·back_wheel_swivel·roller 네 개가 각각 강체로 묶이고, 자식 collider에 강체가 중복 적용되지 않았는지 Stage에서 본다.
+- **7개 관절 구성:** `inspect_result.py`를 Script Editor에서 실행해 movable joint가 7개인지 확인한다. 출력된 body0/body1·axis·limit·drive를 `joint_spec.json`과 직접 대조한다. 도구는 관절 수를 자동 검사하지만 연결·설정값 전체가 spec과 같은지 자동 판정하지는 않는다.
+- **roller와 구동의 차이:** 네 roller joint에는 drive가 없고, `rear_drive`는 X축 속도 목표 -200 deg/s를 가진다. 완성 후 Play에서 뒷바퀴 구동으로 차체가 움직이고 앞 roller는 접촉에 따라 수동으로 구르는지 본다. 모든 바퀴에 같은 목표를 넣는 구성이 아니다.
+- **lift·조향 반응:** lift 목표를 -15→50 cm로 바꾸면 Z축을 따라 올라가고, `rear_steer` 목표만 0→20 deg로 바꾸면 뒷바퀴 방향과 주행 경로가 달라지는지 확인한다. joint 범위 -15..200 cm와 -60..60 deg는 서로 다른 단위다.
+- **접촉과 완료 판정:** collider 표시에서 fork의 빈 공간이 막히지 않고 바퀴의 윤곽이 매끈하게 맞는지 본다. 관절 수 검사 통과와 별도로 Play 직후 링크 분리·급격한 튀기·바퀴 떨림 없이 주행과 lift가 가능한지 관찰하고 결과를 저장한다.
+
 ## 실행과 준비
 
 Isaac Sim **5.1.0**, RTX GPU, GUI, 위 forklift asset을 읽을 수 있는 assets root가 필요하다. 다른 로컬 패키지는 필요 없다. 기본 구성: 강체는 같이 움직이는 부품 묶음, collider는 접촉 표면, joint는 두 강체의 허용 운동, articulation은 이 joint들을 물리 solver의 트리로 묶는 정보다.
@@ -34,7 +46,7 @@ python3 run.py --help
 8. back_wheel_swivel→back_wheel의 `rear_drive` revolute를 만들고 axis=X, Angular Drive stiffness=100, damping=10000으로 둔다. body→back_wheel_swivel의 `rear_steer`는 axis=Z, limits=-60..60 **deg**, stiffness=100000, damping=100이다.
 9. 루트 `SMV_Forklift_B01_01`에 Articulation Root가 있는지 확인하고 Self Collision은 끈다. root가 이미 있으면 중복으로 추가하지 않는다. **Create → Physics → Physics Scene**, **Ground Plane**을 추가하고 stage 단위에 맞는 중력을 확인한다. cm stage에서 9.8 m/s²는 980 stage-unit/s²다.
 10. `rear_drive` target velocity=-200 **deg/s**로 두고 Play. forklift가 전진하고 네 roller가 수동적으로 굴러가는지 본다. lift target을 -15→50으로 바꿔 위로 움직이는지 확인한다.
-11. **Window → Script Editor**에서 `inspect_result.py`를 실행한다. 실제 움직이는 joint가 7개인지 검사하고 body relationship, axis, limit, drive가 출력된다. `joint_spec.json`과 대조한다. 이 검사는 수치·구조 검사이며 접촉과 주행 안정성은 실제 화면에서 확인한다.
+11. **Window → Script Editor**에서 `inspect_result.py`를 실행한다. revolute/prismatic joint가 7개인지 검사하고 body relationship, axis, limit, drive가 출력된다. 출력값을 `joint_spec.json`과 직접 대조한다. 도구는 실제 운동이나 모든 수치의 일치를 자동 검사하지 않으므로 접촉과 주행 안정성은 실제 화면에서 확인한다.
 
 ## 단위 변환과 마무리
 

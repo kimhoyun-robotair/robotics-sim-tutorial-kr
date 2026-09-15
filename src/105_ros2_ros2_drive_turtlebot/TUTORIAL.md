@@ -4,6 +4,18 @@
 
 예상 결과는 외부 `/cmd_vel` 메시지에 따라 TurtleBot이 바닥 위에서 이동하고, 0 명령을 보내면 정지하는 것이다. `run.py`는 공식 TurtleBot3 asset과 같은 제어 노드로 평평한 테스트 장면을 만든다. 공식 Simple Room 환경 대신 평면을 사용하여 제어 연결을 보기 쉽게 한 변형이다.
 
+## 이 실습의 의도
+
+차체의 전진·회전 속도인 `Twist.linear.x`와 `angular.z`가 좌우 바퀴의 각속도로 바뀌고 실제 이동으로 이어지는 과정을 확인한다. 평평한 바닥은 바퀴 제어와 접지 결과를 쉽게 비교하기 위한 구성이다. 기본 실행은 `/cmd_vel` 수신과 제어 그래프를 준비하며, 주행 명령은 외부 ROS 터미널에서 보내야 한다.
+
+## 실행 후 확인할 것
+
+- `/DriveGraph`에서 `Twist → Linear/Angular → Differential → Actuator`를 따라가고, `ros2 topic info /cmd_vel -v`에서 `geometry_msgs/msg/Twist`를 받는 subscriber를 확인한다. 토픽 연결과 실제 주행을 각각 확인한다.
+- 아래의 10 Hz 전진 명령 `linear.x=0.2`, `angular.z=0`을 보내면 콘솔 `wheel_commands_rad_s`의 두 값이 약 8 rad/s로 같고, `position_m`과 viewport의 로봇 위치가 변해야 한다. 바퀴 명령과 차체 이동이 함께 보이는 것이 적용 확인이다.
+- 제자리 회전 명령 `linear.x=0`, `angular.z=0.5`에서는 좌우 바퀴 명령이 반대 부호가 되고 차체 방향이 바뀌어야 한다. 접지 과도응답 때문에 위치가 한 점에 정확히 고정될 필요는 없다.
+- 송신기를 Ctrl+C로 끝내도 마지막 속도로 계속 움직이는 것은 watchdog이 없는 이 그래프의 의도된 동작이다. 선속도·각속도가 모두 0인 메시지를 보낸 뒤 바퀴 명령이 0으로 바뀌고 로봇이 멈추는지 확인한다.
+- 물리·렌더 간격은 1/60초이고 제어는 매 playback tick에 실행된다. 콘솔은 120스텝마다 출력하므로 로그 빈도를 `/cmd_vel` 송신 빈도나 제어 빈도로 해석하지 않는다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 3600스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
 
 ## 이 폴더에서 시작하기
@@ -77,4 +89,4 @@ Articulation Root는 로봇의 링크·관절을 하나의 물리 계통으로 �
 - [공식 5.1 노드 해설](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html#graph-explained)
 - [공식 5.1 ROS 확인](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html#verifying-ros-connections)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.

@@ -4,6 +4,18 @@
 
 UR10으로 c-space 최적 시간 궤적, timestamped 궤적, task-space 직선 경로, 복합 path spec을 각각 생성합니다. 공식 예제의 핵심 모드를 독립 실행 옵션으로 제공하고 실제 관절 추종 상태를 기록합니다.
 
+## 이 실습의 의도
+
+UR10의 관절 waypoint 또는 말단 경로를 시간에 따른 관절 목표열로 바꾸고 실제 drive가 그 목표를 따라가는지 확인합니다. 기본 cspace 모드는 6축 관절 waypoint를 연결하며, 빨간 marker는 해당 waypoint의 말단 FK 위치를 보여 줍니다. 로봇 원점 아래로도 지나가는 경로를 위해 바닥을 z=−2 m에 두고, 시작 자세만 한 번 직접 설정한 뒤 물리 drive로 궤적을 재생합니다.
+
+## 실행 후 확인할 것
+
+- GUI에서 `/World/ur10`과 빨간 `/World/waypoint_*`를 확인합니다. base가 바닥보다 위에 고정되어 보이는 것은 열린 작업공간을 마련한 구성이고, cspace의 말단 이동이 marker 사이 직선일 필요는 없습니다.
+- `trajectory.json`의 `mode`, `action_count`, `duration_s`, `ground_plane_z_m`를 확인합니다. 생성된 action이 있다는 사실은 궤적 계산 성공이며 실제 전체 재생과 추종은 다음 항목으로 구분합니다.
+- `completed_sequence=true`는 모든 action을 적용할 만큼 스텝을 실행했다는 뜻입니다. 제한 실행에서는 `--steps`를 `action_count` 이상으로 잡고, timestamped의 13초 경로는 headless 기본 600스텝(10초)으로 완료되지 않을 수 있음을 확인합니다.
+- 15스텝마다 기록한 `trace`의 `target_positions`와 `measured_positions`를 비교해 6개 관절의 물리 추종을 확인합니다. `completed_sequence`가 true여도 오차가 크면 목표열 전달과 실제 추종 결과가 다른 상태입니다.
+- GUI를 계속 열어 두면 경로 재생 후 마지막 목표를 유지합니다. 끝에서 로봇이 멈춰 있는 것은 반복 재생을 하지 않는 설계이며, marker 통과와 관절 추종을 확인해도 전체 경로의 충돌 부재까지 검증한 것은 아닙니다.
+
 ## 준비와 실행
 
 이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
@@ -32,7 +44,7 @@ UR10의 고정 base는 월드 원점에 두고, 참조용 바닥은 **z=−2 m**
 ## 단계별 실습
 
 1. cspace 실행에서 빨간 waypoint marker를 확인합니다. 6개 값으로 된 UR10 관절 waypoint를 FK로 변환하여 표시합니다. joint 공간에서 부드럽게 이어도 end-effector가 task-space 직선으로 움직인다는 뜻은 아닙니다.
-2. timestamped 모드는 같은 waypoint를 `[0,5,10,13]`초에 통과하도록 요구합니다. 총 재생이 끝나려면 적어도 13×60 스텝이 필요하며 종료 뒤 마지막 target을 유지합니다.
+2. timestamped 모드는 같은 waypoint를 `[0,5,10,13]`초에 통과하도록 요구합니다. 물리 시간 13초 분량이므로 제한 실행은 실제 생성된 `action_count` 이상으로 스텝 수를 잡고, 재생 완료 뒤 마지막 target을 유지하는지 확인합니다.
 3. taskspace 모드는 `[0.3,−0.3,0.1]`에서 시작하는 직사각형의 다섯 점과 고정 quaternion `[0,1,0,0]`을 전달합니다. `ee_link` frame의 위치/orientation을 task space에서 연결합니다.
 4. composite 모드는 task-space의 translation, rotation, three-point arc에 c-space 경로를 연결합니다. 초기 configuration과 path 사이에는 `TransitionMode.FREE`를 사용합니다. 이 연결 구간은 직선 task-space 이동으로 제한되지 않습니다.
 5. `trajectory.json`의 action_count와 duration_s를 확인합니다. completed_sequence가 false라면 창을 더 오래 열어 두거나, 제한 실행에서 `--steps`를 늘려 전체 궤적을 재생합니다. GUI는 궤적 재생 뒤에도 마지막 목표를 유지하며 물리를 계속 갱신합니다. trace의 target_positions와 measured_positions 차이는 물리 drive의 추종 오차입니다.

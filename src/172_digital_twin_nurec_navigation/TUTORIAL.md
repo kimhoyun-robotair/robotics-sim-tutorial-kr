@@ -2,7 +2,19 @@
 
 권장 학습 순서 **172** · 고급 데이터 생성과 외부 시스템 통합 · 출처 ID `t178`
 
-실제 사진으로 재구성한 3D Gaussian 기반 NuRec 장면을 USD로 열고 Nova Carter의 navigation graph를 실행한다. 이 패키지는 **실제 NuRec dataset**을 입력으로 요구한다. 빈 stage나 일반 cube로 신경 렌더링을 대신하지 않는다. `run.py`는 원문의 네 가지 장면 중 하나를 선택하여 bounded simulation을 실행하고 실제 chassis 위치를 `trajectory.json`에 기록한다.
+실제 사진으로 재구성한 3D Gaussian 기반 NuRec 장면을 USD로 열고 Nova Carter의 navigation graph를 실행한다. 이 패키지는 **실제 NuRec dataset**을 입력으로 요구한다. 빈 stage나 일반 cube로 신경 렌더링을 대신하지 않는다. `run.py`는 원문의 네 가지 장면 중 하나를 선택하여 주행 시뮬레이션을 실행하고 실제 chassis 위치를 `trajectory.json`에 기록한다.
+
+## 이 실습의 의도
+
+사진 기반 Gaussian 장면의 시각적 재구성과 로봇을 지지하는 물리 장면이 서로 다른 구성임을 Carter 주행으로 확인한다. 장면별 시작점·로컬 목표 변환을 명시하고, lounge에만 보이지 않는 충돌 평면을 추가해 렌더링된 바닥과 실제 접촉면의 차이를 드러낸다. 기본 실행은 준비된 NuRec dataset 한 장면에서 공식 navigation graph를 실행하고 실제 chassis 궤적을 기록하며, 재구성 학습이나 새 경로 계획 알고리즘을 구현하지 않는다.
+
+## 실행 후 확인할 것
+
+- **배경과 로봇:** GUI에서 선택한 cafe·galileo·wormhole·lounge의 neural volume 배경과 `/World/NovaCarterNav`가 함께 나타나는지 본다. Carter만 보이는 경우는 NuRec 렌더링 성공으로 판단하지 않는다.
+- **접촉과 이동:** `chassis_link`가 지면에 지지되고 목표 방향으로 이동하는지 관찰한다. lounge에서는 `/World/CollisionPlane`이 Stage에 있고 `visibility=invisible`이면서 collision이 활성화되어야 하며, 화면에 평면이 안 보이는 것이 정상이다.
+- **실측 궤적:** 실행을 마친 뒤 `trajectory.json`의 `step`, `timeline_seconds`, `chassis_world_position`을 읽어 시간과 실제 위치 변화를 비교한다. 좌표가 target 설정값으로 고정된 기록이 아니라 chassis에서 읽은 값인지 이해한다.
+- **목표 좌표:** `scenarios.json`의 `relative_target`은 `targetXform`의 부모 기준이다. Stage hierarchy에서 세계 좌표로 확인한 목표와 chassis의 세계 좌표를 비교하며 두 배열을 그대로 빼서 도달 판정을 하지 않는다.
+- **종료의 의미:** `--check`는 root USD 존재만 확인하고, `--steps 500`은 앱 업데이트 횟수만 제한한다. 충분히 주행하지 못한 짧은 기록·창 닫기·시간 제한 종료를 목표 도달 성공으로 세지 않는다.
 
 ## 준비
 

@@ -4,6 +4,19 @@
 
 Isaac Sim 5.1 **RTX Lidar Sensors**를 독립 실행 패키지로 재구성했다. 2D 회전형 센서가 `/scan`에 LaserScan을 보내고, 3D 센서가 `/point_cloud`에 PointCloud2를 보낸다. 두 센서와 벽·표적을 코드로 만들므로 TurtleBot이나 창고 자산을 준비하지 않아도 된다. 원문의 로봇 부착, GUI 그래프, 단축 메뉴, 여러 센서 시간 동기화는 아래에서 같은 원리로 실습한다.
 
+## 이 실습의 의도
+
+같은 위치의 2D·3D RTX LiDAR가 주변 기하를 각각 수평 거리 배열과 3D 점군으로 표현하는 차이를 확인한다. 네 벽과 +X 방향 표적은 거리와 단면을 해석할 기준물이며, 두 센서에 별도 Render Product를 붙인다. 기본 실행은 부분 3D 점군과 완성된 2D LaserScan 및 시계를 발행하고, 로봇 이동이나 센서 TF 구성은 포함하지 않는다.
+
+## 실행 후 확인할 것
+
+- Stage의 `/World/Lidar2D`, `/World/Lidar3D`가 같은 위치 (0,0,1) m에 있고 각 Helper가 자기 Render Product를 참조하는지 확인한다. `--profile`은 3D 센서만 바꾸며 2D는 항상 `Example_Rotary_2D`다.
+- `/scan`의 타입은 `sensor_msgs/msg/LaserScan`, `/point_cloud`는 `sensor_msgs/msg/PointCloud2`이고 두 메시지의 `header.frame_id`는 `base_scan`이어야 한다. ranges와 점군 width/point_step/data가 채워지고 timestamp가 진행하는지 실제 수신으로 확인한다.
+- RViz Fixed Frame=`base_scan`에서 LaserScan은 벽·표적의 수평 단면, PointCloud2는 높이 방향을 포함한 표면을 보여야 한다. +X 표적의 가까운 면은 약 1.5 m이며 개별 광선 표본이 정확히 그 값에 놓일 필요는 없다.
+- `/clock`을 수신하고 RViz의 `use_sim_time=true`를 적용한다. `/tf` 발행기는 없는 구성이므로 Fixed Frame=`world`에서 변환 오류가 나는 것은 world 기준 시각화를 아직 구성하지 않았다는 뜻이다.
+- LaserScan은 한 회전의 데이터가 준비될 때까지 기다린다. 60 render frame/s 설정과 센서의 완전 스캔 발행 주기는 다르므로 매 프레임 새 LaserScan을 요구하지 않는다.
+- 기본 실행과 `--full-scan` 실행의 `/point_cloud` 점 수·수신 간격을 비교한다. 전체 스캔을 누적하는 3D 출력의 차이를 관찰하고, 변경하지 않은 `/scan` 설정과 구분한다. 실제 Hz는 GPU와 센서 프로필에 따라 달라진다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 시뮬레이션 스텝과 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 지정하면 해당 횟수 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1800회를 사용합니다. 이전 `--frames` 옵션은 `--steps` 없는 headless 실행의 횟수만 정하며, GUI 종료에는 영향을 주지 않습니다. `--steps`를 지정하면 `--frames`보다 우선하며 0과 음수는 허용하지 않습니다.
 
 ## 준비와 실행

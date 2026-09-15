@@ -2,15 +2,24 @@
 
 권장 학습 순서 **10** · Python 실행 환경과 USD 기초 · 출처 ID `t173`
 
+## 이 실습의 의도
+
+구 하나를 `/hello/world`에 두고 부모/자식 변환, 재질 연결, 레이어 합성, 저장 범위를 작은 USD 장면으로 익힌다. 부모 이동과 자식 이동을 나눠 작성하고 session layer에서만 반지름을 바꾸어, 화면의 합성 결과와 디스크에 저장되는 의견이 어떻게 다른지 확인한다. 기본 실행은 `hello.usda`, `details.usda`, `inspection.json`을 만들고 저장 장면을 열며, 물리 낙하 없이 USD 데이터와 변환 계산을 검사한다.
+
+## 실행 후 확인할 것
+
+- `inspection.json`의 `world_position`이 `[1, 0, 1]`인지 확인한다. `/hello`의 Z=1과 자식 `/hello/world`의 X=1이 합쳐진 결과이며, 두 로컬 위치 중 어느 하나만 읽은 값과 구분한다.
+- 기본 `--radius 0.5`에서 `session_radius`는 1.0, `saved_radius`는 0.5인지 확인한다. 다른 반지름을 주면 각각 입력의 두 배와 원래 값이어야 한다. 새 session으로 파일을 다시 열 때 두 배 변경이 사라지는 것은 의도된 저장 범위 비교다.
+- `details.usda`의 `tutorial:label = "layer-authored"`와 `hello.usda`의 `subLayers` 참조를 확인한다. 두 파일의 상대 경로를 유지하고 `hello.usda`를 열면 `details.usda`의 속성이 합성된다. root 파일 저장만으로 session 의견까지 저장되지는 않는다.
+- `/hello/world`의 재질 바인딩과 `/hello/Looks/Red/Shader`의 `diffuseColor`를 확인한다. 기본 실행은 빨간 `UsdPreviewSurface` 재질을 작성하며, 아래 MDL 비교는 사용자가 별도로 실행한다. 구가 중력으로 떨어지지 않는 것도 정상이다.
+- `traversal`에는 `/Light`가 있고 `default_prim_subtree`에는 없어야 한다. 전체 Stage 순회와 defaultPrim인 `/hello` 아래 순회의 범위 차이를 보여준다.
+- `transform_max_error`가 1e−6 이내인지 확인한다. 이는 제공된 균일 양수 스케일·회전·이동 행렬을 분해한 결과의 오차이며, 임의 shear나 음수 스케일까지 검증하는 기준은 아니다. `--steps`는 이 계산의 반복 횟수가 아닌 장면 표시를 위한 앱 업데이트 제한이다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
 이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
-
-## 목표와 예상 결과
-
-`/hello/world`에 구를 만들고 속성 수정, 부모/자식 이동, 재질 연결, Stage 순회, sublayer/session layer, 변환 분해를 실습한다. 물리 시뮬레이션 없이 USD를 작성·재개방하며 `hello.usda`, `details.usda`, `inspection.json`을 만든다. 이 예제의 구가 중력으로 떨어지지 않는 것은 정상이다.
 
 ## 순서대로 실습
 

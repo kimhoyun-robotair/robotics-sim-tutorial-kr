@@ -4,6 +4,18 @@
 
 동일한 낙하 상자를 4개의 환경으로 복제하고 모든 상자의 포즈를 배열 하나로 읽고 수정합니다. 공식 Script Editor 예제를 독립 실행 프로그램으로 옮겼으며, `Cloner`, `GridCloner`, 일괄 포즈 처리, physics replication과 충돌 필터를 모두 실습합니다.
 
+## 이 실습의 의도
+
+낙하 상자 하나를 환경 단위로 복제하고 모든 상자의 위치를 한 배열로 읽고 바꾸는 흐름을 익힙니다. 기본은 파란 상자 네 개를 격자에 놓고 공통 바닥은 공유하며, `--layout line`, `--copy`, `--replicate-physics`로 배치·USD 속성 공유·물리 생성 방식을 각각 비교합니다. 이 코드는 실제 물리 step을 진행하지만 기본 환경 간격이 넓어서 화면의 낙하만으로 환경 간 충돌 필터의 효과나 복제 성능 향상까지 입증할 수는 없습니다.
+
+## 실행 후 확인할 것
+
+- **복제된 대상:** Stage에서 `/World/envs/env_0`부터 요청한 개수의 환경까지 각 `cube`가 하나씩 있는지 확인합니다. 기본 상자는 한 변 0.5 m이고 바닥 `/World/defaultGroundPlane`은 환경 밖에서 공유됩니다.
+- **배치와 기록 수:** 실행 종료 후 `poses.json`의 `paths`, `initial_positions_m`, `final_positions_m` 행 수가 모두 `--count`인지 확인합니다. line 모드의 X 간격은 `--spacing`, Y는 0이며 grid 모드는 격자 배치입니다. 초기 배열은 코드에서 일괄 Z 이동을 적용하고 `world.reset()`한 뒤 읽은 값입니다.
+- **낙하와 접촉:** 충분히 진행했을 때 final Z가 initial Z보다 낮아지고, 바닥에서 안정된 상자 중심이 대략 0.25 m인지 화면과 숫자로 확인합니다. 짧은 `--steps`는 낙하 중에 끝날 수 있습니다. [RUNTIME_CHECK.md](RUNTIME_CHECK.md)의 60스텝 final Z 약 0.56 m는 해당 시점의 예이며 접촉 안정 높이나 모든 실행의 정답이 아닙니다.
+- **복사 방식:** 기본 `copy_from_source=false`와 `--copy` 실행의 `cloned_scene.usda` 구성을 비교합니다. 기본 Inherits에서는 원본 cube 색 수정이 clone에 전달되는지, copy 모드에서는 독립적으로 남는지 관찰합니다.
+- **물리 복제·충돌 범위:** `poses.json`에서 요청한 `replicate_physics`가 기록됐는지 확인하고, Stage의 `/World/collisionGroups`가 환경별 그룹과 공통 바닥을 참조하는지 봅니다. 이 플래그의 기록만으로 물리 성능이나 환경 간 충돌 차이를 검증한 것은 아닙니다.
+
 ## 준비와 실행
 
 이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
@@ -27,7 +39,7 @@ python3 run.py --help
 1. 기본 실행 후 Stage에서 `/World/envs/env_0`부터 `env_3`까지 펼칩니다. 각 환경에는 `cube` 하나가 있습니다. 바닥과 PhysicsScene은 환경 밖에서 공유됩니다.
 2. `GridCloner(spacing=3)`는 환경 원점을 격자로 배치합니다. `--layout line`에서는 `Cloner.clone(positions=...)`에 `[0,0,0]`, `[3,0,0]`, `[6,0,0]`, `[9,0,0]`을 직접 전달합니다.
 3. 코드의 `XFormPrim('/World/envs/env_.*/cube')`가 네 상자를 하나의 view로 잡는 부분을 찾습니다. `get_world_poses()`의 위치 배열은 `(N,3)`, 회전 배열은 `(N,4)`이며 quaternion 순서는 **w,x,y,z**입니다. 모든 z에 1.5 m를 더한 뒤 `set_world_poses()`로 적용합니다.
-4. 상자가 바닥에 떨어진 후 `poses.json`의 초기/최종 z를 비교합니다. 한 변 0.5 m인 상자는 바닥 위에서 중심이 대략 0.25 m에 있어야 합니다. 물리 오차를 고려하여 정확한 문자열 일치 대신 수치와 화면을 비교합니다.
+4. 상자가 바닥에 떨어져 안정될 만큼 진행한 후 `poses.json`의 초기/최종 z를 비교합니다. 안정된 한 변 0.5 m 상자는 바닥 위에서 중심이 대략 0.25 m에 있어야 하며, 짧은 실행은 그 높이에 도달하기 전에 끝날 수 있습니다. 물리 오차를 고려하여 정확한 문자열 일치 대신 수치와 화면을 비교합니다.
 5. `--copy`를 넣어 실행하고 `cloned_scene.usda`에서 inherit 구성이 사라지는지 비교합니다. GUI에서 원본 `env_0/cube`의 displayColor를 수정하면 기본 Inherits 구성은 다른 clone에도 전달됩니다. `--copy` 결과에서는 독립적입니다.
 6. `--replicate-physics`로 복제를 반복합니다. `define_base_env('/World/envs')`와 `generate_paths()`를 먼저 호출하여 replication에 필요한 공통 조상과 순차 접미사를 명확히 합니다. 실행 중 마찰/재질/shape 속성을 바꾸는 실험은 replication을 끈 상태로 합니다.
 
@@ -39,9 +51,9 @@ USD Stage는 장면 문서이며 prim은 `/World/envs/env_0/cube`처럼 경로�
 
 5.1 문서 일부는 `XFormPrimView`라는 이전 이름을 보여 줍니다. 설치된 5.1 API의 복수 prim 클래스 `XFormPrim`을 사용합니다. 이 클래스의 정규식과 단일 prim 클래스 `SingleXFormPrim`을 혼동하지 않습니다.
 
-## 관찰 기준과 한 변수 실험
+## 한 변수 실험
 
-`poses.json`의 paths/초기/최종 위치 행 수가 `--count`와 같고, x/y 배치가 선택한 layout에 맞아야 합니다. `--spacing 3`만 `--spacing 1`로 바꾸어 배열을 더 조밀하게 만듭니다. 로봇 정책 학습은 포함하지 않으며 복제된 환경에서 관측을 모을 기초를 구현합니다.
+`--spacing 3`만 `--spacing 1`로 바꾸어 배열을 더 조밀하게 만듭니다. 로봇 정책 학습은 포함하지 않으며 복제된 환경에서 관측을 모을 기초를 구현합니다.
 
 ## 문제 해결
 
@@ -49,7 +61,7 @@ USD Stage는 장면 문서이며 prim은 `/World/envs/env_0/cube`처럼 경로�
 
 ## 검증 범위
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 아래 관찰 기준으로 직접 결과를 확인합니다.
+이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 앞의 **실행 후 확인할 것** 기준으로 직접 결과를 확인합니다.
 
 ## 출처
 

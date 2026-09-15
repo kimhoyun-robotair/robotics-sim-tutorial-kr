@@ -4,9 +4,19 @@
 
 공식 인덱스 **t124** · Isaac Sim **5.1.0**
 
-## 결과와 준비
+## 이 실습의 의도
 
-이 패키지는 공식 GUI/ROS import/Robot Assembler 실습을 한국어 절차로 제공하고, `run.py`로 실제 조립 USD의 articulation root·joint body 관계·variant를 검사합니다. URDF importer나 조립 기능을 자체 구현했다고 주장하는 wrapper가 아닙니다. `prepare_xacro.py`는 이 폴더 안에 포함한 실제 전처리 도구입니다.
+UR10e 손목과 Robotiq 그리퍼를 fixed joint로 연결하고 articulation root를 하나로 정리하여, 두 자산을 하나의 제어 가능한 로봇으로 조립하는 과정을 배웁니다. 수동 연결과 Robot Assembler의 variant 구성을 각각 GUI에서 수행하고 결과의 구조를 비교합니다. 기본 `run.py`는 이미 조립된 공식 샘플을 열어 구조를 기록하는 검사기이며, 직접 만든 로봇은 `--asset`으로 지정해야 검사 대상이 됩니다. `prepare_xacro.py`는 선택한 Robotiq 소스의 작업 복사본과 경로만 준비하며 XACRO 확장·URDF import·조립은 해당 절차에서 따로 수행합니다.
+
+## 실행 후 확인할 것
+
+- **검사 대상:** `assembly_report.json`의 `asset`이 공식 `ur_gripper.usd`인지 자신의 조립 결과인지 먼저 확인합니다. 기본 샘플이 보이는 것만으로 사용자가 만든 조립 결과가 검사된 것은 아닙니다.
+- **articulation 통합:** 보고서의 `articulation_roots`가 하나이고 `single_articulation=true`인지 확인합니다. 이 값은 기록만 되므로 `false`여도 실행 종료 코드가 자동으로 오류가 되지는 않습니다.
+- **손목 연결:** `joints`에서 그리퍼 고정 joint의 `body0`가 `/ur/wrist_3_link`, `body1`이 그리퍼 base 강체를 가리키는지 확인합니다. GUI에서 Play하여 장착 위치를 유지하는지도 봅니다. 이 검사기는 물리를 자동 재생하거나 팔 목표를 보내지 않습니다.
+- **조립 방식별 결과:** Robot Assembler로 만든 경우 `variant_sets`의 `ee_link` 선택지와 GUI의 `None`↔`robotiq_2f_140` 전환을 확인합니다. 보고서는 선택지 이름을 기록할 뿐 전환을 실행하지 않으며, 수동 Fixed Joint 조립에는 같은 variant가 없어도 됩니다.
+- **보존할 파일:** `inspection_scene.usda`는 검사 장면이고 실제 조립 편집은 작업한 로컬 USD에 저장합니다. ROS/XACRO 경로를 택했다면 생성 URDF가 `robotiq_work`의 mesh를 계속 참조하는지도 확인합니다.
+
+## 준비
 
 Isaac Sim 5.1.0, NVIDIA GPU와 정상 드라이버, 5.1 asset root가 필요합니다. **ROS를 설치하지 않아도** Content Browser에서 다음 준비된 공식 에셋으로 조립 실습 전체를 진행할 수 있습니다. 경로는 대소문자를 구별합니다.
 
@@ -92,9 +102,9 @@ python3 run.py --help
 
 `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 1200회 한도를 사용한다. 기존 `--frames`는 `--steps` 없는 headless 실행의 한도로만 쓰며 GUI를 닫지 않는다.
 
-`assembly_report.json`에 articulation root가 정확히 하나인지, 고정 joint body0가 손목을 가리키는지, variant 이름이 있는지 실제 USD 값을 기록합니다. GUI 준비기는 물리를 자동 시작하지 않습니다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 직접 확인할 수 있습니다. 기본 출력은 `output/<고유번호>/`이며 `--output`은 존재하지 않는 새 경로만 허용합니다.
+`assembly_report.json`에는 articulation root 목록과 `single_articulation`, joint의 실제 body0/body1 관계, variant 선택지 이름을 기록합니다. 손목 연결이 올바른지는 보고서를 보고 직접 대조하며, root 개수나 variant 전환 성공을 자동 합격/불합격 판정하지 않습니다. GUI 준비기는 물리를 자동 시작하지 않습니다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 직접 확인할 수 있습니다. 기본 출력은 `output/<고유번호>/`이며 `--output`은 존재하지 않는 새 경로만 허용합니다.
 
-성공은 모델이 보이는 것뿐 아니라 root 하나, 손목–그리퍼 fixed joint, variant 전환 후 구성 변화로 판정합니다. 한 변수 실험으로 Assembler의 Z +90만 생략해 장착 방향이 어떻게 달라지는지 비교합니다. gripper가 떨어지면 root_joint의 Body0/Body1과 articulation root 수를 확인합니다. Import가 모델을 못 찾으면 작업 복사본의 mesh 경로와 ROS node 이름을 먼저 확인합니다.
+성공은 모델이 보이는 것뿐 아니라 root 하나, 손목–그리퍼 fixed joint와 실제 장착 유지로 판정합니다. Assembler 경로에서는 variant 전환 후 구성 변화도 확인합니다. 한 변수 실험으로 Assembler의 Z +90만 생략해 장착 방향이 어떻게 달라지는지 비교합니다. gripper가 떨어지면 root_joint의 Body0/Body1과 articulation root 수를 확인합니다. Import가 모델을 못 찾으면 작업 복사본의 mesh 경로와 ROS node 이름을 먼저 확인합니다.
 ## 버전 고정 출처
 
 - [NVIDIA Isaac Sim 5.1.0 — Tutorial 6: Setup a Manipulator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_import_assemble_manipulator.html)

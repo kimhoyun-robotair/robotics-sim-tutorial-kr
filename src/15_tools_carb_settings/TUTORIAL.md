@@ -4,6 +4,18 @@
 
 이 패키지의 작은 확장은 startup 때 `foo` 값을 읽는다. Script Editor, 명령행, extension TOML, app KIT의 네 가지 설정 위치를 실제 값으로 비교한다.
 
+## 이 실습의 의도
+
+하나의 Carb 설정 `/exts/kr.settings.demo/data/foo`를 확장 시작 시 읽어, 실행 중 변경과 다음 앱 실행에도 남는 설정의 차이를 비교합니다. 작은 확장은 장면을 만들거나 로봇을 움직이지 않고 `on_startup()`에서 읽은 값을 출력합니다. 기본 TOML, Script Editor, 명령행 인자, 사용자 app 설정을 차례로 바꾸며 **어디에 값을 썼는지와 언제 읽었는지**를 연결하는 실습입니다.
+
+## 실행 후 확인할 것
+
+- 원본 `extension.toml`을 유지하고 별도 설정 인자 없이 확장을 켰다면 Console/터미널에 `kr.settings.demo startup foo = False`가 나와야 합니다. 이 값이 이후 비교의 기준입니다.
+- Script Editor에서 `change_setting.py`를 실행하면 확장이 꺼졌다 켜지며 `shutdown` 다음의 startup 값과 `live setting`이 `True`인지 확인합니다. 현재 프로세스의 값을 바꾸고 다시 읽는 동작입니다.
+- TOML을 수정하지 않은 상태에서 앱을 완전히 종료하고 인자 없이 다시 실행하면 기본값 `False`로 돌아오는지 봅니다. USD Stage 저장은 이 설정을 보존하지 않습니다.
+- `--/exts/kr.settings.demo/data/foo=true`를 넣은 실행은 startup이 `True`인지 확인합니다. TOML을 false로 유지한 채 CLI 인자만 바꿔야 두 설정 위치의 차이를 판단할 수 있습니다.
+- 설정을 저장하는 단계에서는 extension TOML 또는 사용자 app KIT를 수정한 뒤 재실행해 startup 값을 봅니다. `app_settings.toml` 자체는 붙여 넣을 설정 조각이므로 이 파일만 실행해서 앱이나 결과 창이 만들어지는 실습은 아닙니다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -61,7 +73,7 @@ cd /absolute/path/to/this-package/output/app-template
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 위의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

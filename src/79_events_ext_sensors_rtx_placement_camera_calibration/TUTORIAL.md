@@ -4,6 +4,18 @@
 
 두 가상 카메라의 내부·외부 행렬, 보정점, 바닥 FOV를 공식 Camera Calibration GUI로 내보냅니다. `room.usda`는 12 m × 10 m 바닥, 가림막, 두 Camera prim과 NavMesh 포함 영역을 가진 독립 장면입니다. 공식 Full Warehouse를 작은 장면으로 바꾸었고 보정 계산은 NVIDIA 확장의 원래 구현을 사용합니다. 실제 카메라의 렌즈 왜곡을 측정하는 체커보드 보정 실험과는 구별하세요.
 
+## 이 실습의 의도
+
+알려진 가상 카메라 두 개의 위치·렌즈 정보를 영상 좌표와 연결하고, 내보낸 행렬·보정점·바닥 FOV가 서로 어떤 관계인지 확인합니다. 서로 반대편의 `Camera_A`, `Camera_B`와 중앙 가림막은 카메라마다 투영과 보이는 바닥 영역이 다르다는 점을 보여줍니다. 실행 명령은 GUI를 준비하며, 보정 파일과 이미지는 Bake·Top View 생성·점 생성·내보내기를 직접 수행해야 만들어집니다. 검사기는 그 파일 내부의 수학적 일관성을 계산하며 실제 카메라 렌즈의 측정 오차를 추정하지 않습니다.
+
+## 실행 후 확인할 것
+
+- `/World/Cameras`의 `Camera_A`, `Camera_B`와 Bake된 NavMesh를 확인합니다. `inspect_stage.py`에 두 경로와 `navmesh_available=true`가 나오는 것은 준비 완료 기준이고, 아직 보정 계산이 완료되었다는 뜻은 아닙니다.
+- **Create Dot Prims** 후 `/World/Calibration_Dots/Camera_A`, `Camera_B` 아래 각각 6개 점이 생기고 각 카메라 영상에 보이는지 확인합니다. 카메라 자세나 렌즈를 바꾼 뒤에는 점 생성부터 반복해야 같은 조건의 데이터를 비교할 수 있습니다.
+- `calibration.json`을 검사해 `camera_count=2`와 카메라마다 `dot_pairs`가 6 이상인지 확인합니다. 직접 파일에서 K=`intrinsicMatrix` 3×3, E=`extrinsicMatrix` 3×4, P=`cameraMatrix` 3×4와 `homography` 3×3, `place` 값이 입력한 장면 정보와 맞는지도 봅니다.
+- `max_reprojection_error_px`와 `projection_vs_intrinsic_extrinsic_residual`은 각각 점 대응과 P=K×E의 일관성을 읽는 수치입니다. 검사기는 값을 출력하며 별도의 오차 합격선을 적용하지 않으므로, 종료 성공만 보고 보정 정확도가 보장되었다고 판단하지 않습니다. 큰 오차가 보이면 점 대응과 카메라 변경 여부를 먼저 확인합니다.
+- `Top.png`, `imageMetadata.json` 및 켜 둔 FOV 이미지 옵션의 `Debug/fieldOfViewPolygon`을 실제로 열어 방 전체와 카메라별 FOV를 대조합니다. 상면 폴리곤의 구멍이나 가림막 뒤 빈 영역은 가림의 결과일 수 있으며, 작은 행렬 잔차가 그 영역의 가시성을 보장하지는 않습니다.
+
 ## 필요한 환경과 명령
 
 Isaac Sim 5.1.0 GUI, 지원 RTX GPU, `isaacsim.sensors.rtx.placement`, `omni.anim.navigation.bundle`이 필요합니다. 다른 로컬 튜토리얼·공통 코드·외부 모델은 필요 없습니다.
@@ -41,7 +53,7 @@ USD Camera는 로컬 -Z를 보고 +Y가 영상 위쪽입니다. Z-up 장면에 �
 
 보정점의 월드 좌표를 P로 변환하고 마지막 성분으로 나눈 결과와 저장된 픽셀 좌표를 비교한 값이 재투영 오차입니다. 작은 오차는 **파일 안 좌표의 일관성**을 뜻합니다. 그 자체로 현실 카메라의 정확도나 장애물 뒤의 가시성을 증명하지 않습니다. FOV 폴리곤은 렌즈 화각뿐 아니라 장면의 가림과 raycast 샘플링에 영향을 받습니다.
 
-성공하면 카메라 두 개의 유효 행렬과 카메라마다 6쌍 이상의 점 좌표가 있고 상면 이미지와 폴리곤이 보입니다. 점 샘플은 달라질 수 있으므로 원문 스크린샷과 픽셀이 같을 필요는 없습니다.
+점 샘플은 달라질 수 있으므로 원문 스크린샷과 픽셀이 같을 필요는 없습니다.
 
 ## 한 값 변경하기
 

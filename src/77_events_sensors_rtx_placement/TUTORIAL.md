@@ -4,6 +4,18 @@
 
 이 패키지는 공식 소개 페이지의 두 창을 실제 장면에서 연결하는 독립 실습입니다. `room.usda`는 외부 에셋 없이 만든 12 m × 10 m 바닥, 가림막, 두 카메라, NavMesh 포함 영역입니다. NVIDIA의 배치·보정 확장을 그대로 사용하며, Full Warehouse 대신 작은 실습 장면을 제공했습니다. 자동 배치 알고리즘 자체를 재구현한 패키지가 아닙니다.
 
+## 이 실습의 의도
+
+미리 배치한 두 카메라와 가운데 가림막을 통해, 카메라를 배치하는 도구와 기존 카메라의 투영·FOV를 내보내는 도구의 역할을 구분합니다. `/World/NavMeshVolume`은 걷는 영역을 계산할 범위이고, 가림막은 렌즈 화각 안에도 보이지 않는 바닥이 생긴다는 점을 보여줍니다. 실행 명령은 GUI와 확장을 준비하며, 장면 열기·NavMesh Bake·보정점 및 파일 생성은 아래 버튼 순서대로 직접 수행해야 합니다. 이 입문 절차에서는 기존 `Camera_A`, `Camera_B`를 사용하고 자동 배치는 별도로 실행하지 않습니다.
+
+## 실행 후 확인할 것
+
+- 원본 장면에서 `/World/Room/Occluder`와 `/World/Cameras/Camera_A`, `Camera_B`가 있는지 확인하고 각 카메라 시점으로 전환합니다. 파란 가림막에 가려지는 바닥은 의도한 관찰 대상이며, 카메라 두 개가 있다는 사실만으로 방 전체가 보이는 것은 아닙니다.
+- Bake 후 Navmesh 표시를 켜 바닥의 보행 영역을 확인합니다. Script Editor의 `inspect_stage.py` 출력에서 `meters_per_unit=1`, `up_axis=Z`, `navmesh_available=true`와 두 카메라 경로를 확인합니다. 볼륨 prim만 있거나 검사 스크립트만 실행한 상태는 Bake 완료가 아닙니다.
+- Camera Placement와 Camera Calibration 창이 모두 열리고, Calibration에서 생성한 Top View 카메라로 방 전체를 내려다볼 수 있는지 확인합니다. Top View 카메라는 기존 관찰용 두 카메라와 역할이 다릅니다.
+- **Create Dot Prims** 뒤 `/World/Calibration_Dots`의 두 카메라별 점 6개를 확인하고, **Generate Calibration File / Generate Top View Image** 뒤 `calibration.json`, `Top.png`, `imageMetadata.json`을 실제로 엽니다. 장면을 열거나 확장을 켜기만 해서는 이 산출물이 생기지 않습니다.
+- `calibration.json`의 카메라 정보와 각 시점·상면 이미지를 대조합니다. 이 실습의 stage 검사기는 준비 상태를 확인하며, 파일의 행렬 정확도나 가림막 뒤의 가시성까지 검사하는 도구는 아닙니다.
+
 ## 준비와 실행
 
 Isaac Sim **5.1.0**, 지원 RTX GPU, GUI 실행 환경이 필요합니다. 아래 명령의 설치 경로를 자신의 경로로 바꾸세요. 다른 튜토리얼이나 공통 모듈은 필요 없습니다.
@@ -33,8 +45,6 @@ mkdir -p output/intro-run-01
 USD **Stage**는 장면 전체이고 **prim**은 `/World/Cameras/Camera_A`처럼 주소를 가진 항목입니다. Xform은 부모 좌표계를 만들며, Camera prim의 위치는 부모 변환을 포함한 월드 위치와 다를 수 있습니다. 이 장면은 부모 Xform에 변환이 없어 두 좌표가 같습니다. USD 카메라는 자신의 -Z 방향을 보고 +Y가 영상의 위쪽입니다. 장면의 Z-up과 카메라의 로컬 축은 별개입니다.
 
 FOV는 화각 또는 실제 보이는 바닥 영역을 뜻합니다. 렌즈 화각이 넓어도 장애물 뒤는 관찰할 수 없습니다. Calibration은 가상 장면의 알려진 카메라 정보를 내보내는 작업이며 실제 카메라에서 체커보드로 렌즈 왜곡을 추정하는 실험과 다릅니다.
-
-성공하면 두 UI가 열리고, 두 카메라 영상과 장애물의 가림을 볼 수 있으며, 6개씩의 점과 실제 보정 파일·상면 이미지가 생성됩니다. 파일 생성만으로 바닥 전체를 감시한다고 결론 내리지 마세요.
 
 ## 한 가지 바꾸기와 문제 해결
 

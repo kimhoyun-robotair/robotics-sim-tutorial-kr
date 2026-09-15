@@ -4,11 +4,23 @@
 
 이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다.
 
+## 이 실습의 의도
+
+물체에 붙인 사건 태그, 시간 trigger, actor의 사건 반응을 연결하여 무엇이 언제 발생했고 누가 반응했는지 영상과 로그로 확인합니다. `prepare.py`가 만드는 기본 IRA 설정은 태그된 창고에서 1초에 Topple 하나를 발생시키고 가까운 actor 한 명이 사건 쪽으로 이동하도록 구성합니다. Fire·Spill은 별도 `incident_config.yaml`을 IRI UI에 로드하는 실습이며, 설정 생성만으로 사건이 실행되거나 두 설정이 자동 합쳐지지는 않습니다.
+
+## 실행 후 확인할 것
+
+- **기본 설정의 사건·반응 연결:** 생성된 `config.yaml`에서 `event.event_list`의 `shelf_topple`과 `response.response_list`의 `inspect_topple`을 확인합니다. response trigger의 `type`은 `physical_event`, `event_name`은 `shelf_topple`이고 명령은 `GoToResponse → LookAround 2`여야 합니다.
+- **실제 전도:** IRI가 활성화되고 loose item 태그가 있는 장면에서 실행한 뒤 사건 로그의 이름·시간·대상과 실제 상자의 움직임을 함께 봅니다. 기본 IRA의 시간은 1초이고, 독립 IRI 파일의 Topple 시간은 3초이므로 사용한 설정에 맞춰 비교합니다. 카메라는 사건 대상 쪽으로 자동 이동하지 않으므로 직접 대상도 확인합니다.
+- **actor 반응:** 사건 후 선택된 actor가 사건 위치로 향하는지 관찰합니다. 기본 90프레임은 3초라 이동·LookAround·원래 명령 복귀까지 끝나지 않을 수 있으므로 아래 `--frames 300` 절차로 더 길게 확인합니다.
+- **독립 IRI의 Fire·Spill:** `report_dir`를 실제 새 절대 경로로 바꾸고 세 사건을 활성화한 경우 6초 화재, 9초 누출 시작, 누출 지속 5초를 로그와 화면에서 비교합니다. 기본 IRA에 화염·액체가 없는 것은 설정대로이며 이 비교는 15초 이상 따로 기록합니다.
+- **주석 범위:** 기본 writer의 RGB와 객체 bbox/semantic class에서 전도 대상의 `incident_toppled_item`을 확인합니다. `semantic_filter_predicate`에 화재·누출 class가 적혀 있어도 그 사건이 자동 활성화되거나 개별 화염 마스크·semantic segmentation 출력이 켜지는 것은 아닙니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim 5.1 GUI, NVIDIA RTX GPU/드라이버, Isaac Sim 5.1 Assets 접근이 필요합니다. GUI는 설치 디렉터리의 `./isaac-sim.sh`로 실행합니다. `Window > Extensions`에서 `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`를 켜고 요구되는 재시작을 마칩니다. 사람 애니메이션은 `omni.anim.people`, `omni.anim.graph`, 경로 탐색은 `omni.anim.navigation`, 로봇은 `isaacsim.anim.robot`가 담당하며 IRA 의존성으로 활성화됩니다. 클라우드 LLM·ROS·별도 Python 설치는 필요하지 않습니다.
 
-기본 환경은 `https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Environments/Simple_Warehouse/full_warehouse.usd`, 사람은 같은 Assets 루트의 `/Isaac/People/Characters/`입니다. 오프라인 자산팩을 설치했다면 `--assets-root /절대경로/Assets/Isaac/5.1`을 지정합니다. 자산팩 자체는 이 패키지에 포함하지 않습니다.
+기본 환경은 `https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/Replicator/Incidents/full_warehouse_with_incident_tags.usd`라는 사건 태그가 있는 창고이며, 사람은 같은 Assets 루트의 `/Isaac/People/Characters/`입니다. 오프라인 자산팩을 설치했다면 `--assets-root /절대경로/Assets/Isaac/5.1`을 지정합니다. 자산팩 자체는 이 패키지에 포함하지 않습니다.
 
 이 패키지는 원문의 **확장 UI와 YAML 설정 방식**을 유지합니다. `prepare.py`는 해당 수업 설정과 명령 파일을 실제 생성합니다. 설정을 만드는 것만으로 사람을 시뮬레이션하거나 영상을 저장하지는 않습니다. 모든 명령은 이 패키지 디렉터리에서 실행합니다.
 
@@ -20,7 +32,7 @@ python3 prepare.py --output ./output/run_01 --frames 90
 설치 경로는 자신의 환경에 맞게 바꿉니다. `output/run_01/config.yaml`은 JSON 문법으로 작성한 유효한 YAML 1.2 파일이며 Isaac Sim의 YAML 로더가 읽습니다. `lesson.json`의 `{ASSETS}`, `{OUTPUT}`, `{PACKAGE}`는 준비 스크립트가 절대 경로로 치환합니다. `isaacsim.replicator.agent` 아래에 설정을 중첩하는 구조는 설치된 5.1 기본 설정과 같습니다. 설정 버전 `0.7.0`은 Sim 버전 `5.1.0`과 다른 IRA 설정 호환성 버전입니다.
 
 1. `Tools > Action and Event Data Generation > Actor SDG`를 엽니다. `Config File Path`에서 생성한 `config.yaml`을 선택합니다.
-2. 환경에 NavMesh가 없으면 창고 USD를 먼저 열고, Stage 우클릭 `Create > Navigation > NavMesh Include Volume`을 추가해 바닥을 덮습니다. `Window > Navigation > NavMesh`에서 Bake 후 `Save As`로 패키지 `output/warehouse_nav.usd`에 저장합니다. `Scene > Asset Path`를 그 복사본으로 바꾸고 설정을 저장합니다. NavMesh는 사람이 서거나 걸을 수 있는 표면입니다.
+2. 환경에 NavMesh가 없으면 태그된 기본 창고 USD를 먼저 열고, Stage 우클릭 `Create > Navigation > NavMesh Include Volume`을 추가해 바닥을 덮습니다. `Window > Navigation > NavMesh`에서 Bake 후 `Save As`로 패키지 `output/warehouse_nav.usd`에 저장합니다. `Scene > Asset Path`를 그 복사본으로 바꾸고 설정을 저장합니다. NavMesh는 사람이 서거나 걸을 수 있는 표면입니다.
 3. `Set Up Simulation`을 누르고 사람/카메라 자산 로딩이 끝날 때까지 기다립니다. Stage의 `/World/Characters`, `/World/Cameras`에서 실제 이름을 확인합니다. 명령의 `Character_01` 같은 이름은 실제 탭 이름과 일치시킵니다.
 4. Character 패널에서 명령을 확인하고 디스크 아이콘으로 **Save Commands**합니다. UI의 파란색은 미저장, 빨간색은 잘못된 입력입니다. 설정만 바꾸면 화면 값과 디스크 파일이 달라질 수 있으므로 `Save`도 누릅니다.
 5. 아래 수업별 조작을 진행한 다음 `Start Data Generation`을 누릅니다. 기본 90프레임은 30 FPS 기준 3초입니다. 완료 후 `output/run_01/capture`를 확인합니다. 중단 후 재실행할 때는 저장 종료를 기다립니다.
@@ -42,7 +54,7 @@ python3 prepare.py --output ./output/run_01 --frames 90
 
 1. `prepare.py --frames 300 --output output/actor_event`로 새 설정을 만들고 Actor SDG에서 로드합니다. 이 설정은 의도적으로 Topple 하나만 1초에 일어나게 합니다. 배우 한 명·카메라 한 대로 사건과 반응을 따라가기 쉽습니다.
 2. Events 패널에서 `shelf_topple`, Response 패널에서 `inspect_topple`을 확인합니다. `physical_event` trigger의 `event_name`이 정확히 `shelf_topple`이어야 합니다. `GoToResponse`는 사건 위치로 이동하는 특수 명령이며 뒤의 `LookAround 2`를 함께 실행합니다.
-3. Setup → Generate Random Commands → Save → Start Data Generation 순서로 실행합니다. 사건 로그와 actor 동작, RGB/semantic 주석을 함께 비교합니다. generic actor 문서의 `incident`와 이 IRI 통합 설정의 `event` 표기가 섞여 있으므로 본 패키지는 설치된 5.1 `incident_bridge.py`가 읽는 **event/event_list** 구조를 사용합니다.
+3. Setup → Generate Random Commands → Save → Start Data Generation 순서로 실행합니다. 사건 로그와 actor 동작, RGB 및 객체 bbox에 붙은 semantic class를 함께 비교합니다. 기본 설정은 semantic segmentation 이미지를 켜지 않습니다. generic actor 문서의 `incident`와 이 IRI 통합 설정의 `event` 표기가 섞여 있으므로 본 패키지는 설치된 5.1 `incident_bridge.py`가 읽는 **event/event_list** 구조를 사용합니다.
 
 전도된 물체는 `incident_toppled_item`, 불붙은 물체는 `incident_flaming_item`, 새는 물체는 `incident_leaking_item`, 액체 면은 `incident_liquid_spill` semantic label을 가집니다. 화염 자체를 쓰려면 별도 writer가 필요하므로 RGB 화염이 보인다고 개별 화염 마스크까지 생성됐다고 판단하지 않습니다.
 

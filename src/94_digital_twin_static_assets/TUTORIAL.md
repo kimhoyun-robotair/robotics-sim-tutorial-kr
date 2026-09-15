@@ -4,6 +4,18 @@
 
 NVIDIA Assets에서 참조로 가져온 시각용 box pile에 개별 rigid body/collider를 작성한다. local `apply_box_physics.py`는 **Script Editor에서 현재 선택한 pile의 직접 자식들을 각각 box로 간주하여** physics를 붙이는 보조 구현이다. 선택한 자식이 실제로 독립 box인지 먼저 Stage에서 확인해야 한다. 자동으로 모든 asset의 의미를 판별하지 않는다.
 
+## 이 실습의 의도
+
+창고에서 보기만 하던 box pile을 상자별로 떨어지고 부딪히는 물리 자산으로 바꾸며 reference와 현재 edit layer의 역할을 익힌다. pile 전체가 한 몸체로 움직이지 않도록 직접 자식마다 강체를, 그 아래 mesh/cube마다 collider를 작성하는 구성이다. 스크립트는 선택한 자산에 물리 속성만 추가하므로 자산 가져오기·단위 확인·지면 추가·Play·새 USD 저장은 GUI에서 수행한다.
+
+## 실행 후 확인할 것
+
+- **대상과 크기:** Stage에서 선택한 pile root의 직접 Xformable 자식 하나가 실제 상자 하나인지 확인한다. import parent를 바꾸거나 reparent한 뒤에도 의도한 실제 크기가 유지되어야 한다.
+- **속성이 쓰인 위치:** Script Editor의 `Rigid box: <경로>`마다 해당 자식에 `RigidBodyAPI`가 있고, 하위 mesh/cube에 `CollisionAPI`가 있는지 Property에서 확인한다. mesh에는 `convexHull` 근사가 적용된다.
+- **개별 접촉 반응:** Ground Plane을 추가하고 Play한 뒤 아래 상자를 움직이면 다른 상자가 각각 중력과 접촉에 반응하는지 본다. pile이 통째로 움직이거나 상자가 지면을 통과하면 성공 기준을 충족하지 못한 것이다.
+- **저장과 재사용:** `output/pile_physics.usd`로 Save As한 뒤 Layer에서 원본 reference와 현재 layer의 physics 작성 내용을 확인한다. 스크립트의 완료 메시지는 속성 작성 완료이며 낙하 시험이나 파일 저장 완료를 뜻하지 않는다.
+- **선택 오류의 의미:** root를 하나만 선택하지 않았거나 직접 Xformable 자식이 없으면 중단된다. 반대로 `Rigid box` 출력이 있더라도 자식 아래에 지원 대상 mesh/cube가 없으면 collider가 작성되지 않으므로 출력 수만으로 물리 구성을 판단하지 않는다.
+
 ## 창고 조립과 단위 확인
 
 1. `Window > Browsers > NVIDIA Assets`를 연다. `Industrial > Buildings > Warehouse`에서 `Warehouse01`을 찾는다. Stage의 `/World`로 drag하면 해당 parent 원점에 reference가 들어간다. viewport에 drag하면 마우스로 놓은 위치가 사용된다.

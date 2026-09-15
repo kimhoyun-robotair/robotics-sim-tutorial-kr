@@ -4,6 +4,18 @@
 
 이 패키지는 공식 Object Based Synthetic Dataset Generation의 실제 5.1 코드와 helper를 포함합니다. YCB pudding box·mustard bottle, 물리 방해 물체, 보이지 않는 충돌 벽, 목표를 바라보는 여러 카메라, 색/조명/배경 이벤트, PathTracing motion blur가 모두 원래 파이프라인으로 실행됩니다. 입문 config는 방해 물체 수와 카메라 수를 낮췄으며 BasicWriter로 RGB·분할·상자·깊이부터 관찰합니다.
 
+## 이 실습의 의도
+
+표적 물체 가까이에서 촬영할 때 생기는 가림·배경·시점·움직임의 변화를 데이터셋에 담는 실습입니다. 중력을 끈 YCB 표적, 여러 방해 물체, 보이지 않는 충돌 벽을 함께 두어 물체가 작업 공간 안에서 계속 섞이도록 구성합니다. 기본 설정은 pudding box와 mustard bottle 각 3개, 방해 도형 40개·메시 12개를 카메라 2대로 6회 촬영하며, 출력은 BasicWriter 데이터까지입니다.
+
+## 실행 후 확인할 것
+
+- **설정과 실제 결과 구분:** `--check-config` 출력만으로는 장면이 실행되지 않습니다. 실제 실행 후 `effective_config.json`과 RGB를 대조하고, 기본 완료 시 512×512 RGB가 카메라마다 6장씩 있는지 확인합니다. 런처의 `Actual PNG files`는 분할 PNG도 포함할 수 있어 RGB 개수와 같지 않습니다.
+- **떠 있는 표적과 숨은 벽:** Stage의 `/World/Labeled` 아래 표적과 `/World/CollisionWalls`를 확인합니다. `floating=true`는 중력만 끄며 속도·충돌 반응은 남습니다. 벽이 안 보이거나 물체가 바닥 부근에서 다시 튀어 오르는 것은 작업 공간 유지와 속도 재설정에 따른 동작입니다.
+- **가림과 라벨:** RGB의 보이는 표적을 `pudding_box`, `mustard_bottle` semantic 매핑과 2D box·깊이에 대조합니다. 카메라는 임의의 표적을 바라보므로 두 클래스가 모든 프레임에서 전부 보일 필요는 없습니다. 방해 물체 수를 늘릴 때는 표적 가시성이 얼마나 줄었는지 봅니다.
+- **캡처 주기:** 기본 0–5번 프레임 로그에서 카메라 재배치는 0·3번, 조명 변경과 모션 블러 캡처는 0·5번에 발생합니다. 첫 프레임부터 PathTracing을 사용하므로 느릴 수 있으며, 일반 캡처의 `delta_time=0`과 블러 노출 중 물리 진행을 구분합니다.
+- **현재 설정 키 불일치:** 표적 항목의 `scale_min_max=[0.85,1.25]`는 현재 `object_based_sdg.py`가 읽는 `randomize_scale`과 이름이 달라 적용되지 않습니다. 현재 표적 배율은 기본 `(1,1)` 범위로 선택되므로 크기 변화를 성공 기준으로 삼지 않습니다. 이는 의도한 무작위화가 아닌 구현·설정의 불일치입니다.
+
 ## 준비와 명령
 
 Isaac Sim 5.1.0 전체 설치, 지원 RTX GPU/드라이버, 충분한 GPU 메모리와 디스크가 필요합니다. 5.1 asset root에 YCB와 창고 Props 및 배경 텍스처가 있어야 합니다. 처음 실행은 서버에서 자산을 읽으므로 네트워크/로컬 미러 상태를 확인합니다. 이 패키지는 로컬 helper를 포함해 다른 src 패키지를 요구하지 않습니다.
@@ -53,7 +65,7 @@ Motion blur는 멈춘 물체에 필터를 바르는 것이 아니라 짧은 노�
 
 ## 성공 기준과 한 가지 변경
 
-RGB에서 YCB 물체가 두 카메라에 관찰되고 pudding_box/mustard_bottle label과 bbox/depth가 저장되어야 합니다. **shape_distractors_num만 40→80**으로 바꾼 config를 새 output으로 실행해 표적의 가림과 프레임 시간을 비교합니다. 메모리가 부족하면 해상도·카메라·방해 물체 수 중 하나만 줄여 원인을 분리합니다. 배경/재질이 검으면 asset root와 관련 texture 참조를 확인합니다. `--check-config`·compile 검사는 PhysX/렌더 성공 증거가 아닙니다. 원본 출처/라이선스는 NOTICE와 Apache-2.0 파일에 있습니다.
+두 카메라의 RGB와 bbox/depth를 확인하고, 각 이미지에서 실제로 보이는 YCB 표적을 pudding_box/mustard_bottle 라벨에 대조합니다. 모든 표적이 매 이미지에 보여야 한다는 기준은 두지 않습니다. **shape_distractors_num만 40→80**으로 바꾼 config를 새 output으로 실행해 표적의 가림과 프레임 시간을 비교합니다. 메모리가 부족하면 해상도·카메라·방해 물체 수 중 하나만 줄여 원인을 분리합니다. 배경/재질이 검으면 asset root와 관련 texture 참조를 확인합니다. `--check-config`·compile 검사는 PhysX/렌더 성공 증거가 아닙니다. 원본 출처/라이선스는 NOTICE와 Apache-2.0 파일에 있습니다.
 
 ## 출처와 버전
 

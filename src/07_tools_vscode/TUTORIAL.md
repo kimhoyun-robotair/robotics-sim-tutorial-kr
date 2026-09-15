@@ -4,6 +4,17 @@
 
 VS Code에서 열린 파일을 실행 중인 Isaac Sim으로 보내 파란 Cube를 만든다. 공식 IDE 연결 기능의 실습이며 코드는 이 폴더에 들어 있다.
 
+## 이 실습의 의도
+
+VS Code의 Isaac Sim 전용 Run 명령이 실행 중인 GUI의 Kit Python 환경에서 코드를 수행한다는 것을 확인한다. `scene.py`는 큐브 하나와 `cube` 변수를 만들고, 이어서 선택 영역을 실행해 같은 앱의 장면과 변수에 다시 접근하도록 구성했다. 기본 실습의 결과는 활성 Stage의 USD 도형과 VS Code 출력이며, 별도 standalone 앱이나 물리 시뮬레이션을 시작하지 않는다.
+
+## 실행 후 확인할 것
+
+- VS Code의 전용 Run을 누른 뒤 Isaac Sim Stage에 `/World/EditorCube`가 생겼는지 확인한다. Prim을 선택해 `F`를 누르면 푸른 큐브가 보이고 Property의 Size는 0.5, 위치 Z는 0.5여야 한다.
+- **Isaac Sim VS Code Edition output**에 `created /World/EditorCube size 0.5`가 출력되는지 확인한다. 로컬 터미널에서 파일 실행이 끝났다는 메시지보다 실제 연결된 Stage와 출력을 함께 확인하는 것이 기준이다.
+- 같은 연결에서 `print(cube.GetPath())`를 **Run selected text**로 실행했을 때 `/World/EditorCube`가 출력되어야 한다. 이로써 후속 실행이 기존 Python 상태에 접근함을 확인한다.
+- Play를 눌러도 큐브는 낙하하지 않는다. `scene.py`는 USD 도형만 만들며 강체·충돌을 추가하지 않는다. 같은 Stage에서 전체 파일을 다시 실행할 때의 `already exists` 오류는 중복 생성 보호이므로 새 Stage에서 실험을 반복한다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -35,7 +46,7 @@ Isaac Sim 설치의 `.vscode/launch.json`에는 **Python: Current File**(standal
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 확인해야 한다.
 
 ## 출처
 

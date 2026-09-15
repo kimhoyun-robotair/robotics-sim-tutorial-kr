@@ -4,6 +4,18 @@
 
 Python과 같은 `.ogn` 선언을 C++ compute에 연결하는 native build 실습이다. 제공 두 파일은 외부 template의 ExampleNode를 작고 읽기 쉬운 비교 노드로 바꾼다. 전체 Kit 빌드 시스템을 이 폴더에 위장 구현하지 않는다.
 
+## 이 실습의 의도
+
+입력 숫자가 양수인지 판단하는 최소 계산으로 `.ogn`의 타입 선언, 생성된 Database header, C++ `compute()`와 노드 등록이 연결되는 과정을 배운다. 비교 연산을 단순하게 둔 이유는 계산 알고리즘보다 native 노드의 빌드·등록·평가 경로를 확인하기 위해서다. 이 폴더에는 노드 소스 두 개만 있으므로 외부 template에서 빌드한 뒤 Kit 앱과 Isaac Sim에 직접 로드해야 한다.
+
+## 실행 후 확인할 것
+
+- **생성·빌드:** template 빌드가 `OgnExampleNodeDatabase.h`와 plugin을 생성하는지 확인한다. 제공 `.cpp`를 단독 실행하거나 소스 파일을 복사한 것만으로 노드가 등록되지는 않는다.
+- **등록:** extension을 켠 앱의 Action Graph에서 `Korean Positive Cpp`를 찾고 `value` 입력이 double, `positive` 출력이 bool인지 본다.
+- **비교 결과:** 아래 Script Editor 평가 예제 또는 consumer가 연결된 graph에서 `value=-1, 0, 2`를 각각 평가하면 `positive=false, false, true`여야 한다. 노드만 배치하고 평가하지 않은 출력은 비교 근거가 아니다.
+- **false의 의미:** 입력 0의 `positive=false`는 의도된 경계 결과다. `compute()`의 `return true`는 계산 완료를 뜻하므로 출력 false와 모순되지 않는다.
+- **호스트 통합:** template 앱 확인 뒤 Isaac Sim 5.1에서도 같은 노드를 로드하고 비교 결과를 확인한다. template 빌드 성공과 Isaac Sim에서의 binary 로드 성공은 각각 확인한다.
+
 ## 고정한 외부 build 환경
 
 원문이 연결하는 C++ template 저장소는 현재 최신 Kit로 바뀔 수 있다. 여기서는 **Kit 107.3.0 업데이트 커밋 `e8b660c96183f4a35f12f5ff75e37756ae6aee3b`**를 고정한다. Linux x86_64에서 Git, C++ build 도구, template dependency 다운로드를 위한 인터넷과 디스크 공간이 필요하다. Windows는 대응 `build.bat`와 Visual Studio C++ toolchain을 사용한다. C++ binary의 Isaac Sim 5.1 호환성은 실제 로드로 최종 확인해야 한다.
@@ -48,7 +60,7 @@ print(og.Controller.attribute("/CppCheck/positive.outputs:positive").get())
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공 `.ogn`과 C++ 비교 구현을 대조했다. 외부 template 빌드와 Kit/Isaac Sim에서의 실제 로드는 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 기준을 실제 실행 후 확인해야 한다.
 
 ## 출처
 

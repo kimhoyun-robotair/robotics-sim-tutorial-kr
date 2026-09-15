@@ -2,7 +2,19 @@
 
 권장 학습 순서 **132** · Replicator 합성 데이터 기초와 확장 · 출처 ID `t035`
 
-이 실습은 같은 모양의 상자 두 개를 만들되 왼쪽에만 `carton` 의미 라벨을 붙입니다. RGB에는 둘 다 보이고, 의미 분할·검출 정답에는 라벨이 있는 물체가 포함되는 차이를 관찰합니다. 공식 Overview의 다섯 도구를 작은 로컬 장면에서 연결한 입문용 구현입니다.
+이 실습은 같은 모양의 상자 두 개를 만들되 `/World/Labeled`에만 `carton` 의미 라벨을 붙입니다. RGB에는 둘 다 보이고, 의미 분할·검출 정답에는 라벨이 있는 물체가 포함되는 차이를 관찰합니다. 공식 Overview의 다섯 도구를 작은 로컬 장면에서 연결한 입문용 구현입니다.
+
+## 이 실습의 의도
+
+RGB에 물체가 보이는 조건과 학습용 의미·검출 정답에 포함되는 조건이 다름을 배우는 실습입니다. 두 상자를 같은 크기·높이로 두고 하나에만 라벨을 붙여 그 차이를 명확히 비교합니다. 기본 `run.py`는 정지한 장면을 세 번 캡처하고 PNG·정답 파일·`labels.usda`를 저장하며, GUI는 저장 후 관찰용으로 유지됩니다. Semantics 편집, GUI Recorder 재녹화, `workflow.yaml` 실행은 그 뒤에 직접 수행하는 별도 단계입니다.
+
+## 실행 후 확인할 것
+
+- **객체 식별:** Stage에서 `/World/Labeled`는 x=-1.5, `/World/Unlabeled`는 x=1.5이고 둘 다 크기 1 m, z=0.5인지 봅니다. 카메라의 화면 왼쪽·오른쪽 대신 prim 경로로 라벨 대상을 구분합니다.
+- **RGB와 정답 차이:** 출력 RGB에는 두 상자가 보이지만 `carton` 라벨 mapping과 tight bounding box는 기본 장면의 `/World/Labeled`를 대상으로 해야 합니다. Unlabeled가 RGB에 보이면서 carton 정답에 빠지는 것은 의도된 동작입니다.
+- **저장 결과와 횟수:** 기본 출력 폴더에서 세 캡처의 RGB·semantic segmentation·bounding box 파일과 `labels.usda`를 확인합니다. 움직임이나 randomizer가 없으므로 장면 배치가 프레임마다 같아도 정상이며 `--steps`는 이 캡처 수를 정하지 않습니다.
+- **라벨 추가 실험:** GUI에서 `/World/Unlabeled`에도 class=`carton`을 붙인 뒤 새 Recorder 출력으로 기록하여 두 객체가 정답에 포함되는지 비교합니다. 이미 저장된 첫 캡처는 라벨 편집만으로 다시 쓰이지 않습니다.
+- **YAML 대안:** `workflow.yaml`은 새 장면에 라벨 있는 상자 하나를 만들고 세 프레임의 Z 회전을 무작위화합니다. 기본 Python의 두 상자 장면과 구분해 새 출력 경로의 결과를 확인합니다.
 
 ## GUI 실행과 종료
 
@@ -31,9 +43,9 @@ cd src/132_replicator_replicator_overview
 ## 직접 해보기
 
 1. Stage에서 `/World/Labeled`와 `/World/Unlabeled`를 각각 선택합니다. 둘의 크기와 높이는 같고 x 위치만 다릅니다. USD의 prim은 장면 트리의 한 항목이며 경로는 해당 항목의 주소입니다.
-2. **Tools > Replicator > Semantics Schema Editor**를 엽니다. `/World/Labeled`의 class 값 `carton`을 확인합니다. `/World/Unlabeled`에는 class가 없습니다. 오른쪽 물체에도 `carton`을 추가한 뒤 다시 기록하면 두 물체의 정답이 생깁니다. 동일 class는 동일 물체 인스턴스를 의미하지 않습니다.
+2. **Tools > Replicator > Semantics Schema Editor**를 엽니다. `/World/Labeled`의 class 값 `carton`을 확인합니다. `/World/Unlabeled`에는 class가 없습니다. `/World/Unlabeled`에도 `carton`을 추가한 뒤 다시 기록하면 두 물체의 정답이 생깁니다. 동일 class는 동일 물체 인스턴스를 의미하지 않습니다.
 3. Viewport의 **Synthetic Data Visualizer** 아이콘에서 RGB 다음 Semantic Segmentation을 선택합니다. 라벨과 RGB 색은 별개입니다. 라벨 변경 후 렌더를 갱신합니다. Cross Correspondence는 두 카메라의 대응 관계가 필요한 별도 센서라 이 단일 카메라 실습의 성공 기준에 넣지 않습니다.
-4. **Tools > Replicator > Synthetic Data Recorder**를 엽니다. **Add New Render Product**로 카메라를 추가하고 Stage의 Camera prim 경로를 입력합니다. 해상도는 512×512, RGB와 Semantic Segmentation, Number of Frames는 3으로 둡니다. Output은 이 패키지 아래 새 폴더로 지정하고 Start를 누릅니다.
+4. **Tools > Replicator > Synthetic Data Recorder**를 엽니다. **Add New Render Product**로 카메라를 추가하고 Stage의 Camera prim 경로를 입력합니다. 해상도는 512×512, RGB와 Semantic Segmentation, Bounding Box 2D Tight를 켜고 Number of Frames는 3으로 둡니다. Output은 이 패키지 아래 새 폴더로 지정하고 Start를 누릅니다.
 5. `output`의 RGB PNG, 의미 분할 이미지와 라벨 JSON, 2D bounding box 배열을 비교합니다. 색으로 보이는 상자와 학습 정답에 포함된 상자는 다를 수 있습니다.
 6. YAML 방식을 체험하려면 **새 장면**에서 `workflow.yaml`을 엽니다. 파일의 `output_dir`를 이 패키지 아래 **아직 없는 절대경로**로 먼저 변경합니다. 기본 예시 경로를 그대로 여러 번 쓰면 이전 데이터와 충돌할 수 있습니다. **Tools > Replicator > Replicator YAML**에서 이 YAML을 불러오고 생성/실행합니다. 세 프레임 동안 carton의 z 회전만 달라집니다. YAML 파서가 `create.camera`, `writers.get`, `trigger.on_frame`을 Replicator API 호출로 연결합니다.
 

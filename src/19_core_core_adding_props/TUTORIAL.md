@@ -4,9 +4,19 @@
 
 공식 원문: **Adding Props** · Isaac Sim **5.1.0** · 인덱스 **t104**
 
-## 만들 결과와 실행 방식
+## 이 실습의 의도
 
-공식 Rubik 에셋에 강체, mesh 충돌체 또는 숨겨진 sphere 충돌체, 질량, 마찰과 반발 재질을 붙입니다. visual/rigid/mesh/sphere의 네 가지 모드를 실제 낙하 결과로 비교합니다.
+같은 Rubik 에셋에서 시각 형상만 있는 상태, 강체만 있는 상태, mesh 충돌체, 숨긴 sphere 충돌체를 선택해 **무엇이 낙하와 접촉 모양을 결정하는지** 비교합니다. 기본값은 `sphere`, 바닥 경사 10°, 반발계수 0.8이며, 보이는 Rubik과 반지름 0.07 m의 접촉용 구를 의도적으로 다르게 구성합니다. 기본 실행은 최초 360단계의 위치를 기록하므로 네 모드를 비교하려면 옵션을 바꿔 각각 실행해야 합니다.
+
+## 실행 후 확인할 것
+
+- `result.json`의 `physics`, `slope_deg`, `restitution`을 먼저 확인해 실제 실행 조건을 구분합니다. 옵션 없는 실행은 sphere 모드 하나이며 네 모드의 물체가 동시에 생성되는 장면이 아닙니다.
+- 수평 바닥(`--slope 0`)에서 visual은 시작 높이 1 m를 유지하고 rigid는 지면 아래로 계속 떨어지는지 GUI와 `samples[].position_m`의 z로 비교합니다. rigid의 관통은 충돌체를 붙이지 않은 의도된 결과입니다.
+- mesh 모드는 `colliders`에 Rubik mesh 경로가 들어가고 바닥에서 지지되는지 확인합니다. sphere 모드는 `/World/Rubik/PhysicsSphere` 하나가 기록되어야 하며, 보이지 않는 이 구가 접촉 외형을 결정하므로 Rubik 모서리와 바닥이 정확히 맞지 않을 수 있습니다.
+- 기본 sphere 모드에서는 경사면에 닿은 뒤 이동·회전과 반발을 관찰합니다. 충분한 기록 구간에서 `--restitution`만 바꿔 높이 변화를 비교하며, 반발계수 1도 영구 운동을 뜻하지 않습니다.
+- `configured_scene.usda`는 진행 전 설정이므로 모드별 스키마·충돌 시각화를 검사하는 데 사용하고, 실제 운동은 `result.json`의 15단계 간격 위치와 GUI로 확인합니다. 짧은 `--steps`의 기록만으로 정착·구르기까지 판정하지 않습니다.
+
+## 실행 방식
 
 이 패키지는 `Adding Props` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
 
@@ -56,10 +66,6 @@ python3 run.py --help
 | MaterialBindingAPI, purpose=physics | 생성한 물리 재질을 실제 충돌 shape에 연결합니다. |
 
 USD의 visibility=invisible은 렌더링을 숨깁니다. 충돌을 끄는 설정이 아닙니다. 보이는 Rubik과 접촉용 sphere가 달라도 되므로 단순한 충돌체로 복잡한 모형을 근사할 수 있습니다. 이 코드는 비교 시작점을 일정하게 만들려고 참조 에셋의 물리 스키마를 제거하고 지정한 모드만 로컬 layer에 다시 저술합니다. 원본 USD 파일은 수정하지 않습니다.
-
-## 관찰과 성공 판정
-
-visual은 높이 유지, rigid는 지면 관통, mesh는 지면 접촉, sphere는 구르기/반발의 차이가 나타나야 합니다. `result.json`의 collider 경로와 실제 위치 샘플을 확인합니다. 반발계수 1이어도 마찰·충돌 수치해석 때문에 영구 운동을 보장하지 않습니다.
 
 ## 한 변수만 바꾸는 실험
 

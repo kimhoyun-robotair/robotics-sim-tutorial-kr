@@ -4,6 +4,18 @@
 
 직접 작성한 `.ogn` schema와 Python compute를 가진 독립 확장을 제공한다. 입력 수가 0보다 큰지 판단하며 원문의 `output_bool`/`out` 불일치를 일관된 `output_bool`로 수정했다.
 
+## 이 실습의 의도
+
+`.ogn`의 typed 입력·출력 선언이 Python `compute(db)`의 데이터 읽기·쓰기로 연결되는 최소 노드를 만든다. 판정은 **입력이 엄밀히 0보다 큰가**이며, 결과 boolean과 계산 함수의 성공 반환값을 구분하는 것이 핵심이다. 확장을 켜면 노드 등록을 준비하고, 사용자가 Action Graph에 Korean Positive와 playback tick을 배치·연결한 뒤 Play해야 입력 판정이 실행된다.
+
+## 실행 후 확인할 것
+
+- 확장 `kr.positive.node`를 켠 뒤 Action Graph 검색에서 **Korean Positive**가 나타나는지 확인한다. 노드에 `execIn`, double형 `value_input`, bool형 `output_bool`이 있어야 `.ogn`과 구현이 올바른 이름으로 연결된 것이다.
+- **On Playback Tick → execIn**을 연결하고 Play 중 `value_input`을 `-1 → 0 → 2`로 바꾼다. Property의 `output_bool`은 차례로 `False → False → True`여야 하며, 특히 0의 경계 결과를 확인한다.
+- 출력이 False인 입력에서도 `compute()`의 `return True`는 정상 계산 완료를 뜻한다. 출력 False 자체를 노드 오류나 계산 실패로 해석하지 않는다.
+- Pause 후 입력만 바꿨을 때 출력이 이전 값으로 남을 수 있음을 확인하고 Play 후 새 판정이 반영되는지 본다. 입력 필드 편집과 execution 신호를 받은 계산은 별개의 단계다.
+- 비교식을 `>= 0`으로 바꾸는 확장 실험에서는 reload 후 입력 0이 True로 바뀌는지 확인한다. 등록 lifecycle을 다시 확인할 때는 노드를 쓰던 그래프를 새 Stage로 정리하고 확장을 껐다 켜며, 생성된 Database 파일을 직접 수정하지 않는다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -37,7 +49,7 @@ Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

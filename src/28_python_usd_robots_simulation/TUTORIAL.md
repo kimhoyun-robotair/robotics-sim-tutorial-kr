@@ -2,15 +2,27 @@
 
 권장 학습 순서 **28** · 물리 기초와 Core API 확장 · 출처 ID `t097`
 
+## 이 실습의 의도
+
+Franka 두 대를 하나의 Articulation view로 묶어, 배열의 행은 로봇이고 열은 관절이라는 일괄 제어 구조를 익힙니다. 다섯 실행 모드는 전체 팔 또는 `panda_joint2`의 위치 목표·속도 목표·직접 토크가 서로 다른 명령이며, 그에 맞게 drive gain도 바꿔야 한다는 점을 비교합니다. 기본 `position` 실행은 두 로봇의 일곱 팔 관절에 사인파 위치 목표를 보내고 상태를 CSV에 계속 기록하며, 물체 집기나 목표 도달 판정은 하지 않습니다.
+
+## 실행 후 확인할 것
+
+- GUI에 `/World/Franka_1`, `/World/Franka_2`가 X=-1,+1 m로 떨어져 배치되는지 봅니다. `robot_info.json`의 `count`는 2이고 `dof_names`에는 일곱 팔 관절과 두 손가락 관절이 있어야 합니다. 관절 배열은 이 이름 순서와 함께 읽습니다.
+- `control`과 `controlled_joints`를 확인합니다. position/velocity는 팔 관절 일곱 개, single-position/single-velocity/effort는 `panda_joint2`에 명령합니다. single 모드라도 다른 관절에 물리 응답이 전혀 없어야 하는 것은 아닙니다.
+- 종료 후 `states.csv`에서 같은 `step`에 `robot` 0과 1의 행이 각각 있는지, positions/velocities/applied_efforts 배열이 DOF 수에 맞는지 봅니다. 기본 위치 제어의 첫 목표는 초기값과 같으므로 여러 스텝의 변화를 비교해야 합니다.
+- 속도 모드에서는 제어 관절의 stiffness=0, damping=20 설정과 속도 추종을 함께 확인합니다. effort는 둘 다 0으로 바꾸므로 중력 보상 없는 팔이 토크 부호만으로 예상한 방향과 다르게 움직일 수 있습니다. `applied_efforts`는 직접 적용한 명령 값이며 모든 drive·접촉 반력의 센서값은 아닙니다.
+- 일정 길이 비교에는 `--steps 120`처럼 제한을 줍니다. GUI 기본 실행은 CSV 파일을 연 채 계속 기록하고 종료할 때 파일을 닫으므로, 실행 중 파일 내용만 보고 최종 기록 수를 판정하지 않습니다. `variants` 목록은 자산에서 찾은 선택지이며 기본 실행은 variant를 변경하지 않습니다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
 이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 120단계를 사용합니다. 창을 닫을 때까지 관절 제어와 CSV 기록을 계속합니다. 일정 길이의 비교 기록이 필요하면 `--steps 120`처럼 제한을 지정합니다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
 
-## 목표와 준비
+## 에셋 준비
 
-Franka Panda 두 대를 하나의 Articulation view로 묶고 전체/단일 자유도 위치·속도·토크 제어를 비교한다. Isaac 5.1 자산 루트의 `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`와 그 종속 파일이 필요하다. `--usd /실제/경로/franka.usd`로 로컬 자산을 사용할 수 있다. 로봇 자산은 패키지에 복제하지 않는다.
+Isaac 5.1 자산 루트의 `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`와 그 종속 파일이 필요하다. `--usd /실제/경로/franka.usd`로 로컬 자산을 사용할 수 있다. 로봇 자산은 패키지에 복제하지 않는다.
 
 ## 순서대로 실습
 
@@ -27,7 +39,7 @@ Franka Panda 두 대를 하나의 Articulation view로 묶고 전체/단일 자�
 3. `world.reset()` 후 실제 `dof_names`와 limits를 조회한다. 기본 초기 자세를 이름으로 지정한다. 모든 관절을 같은 1.5에 설정하면 직선 손가락 범위를 위반하므로 사용하지 않는다.
 4. position은 일곱 팔 관절의 초기값에 작은 사인파 offset을 준다. single-position은 `panda_joint2`만 변경한다. `set_joint_position_targets`가 드라이브 목표를 바꾸며 `set_joint_positions`의 즉시 상태 변경과 구분한다.
 5. velocity 모드에서는 제어할 관절의 stiffness를 0, damping을 20으로 바꾼 후 속도 목표를 전달한다. single-velocity는 두 번째 팔 관절만 선택한다.
-6. effort는 두 번째 팔 관절의 stiffness와 damping을 모두 0으로 바꾸고 매 스텝 토크를 전달한다. 중력 보상을 넣지 않았으므로 작은 토크를 줘도 중력 때문에 움직일 수 있다. 다른 관절은 초기 자세 드라이브를 유지한다.
+6. effort는 두 번째 팔 관절의 stiffness와 damping을 모두 0으로 바꾸고 매 스텝 토크를 전달한다. 중력 보상을 넣지 않았으므로 작은 토크를 줘도 중력 때문에 움직일 수 있다. 다른 관절의 drive gain은 이 분기에서 변경하지 않는다. 초기 관절 위치를 직접 설정하는 것과 모든 관절에 그 위치를 유지할 목표를 계속 보내는 것은 구별한다.
 7. `states.csv`에서 각 로봇의 positions, velocities, applied_efforts를 비교한다. applied effort는 직접 적용 명령을 읽는 값이며 모든 모터/접촉 반력을 합친 관절 센서 힘이라고 해석하지 않는다.
 8. GUI에서 로봇의 Joint Prim을 선택하고 Drive stiffness/damping과 limits를 대조한다. JSON의 `physics_joint_prims`는 USD 타입 검사 `prim.IsA(UsdPhysics.Joint)`의 결과다.
 

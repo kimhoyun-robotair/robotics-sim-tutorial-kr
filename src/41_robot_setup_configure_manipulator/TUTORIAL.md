@@ -4,9 +4,19 @@
 
 공식 인덱스 **t125** · Isaac Sim **5.1.0**
 
-## 결과와 준비
+## 이 실습의 의도
 
-UR10e+Robotiq의 articulation solver 설정, finger 관절 최대 effort, fingertip 마찰을 설정한 로컬 USD를 만듭니다. 이후 Physics Inspector와 Gain Tuner에서 실제 목표 추종을 관찰합니다. `run.py`는 물리 속성 저술을 구현하며 Gain Tuner의 자동 실험을 대신 실행했다고 주장하지 않습니다.
+조립된 UR10e+Robotiq에 solver 반복 횟수, finger drive의 effort 한도, 손가락 접촉 재질을 각각 설정하고 이 값들이 제어와 접촉에 어떤 역할을 하는지 구분합니다. 기본 실행은 원본 reference 위에 로컬 설정을 작성하고 보고서를 저장합니다. 실제 목표 추종과 진동 변화는 Physics Inspector·Gain Tuner에서 따로 관찰하므로, 설정 파일이 만들어졌다는 사실과 로봇이 안정적으로 물체를 잡는다는 결과를 구분해서 확인합니다.
+
+## 실행 후 확인할 것
+
+- **solver 설정:** `configuration_report.json`의 articulation 경로가 원하는 로봇 root인지, `solver_position_iterations=64`, `solver_velocity_iterations=4`인지 확인합니다. Property에서는 sleep `0.00005`, stabilization `0.00001`도 확인합니다.
+- **직접 구동 관절:** 보고서의 `finger_joint`와 `max_force`를 봅니다. 기본은 `max_force=200`이고 `--max-force`를 바꾸면 지정값이 기록되어야 합니다. 이 제한을 설정한 것만으로 finger가 자동으로 닫히지는 않습니다.
+- **재질의 실제 연결:** `material_bound_colliders`에 좌우 inner finger 경로가 포함되는지 확인하고, 각 collider의 physics material이 `/ur/Looks/FingerPhysics`를 가리키는지 봅니다. 기본 static/dynamic friction은 둘 다 1.0이며 `--friction 0.5`에서는 둘 다 0.5입니다.
+- **GUI 목표 추종:** Physics Inspector에서 finger 목표를 작게 바꾸고 실제 DOF 위치가 따라오는지 관찰합니다. Gain Tuner에서는 같은 관절·시험 조건으로 목표/실제 plot을 비교해 오차와 과도한 진동이 줄어드는지 봅니다. 이 동작 실험은 `--headless --frames ...` 실행으로 수행되지 않습니다.
+- **결과 해석:** `configured.usda`를 다시 열어 위 속성이 남아 있는지 확인합니다. 보고서는 적용한 속성을 기록하며 접촉 물체·잡기 시퀀스·추종 오차를 측정하지 않으므로, 마찰값이나 max force만으로 grasp 성공을 판정하지 않습니다.
+
+## 준비와 실행
 
 Isaac Sim 5.1.0, 지원 NVIDIA GPU/드라이버와 다음 공식 에셋만 있으면 됩니다. 앞선 로컬 튜토리얼의 산출물은 필요 없습니다.
 

@@ -4,6 +4,18 @@
 
 Isaac Sim **5.1.0**의 native Mesh Merge Tool로 두 개의 box mesh를 병합한다. 각 box는 6개 면과 다른 재질을 갖는다. `run.py`는 실제 `MergeMeshesCommand`를 호출하고 12개 면/2개 material subset을 검사한다. 물리 링크 병합이나 robot articulation 조립을 수행하는 도구가 아니다.
 
+## 이 실습의 의도
+
+서로 다른 위치와 재질을 가진 두 box를 하나의 Mesh로 합치면서 표면 위치와 재질 구분을 보존하는 방법을 배운다. 빨간색·파란색 원본은 각각 6개 면을 가져, 병합 후 면 수와 material subset으로 중복 병합이나 재질 손실을 확인할 수 있다. 기본 실행은 병합과 구조 검사를 자동 수행하고, `--prepare-only`는 사용자가 GUI 도구에서 병합할 두 원본만 준비한다.
+
+## 실행 후 확인할 것
+
+- **보이는 결과:** 기본 실행에서 빨간 box와 파란 box의 표면은 원래 월드 위치를 유지해야 한다. Stage에서 `report.json`의 `merged_path`가 가리키는 prim은 두 물체의 면을 담은 하나의 Mesh여야 한다.
+- **면과 재질:** 기본 `report.json`의 `faces=12`, `subsets=2`를 확인하고 결과 Mesh의 두 `GeomSubset`에 각각 올바른 색의 재질이 연결되었는지 조사한다. 이 수는 이 패키지의 두 6면 box 입력에 대한 기준이다.
+- **원본 상태:** 기본 설정의 `sources_active`는 `[false, false]`여야 한다. 원본 `/World/Source_0`, `/World/Source_1`은 삭제된 것이 아니라 비활성화되어 있고, `--keep-sources`를 쓰면 `[true, true]`로 남아 결과와 겹쳐 보이는 것이 정상이다.
+- **기준점 비교:** 새 출력으로 `--clear-transform`을 실행해 mesh의 transform 기준점은 world origin으로 바뀌고 표면의 월드 위치는 같은지 비교한다. 이 실험에서는 색이나 재질 수가 달라질 이유가 없다.
+- **GUI 준비 모드:** `--prepare-only`에서는 선택된 두 Xform과 `scene.usda`만 준비되며 자동 `report.json`은 생성되지 않는다. GUI 병합 때는 자식 `Geometry`가 아닌 부모 Xform 둘을 선택하고, 병합 결과는 직접 Save As한다.
+
 ## 준비와 실행
 
 Isaac Sim 5.1, RTX GPU/드라이버, `isaacsim.util.merge_mesh`가 필요하다. 코드가 mesh와 `UsdPreviewSurface` 재질을 모두 작성하므로 외부 자산과 다른 로컬 패키지가 필요 없다.
@@ -38,7 +50,7 @@ cd src/33_importers_util_merge_mesh
 
 5.1에 설치된 extension은 command 클래스를 자동 등록하지 않으므로 실행기가 `omni.kit.commands.register(MergeMeshesCommand)`로 등록한다. 모듈 전체 이름 `isaacsim.util.merge_mesh.commands.MergeMeshes`를 사용해 다른 extension의 동명 명령과 구분한다. 오류가 나면 Kit 종료 전에 traceback을 남긴다. 종료 코드만 확인하지 말고 `report.json`의 12 faces/2 subsets와 저장된 Mesh를 확인한다.
 
-실험 명령 `--clear-transform --output output/world_origin`으로 기준점 하나만 바꿔 비교할 수 있다. `--keep-sources`는 원본을 활성 상태로 남기므로 원본과 결과가 겹쳐 보일 수 있다. 이 경우 겹침을 병합 실패로 오해하지 않는다. topology/재질 검사 코드는 작성했지만 GPU/Kit 병합 실제 실행은 아직 미검증이며 문법/CLI만 확인했다.
+실험 명령 `--clear-transform --output output/world_origin`으로 기준점 하나만 바꿔 비교할 수 있다. `--keep-sources`는 원본을 활성 상태로 남기므로 원본과 결과가 겹쳐 보일 수 있다. 이 경우 겹침을 병합 실패로 오해하지 않는다. 기본 headless 병합의 12 faces·2 subsets·원본 비활성화 실행 기록은 아래 `RUNTIME_CHECK.md`에 있으며, 다른 옵션과 GUI 조작은 해당 기록의 확인 범위 밖이다.
 
 ## 출처
 

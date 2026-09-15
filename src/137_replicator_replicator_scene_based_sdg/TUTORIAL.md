@@ -4,6 +4,18 @@
 
 이 패키지는 지게차·팔레트·상자·콘이 있는 **공식 scene-based SDG 전체 파이프라인**을 로컬로 포함합니다. 지게차 주변의 의미 있는 위치 관계, 물리 낙하, 세 카메라, 서로 다른 randomizer 주기, 여러 writer 설정을 유지합니다. `scene_based_sdg.py`와 `scene_based_sdg_utils.py`는 NVIDIA 5.1 설치 예제를 Apache-2.0 고지와 함께 포함했고 실행 제한·출력 보호·오류 시 앱 종료를 추가했습니다.
 
+## 이 실습의 의도
+
+창고에서 지게차 앞의 팔레트, 그 위의 상자처럼 관계가 있는 장면을 구성한 뒤 여러 시점의 학습 데이터를 만드는 실습입니다. 물리로 떨어뜨린 상자와 캡처마다 재배치하는 상자를 함께 두어, 물리 진행과 장면 무작위화가 서로 다른 단계임을 보여 줍니다. 기본 실행은 세 카메라에서 6회 캡처하여 BasicWriter 결과를 저장하며 검출 모델 학습은 시작하지 않습니다.
+
+## 실행 후 확인할 것
+
+- **준비와 실행 구분:** `--check-config`는 적용할 JSON만 출력합니다. 실제 실행 후의 `effective_config.json`에서 `num_frames=6`, `resolution=[512,512]`, `writer=BasicWriter`와 출력 경로를 확인합니다.
+- **관계가 있는 장면:** GUI의 `/World/Forklift`, `/World/Pallet`, `/World/SimulatedPallet`, `/World/SimulatedCardbox_0` 등을 살펴봅니다. 지게차 앞 팔레트의 scatter 상자와 별도 팔레트로 떨어뜨린 8개 상자를 구분합니다. 물리 준비 루프는 최대 250스텝 또는 마지막 상자의 저속 상태에서 끝나며 전체 상자의 완전 정착을 판정하지 않습니다.
+- **세 시점:** 출력의 `TopView`, `DriverView`, `PalletView` 식별자로 RGB를 구분하고 기본 완료 시 카메라마다 6장, 총 18장의 512×512 RGB를 확인합니다. TopView의 천장 일부가 잘려 보이는 것은 가까운 clipping 거리를 6 m로 설정한 결과입니다.
+- **정답 데이터:** 같은 카메라·프레임의 semantic 매핑, 2D/3D bounding box, `distance_to_image_plane`, occlusion 출력을 확인합니다. 보이는 대상의 `forklift`, `pallet`, `cardbox`, `traffic_cone` 라벨을 RGB와 대조하되 모든 클래스가 모든 시점에 보여야 한다고 요구하지 않습니다.
+- **변화 주기:** 캡처 로그와 이미지를 비교해 상자·조명·Driver/Pallet 카메라는 매 캡처, Top 카메라는 4프레임 간격, 콘 이벤트는 프레임 0·2·4에 적용되는 구성을 확인합니다. 캡처 중 `delta_time=0`이므로 물리 낙하가 영상마다 계속 진행되지 않는 것은 정상입니다.
+
 ## 준비와 실행
 
 Isaac Sim 5.1.0 전체 설치, 지원 RTX GPU/드라이버, 5.1 자산 서버 연결 또는 로컬 asset root가 필요합니다. 다른 튜토리얼의 공통 모듈은 필요하지 않습니다. 이 폴더 전체만 복사해도 로컬 helper와 config가 함께 갑니다. 런처는 일반 Python이고 자식 파이프라인을 설치본 `python.sh`로 실행합니다.
@@ -39,7 +51,7 @@ Stage는 USD 장면 전체이고 `create_prim(usd_path=...)`는 외부 USD를 re
 
 `register_scatter_boxes`는 팔레트의 bounding box를 기준으로 scatter plane을 만들고 `scatter_2d(..., check_for_collisions=True)`로 상자끼리 겹치지 않게 배치합니다. AABB는 월드 축에 평행한 상자이고 OBB는 물체 방향을 고려한 상자입니다. 콘 randomizer는 지게차 OBB의 아래 모서리 중에서 위치를 고릅니다.
 
-`simulate_falling_objects`는 World와 강체·충돌을 이용해 별도의 상자를 팔레트로 떨어뜨린 뒤 정착시킵니다. 이후 캡처 루프의 `delta_time=0.0`은 그 물리 상태를 고정합니다. `rep.trigger.on_frame`의 상자·조명·카메라 변화는 캡처마다, top camera는 4프레임마다, `randomize_cones` custom event는 코드에서 2프레임마다 발생합니다. Trigger는 OmniGraph에 기록된 실행 조건이며 일반 Python for문과 같은 시점에 항상 실행되는 것은 아닙니다.
+`simulate_falling_objects`는 World와 강체·충돌을 이용해 별도의 상자를 팔레트로 떨어뜨립니다. 최대 250스텝 또는 마지막 상자의 선속도 <0.001 m/s에서 준비를 끝내며, 모든 상자의 정착을 별도로 검사하지는 않습니다. 이후 캡처 루프의 `delta_time=0.0`은 그 물리 상태를 고정합니다. `rep.trigger.on_frame`의 상자·조명·카메라 변화는 캡처마다, top camera는 4프레임마다, `randomize_cones` custom event는 코드에서 2프레임마다 발생합니다. Trigger는 OmniGraph에 기록된 실행 조건이며 일반 Python for문과 같은 시점에 항상 실행되는 것은 아닙니다.
 
 Render product는 세 카메라의 렌더 요청입니다. 준비 중에는 `hydra_texture.set_updates_enabled(False)`로 불필요한 센서 렌더를 끄고 SDG 직전에 다시 켭니다. `BasicWriter.initialize(**writer_config)`가 어떤 정답을 저장할지 결정하고 모든 render product에 attach합니다. 종료 전 출력 큐를 기다린 뒤 detach/destroy합니다.
 
@@ -53,7 +65,7 @@ CocoWriter는 `coco_categories`의 ID와 class 라벨 대응을, KittiWriter는 
 
 ## 관찰, 실험, 오류
 
-성공 기준은 세 카메라에 지게차/팔레트가 보이고 class 매핑과 깊이/검출 정답이 실제 파일로 생기는 것입니다. **rt_subframes만 16→32**로 바꾸고 재배치된 상자/재질의 잔상과 캡처 시간을 비교합니다. 위치 random seed를 이 예제에서 고정하지 않으므로 두 실행의 픽셀 차이를 subframe 효과만으로 단정하면 안 됩니다.
+세 카메라의 RGB와 class 매핑·깊이·검출 정답을 함께 확인합니다. 개별 카메라의 가림과 시야에 따라 보이는 클래스가 다를 수 있습니다. **rt_subframes만 16→32**로 바꾸고 재배치된 상자/재질의 잔상과 캡처 시간을 비교합니다. 위치 random seed를 이 예제에서 고정하지 않으므로 두 실행의 픽셀 차이를 subframe 효과만으로 단정하면 안 됩니다.
 
 자산을 열지 못하면 asset root와 5.1 경로를 확인합니다. dataset이 비었으면 writer 등록 이름, class 라벨, 카메라 시야를 확인합니다. `--check-config`는 JSON 구성을 확인할 뿐 GPU·원격 자산 실행 검증이 아닙니다. 복사한 NVIDIA 파일의 저작권/변경 사항은 `NOTICE.txt`와 `LICENSE-APACHE-2.0.txt`를 확인합니다.
 

@@ -4,6 +4,18 @@
 
 독립 색상 난수 → 크기와 색을 공유하는 의존 난수 → 전체 그룹을 함께 움직이는 bin packing 순서로 세 완전한 설정을 비교한다.
 
+## 이 실습의 의도
+
+같은 큐브 여덟 개에 대해 독립적인 색 난수, 크기와 색이 연결된 난수, 공유 이동과 packing까지 연결한 난수를 차례로 비교합니다. `dependent.yaml`은 물체별 계수 하나를 크기와 빨강·파랑 채널에 함께 쓰고, `packed.yaml`은 모든 물체가 같은 `bin_translate`와 `bin_rotate`를 참조하게 하여 그룹 배치를 유지합니다. `run.py` 기본 호출은 YAML 준비만 수행하며, native IRO 생성에서는 각 설정의 0.5초 물리 진행 후 영상을 저장하므로 description의 샘플링 값과 최종 물리 위치를 구분해야 합니다.
+
+## 실행 후 확인할 것
+
+- **독립 설정의 기준:** 기본 `scene.yaml`을 native 실행한 뒤 description에서 subject가 8개이고 모두 scale 0.7인지 확인합니다. 각 RGB 채널은 0..1의 독립 난수이며 큰 물체일수록 붉다는 관계는 이 설정에 없습니다.
+- **크기·색 의존성:** `--config dependent.yaml`의 같은 subject에서 `size=0.35+size_coef_i*(0.85-0.35)`, `R=size_coef_i`, `G=0`, `B=1-size_coef_i`를 검산합니다. 큰 큐브일수록 R이 크고 R+B=1이어야 하며, 조명 때문에 화면 픽셀값은 이 재질 색과 같지 않을 수 있습니다.
+- **높이의 의미:** dependent의 초기 Y 위치는 `size*50`으로, 한 변 `size*100`인 큐브의 바닥을 지면에 맞춘 값입니다. 최종 RGB나 Stage 위치가 초기 위치와 다르면 먼저 물리 접촉·초기 겹침의 영향을 확인합니다.
+- **그룹 공유와 packing:** `--config packed.yaml`의 description에서 모든 subject의 첫 translate와 `rotateY`가 같은 `bin_translate`, `bin_rotate` 값인지 확인합니다. 그 뒤의 harmonized transform은 물체별 배치이며 각 큐브의 size에 맞춘 AABB를 사용합니다.
+- **물리 전후 구분:** packed는 초기 그룹 중심 Y를 130(cm)에 두고 중력 981로 0.5초 진행합니다. 초기 packing 배치와 저장 시점의 낙하·접촉 배치를 따로 관찰하며, 모든 물체가 원래 bin 안에 영구히 고정되거나 0.5초 안에 완전히 안정된다고 기대하지 않습니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
@@ -40,9 +52,7 @@ GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action a
 
 IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
 
-## 관찰과 성공 기준
-
-dependent에서 size는 0.35..0.85, R+B=1이고 큰 큐브일수록 R이 크다. packed에서 모든 subject의 첫 translate와 rotateY는 동일하다. 물리 단계 이후 월드 위치는 낙하로 달라질 수 있으므로 randomization description과 실제 최종 pose의 의미를 구분한다.
+## 한 변수 실험
 
 dependent.yaml의 size_max만 0.85에서 1.2로 바꾼다. 색 계수 범위는 그대로이지만 크기의 범위가 넓어지고 충돌 가능성이 커지는지 확인한다.
 

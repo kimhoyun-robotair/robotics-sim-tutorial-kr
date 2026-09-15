@@ -4,6 +4,18 @@
 
 로컬 extension 경로 추가, 활성화, 버전 변경 확인과 registry UPDATE 동작을 구분한다. 이 폴더의 실제 작은 UI 확장으로 검색/활성/재로드를 연습한다.
 
+## 이 실습의 의도
+
+로컬 확장을 검색할 수 있는 상태, 실제 Python 모듈이 활성화된 상태, 선택된 package 버전이 바뀐 상태를 각각 확인하는 실습이다. `kr.version.lesson`은 버튼 한 번으로 USD Cube를 만들어 경로 검색과 버전 표시를 실제 callback 실행까지 연결한다. 제공 확장에는 registry 다운로드나 UPDATE 자동화가 없으며, 로컬 metadata 변경과 원격 registry 업데이트는 아래에서 따로 수행한다.
+
+## 실행 후 확인할 것
+
+- Extension Search Paths에 `exts` 부모 경로를 추가한 뒤 Third Party에서 `kr.version.lesson`, version=`1.0.0`이 발견되는지 확인한다. 검색 결과의 실제 경로도 보아 같은 이름의 다른 설치본을 활성화하지 않았는지 확인한다.
+- Enabled 후 **Korean Extension Starter** 창에서 **Create Cube**를 누르면 Stage의 `/World/ExtensionCube`와 Console의 `created /World/ExtensionCube`가 나타나야 한다. Cube의 size=`0.3`, translate=`(0, 0, 0.5)`를 Property에서 확인한다.
+- Cube는 `UsdGeom.Cube`만 정의하므로 강체·충돌 동작이 없고 Play해도 떠 있는 것이 정상이다. 같은 Stage에서 버튼을 다시 누르면 `ExtensionCube exists` 오류를 내어 기존 prim을 덮어쓰지 않는다.
+- 확장을 끄면 창이 없어지고 기존 Cube는 Stage에 남는지 확인한다. version을 `1.0.1`로 바꾼 후 목록에서 새 버전을 확인하고, 새 Stage에서 버튼까지 다시 실행해 실제 선택된 코드가 동작하는지 본다. 창 제목은 Python 문자열이므로 TOML title 변경과 자동으로 일치하지 않을 수 있다.
+- registry 실습에서는 현재 제공되는 버전과 INSTALL/UPDATE 표시를 확인한다. UPDATE가 없는 상태도 가능한 결과이며, 로컬 version 숫자만 바꾼 것은 원격 패키지를 내려받아 갱신한 결과가 아니다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -39,7 +51,7 @@ extension.toml의 package version은 코드 배포 버전, dependency는 필요�
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

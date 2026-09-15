@@ -4,9 +4,19 @@
 
 공식 원문: **Adding a Controller** · Isaac Sim **5.1.0** · 인덱스 **t100**
 
-## 만들 결과와 실행 방식
+## 이 실습의 의도
 
-직접 작성한 UnicycleController와 공식 DifferentialController가 같은 바퀴 목표를 만드는 것을 읽고, WheelBasePoseController가 실제 로봇 위치를 피드백해 목표에 정지하는 과정을 관찰합니다.
+차동구동 로봇의 전진·회전 속도를 좌우 바퀴 속도로 바꾸는 계산과, 현재 pose를 읽어 목적지로 가는 피드백 제어를 구분합니다. 직접 만든 UnicycleController와 공식 DifferentialController를 같은 반지름·바퀴 간격으로 구성해 계산 결과를 비교하고, 기본 `pose` 모드는 Jetbot을 세계 좌표 (0.8,0.8) m로 보냅니다. 목표 marker는 따로 만들지 않으므로 도착 여부는 로봇의 움직임과 출력된 위치 오차를 함께 읽습니다.
+
+## 실행 후 확인할 것
+
+- 터미널의 `Custom wheel targets rad/s`와 `Built-in wheel targets rad/s`가 같은 입력에서 일치하는지 봅니다. 이 두 출력은 선택한 실행 모드와 관계없이 초기 계산을 비교하는 것이며, pose 모드의 매 스텝 바퀴 목표 기록은 아닙니다.
+- 기본 pose 실행에서 `/World/Jetbot`이 목표 쪽으로 방향을 맞추고 전진한 뒤 정지하는지 관찰합니다. `result.json`의 `goal_m`과 `samples[].goal_error_m`를 함께 읽어 어느 목적지에 접근했는지 확인합니다.
+- 충분한 실행 후 pose의 `final_goal_error_m`가 설정한 위치 허용 반경 0.04 m 부근 이하인지 봅니다. 정지 동작도 함께 확인하며, 짧은 `--steps`나 0인 `--linear`로 목표에 못 간 결과를 같은 조건의 도달 실패로 비교하지 않습니다.
+- custom/differential 모드는 일정한 전진·회전 명령을 계속 적용하므로 목표에서 멈추지 않아도 됩니다. 이 모드의 목표 오차는 참고값이며 도달 성공 기준이 아닙니다. pose에서는 `--angular` 대신 현재 위치·방향으로 회전 명령을 계산합니다.
+- 기본 900단계 이후 GUI에서 계속 보이는 움직임은 `result.json`에 추가되지 않습니다. 두 모드의 경로를 비교할 때 동일한 `--steps`, `--linear`, `--angular`와 에셋을 사용하고 60단계 간격의 샘플이라는 점을 고려합니다.
+
+## 실행 방식
 
 이 패키지는 `Adding a Controller` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
 
@@ -50,10 +60,6 @@ python3 run.py --help
 | WheelBasePoseController | 현재 pose와 세계 목표 → 내부 DifferentialController action | 위치와 방향 |
 
 세계 좌표 목표는 `[x,y,z]`이며 이 제어기는 평면 x,y 거리와 yaw를 사용합니다. USD에서 Jetbot의 Prim 주소와 Scene 이름은 별개의 식별자입니다. 관절 속도 목표는 다음 명령까지 유지될 수 있으므로 도착 후 0 속도를 명시하는 것이 필요합니다.
-
-## 관찰과 성공 판정
-
-custom과 differential의 초기 바퀴 계산 출력이 같아야 합니다. pose 실행은 `final_goal_error_m`가 0.04 m 근처 이하로 내려가고 정지하는 것을 확인합니다. 짧은 실행에서는 아직 이동 중일 수 있습니다.
 
 ## 한 변수만 바꾸는 실험
 

@@ -2,9 +2,19 @@
 
 권장 학습 순서 **168** · 고급 데이터 생성과 외부 시스템 통합 · 출처 ID `t075`
 
-## 기대 결과와 준비
+## 이 실습의 의도
 
-xArm gripper가 soup can 주위의 다섯 grasp 후보에서 손가락을 닫고, 각 후보의 실제 gripper 상태를 `capture_*.yaml`에 남깁니다. 5.1의 저장 결과는 gripper 상태 기록입니다. 파일이 생겼다는 이유만으로 안정적인 집기 성공/실패 label을 자동 판정하지 않습니다.
+xArm gripper가 soup can의 양쪽 표면을 잡을 수 있는 후보 자세를 샘플링하고, 각 자세에서 손가락을 닫는 물리 단계를 실행합니다. 기본 설정은 후보 5개를 요청하고 실제 얻은 후보 중 최대 5개를 평가하여 `capture_*.yaml`에 gripper 상태를 남깁니다. Close 단계만 구성했으므로 이 기록은 물체를 들어 올린 뒤 버티는 집기 성공/실패 label이 아닙니다.
+
+## 실행 후 확인할 것
+
+- **대상과 자세:** GUI에서 `/World/Grippers/xarm_gripper`가 `/World/Objects/_05_tomato_soup_can` 주위의 서로 다른 후보 자세로 이동하는지 본다. 접근 축은 gripper 로컬 축이므로 물체를 향하는 방향까지 확인한다.
+- **닫힘 단계:** `drive_joint`가 열린 초기 목표 0에서 Close 목표 48도로 구동되는지 관찰한다. 32 step 동안 1/60초씩 평가하며, 실제 손가락 위치는 물체 접촉의 영향을 받으므로 반드시 목표 각도에 도달해야 하는 것은 아니다.
+- **상태 파일:** 각 `capture_*.yaml`의 `grasp_result`에서 `gripper_path`, `object_path`, `gripper_location`, `gripper_orientation`, `joint_states`를 확인한다. 자세 기록과 관절 상태를 함께 읽어 어느 후보를 평가한 결과인지 연결한다.
+- **완료 수:** `summary.json`의 `evaluated_poses`, `result_files` 길이, 실제 capture 파일 수가 일치해야 한다. 요청한 후보가 모두 생성되지 않을 수 있으므로 `sampled_poses`도 확인하며, 후보 0개나 평가 시간 초과는 완료가 아니다.
+- **복귀와 해석:** 평가 후 gripper가 초기 자세로 돌아가는 것은 정상이다. 설정에는 Lift 단계가 없고 원본 장면의 물체는 중력이 꺼져 있으므로, 종료 화면이나 capture 개수로 중력 아래 집기 안정성을 결론 내리지 않는다.
+
+## 준비
 
 Isaac Sim 5.1, RTX GPU와 드라이버, `isaacsim.replicator.grasping` 및 GUI를 쓸 경우 `isaacsim.replicator.grasping.ui`가 필요합니다. sampler는 `libspatialindex`를 사용합니다. Ubuntu에 라이브러리가 없다면 시스템 관리 방식에 맞게 `libspatialindex-dev`를 설치합니다. 이 패키지는 라이브러리 설치를 실행하지 않습니다. gripper/물체/rigid body가 들어 있는 외부 5.1 Assets 장면은 다음 파일입니다.
 

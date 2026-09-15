@@ -2,15 +2,24 @@
 
 권장 학습 순서 **06** · Python 실행 환경과 USD 기초 · 출처 ID `t094`
 
+## 이 실습의 의도
+
+설치의 `python.sh`가 준비하는 환경과 `SimulationApp`이 관리하는 앱 수명을 작은 낙하 장면으로 확인한다. 물리 간격은 1/60초, 렌더 간격은 1/30초로 달리 두어 반복문 횟수·렌더 프레임·물리 콜백 횟수가 무엇을 세는지 비교한다. 기본 실행은 큐브 장면과 `environment.json`, `scene.usda`를 만들며, `--stage`는 지정한 로컬 장면을 대신 열고 `--extension`은 요청한 확장을 활성화한다. Carter URDF 가져오기와 설치 예제들은 별도로 실행하는 후속 실습이다.
+
+## 실행 후 확인할 것
+
+- 기본 실행의 `/World/Cube`가 높이 2 m에서 내려오는지 본다. `--stage`를 지정했을 때는 입력 장면이 관찰 대상이며 코드가 기본 큐브와 지면을 추가하지 않는 것이 정상이다.
+- 종료 후 `environment.json`의 `environment`에서 `ISAAC_PATH`, `EXP_PATH`, `CARB_APP_PATH`를 읽어 설치 실행 환경을 확인한다. 키가 있다는 사실만으로 설정이 올바르다고 판단하지 말고 실제 사용한 설치 경로와 비교한다.
+- 같은 `--steps`로 GUI와 `--headless`를 실행해 `requested_steps`, 실제 `physics_callbacks`, `physics_time_s`를 비교한다. 서로 다른 물리·렌더 간격 때문에 반복 횟수에 무조건 1/60을 곱해 총 시간을 단정하지 않는다.
+- `requested_resolution`과 `enabled_extensions`는 코드에 전달한 요청 목록이다. 창 크기는 GUI에서, 확장 활성화는 해당 앱의 Extensions 창에서 확인한다. 보고서에 이름이 실렸다는 것만으로 화면 크기나 확장 동작이 검증되는 것은 아니다.
+- 출력 `scene.usda`를 다시 열어 장면이 저장되었는지 확인한다. 이 파일은 Stage 저장 결과이며 콜백 횟수나 이동 궤적 기록은 `environment.json`과 구분한다.
+- 보조 `urdf_import.py`를 실행했다면 `/carter/joints/left_wheel`, `right_wheel`의 속도 목표 150도/초와 실제 바퀴 움직임을 확인한다. `--fix-base`에서는 베이스가 고정되어 차체가 주행하지 않는 것이 의도이며, 이 보조 파일의 `--steps`는 물리 스텝이 아닌 앱 업데이트 제한이다.
+
 ## 독립 패키지 준비와 실행 규칙
 
 이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
 
 이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
-
-## 목표와 예상 결과
-
-설치 Python이 준비하는 환경과 `SimulationApp`의 역할을 실제 실행으로 확인한다. 이 패키지는 옵션으로 창 해상도·확장·로컬 Stage를 선택하고, 물리 콜백 횟수와 시뮬레이션 시간을 `environment.json`에 기록한다. 기본 실행은 떨어지는 큐브와 `scene.usda`를 만든다.
 
 ## 순서대로 실습
 

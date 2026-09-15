@@ -4,6 +4,17 @@
 
 Distribution Visualizer의 점구름을 사용해 회전과 반지름 범위가 만드는 위치 분포를 보고 같은 범위를 실제 IRO description에 적용한다.
 
+## 이 실습의 의도
+
+Distribution Visualizer에서 변환별 난수 구간이 합성되어 어떤 위치 분포를 만드는지 먼저 보고, 같은 구간을 IRO 장면의 Torus 한 개에 적용해 비교합니다. GUI 점구름은 가능한 중심 위치의 표본이고 `scene.yaml`의 Torus는 그 분포에서 프레임마다 뽑힌 한 사례이므로 두 화면의 물체 수가 다른 것이 의도입니다. `run.py`는 기본적으로 YAML만 준비하며 `--launch --headless`도 장면 데이터 생성까지만 수행하므로 Visualizer의 선택·슬라이더 조작은 별도 GUI 실습으로 확인합니다.
+
+## 실행 후 확인할 것
+
+- **선택한 대상과 UI:** GUI에서 Torus를 선택하고 **Apply Preset xformOps** 후 다시 선택했을 때 Visualizer의 대상 Prim과 Stage 선택이 일치하고 `rotateY → rotateX → translate`가 보이는지 확인합니다.
+- **분포 모양:** Y 회전 -120..120도, X 회전 -30..30도, 로컬 Z 이동 150..300을 적용하면 점구름이 두께가 있는 구 껍질 일부처럼 보여야 합니다. 점구름 애니메이션은 가능 위치의 표시이며 실제 Torus 여러 개를 물리 시뮬레이션한 결과가 아닙니다.
+- **한 변수 비교:** translate Z의 start/end를 모두 150으로 맞추면 반지름 변화가 없어져 곡면이 얇아져야 합니다. 각도 구간을 줄이면 해당 각도 방향의 펼쳐짐이 줄어드는지 비교합니다.
+- **YAML 결과와 대응:** Object SDG에 `prepared.yaml`을 로드하고 **Simulate**하면 한 프레임의 `subject` Torus가 위 구간의 한 위치에 나타납니다. `descriptions/`에서 두 회전과 translate Z 범위를 확인하고 `images/`의 Torus와 비교합니다. 기본 3프레임만으로 전체 확률 밀도가 균일한지 판단하지 않습니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
@@ -40,9 +51,7 @@ GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action a
 
 IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
 
-## 관찰과 성공 기준
-
-translate Z 구간이 껍질의 두께를, rotateY/X 구간이 가로/세로 각도 범위를 바꾼다. 선택이 바뀌면 UI에 표시되는 prim과 Stage 선택이 일치해야 한다.
+## 한 변수 실험
 
 translate Z의 end만 300에서 150으로 바꾼다. 반지름 변동이 사라지고 두께 없는 곡면으로 가까워지는지 관찰한다.
 

@@ -4,6 +4,19 @@
 
 이 패키지는 **실제 Synthetic Data Recorder**를 이용하는 두 가지 실행을 제공합니다. GUI에서는 사용자가 Writer/Control 상태를 조작하며, `--headless`는 같은 확장의 `SyntheticRecorder` 클래스로 정해진 프레임을 기록합니다. 외부 창고를 받기 전에도 동작을 배울 수 있도록 class 라벨이 있는 상자와 키프레임 카메라를 로컬에서 만듭니다. 공식 창고 장면으로 반복하는 절차도 아래에 포함됩니다.
 
+## 이 실습의 의도
+
+카메라·해상도·annotator를 묶는 Writer 설정과 Start/Pause/Resume/Stop으로 기록을 제어하는 과정을 배우는 실습입니다. `/World/Carton`은 고정하고 `/World/AnimatedCamera`만 키프레임으로 이동시켜, 시간 진행이 출력 시점에 미치는 영향을 관찰합니다. 기본 GUI 실행은 장면과 Recorder 설정 파일을 준비한 뒤 사용자의 Start를 기다리고, `--headless`는 BasicWriter로 요청 프레임을 자동 기록합니다. 사용자 writer와 랜덤 카메라는 아래에서 직접 선택·실행해야 하는 확장 실험입니다.
+
+## 실행 후 확인할 것
+
+- **GUI 준비 결과:** 출력 폴더에 `recorder_stage.usda`와 `recorder_config.json`이 생성되고 Stage에 `/World/Carton`, `/World/AnimatedCamera`가 있는지 확인합니다. GUI에서 아직 Start하지 않았다면 PNG가 없어도 정상입니다.
+- **기본 캡처:** 설정을 불러와 Start하거나 `--headless --frames 10`을 실행한 뒤 설정한 recording 출력에서 10프레임의 RGB·carton 의미 정답·tight box를 확인합니다. headless 코드의 PNG 존재 검사는 최소 검사이므로 내용과 프레임 수도 따로 살펴봅니다.
+- **카메라와 시간:** Control Timeline을 켠 기록에서 카메라가 x=-1→1로 보간되는지 확인합니다. 전체 키프레임은 0~120 time code, 2초 구간이므로 짧은 10프레임 기록만으로 전체 이동이 끝나기를 기대하지 않습니다.
+- **GUI 상태 조작:** 프레임 수를 늘려 Start→Pause→Resume→Stop을 직접 시험합니다. Pause 중 저장 진행과 재개 후 기록을 비교하고, headless 자동 완료를 GUI 버튼 검증으로 대신하지 않습니다.
+- **사용자 writer:** `BeginnerNormalWriter`를 선택한 실행은 `rgb.../000000.png`와 `normals.../000000.png` 같은 annotator별 폴더를 비교합니다. 법선 그림의 색은 표면 방향을 표현하며 거리나 RGB 재질 색이 아닙니다.
+- **설정과 장면 구분:** Recorder JSON을 다시 불러와도 USD 장면까지 복원되지는 않습니다. 랜덤 카메라 실험은 해당 스크립트가 만든 Camera prim을 새 render product에 연결한 뒤 프레임별 시점 변화를 확인합니다.
+
 ## GUI 실행과 종료
 
 GUI에서는 Recorder를 직접 조작하며, `--steps`를 생략하면 사용자가 창을 닫을 때까지 유지됩니다. `--steps N`을 주면 장면 준비 후 최대 N번 app update하고 종료합니다. `--headless`는 정해진 프레임을 자동 기록하며, `--steps` 생략 시 기존 10000 app update 제한을 사용합니다.
@@ -38,7 +51,7 @@ python3 run.py --help
 5. **Writer > Config**에서 상태를 저장하고 다시 불러옵니다. 실행기가 만든 `output/recorder_config.json`도 불러올 수 있습니다. 로드 후 Output 경로를 확인합니다. 설정 파일은 USD 장면을 포함하지 않으므로 `recorder_stage.usda`는 별도로 열어야 합니다.
 6. **Custom Writer**에 `BeginnerNormalWriter`, **Parameters Path**에 이 패키지의 `custom_writer_params.json` 절대경로를 지정합니다. 새 출력 폴더에서 3프레임 기록합니다. RGB와 법선 시각화 PNG가 annotator별 하위 폴더에 생겨야 합니다.
 7. DataVisualizationWriter를 쓰려면 Script Editor에서 `from isaacsim.replicator.writers import DataVisualizationWriter`를 실행합니다. Custom Writer 이름을 `DataVisualizationWriter`, Parameters Path를 `visualization_params.json`으로 바꾸고 기록합니다. RGB 위 녹색 tight box, normals 위 빨간 loose box, RGB 위 3D box를 비교합니다.
-8. Script Editor에서 `randomize_camera.py` 내용을 실행합니다. Stage에 생성된 `RandomRecorderCamera` 아래 Camera prim을 선택해 새 render product로 추가합니다. Start마다 카메라가 지정된 범위에서 상자를 보도록 변합니다. 기존 키프레임 카메라와 랜덤 카메라를 별도 출력으로 비교합니다.
+8. Script Editor에서 `randomize_camera.py` 내용을 실행합니다. Stage에 생성된 `RandomRecorderCamera` 아래 Camera prim을 선택해 새 render product로 추가합니다. 기록 프레임의 `on_frame` trigger마다 카메라가 지정된 범위에서 상자를 보도록 변합니다. 기존 키프레임 카메라와 랜덤 카메라를 별도 출력으로 비교합니다.
 
 ## 공식 창고 장면으로 반복
 

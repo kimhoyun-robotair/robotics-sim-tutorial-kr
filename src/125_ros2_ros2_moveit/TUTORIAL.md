@@ -4,6 +4,18 @@
 
 공식 `Franka MoveIt` 장면과 `isaac_moveit` ROS launch를 사용하는 완전한 GUI 실습이다. 손가락 열기와 팔 목표 자세를 계획하고 Isaac Sim에서 실제로 실행한다. USD/ROS 패키지를 이 폴더에 재배포하지 않으며 필요한 준비를 여기서 모두 설명한다.
 
+## 이 실습의 의도
+
+MoveIt의 경로 계획과 ros2_control을 통한 실제 관절 실행이 별도 단계임을 배우는 실습이다. `/Franka`는 `/isaac_joint_states`로 현재 상태를 보내고 `/isaac_joint_commands`로 받은 명령을 Articulation Controller에 적용한다. 로컬 실행기는 없으므로 공식 GUI 장면과 외부 `isaac_moveit` launch를 준비하고, 손가락 `hand/open`과 팔 `panda_arm` 목표를 직접 Plan→Execute한다.
+
+## 실행 후 확인할 것
+
+- **시뮬레이터 연결:** Stage에 `/Franka`와 `/ActionGraph`가 있고 Play 중 `/isaac_joint_states`와 `/clock`을 실제로 수신하는지 확인한다. `ros2 control list_controllers`에서는 arm/hand controller가 active여야 한다.
+- **계획 단계:** RViz의 `hand/open` 또는 `panda_arm`에서 Plan을 누르면 경로 미리보기가 생성되는지 본다. 이때 Isaac Sim의 실제 로봇이 그대로 있는 것은 정상이다.
+- **실행 단계:** Execute 후 `/isaac_joint_commands`가 전달되고 `/isaac_joint_states`가 변하며 Isaac Sim 손가락 또는 팔이 목표로 움직이는지 확인한다. launch의 `ros2_control_hardware_type:=isaac`도 함께 확인한다.
+- **목표의 시작 상태:** 이미 open인 손가락에는 같은 open 명령을 줘도 변화가 작을 수 있다. 다른 자세에서 다시 시험하고, `hand/close` 실패는 계획 실패인지 실행 응답 문제인지 구분해 기록한다.
+- **충돌 해석:** `<random_valid>`는 MoveIt의 계획 장면 기준 유효 목표다. Isaac Sim에 별도로 추가한 장애물이 MoveIt에 자동 반영된다고 판단하지 말고, 기본 장면·가까운 목표에서 계획과 실제 실행을 먼저 비교한다.
+
 ## 설치와 터미널 준비
 
 이 폴더만 복사해도 실습할 수 있다. 다른 로컬 튜토리얼이나 공통 Python 모듈은 필요 없다. 외부 프로그램인 Isaac Sim 5.1.0, 공식 5.1 자산, ROS 2와 아래 공식 ROS 워크스페이스는 필요하다. 아래 명령은 **Ubuntu 22.04 + Humble**, bash 터미널 기준이다. Ubuntu 24.04에서는 `humble`을 `jazzy`로 바꾼다. Windows는 원문에서도 부분 지원이며 이 실습의 검증 대상으로 삼지 않는다.

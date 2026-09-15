@@ -4,6 +4,19 @@
 
 이 패키지는 Isaac Sim 5.1의 **ROS 2 Cameras**를 독립 실행 가능한 작은 실험실로 재구성했다. 두 카메라와 색이 다른 물체를 직접 만들고, 각각 RGB, 깊이, 깊이 기반 점군, CameraInfo를 발행한다. 원문은 TurtleBot이 있는 장면에서 GUI로 진행한다. 여기서는 로봇 모델과 창고 다운로드 없이 같은 카메라 그래프를 관찰할 수 있다. 아래 GUI 실습은 원문의 카메라 배치, 그래프 작성, 단축 메뉴까지 다룬다.
 
+## 이 실습의 의도
+
+카메라 prim, Render Product, ROS Helper의 역할을 나누어 RGB·깊이·점군·내부 파라미터가 하나의 카메라에서 함께 만들어지는 과정을 확인한다. 빨간·파란 물체와 x축으로 1 m 떨어진 두 카메라는 시점 차이를 비교하기 위한 구성이다. 기본 실행은 두 카메라의 네 가지 출력을 발행하고, 의미 분할·경계 상자는 `--perception`을 선택했을 때 추가한다.
+
+## 실행 후 확인할 것
+
+- Stage의 `/World/Camera_1`, `/World/Camera_2`와 각각의 `/World/CameraGraph_1`, `/World/CameraGraph_2`를 확인한다. RViz Image에서 `/camera_1/rgb`, `/camera_2/rgb`를 실제 수신하면 같은 빨간·파란 물체의 영상상 위치가 서로 달라야 한다.
+- `ros2 topic list -t`에서 각 카메라의 `rgb`·`depth`는 `sensor_msgs/msg/Image`, `depth_pcl`은 `sensor_msgs/msg/PointCloud2`, `camera_info`는 `sensor_msgs/msg/CameraInfo`인지 확인한다. 이름만 나타나는 것과 데이터가 도착하는 것은 별개다.
+- `/camera_1/camera_info`의 해상도는 640×480, frame은 `camera_1`이어야 하며 K는 9개 원소를 갖는다. 두 번째 카메라의 frame은 `camera_2`다. 아래의 카메라 설정으로 계산한 fx·fy 약 549.75 pixel과 중심점 (320,240)을 대조한다.
+- RViz PointCloud2를 `/camera_1/depth_pcl`, Fixed Frame=`camera_1`로 설정해 물체 표면을 확인한다. 이 코드는 TF를 발행하지 않으므로 `world`나 다른 카메라 frame으로 변환하려 할 때의 오류는 별도 TF 구성 없이는 예상되는 결과다.
+- 깊이 영상에서 물체·바닥의 유한한 거리를 확인한다. 배경의 무한대 때문에 대비가 몰릴 수 있으며, 정지된 장면이라 영상 내용이 반복되는 것은 정상이다. 1/60초 렌더 간격을 설정했어도 실제 수신 Hz는 실행 성능과 DDS 상태에 따라 달라진다.
+- 기본 `--perception none`에서는 인식 결과와 labels 토픽이 없다. `semantic_segmentation`이나 `bbox_3d`로 새로 실행했을 때 선택한 결과와 `/camera_1/labels`를 받아 `red`·`blue` 라벨 연결을 확인한다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 시뮬레이션 스텝과 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 지정하면 해당 횟수 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1800회를 사용합니다. 이전 `--frames` 옵션은 `--steps` 없는 headless 실행의 횟수만 정하며, GUI 종료에는 영향을 주지 않습니다. `--steps`를 지정하면 `--frames`보다 우선하며 0과 음수는 허용하지 않습니다.
 
 ## 준비와 실행

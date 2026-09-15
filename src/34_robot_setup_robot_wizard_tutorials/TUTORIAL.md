@@ -5,6 +5,18 @@
 공식 Robot Wizard Tutorial의 **GUI native** 실습이다. 실행기는 공식 `/Isaac/Samples/Rigging/RobotWizard/raw_blocks.usd`를 새 로컬 편집 layer로 열고, Wizard에서 실제 로봇 계층·joint·drive를 작성한다. Isaac Sim 5.1 assets root에서 이 파일을 읽을 수 있어야 한다. 원격 asset pack을 쓰거나 동일 버전 로컬 pack을 설정한다.
 
 
+## 이 실습의 의도
+
+Robot Wizard가 원시 도형을 링크·충돌 형상·관절·drive·articulation으로 조직하는 과정을 직접 익힌다. world에 고정된 link1, 직선 이동하는 link2, 회전하는 link3를 만들어 서로 다른 joint와 drive의 역할을 한 장면에서 비교한다. `run.py`는 `raw_blocks.usd`와 로컬 편집 layer를 열어 초기 구조만 기록하며, Wizard 조립·저장·Play는 아래 GUI 절차에서 사용자가 수행한다.
+
+## 실행 후 확인할 것
+
+- **시작과 완료 구분:** 실행 직후의 도형은 아직 Wizard에서 완성한 로봇이 아니다. `initial_inventory.json`은 GUI 편집 전의 강체·joint·root 목록이므로, 편집 후 결과가 자동 반영되는 최종 성적표로 읽지 않는다.
+- **링크 구조:** Wizard 작업 후 `wizard_robot` 아래에 `link1`, `link2`, `link3`가 있고 지정한 도형이 각 링크로 묶였는지 Stage에서 확인한다. 자료용 `meshes`·`visuals`·`colliders` Scope의 원본이 겹쳐 보이면 visibility를 조정하고 실제 링크 위치는 유지한다.
+- **연결과 목표:** Property에서 `fixed_joint`는 world→link1, `slider_joint`는 link1→link2의 X축, `rotate_joint`는 link2→link3의 Z축인지 확인한다. slider의 범위는 0..3, 위치 목표는 1이며 rotate는 속도 목표 100 deg/s와 양의 damping이 필요하다.
+- **Play 후 운동:** link1이 고정된 채 link2가 slider 목표로 이동하고 link3가 계속 회전하는지 본다. link3가 멈추지 않는 것은 속도 목표를 유지하는 의도된 결과다. slider 목표만 2로 바꿨을 때 정착 위치가 달라지는지도 비교한다.
+- **저장 결과:** Save Robot 결과의 root와 base/physics 구성 파일을 열어 세 joint의 body 관계와 drive가 저장되었는지 확인한다. `--headless --steps ...`로 원본이 열린 것만 확인한 실행은 이 GUI 제작·운동 확인을 대신하지 않는다.
+
 ## 실행 환경과 파일
 
 Isaac Sim **5.1.0**, 지원되는 RTX GPU와 GUI가 필요하다. `ISAAC_SIM_PATH`는 `python.sh`가 있는 설치 디렉터리다. Python CLI 도움말은 일반 Python에서도 열린다. 이 패키지는 자체 코드/설정을 가지며 다른 로컬 튜토리얼을 import하지 않는다.

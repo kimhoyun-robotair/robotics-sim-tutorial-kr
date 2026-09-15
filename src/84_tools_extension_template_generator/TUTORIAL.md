@@ -4,6 +4,18 @@
 
 공식 생성기로 네 템플릿을 만드는 실습과 즉시 실행 가능한 작은 독립 UI extension을 함께 제공한다. 생성 결과의 README는 NVIDIA 생성기 산출물이며 이 저장소 README를 변경하는 절차가 아니다.
 
+## 이 실습의 의도
+
+공식 생성기가 만드는 네 템플릿을 각각 생성·활성화하고, 템플릿에 따라 장면과 제어를 누가 준비해야 하는지 확인한다. 함께 제공한 `kr.template.starter`는 startup→UI 버튼→USD prim 생성→shutdown의 최소 연결을 보여주며, 이를 켠다고 네 공식 템플릿이 생성되지는 않는다. 공식 생성 버튼은 파일을 만들고, 확장 검색 경로 등록·Enabled·각 템플릿의 Load/Run은 별도로 수행해야 한다.
+
+## 실행 후 확인할 것
+
+- Generate 후 `output/extensions` 아래 `kr.loaded`, `kr.scripted`, `kr.configuration`, `kr.components`의 파일과 생성 README가 각각 있는지 확인한다. 부모 search path를 등록한 뒤 각 이름이 Extensions에 검색되어 실제 메뉴/창을 여는지까지 본다.
+- Loaded Scenario에서 **Load → Run → Stop → Reset**을 수행한다. 설치된 기본 템플릿의 `/ur10e` 관절이 순차적으로 움직이고 `/Scenario/cuboid`가 로봇 주위를 돌며, Stop 시 갱신이 멈추고 Reset 후 다시 시작할 상태로 돌아오는지 확인한다.
+- Scripting에서는 Load/Run 후 로봇의 목표 이동과 gripper 개폐가 순서대로 진행되는 동안 UI가 응답하는지 본다. Configuration에서는 별도로 Franka를 추가하고 Play한 뒤 dropdown으로 선택해야 관절 UI와 실제 관절 이동을 확인할 수 있다.
+- UI Component Library에서는 FloatField·체크박스·버튼의 callback에 전달되는 값과 타입을 생성 코드와 대조한다. 필드가 보이거나 바뀌었다는 것과 연결된 callback이 호출되는 것은 별도로 확인한다.
+- 제공 starter의 **Create Cube**는 `/World/ExtensionCube`에 size=`0.3`, 높이 `0.5`의 도형을 만든다. 강체·충돌을 추가하지 않아 Cube가 떨어지지 않고, 확장을 꺼 창을 없애도 prim은 남는다. 이 결과로 공식 템플릿의 로봇 실행까지 완료했다고 판단하지 않는다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -45,7 +57,7 @@ Korean Extension Starter 창의 **Create Cube**를 누르면 `/World/ExtensionCu
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

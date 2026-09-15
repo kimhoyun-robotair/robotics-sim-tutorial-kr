@@ -4,6 +4,20 @@
 
 같은 Franka와 네 블록 환경에서 세 가지 behavior를 비교한다. `peck_state_machine.py`, `peck_decider_network.py`, `peck_game.py`를 모두 로컬에 포함했다. 원본이 보여 주는 상태 기계의 반응성 한계를 관측한 뒤 이를 개선하는 decider 구조를 읽는 실습이다.
 
+## 이 실습의 의도
+
+한 번 정한 손끝 목표를 끝까지 시도하는 행동과 환경 변화를 감시해 목표를 다시 고르는 행동의 차이를 비교한다. 네 색 블록은 사용자가 옮길 수 있는 물리 물체이자 RMPflow 장애물이며, 바닥 peck 목표를 가려 상위 판단의 필요성을 드러낸다. 기본 실행은 `peck_state_machine` 하나를 선택하므로 반응성 비교와 최근 이동 블록 추종은 behavior를 바꿔 각각 실행한다.
+
+## 실행 후 확인할 것
+
+- **기본 peck 반복:** 물체를 옮기지 않은 장면에서는 손끝이 블록에서 떨어진 바닥 목표(z=0.01)를 향하고 약간 올라온 뒤 다른 목표를 고르는지 본다. 목표 x=0.3~0.7, y=-0.4~0.4는 난수로 정하므로 매 실행 같은 위치를 기대하지 않는다.
+- **의도된 정체 상황:** `peck_state_machine`이 접근하는 목표를 `/World/Obs/RedCube` 등으로 가리면 손끝이 장애물을 피하면서 기존 목표 도달을 계속 시도할 수 있다. 진입 때만 목표를 고르는 이 behavior의 반응성 한계를 관찰하는 조건이다.
+- **재선택 비교:** `peck_decider_network`로 바꿔 같은 가림을 만들면 현재 목표와 등록 장애물의 거리가 0.2 미만일 때 monitor가 `is_done`을 바꾸고 새로운 목표를 선택하는지 본다. 목표에 도달했을 때의 완료와 목표가 막혔을 때의 선점을 구분한다.
+- **블록 peck game:** `peck_game`에서는 한 블록을 1cm 넘게 옮겨 활성 목표를 만들고, 이어 다른 블록을 옮겨 추종 대상이 바뀌는지 확인한다. 블록 중심보다 z가 0.0325 높은 목표에 손끝이 1cm 미만으로 접근하면 활성 상태를 해제한다. 여러 블록을 동시에 이동시키지 않고 순차적으로 시험한다.
+- **대기와 lift 해석:** `peck_game`에서 이동한 블록이 없으면 home으로 가고, 손끝이 비활성 블록의 0.07 이내에 있으면 먼저 lift한다. 정지한 장면에서 계속 바닥을 peck하지 않아도 정상이며, `diagnostics_message`는 로컬 context에 저장되지만 이 실행기가 매번 콘솔에 출력하지는 않는다.
+
+## 동일한 장면에서 세 behavior 비교
+
 ```bash
 "$HOME/isaacsim/python.sh" run.py --behavior peck_state_machine --interactive
 "$HOME/isaacsim/python.sh" run.py --behavior peck_decider_network --interactive

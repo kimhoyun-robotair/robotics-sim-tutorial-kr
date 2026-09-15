@@ -4,6 +4,18 @@
 
 이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다.
 
+## 이 실습의 의도
+
+actor를 바라보는 카메라의 배치 범위와 렌즈 무작위화를 구분하고, UI 설정이 실제 USD 카메라 위치와 영상에 반영되는지 확인합니다. 기본 구성은 사람 두 명과 카메라 한 대이며 `prepare.py`는 구성 파일만 만들기 때문에 `camera_settings.json`은 별도로 Script Editor에서 적용한 뒤 Setup해야 합니다. 같은 stage의 기존 카메라를 재사용하면 변경 효과가 드러나지 않을 수 있어 비교 실행은 새 stage에서 진행합니다.
+
+## 실행 후 확인할 것
+
+- **설정 적용:** `apply_camera_settings()`가 출력한 값을 JSON과 대조합니다. `aim_camera_to_character=true`, focus 높이 0.7, 카메라 높이 2..3, 거리 6.5..14, focalLength 13..23이 설정되어야 하며, 이 출력은 아직 실제 카메라가 배치됐다는 증거가 아닙니다.
+- **실제 카메라:** Setup 후 `inspect_cameras.py`에서 `/World/Cameras/` 아래 카메라의 `world position`, `focalLength`, `view direction`이 출력되는지 확인합니다. 유효한 actor 지향 배치가 이루어진 경우 world Z가 2..3 m 범위인지 보고 카메라 뷰에서 배우도 확인합니다. 출력 스크립트 자체는 actor까지의 거리나 시선 일치를 자동 판정하지 않습니다.
+- **높이 고정 비교:** min/max 높이를 둘 다 2.5로 바꾸어 적용하고 **File > New** 후 다시 Setup합니다. world Z가 약 2.5 m로 고정되는지 비교하며, 이전 카메라를 그대로 읽어 설정이 무시됐다고 판단하지 않습니다.
+- **서로 다른 스위치:** `aim_camera_to_character=false`는 배우를 향한 배치를 끄는 비교이고, `randomize_camera_info=false`는 렌즈 정보 무작위화의 비교입니다. focalLength 13..23은 배우까지의 거리(m)가 아니므로 서로 바꾸어 해석하지 않습니다.
+- **배치 실패 구분:** NavMesh나 유효한 배치 공간이 없어서 원점을 바라보는 결과는 actor 지향 범위 검증에 포함하지 않습니다. 올바른 뷰가 확보된 후 생성한 RGB·카메라 파라미터를 확인하고, persistent 설정은 실험 후 원래 값으로 복원합니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim 5.1 GUI, NVIDIA RTX GPU/드라이버, Isaac Sim 5.1 Assets 접근이 필요합니다. GUI는 설치 디렉터리의 `./isaac-sim.sh`로 실행합니다. `Window > Extensions`에서 `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`를 켜고 요구되는 재시작을 마칩니다. 사람 애니메이션은 `omni.anim.people`, `omni.anim.graph`, 경로 탐색은 `omni.anim.navigation`, 로봇은 `isaacsim.anim.robot`가 담당하며 IRA 의존성으로 활성화됩니다. 클라우드 LLM·ROS·별도 Python 설치는 필요하지 않습니다.

@@ -4,6 +4,18 @@
 
 이 패키지는 공식 UR10 bin stacking 시뮬레이션 위에 SDG를 붙입니다. 상자를 뒤집는 helper에 닿을 때는 annotator 배열을 직접 저장하고, 팔레트/이미 쌓인 상자에 닿을 때는 BasicWriter를 사용합니다. NVIDIA 5.1 배포 소스의 `PalletizingSDGDemo`를 로컬 `palletizing.py`에 포함했습니다. `run.py`는 앱 초기화, 실제 로봇 예제 로딩, 생성 작업과 GUI 수명 관리, task 오류 전파와 출력 보호를 추가한 standalone 적용입니다.
 
+## 이 실습의 의도
+
+UR10이 상자를 처리하는 도중 특정 물체와 겹치는 사건을 감지해, 그 순간의 데이터를 여러 외관·시점으로 수집하는 실습입니다. 뒤집기 helper 사건은 annotator로 직접 저장하고 팔레트 사건은 BasicWriter로 저장하여 두 데이터 접근 경로를 비교합니다. 기본 실행은 상자 2개의 팔레트 사건을 각 16프레임 기록하며, 뒤집기 사건이 실제로 발생한 상자에만 추가 4프레임을 기록합니다.
+
+## 실행 후 확인할 것
+
+- **사건과 정지 구간:** `/World/Ur10Table/bins/bin_0`가 움직이다 helper `/World/Ur10Table/pallet_holder` 또는 팔레트·다른 bin과 겹칠 때 `Running bin flip scenario` 또는 `Running pallet scenario` 로그가 나오는지 봅니다. 감지는 PhysX bounding-box overlap이며 접촉력 측정값이 아닙니다.
+- **팔레트 결과:** 기본 완료 시 `writer_bin_0`, `writer_bin_1` 두 폴더에 각각 16프레임의 512×512 RGB와 instance segmentation이 있는지 확인합니다. 런처는 폴더 수와 PNG 존재를 확인하므로, 실제 이미지 내용과 프레임별 결과는 함께 열어 봅니다.
+- **조건부 뒤집기 결과:** 해당 사건이 발생한 `annot_bin_<번호>/`에는 `rgb_0.png`, `is_0.png`, `is_info_0.json`부터 기본 4세트가 있어야 합니다. 뒤집을 필요가 없는 상자에서 이 폴더가 없는 것은 정상이며 bin 수와 같은 개수를 요구하지 않습니다.
+- **같은 순간의 여러 외관:** 캡처 중 `delta_time=0`이므로 로봇은 정지한 채 조명·시점·재질이 바뀝니다. 팔레트 모드에서는 bin 재질은 매 캡처, 카메라와 팔레트 텍스처는 4프레임 간격으로 변경되는지 비교합니다.
+- **복구와 완료:** `Restoring original material` 로그와 GUI의 bin·팔레트 재질을 대조하고, 캡처 후 다음 동작으로 이어지는지 봅니다. `--steps` 초과나 상자별 출력 누락은 미완료이며, 마지막 SDG 완료는 로봇 작업 전체의 종료가 아닌 요청한 캡처 수의 완료입니다.
+
 ## GUI 실행과 종료
 
 GUI에서 `--steps`를 생략하면 app update 횟수로 실행을 끊지 않습니다. 요청한 `--bins` 상자의 데이터 기록과 파일 저장을 마친 뒤에도 사용자가 창을 닫을 때까지 장면을 유지하며, 추가 데이터를 무한히 생성하지 않습니다. 양수 `--steps N`은 생성 작업을 기다리는 최대 app update 수이고, 작업이 먼저 끝나면 바로 종료합니다. 제한 안에 요청한 데이터가 완성되지 않으면 실패합니다. `--headless`에서 생략하면 기존 60000회 제한을 사용합니다.
@@ -44,7 +56,7 @@ cd src/143_replicator_replicator_ur10_palletizing
 
 flip 모드의 `rgb_annot.get_data()`는 RGBA 배열이고 instance segmentation은 `data`와 `info`를 포함합니다. 색으로 인코딩된 segmentation은 uint8 채널로 변환해 저장하고 ID 의미는 JSON으로 보존합니다. pallet 모드의 Writer는 동일 데이터를 파일 형식으로 조직해주는 고수준 기능입니다. 둘 중 하나가 더 정확한 센서를 뜻하지 않습니다.
 
-USD material은 mesh에 binding되어 있습니다. `UsdShade.MaterialBindingAPI.ComputeBoundMaterial`로 원래 material을 저장하고 랜덤화 후 Bind로 되돌립니다. render mode도 PathTracing에서 RayTracedLighting으로 돌립니다. `wait_until_complete_async` 뒤에 graph와 render product를 정리해 아직 쓰는 데이터를 먼저 파괴하지 않습니다. 이 패키지는 새 예제 장면을 열어 `/Replicator`를 자체 SDG 용도로 사용합니다. 작업 중인 사용자 장면에 import해서 실행하지 않습니다.
+USD material은 mesh에 binding되어 있습니다. `UsdShade.MaterialBindingAPI.ComputeBoundMaterial`로 원래 material을 저장하고 랜덤화 후 Bind로 되돌립니다. render mode도 PathTracing에서 RayTracedLighting으로 돌립니다. 이 구현은 캡처 후 writer/annotator를 분리하고 render product를 제거하며, `wait_until_complete_async`로 backend 쓰기 완료를 기다린 뒤 SDG graph를 정리합니다. 이 패키지는 새 예제 장면을 열어 `/Replicator`를 자체 SDG 용도로 사용합니다. 작업 중인 사용자 장면에 import해서 실행하지 않습니다.
 
 ## 한 가지 실험과 확인
 

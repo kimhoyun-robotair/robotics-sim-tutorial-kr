@@ -4,6 +4,19 @@
 
 **목표:** Python이 물리 스텝을 소유하는 standalone 실행에서 `/sim_time`과 `/manual_time`의 발행 시점을 비교합니다. 로컬 `run.py`는 공식 수동 clock 예제에 실행 기록과 선택적인 종료 스텝을 추가합니다.
 
+## 이 실습의 의도
+
+Python의 스텝 루프가 자동 playback tick과 수동 impulse 발행을 어떻게 구분하는지 두 Clock 토픽으로 비교한다. 같은 시뮬레이션 시간을 서로 다른 실행 신호에 연결해 시간값의 원천과 발행 시점이 별개임을 확인한다. 기본 `run.py`는 시계 그래프와 trigger 기록을 만들고, `camera_manual.py`는 센서 Gate를 선택한 프레임에 여는 별도 확장 실습이다.
+
+## 실행 후 확인할 것
+
+- `/ClockLab`에서 Auto는 Tick, Manual은 Impulse에 연결되고 둘 다 Time의 simulationTime을 읽는지 확인한다. 외부 `/sim_time`, `/manual_time`의 타입은 모두 `rosgraph_msgs/msg/Clock`이며 기본 실행은 `/clock`이라는 이름으로 발행하지 않는다.
+- 기본 `--domain-id 1`은 환경변수보다 우선하므로 수신 터미널도 Domain ID=1로 맞춘다. `/manual_time`은 `--every 10`에서 수신 누락 없이 연속 표본을 받았다면 약 10/60초씩 증가하고, `/sim_time`은 playback tick마다 발행된다.
+- `--every 30`으로 바꾸어 새 출력 파일에 실행하면 수동 토픽의 정상 연속 간격은 약 0.5초가 되어야 한다. 이는 시뮬레이션 시간 간격이며 `ros2 topic hz`의 벽시계 값이 반드시 2 Hz여야 한다는 뜻은 아니다.
+- 정상 종료 뒤 `output/clock_schedule.json`의 `manual_trigger_schedule`에서 기본 frame이 0, 10, 20… 순서인지 확인한다. `simulation_time_before_step`은 impulse 설정 직전의 시간이며, 기록 자체는 발행 완료나 DDS 수신 증거가 아니므로 ROS echo를 함께 확인한다.
+- 기존 출력 파일을 다시 지정하면 실행 전에 오류가 나는 것은 기록 덮어쓰기를 막는 동작이다. GUI 무제한 실행의 `requested_steps`는 null이고, 실행 도중 파일은 아직 완성된 JSON이 아닐 수 있으므로 정상 종료 후 읽는다.
+- 별도 `camera_manual.py`에서는 `/rgb`·`/depth`의 `sensor_msgs/msg/Image`와 `/camera_info`의 `CameraInfo`, frame=`sim_camera`를 확인한다. 초기 준비 이후 RGB는 Play 5프레임, depth는 60프레임마다 Gate를 열고 정보는 매 프레임 보낸다. 창고 asset이 필요한 이 경로의 `--steps`는 Pause/Stop 중 앱 업데이트도 포함하므로 기본 시계 실험의 관찰 범위와 구별한다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1200스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
 
 ## 실행 환경: 이 폴더만으로 시작하기

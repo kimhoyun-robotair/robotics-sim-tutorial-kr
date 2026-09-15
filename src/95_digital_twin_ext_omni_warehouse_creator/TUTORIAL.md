@@ -4,6 +4,18 @@
 
 직사각형 외곽에서 벽·내부 tile·기둥을 생성한 다음 벽의 용도와 기둥 배치를 바꾸는 **공식 GUI 실습**이다. `floor_plan.json`은 사용할 외곽 꼭짓점과 실험 순서를 tile 단위로 기록한 로컬 설계도다. 자동 warehouse generator를 흉내 낸 코드가 아니라 설치된 `omni.warehouse_creator`를 직접 조작한다.
 
+## 이 실습의 의도
+
+모듈형 자산의 격자에 맞춰 창고 외곽을 닫고, 생성된 구조의 벽 스타일과 내부 기둥을 전용 편집기로 변경하는 과정을 배운다. 4×3 tile 직사각형은 외곽 생성 결과를 쉽게 확인하면서 같은 구조 안에서 variant와 기둥 편집을 비교하기 위한 기준이다. 로컬 JSON은 사람이 따라 그릴 설계도이며 자동으로 읽어 창고를 생성하는 실행 파일은 제공하지 않는다.
+
+## 실행 후 확인할 것
+
+- **외곽과 바닥:** GUI에서 `vertices_tiles` 순서대로 그리고 Finish한 뒤 닫힌 직사각형 벽과 내부 바닥 tile이 생성되는지 본다. 4×3은 meter가 아닌 tile 수이므로 실제 크기는 선택한 dataset의 모듈 크기와 비교한다.
+- **벽 variant:** Component 선택으로 직선 벽 하나의 style을 바꿨을 때 해당 벽이 loading dock/access 등 선택한 형태로 바뀌고 외곽은 유지되는지 확인한다.
+- **기둥 Confirm:** `Edit Column Placement`에서 기둥 하나를 disabled로 바꾸면 편집 중 반투명 녹색으로 표시되고, Confirm 후 그 배치가 적용되는지 본다. 편집할 때 천장과 세부 요소가 숨겨지는 것도 이 모드의 일부다.
+- **기둥 Cancel:** 다시 편집하여 Flip All을 누른 뒤 Cancel하면 직전에 Confirm한 기둥 배치가 유지되어야 한다. 편집 중 미리보기와 확정된 상태를 비교한다.
+- **USD 저장:** `output/warehouse.usd`를 새로 저장하고 다시 열었을 때 벽 style과 확정한 기둥 상태를 확인한다. 참조 자산을 사용하는 결과이므로 dataset 연결이 끊긴 상태의 빈 장면을 정상 생성 결과로 판단하지 않는다.
+
 ## 순서대로 만들기
 
 1. Isaac Sim에서 새 stage를 만든다. `Window > Extensions`에서 `Warehouse Creator`를 검색하여 `omni.warehouse_creator`를 설치/활성화한다. 이미 있는 버전은 5.1 환경에 맞는 것을 사용한다.

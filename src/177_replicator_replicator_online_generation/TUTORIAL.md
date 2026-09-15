@@ -4,9 +4,17 @@
 
 Isaac Sim 5.1 공식 **Online Generation** 수업이다. 공식 문서에서 **DEPRECATED**로 표시한 예제라 후속 버전 호환을 전제하지 않는다. 이 패키지는 설치된 공식 `online_generation` 구현을 실행하는 native 실습이다. `run.py`는 ShapeNet 파일을 먼저 검사하고, 학습 횟수와 결과 저장 위치를 제한한다. 다른 로컬 튜토리얼은 필요 없다.
 
-## 무엇을 관찰하는가
+## 이 실습의 의도
 
-ShapeNet 물체를 USD로 변환한 뒤 카메라·조명·물체 자세·텍스처가 매번 바뀌는 영상을 만든다. RGB, bounding box, instance mask가 `IterableDataset`에서 곧바로 Mask R-CNN 학습으로 넘어간다. 학습용 이미지 전체를 디스크에 쌓지 않고, 관찰용 PNG만 저장하는 방식이다. 짧은 10회 실험은 배선 확인용이며 정확도 향상을 보장하지 않는다.
+ShapeNet 물체를 USD로 변환한 뒤 카메라·조명·물체 자세·텍스처가 매번 바뀌는 영상을 만든다. RGB, bounding box, instance mask가 `IterableDataset`에서 곧바로 Mask R-CNN 학습으로 넘어간다. 학습용 이미지 전체를 디스크에 쌓지 않고, 관찰용 PNG만 저장하는 방식이다. 기본 설정의 짧은 10회 학습은 렌더 결과와 정답이 실제 손실 계산·가중치 갱신까지 연결되는지 확인하는 용도이며 정확도 향상을 보장하지 않는다.
+
+## 실행 후 확인할 것
+
+- **변환·파일 검사:** `convert` 후 원본 옆 `ShapeNetCore_nomat/`에 geometry-only USD가 생기고, `audit`에서 plane·watercraft·rocket의 `size_eligible`이 모두 0보다 큰지 확인한다. 파일 검사 통과만으로 GPU 렌더링과 학습이 확인되는 것은 아니다.
+- **온라인 표본:** `sample`의 `_out_gen_imgs/domain_randomization_test_image_*.png` 기본 4장을 열어 배치·조명·재질 변화와 RGB/마스크 대응을 본다. USD 파일의 synset 번호와 영상의 학습 클래스 이름을 연결해 읽는다.
+- **학습 진행:** `train` 콘솔에 기본 `ITER 0`부터 `ITER 9`까지 실제 loss가 기록되는지 확인한다. loss가 유한한지 보고, 짧은 실행에서 매번 감소하거나 정확한 물체 예측이 나타나야 한다고 요구하지 않는다.
+- **예측 표시:** `_out_train_imgs/`의 입력과 예측 시각화를 비교한다. 초기 모델의 예측이 confidence 기준을 넘지 못하면 overlay가 비어 있을 수 있으므로 이미지 존재와 탐지 품질을 분리해서 읽는다.
+- **저장 범위:** 출력의 `asset_audit.json`, `command.json`으로 클래스와 실행 인수를 확인한다. 이 native 예제는 학습 checkpoint를 저장하지 않으므로 `.pth`가 없는 것이 이 실습의 동작이며, PNG가 배포 가능한 모델을 뜻하지 않는다.
 
 ## 준비와 실행
 

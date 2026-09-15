@@ -4,6 +4,19 @@
 
 예상 결과는 실제 USD의 `panda_joint1` 경로가 유지되고 ROS `/joint_states`에는 `shoulder_pan`이 보이는 것이다. 외부에서 별칭으로 보낸 명령은 Joint Name Resolver를 거쳐 같은 실제 관절을 움직인다. Franka 모델과 ROS 그래프를 이 폴더에서 모두 구성한다.
 
+## 이 실습의 의도
+
+USD의 관절·링크 주소를 유지하면서 ROS에 공개할 이름을 별칭으로 정하는 방법을 확인한다. 첫 관절에는 `shoulder_pan`, 베이스 링크에는 `robot_base`를 지정해 JointState와 TF 양쪽의 이름 변화를 비교한다. 기본 실행은 상태·TF 발행과 별칭 명령 해석을 준비하며, 외부 `send_command.py`를 실행해야 관절 명령의 역방향 변환까지 확인할 수 있다.
+
+## 실행 후 확인할 것
+
+- Stage에서 `panda_joint1`과 `/panda/panda_link0` 이름이 그대로이고 `isaac:nameOverride` 값만 각각 `shoulder_pan`, `robot_base`인지 확인한다. 콘솔의 `USD path remains`와 `actual_joint_names`는 물리 모델의 원래 이름을 보여 준다.
+- 외부 `/joint_states`의 타입은 `sensor_msgs/msg/JointState`이며 `name` 배열에 `shoulder_pan`이 있어야 한다. 배열 순서를 추측하지 말고 이 이름과 같은 인덱스의 position을 읽는다.
+- `python3 send_command.py --joint shoulder_pan --position 0.3 --seconds 10`을 실행하면 `/joint_command`의 JointState 명령이 첫 관절에 적용되어 position이 0.3 rad 쪽으로 접근하고 viewport에서도 회전해야 한다. 토픽 이름 변경만 확인한 상태와 구별한다.
+- `/JointGraph/Resolver`의 출력 이름과 Actuator 연결을 확인한다. 별칭이 실제 `panda_joint1`로 해석되고 Resolver의 execOut 뒤에 Actuator가 실행되어야 한다.
+- `/tf`의 `tf2_msgs/msg/TFMessage`에서 `robot_base` frame을 찾는다. 이는 링크 별칭 확인이며 joint 별칭 `shoulder_pan`을 TF 링크 이름으로 기대하지 않는다.
+- 상태·TF는 playback tick마다, 콘솔 위치는 120스텝마다 기록된다. 외부 송신기는 약 0.1초 대기 루프로 반복하므로 정확한 고정 Hz나 명령 즉시 위치 일치를 성공 기준으로 두지 않는다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 3600스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
 
 ## 이 폴더에서 시작하기
@@ -58,4 +71,4 @@ USD prim 경로는 장면 계층의 주소다. 실제 prim rename을 하면 refe
 - [공식 5.1 속성 목적](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_name_override.html#setting-up-the-nameoverride-attribute)
 - [공식 5.1 GUI 적용](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_name_override.html#adding-the-isaac-nameoverride-prim-attribute)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.

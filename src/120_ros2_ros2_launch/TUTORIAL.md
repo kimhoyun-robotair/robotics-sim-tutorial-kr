@@ -4,6 +4,17 @@
 
 **목표:** ROS launch가 Isaac Sim 프로세스와 scene 준비 시점을 관리하게 합니다. 로컬 `lesson.launch.py`는 공식 `isaacsim` launch를 포함하고, 로컬 `clock_scene.py`로 Cube/물리/clock 그래프를 만든 뒤 준비 신호를 받아 실제 `/clock` 한 메시지를 관찰합니다. Linux 전용이며 WSL2는 원문에서 지원되지 않습니다.
 
+## 이 실습의 의도
+
+시뮬레이터 프로세스 시작, 장면 준비, 외부 ROS 메시지 수신이 각각 다른 시점임을 배우는 실습입니다. `/World/LaunchCube`의 낙하는 물리 루프가 진행된다는 시각적 단서이고, `/LaunchClock`은 같은 루프의 시뮬레이션 시간을 ROS로 보냅니다. 기본 launch는 준비 문구를 받은 뒤 `/clock` 관찰 프로세스를 한 번 시작하며, Nav2나 로봇 주행은 아래의 별도 확장 절차입니다.
+
+## 실행 후 확인할 것
+
+- **장면과 물리:** Stage의 `/World/LaunchCube`가 z=2 m에서 떨어져 바닥 위에 머무는지 봅니다. 이 Cube는 충돌을 포함한 `DynamicCuboid`이며 낙하가 계속 바닥을 통과하는 구성이 아닙니다.
+- **준비와 통신 순서:** launch 터미널에서 `LOCAL_CLOCK_SCENE_READY` 뒤에 `ros2 topic echo /clock --once`의 실제 Clock 메시지가 나오는지 확인합니다. 준비 문구는 첫 물리 스텝 완료를 뜻하며 DDS 수신까지 보장하지 않습니다.
+- **한 번 관찰한 뒤의 상태:** echo 프로세스는 한 메시지를 받으면 끝나지만 기본 GUI와 clock 발행은 계속됩니다. 시간이 계속 흐르는지 보려면 별도 ROS 터미널에서 `/clock`을 연속 관찰합니다.
+- **종료 조건:** GUI를 닫거나 standalone에 양수 `--steps`를 지정해 종료했을 때 `Final cube world position:`을 확인합니다. 매우 짧은 실행은 Cube가 바닥에 닿기 전에 끝날 수 있으므로 최종 높이를 무조건 바닥 높이로 기대하지 않습니다.
+
 
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 3600스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
 

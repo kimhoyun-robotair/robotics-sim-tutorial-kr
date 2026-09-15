@@ -4,9 +4,19 @@
 
 공식 인덱스 **t126** · Isaac Sim **5.1.0**
 
-## 결과와 준비
+## 이 실습의 의도
 
-공식 USD to URDF Exporter와 Lula Robot Description Editor로 URDF, joint cspace, collision spheres, Lula YAML, cuMotion XRDF를 생성하는 GUI 실습입니다. 이 폴더의 `run.py`는 실제 준비 에셋의 인스턴스를 해제하고 관절 목록을 저장하며, `validate_exports.py`는 사용자가 내보낸 URDF/YAML의 이름과 형상을 교차 검사합니다. Exporter/Lula 편집 자체를 자동 구현했다고 주장하지 않습니다.
+USD의 로봇을 운동 계획기가 사용할 URDF 구조, 팔의 cspace, 충돌 구 근사로 옮기고 이름과 초기 자세를 일치시키는 수업입니다. 팔 6개 joint는 Active로, 별도 제어할 그리퍼 joint는 Fixed로 두어 물리 articulation의 모든 관절과 계획에 쓰는 관절 집합이 다를 수 있음을 확인합니다. 기본 `run.py`는 인스턴스를 해제한 USD와 준비 보고서만 만들며, URDF·Lula YAML·XRDF export와 collision sphere 작성은 사용자가 GUI에서 수행합니다.
+
+## 실행 후 확인할 것
+
+- **준비 산출물:** `lula_ready.usda`와 `preparation_report.json`의 `uninstanced_prims`, 실제 `joints` 목록을 확인합니다. 보고서의 `active_arm_joints`는 코드에 정해 둔 권장 6개 이름이며 Lula에서 Active Joint 설정까지 완료했다는 뜻은 아닙니다.
+- **관절 집합:** 직접 내보낸 URDF와 YAML에서 `cspace`가 shoulder 2개·elbow 1개·wrist 3개로 구성되고 `default_q` 길이와 일치하는지 봅니다. finger/knuckle은 이 팔 cspace에 넣지 않고 고정값을 초기 자세와 맞춥니다.
+- **충돌 구의 덮임:** Lula에서 `upper_arm_link`의 8개 빨간 preview가 링크를 덮는지 보고 Generate 후 cyan 구로 확정되는지 확인합니다. 나머지 링크에도 구를 작성하고, PhysX collider 윤곽과 계획용 sphere 근사를 구분합니다.
+- **export 완료:** Play를 유지한 채 `ur_gripper.urdf`·필요 mesh, `ur10e.yaml`, `ur10e.xrdf`를 각 경로에 저장한 뒤 실제 파일을 엽니다. `run.py`만 실행한 출력 폴더에 이 파일들이 없는 것은 정상입니다.
+- **교차 검사와 한계:** `validate_exports.py`가 출력한 `active_joints`, `collision_spheres`를 확인합니다. 도구는 URDF에 joint/link가 있는지, `default_q` 길이, sphere의 양수 반지름·3성분 중심과 비어 있지 않은 목록을 검사합니다. XRDF 내용·mesh 경로·충돌 구의 실제 덮임·motion 실행은 검사하지 않으므로 따로 확인합니다.
+
+## 준비와 실행
 
 Isaac Sim 5.1.0과 GPU, 다음 공식 구성된 에셋이 필요합니다. 이전 로컬 패키지를 실행하지 않아도 됩니다.
 `/Isaac/Samples/Rigging/Manipulator/configure_manipulator/ur10e/ur/ur_gripper.usd`
@@ -66,7 +76,7 @@ Sphere는 Lula의 충돌 근사이며 PhysX의 실제 contact collider와 다릅
 "$ISAAC_SIM_ROOT/python.sh" validate_exports.py output/내_내보내기/ur_gripper.urdf output/내_내보내기/ur10e.yaml
 ```
 
-검사는 실제 URDF에 없는 cspace joint, 존재하지 않는 sphere link, cspace/default_q 길이 불일치, 잘못된 sphere 반지름/중심, 빈 sphere 목록을 오류로 보고합니다. 형식 검사 통과가 collision coverage나 motion 성능을 검증하지는 않습니다.
+검사는 실제 URDF에 없는 cspace joint, 존재하지 않는 sphere link, cspace/default_q 길이 불일치, 양수가 아닌 sphere 반지름·3성분이 아닌 중심, 빈 sphere 목록을 오류로 보고합니다. XRDF는 이 검사기에 입력하지 않으며, 형식 검사 통과가 collision coverage나 motion 성능을 검증하지는 않습니다.
 
 성공은 유효한 세 파일을 생성하고 sphere가 링크를 덮는 것을 GUI에서 확인하는 것입니다. 한 변수 실험으로 upperarm의 sphere 수만 8→4로 바꿔 근사 빈틈을 비교합니다. 링크 이름이 `ee_link/...`와 `ee_link_...`처럼 export 과정에서 바뀌면 YAML과 URDF의 실제 이름을 일치시켜야 합니다. 이름 검사를 우회하지 않습니다.
 ## 버전 고정 출처

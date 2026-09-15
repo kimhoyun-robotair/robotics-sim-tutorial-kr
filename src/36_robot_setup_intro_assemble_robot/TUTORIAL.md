@@ -5,6 +5,18 @@
 공식 Assemble a Simple Robot의 **기하·물리·재질 편집** 수업이다. 이 패키지는 body cube와 cylinder 바퀴 두 개, 바닥, 빛, 마찰 재질을 직접 생성한다. 외부 asset과 다른 로컬 수업은 필요 없다. 아직 joint가 없으므로 Play를 누르면 세 강체는 따로 떨어진다. 이것이 이번 단계의 올바른 관찰이다.
 
 
+## 이 실습의 의도
+
+몸체와 바퀴의 외형을 배치하고 각각에 강체·충돌·마찰을 부여하는 로봇 제작의 첫 단계를 익힌다. 파란 cube 몸체와 어두운 cylinder 바퀴 둘은 모양상 한 로봇처럼 보이지만, 아직 joint가 없어 독립된 세 강체다. 실행기는 이 출발 장면을 작성하고 창을 유지하며, 사용자가 Play하여 부품별 낙하와 접촉을 확인한 뒤 외관 재질을 직접 편집한다.
+
+## 실행 후 확인할 것
+
+- **세 강체의 위치:** Stage에서 `/World/body/body`, `/World/wheel_left/wheel_left`, `/World/wheel_right/wheel_right`를 찾는다. Rigid Body와 Collider는 이 geometry prim에 적용되어 있고, 부모 Xform은 배치용 변환을 가진다.
+- **의도된 분리 낙하:** Play하면 몸체와 두 바퀴가 각각 떨어져 바닥과 접촉해야 한다. 바퀴가 몸체에서 분리되어 움직이는 것은 joint를 아직 만들지 않은 이 단계의 정상 결과이며, 함께 주행하는 로봇은 이번 출력의 성공 기준이 아니다.
+- **초기 구조 기록:** 기본 `initial_inventory.json`의 `rigid_bodies`는 위 세 prim, `joints`와 `articulation_roots`는 빈 목록이어야 한다. GUI에서 나중에 수정한 내용은 초기 목록에 자동 반영되지 않는다.
+- **바퀴의 접촉 재질:** `/World/Looks/WheelPhysics`에서 static friction `0.8`, dynamic friction `0.6`, restitution `0`을 보고, 두 cylinder의 physics material binding이 이 재질을 가리키는지 확인한다. 값만 만든 것과 실제 바퀴에 연결한 것은 구분한다.
+- **외관과 물리 비교:** 기본 색은 `displayColor`이며 OmniPBR 실습은 직접 수행한다. 복사한 stage에서 한 부품의 Collider만 제거하면 그 부품은 중력으로 떨어져도 바닥을 통과할 수 있다. 색 변경과 접촉 변경이 서로 독립적이라는 점을 확인한다.
+
 ## 실행 환경과 파일
 
 Isaac Sim **5.1.0**, 지원되는 RTX GPU와 GUI가 필요하다. `ISAAC_SIM_PATH`는 `python.sh`가 있는 설치 디렉터리다. Python CLI 도움말은 일반 Python에서도 열린다. 이 패키지는 자체 코드/설정을 가지며 다른 로컬 튜토리얼을 import하지 않는다.

@@ -4,6 +4,18 @@
 
 외부 Ant 자산 없이 만든 한 관절 팔에서 사용자가 설정한 effort, 관절축 방향 측정 effort, 6차원 incoming force/torque를 함께 기록합니다. 원문의 센서 API를 작은 articulation에 적용한 독립 예제입니다.
 
+## 이 실습의 의도
+
+Y축 회전 관절 하나로 긴 링크를 지지하여, 사용자가 준 effort와 관절에서 측정한 힘·토크가 서로 다른 정보임을 익힌다. 고정된 base와 중력을 받는 링크, 목표각 0°의 drive를 사용하므로 명시적 effort 명령이 없어도 관절 반력이 생기는 상황을 관찰할 수 있다. 기본 실행은 매 물리 step의 세 종류 측정값과 DOF·link 인덱스를 함께 저장한다.
+
+## 실행 후 확인할 것
+
+- **지지 구조**: Stage에서 `/World/Arm/FixedRoot`가 base를 세계에 고정하고 `/World/Arm/Joint`가 `/World/Arm/Link`를 Y축으로 연결하는지 확인한다. 링크가 중력 아래에서 drive 목표 자세 부근으로 움직이는 과도 구간도 측정 대상이다.
+- **명령과 측정의 차이**: `joint_forces.json`의 `samples`에서 `applied_effort_Nm`과 `measured_effort_Nm`을 비교한다. 이 코드에는 `set_joint_efforts()` 호출이 없으므로 명령 effort가 0이어도 측정 토크와 반력이 생길 수 있다.
+- **배열과 좌표계**: `incoming_force_torque`는 child link의 incoming joint frame 기준 6성분이며 앞의 3개는 N, 뒤의 3개는 N·m이다. JSON의 `dof_index`는 effort 배열, `link_index`는 force 배열에 사용하므로 두 번호가 같을 것을 요구하지 않는다.
+- **질량 비교**: 충분히 진정된 구간을 골라 기본 1 kg과 `--mass 2`의 유지 토크 크기를 비교한다. 중력 부하가 커지는 경향을 확인하되 초기 충격, drive 오차와 실제 관절각 때문에 매 step이 정확히 두 배일 것을 요구하지 않는다.
+- **기록 구간**: 기본 `samples`는 처음 240물리 스텝의 시계열이다. 이후 GUI의 관절은 계속 움직여도 파일은 추가되지 않으며, `arm.usda`는 저장 시점의 장면이므로 초기 낙하·진동을 다시 보려면 재실행한다.
+
 ## 이 패키지만으로 준비하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.

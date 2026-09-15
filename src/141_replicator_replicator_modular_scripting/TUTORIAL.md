@@ -6,6 +6,18 @@
 
 기본 실습은 외부 환경 장면 없이 동작하도록 작은 도형과 로컬 생성 격자 텍스처를 사용합니다. 선택 사항인 `--stack`은 공식 `VolumeStackRandomizer`를 실제로 실행하므로 NVIDIA 자산 라이브러리가 필요합니다. 원문의 창고 장면 전체를 그대로 복제한 실습은 아닙니다.
 
+## 이 실습의 의도
+
+각 prim에 부착한 행동 스크립트가 노출된 USD 속성과 timeline·이벤트를 통해 동작하는 구조를 배우는 실습입니다. Cube에는 위치·회전·텍스처, 조명에는 밝기, 카메라에는 목표 추적, Sphere에는 직접 만든 원 궤도 행동을 맡겨 변화를 구분합니다. 기본 실행은 8프레임의 RGB와 속성 기록을 저장하며, 물리 상자 쌓기는 자산이 필요한 `--stack`을 선택해야 수행합니다.
+
+## 실행 후 확인할 것
+
+- **행동과 기록 대응:** `rgb/`와 `measurements.json`의 `target_position`, `orbit_position`, `light_intensity`를 비교합니다. 기본 조명 설정 범위는 8000–30000이며 `--interval 3`은 행동 update 간격이므로 모든 저장 이미지에서 모든 값이 달라질 필요는 없습니다.
+- **원 궤도:** 기본 Sphere `/World/Moving`의 기록은 z=1.8 m를 유지하며 초기 중심 `(0,0,1.8)`에서 수평 반지름 약 0.8 m의 궤도에 있어야 합니다. 특정 x·y 좌표나 한 장의 이미지로 이동 주기 전체를 검증하지 않습니다.
+- **노출 속성:** `behaviors.usda`에서 `/World/Target`의 `omni:scripting:scripts`와 `/World/Moving`의 `exposedVar:orbit:radius`, `speed`를 확인합니다. Play 중 radius를 바꾸면 궤도 크기가 바뀌며 Stop은 그 재생을 시작한 위치로 복원합니다.
+- **완료 뒤 정지:** 데이터 저장 후 코드가 timeline을 Stop하므로 GUI가 남아 있어도 Sphere가 계속 돌지 않는 것이 정상입니다. 저장 USD를 다시 열면 그 파일의 위치를 다음 Play의 기준점으로 삼으며, 행동 파일·텍스처 참조가 유효해야 합니다.
+- **이벤트 응답:** 캡처 루프는 `/World/Moving`의 `lesson.orbit.done` 응답에서 `state_name=RANDOMIZED`를 받은 뒤 시작합니다. 이 응답은 별도 성공 로그로 출력되지 않으며, 수신하지 못하면 30 update 뒤 timeout이 발생합니다. `--stack`도 RESET→SETUP→FINISHED 응답을 순서대로 기다리는 별도 작업입니다.
+
 ## GUI 실행과 종료
 
 GUI에서 `--steps`를 생략하면 정해진 데이터 생성과 저장을 마친 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 양수 `--steps N`은 **생성 완료 후 GUI를 관찰하는 app update 횟수**입니다. 생성 작업 자체나 데이터 프레임 수를 제한하는 값은 아니며, `--frames` 등으로 요청한 데이터가 무한히 늘어나지 않습니다. `--headless`는 관찰 대기 없이 기존 유한 작업을 마치면 종료합니다.
@@ -41,8 +53,8 @@ python3 run.py --help
 3. `output/basic/behaviors.usda`를 **File > Open**으로 엽니다. Stage에서 `/World/Moving`을 선택하고 Property에서 `exposedVar:orbit:radius`, `exposedVar:orbit:speed`를 찾습니다. radius를 `0.3`, speed를 `2.0`으로 설정하고 **Play**를 눌러 궤도 크기와 속도를 관찰합니다. **Stop**은 시작 위치로 복원합니다.
 4. `/World/Target`을 선택해 `omni:scripting:scripts`와 `exposedVar` 아래의 `rotationRandomizer`, `locationRandomizer`, `textureRandomizer`를 확인합니다. 하나의 prim에 여러 스크립트가 붙을 수 있습니다. 같은 transform 속성을 서로 다른 스크립트가 동시에 쓰면 마지막 기록이 이길 수 있으므로 위치와 회전 담당을 나누었습니다.
 5. 로컬 `orbit_behavior.py`를 읽습니다. `on_init()`은 속성과 이벤트 구독을 만들고, `on_play()`는 기준 위치를 저장하며, `on_update()`는 시간으로 새 위치를 계산합니다. `on_destroy()`는 구독을 해제해 이미 제거한 prim을 참조하지 않게 합니다.
-6. 실행 로그에서 `lesson.orbit.randomize`에 대한 `RANDOMIZED` 응답을 찾습니다. 요청에는 `prim_path`가 있어 특정 Sphere만 반응합니다. 응답은 실제 behavior 콜백이 위상 값을 바꾼 다음 보내며, 30 update 내 응답이 없으면 스크립트가 실패합니다.
-7. 자산 준비 후 `--stack`을 실행합니다. 로그에서 `reset → RESET`, `setup → SETUP`, `run → FINISHED`를 순서대로 확인합니다. 상태가 기대값에 도달한 뒤에만 다음 작업을 진행합니다. `run` 완료는 모델 학습 완료가 아니라 상자를 쌓는 물리 실험 완료입니다.
+6. `run.py`의 이벤트 대기와 `orbit_behavior.py`의 응답 처리를 확인합니다. `lesson.orbit.randomize`에 대한 `RANDOMIZED` 응답을 받아야 캡처 루프로 진행합니다. 응답 자체를 별도로 출력하는 로그는 없습니다. 요청에는 `prim_path`가 있어 특정 Sphere만 반응합니다. 응답은 실제 behavior 콜백이 위상 값을 바꾼 다음 보내며, 30 update 내 응답이 없으면 스크립트가 실패합니다.
+7. 자산 준비 후 `--stack`을 실행합니다. 코드의 `reset → RESET`, `setup → SETUP`, `run → FINISHED` 요청·응답 순서와 생성된 상자 상태를 확인합니다. 상태가 기대값에 도달한 뒤에만 다음 작업을 진행합니다. `run` 완료는 모델 학습 완료가 아니라 상자를 쌓는 물리 실험 완료입니다.
 
 저장된 stage의 스크립트 참조는 실행한 패키지와 Isaac Sim 설치의 실제 경로를 가리킵니다. **패키지를 다른 경로로 복사했으면 `run.py`를 다시 실행해 새 stage를 생성**하십시오. 기존 결과 USD만 따로 옮기는 경우에는 스크립트/텍스처 경로도 함께 수정해야 합니다.
 

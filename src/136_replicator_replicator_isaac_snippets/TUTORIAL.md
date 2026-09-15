@@ -4,6 +4,19 @@
 
 Isaac Sim 5.1.0 공식 **Useful Snippets**의 일곱 절을 독립적으로 실행합니다. 데이터가 **어느 카메라에서, 어느 시뮬레이션 시점에, 어떤 트리거로** 생성되었는지 확인하는 것이 목표입니다. 하나의 CLI에서 예제를 선택하지만 각 실행은 새 장면으로 시작하며 이전 실습 결과를 요구하지 않습니다.
 
+## 이 실습의 의도
+
+카메라 선택, 물리 상태, 이벤트, 시간 간격이 데이터 수집을 어떻게 결정하는지 비교하는 실습입니다. 기본 `multi-camera`는 같은 두 Cube를 서로 다른 위치와 해상도의 카메라 3대로 3회 촬영하고, annotator 직접 읽기와 사용자 Writer 저장을 함께 수행합니다. 정착·모션 블러·이벤트 빈도·CosmosWriter는 각각 별도 실행 모드이므로 아래에서 선택한 모드에 해당하는 결과를 확인합니다.
+
+## 실행 후 확인할 것
+
+- **기본 다중 카메라:** `0000_camera_0.png`부터 세 시점의 이미지 크기가 각각 320×240, 400×240, 480×240인지 확인합니다. `writer_payloads.json`의 `key`와 `shape`, `custom_writer/`의 파일을 함께 보아 카메라별 결과가 구분되는지 확인합니다. NumPy `shape`는 높이·너비·채널 순서입니다.
+- **정착 모드:** `settled`의 `measurements.json`에서 `physics_steps`, `speed_m_s`, `height_m`를 확인합니다. 코드는 30스텝을 지난 뒤 선속도 <0.05 m/s·각속도 <0.1 rad/s·높이 <1 m가 10스텝 연속 유지될 때만 캡처하며, `--steps` 내 미충족은 timeout입니다.
+- **사용자 이벤트:** `custom-event`에서 `requested_event`가 `lesson.left`, `lesson.right`로 교대하는지 보고 해당 RGB에서 요청한 Cube의 회전을 비교합니다. 기록에는 회전각 수치가 없으므로 이벤트 이름만으로 실제 회전 변경을 확인했다고 판단하지 않습니다.
+- **센서 간격과 이벤트:** 기본 주파수의 `custom-fps`에서는 `physics_time_s`의 연속 차이가 약 0.1초인지 확인합니다. `events`에서는 `timeline_times`와 `physics_dt`가 비어 있지 않은지가 핵심이며, 네 이벤트의 횟수가 같거나 PNG가 저장될 필요는 없습니다.
+- **모션 블러:** `motion-blur`의 `writer/` RGB에서 `/World/Animation_0`부터 세 객체와 `/World/Physics_0`부터 세 객체의 0·2·4 m/s 쌍을 비교합니다. 0속도 쌍은 기준이며, 이동 쌍의 번짐은 RT/PT 설정과 시간 샘플 수에 따라 달라집니다.
+- **Cosmos 모드:** `cosmos/`의 실제 결과와 클래스 매핑을 확인합니다. floor=파랑·cube=빨강·sphere=초록은 의미 클래스 색이며 시각 재질 색과 다릅니다. 이 모드는 데이터 Writer를 실행하며 Cosmos 모델 추론이나 학습은 수행하지 않습니다.
+
 ## GUI 실행과 종료
 
 GUI 실행에서 `--steps`를 생략하면 정해진 캡처와 파일 저장을 끝낸 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 추가 이미지를 무한히 생성하지 않습니다. `--steps`는 settled 모드의 캡처별 정착 대기 상한 또는 events 모드의 관측 update 수이며 생략 시 기존 600회를 사용합니다. 양수 `--steps N`을 명시하면 해당 설정으로 작업을 마치고 GUI 대기 없이 종료합니다. `--headless`는 기존 유한 작업을 마치면 종료합니다.
@@ -52,7 +65,7 @@ python3 run.py --help
 ## 3. 사용자 이벤트로 선택적 무작위화
 
 1. `custom-event`는 두 Cube에 `lesson.left`, `lesson.right` 이벤트를 각각 연결합니다.
-2. 캡처마다 이벤트를 교대로 보내고 회전 결과를 저장합니다. `requested_event`로 어느 Cube를 바꾸려 했는지 확인합니다.
+2. 캡처마다 이벤트를 교대로 보내고 변경된 장면의 RGB를 저장합니다. `requested_event`로 어느 Cube를 바꾸려 했는지 확인합니다. `measurements.json`은 요청 이름과 카메라 배열 크기를 기록하며 회전각 자체는 기록하지 않습니다.
 3. `rep.utils.send_og_event()`는 그래프에 요청을 전달하고 `rep.orchestrator.step()`은 렌더/캡처를 진행합니다. 요청과 파일 쓰기를 같은 동작으로 생각하지 마십시오.
 4. 저장한 stage에서 Replicator 그래프의 두 event trigger를 살펴봅니다. `on_frame`에 연결한 randomizer는 매 캡처마다 동작하므로 특정 객체만 변경하려는 경우 사용자 이벤트가 유용합니다.
 

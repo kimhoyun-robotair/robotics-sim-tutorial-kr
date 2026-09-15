@@ -5,6 +5,18 @@
 공식 Add Camera and Sensors to a Robot은 이 단계에서 **카메라 부착과 프레임 확인**을 다룬다. 이 패키지는 Isaac Sim 5.1 assets root의 `/Isaac/Samples/Rigging/MockRobot/mock_robot_rigged.usd`를 로컬 편집 layer로 열고, `attach_camera.py`로 실제 mounted camera를 추가한다. 외부 센서를 가짜로 대체하지 않는다.
 
 
+## 이 실습의 의도
+
+카메라를 움직이는 로봇의 실제 강체 자식으로 부착하여, 외부 시점과 로봇에 고정된 시점의 차이를 확인한다. body 아래 mount에 장착 자세를 두고 camera 자체의 local transform을 identity로 유지하면 장착 위치와 카메라 조작을 구분해 복구할 수 있다. `run.py`는 rigged robot만 열며, 카메라는 사용자가 GUI에서 만들거나 Script Editor에서 `attach_camera.py`를 실행해야 추가된다.
+
+## 실행 후 확인할 것
+
+- **카메라 생성 여부:** 실행기만 열었을 때 새 `car_camera`가 없어도 정상이다. `attach_camera.py` 실행 후 출력되는 `Camera attached:` 경로와 Stage의 실제 body 강체 아래 `camera_mount/car_camera` 구조를 확인한다.
+- **장착 자세:** mount의 translation `(-6,0,2.2)`, rotation `(0,-80,-90)`과 camera의 local identity를 Property에서 확인한다. 이 수치는 해당 mock robot용이며, body 부모 Xform이 아니라 실제 움직이는 강체 아래에 붙어야 한다.
+- **두 시점의 차이:** Viewport 2를 새 `car_camera`로 전환하고 다른 viewport는 Perspective로 둔다. Play하여 body가 움직일 때 외부 화면에서는 로봇이 이동하고, camera는 body에 대한 장착 위치·방향을 유지하는지 본다. 부착 출력만으로 영상 방향까지 맞았다고 판단하지 않는다.
+- **투영 변화:** camera의 focalLength를 24→48로 바꾸면 장착 pose를 유지하면서 시야가 좁아지는지 비교한다. 잘못된 영상은 active camera와 mount 방향·clipping을 함께 조사한다.
+- **범위와 저장:** 이 실습의 결과는 USD 카메라와 viewport 시점이다. 이미지 파일·ROS 토픽은 생성하지 않는다. 편집한 local layer를 저장하고, 기존 `camera_mount`가 있을 때 스크립트가 재생성을 거절하면 이전 장착을 먼저 조사한다.
+
 ## 실행 환경과 파일
 
 Isaac Sim **5.1.0**, 지원되는 RTX GPU와 GUI가 필요하다. `ISAAC_SIM_PATH`는 `python.sh`가 있는 설치 디렉터리다. Python CLI 도움말은 일반 Python에서도 열린다. 이 패키지는 자체 코드/설정을 가지며 다른 로컬 튜토리얼을 import하지 않는다.

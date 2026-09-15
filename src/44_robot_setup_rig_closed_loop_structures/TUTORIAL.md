@@ -4,6 +4,19 @@
 
 공식 Rig Closed-Loop Structures의 GUI native 실습이다. 시작 asset은 `/Isaac/Samples/Rigging/Gripper/Robotiq 2F-85/Robotiq_2F_85_edit.usd`이며 **폴더 이름의 공백**도 경로의 일부다. `run.py`가 이 asset 위에 로컬 layer를 만들고 `build_test_rig.py`가 실제 lift/reach 축과 잡기 시험용 cylinder를 추가한다.
 
+## 이 실습의 의도
+
+Robotiq의 기계적인 닫힌 고리를 유지하면서 articulation이 요구하는 트리 구조를 구성하는 방법을 배운다. 일부 joint를 articulation 계산에서 제외하고 실제 constraint는 남겨, 손가락 loop·mimic 연동·접촉이 함께 작동하는지 관찰한다. 기본 `run.py`는 공식 편집 checkpoint와 로컬 layer만 열며, joint 수정·시험 장치 추가·drive·제어 graph 구성은 사용자가 진행한다. `build_test_rig.py`도 Script Editor에서 별도로 실행해야 lift/reach와 시험 하중이 생성된다.
+
+## 실행 후 확인할 것
+
+- **loop 연결 유지:** `left_inner_knuckle_joint`, `right_inner_knuckle_joint`의 Exclude From Articulation을 켠 뒤에도 prim과 body0/body1 연결이 남아 있는지 본다. Play에서 양쪽 링크가 기구를 유지해야 하며, 경고를 없애려고 joint 자체를 삭제한 상태는 이 실습의 목표가 아니다.
+- **시험 장치의 생성 범위:** `build_test_rig.py` 실행 후 `/TestRig/anchor`, `slide`, `fixed`, `lift`, `reach`, `Load`를 확인한다. 처음 `run.py`만 열었을 때 `/TestRig`가 없는 것은 정상이며, 초기 `initial_inventory.json`도 나중의 장치 추가를 자동 반영하지 않는다.
+- **lift·reach의 연결:** Property에서 lift의 Z축·reach의 X축, limits=0..1, 위치 목표 0, stiffness/damping=10000을 확인한다. 목표가 처음 0이라 자동 이동하지 않는다. 작은 양수 목표를 주어 그리퍼 base의 local 축을 따라 움직이는지 보고, 수치는 m 단위 장면을 전제로 하므로 초기 stage 단위도 확인한다.
+- **하중과 접촉:** `/TestRig/Load`는 반지름 0.025 m·높이 0.2 m·질량 0.2 kg cylinder다. 스크립트가 fingertip 사이를 자동 탐색하지 않으므로 위치를 직접 맞춘 뒤 잡기·올리기를 수행하고, 바닥에 남거나 미끄러지지 않는지 본다.
+- **구동·mimic:** finger drive와 연결한 제어 입력으로 열기·닫기를 시험하고, mimic 적용 후에는 `finger_joint` 명령에 반대편이 연동하는지 확인한다. drive의 damping/maxForce만 설정하고 속도 목표를 주지 않은 상태는 자동 닫기 시퀀스가 아니다.
+- **안정성 비교:** 0.2→2.5 kg 하중 또는 80→120 Hz 중 하나만 바꾸어 같은 조건에서 slip·떨림·기구 유지 상태를 비교한다. 시험 장치 생성 성공이나 80 Hz 설정 자체가 무거운 물체 잡기 성공을 보장하지 않는다.
+
 ## 준비와 실행
 
 Isaac Sim **5.1.0**, RTX GPU, GUI, 위 공식 5.1 asset에 접근 가능한 assets root가 필요하다. CAD에서 다시 시작하려면 원문의 Onshape 문서를 가져와 Group Mates로 같은 강체에 속한 부품을 묶고 joint와 질량을 정의한다. 이 패키지는 이미 import된 공식 checkpoint에서 시작하므로 Onshape 계정 없이 진행할 수 있다.

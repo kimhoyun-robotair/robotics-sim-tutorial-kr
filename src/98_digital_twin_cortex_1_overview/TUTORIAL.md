@@ -4,6 +4,20 @@
 
 Franka의 손끝 목표를 유지하면서 팔의 나머지 자세와 gripper 폭을 바꾸는 실제 command API 예제다. 관절 각도를 매번 직접 명령하는 방식에서 목표 pose를 보내는 방식으로 사고를 옮긴다. 로컬 `run.py`는 NVIDIA의 `example_command_api_main.py`를 기반으로 CLI와 종료 조건을 추가했다.
 
+## 이 실습의 의도
+
+같은 손끝 위치에 도달하는 여러 팔 자세를 command API의 `posture_config`로 유도하며 Cartesian 목표와 관절 자세 선호를 구분한다. Franka와 지면만 둔 장면에서 7개 arm joint의 선호 자세를 다시 뽑고 gripper를 별도로 여닫아 두 commander의 역할을 드러낸다. 기본 실행은 자동 Play로 이 상태를 반복하며 물체 집기나 카메라 인식, 실제 로봇 연결은 수행하지 않는다.
+
+## 실행 후 확인할 것
+
+- **손끝 목표와 팔 자세:** Stage의 `/World/franka`를 관찰해 손끝이 `(0.7,0,0.5)` 주변을 향하는 동안 팔의 구부러진 모양이 달라지는지 본다. 선호 자세가 바뀌어도 손끝 위치 목표는 매번 같다.
+- **상태 반복:** 콘솔의 `<enter> sampling posture config`가 재출력될 때 새 선호 자세가 적용되는지 비교한다. 전환 조건은 `time.time()` 기준 약 2초이므로 physics step 수나 시뮬레이션 시간과 동일한 주기로 단정하지 않는다.
+- **독립 gripper 명령:** 재진입 시 폭이 0.05보다 크면 닫기(속도 0.5), 그렇지 않으면 열기(속도 0.1)를 명령한다. 팔 자세 변경과 함께 손가락 폭도 변하는지 확인한다.
+- **결과 해석:** 난수로 뽑은 `posture_config`는 최종 관절각을 그대로 강제하지 않는다. 실행마다 같은 팔 모양이나 정확히 같은 궤적을 기대하지 말고, 손끝 목표 유지와 자세 변화가 함께 가능한지를 본다.
+- **충분한 관찰 시간:** 짧은 `--steps` 실행은 접근 또는 첫 상태만 보여 줄 수 있다. 반복 비교에는 여러 `<enter>`를 볼 시간을 확보하며 루프 종료만으로 제어 성공을 판단하지 않는다.
+
+## command API 관찰 순서
+
 1. `run.py`의 `NullspaceShiftState.target_p=[0.7,0,0.5]`를 확인한다. `config_mean`은 7개 arm joint의 기준 자세다. 손가락 두 관절은 별도 gripper commander가 담당한다.
 2. 기본 실행에서 손끝이 목표 주변으로 이동한 뒤 팔 자세가 달라지는지 본다. `<enter> sampling posture config` 로그와 gripper 열림/닫힘을 함께 관찰한다.
 3. `send_end_effector(target_position=..., posture_config=...)`는 Cartesian 목표와 선호 관절 자세를 함께 전달한다. `posture_config`는 목표를 이루는 방법의 선호이며 최종 joint 각도를 그대로 강제하는 명령이 아니다.

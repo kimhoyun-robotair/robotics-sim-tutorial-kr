@@ -4,11 +4,18 @@
 
 공식 원문: **Hello Robot** · Isaac Sim **5.1.0** · 인덱스 **t099**
 
-## 만들 결과와 실행 방식
-
-NVIDIA Jetbot USD를 참조로 불러오고 두 바퀴에 rad/s 명령을 보냅니다. Robot 래퍼와 바퀴 전용 WheeledRobot 래퍼를 같은 조건으로 비교합니다.
-
 이 패키지는 `Hello Robot` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
+
+## 이 실습의 의도
+
+NVIDIA Jetbot USD를 장면에 참조하는 단계와, 초기화된 로봇의 바퀴 관절에 명령을 보내는 단계를 구분합니다. 기본 `--api robot`은 바퀴 이름으로 인덱스를 찾아 명령을 보내며, `--api wheeled`는 그 대응을 `WheeledRobot`에 맡기는 같은 작업을 보여줍니다. 좌우 바퀴에 rad/s 목표를 주고 실제 차체 위치·자세를 읽어, 명령값과 이동 결과의 관계를 확인합니다.
+
+## 실행 후 확인할 것
+
+- 터미널의 `DOF before reset`과 `DOF after reset`을 비교합니다. 초기화 전 값이 아직 준비되지 않은 것은 정상이며, reset 후에는 `left_wheel_joint`, `right_wheel_joint`와 두 바퀴 인덱스를 읽을 수 있어야 합니다.
+- 기본 `--wheel-speeds 4 4`로 충분히 실행하면 `/World/Jetbot`의 차체 위치가 전진 방향으로 변해야 합니다. 터미널의 실제 `wheel_rad_s`가 목표를 추종하는지도 함께 봅니다. 목표값 출력만으로 이동을 판정하지 않습니다.
+- 종료 후 `result.json`의 `command_rad_s`, `wheel_indices`, `displacement_m`, `orientation_wxyz`를 확인합니다. 이동량은 초기 위치를 뺀 벡터이며, 짧은 실행의 과도응답이나 접촉 조건 때문에 고정된 이동 거리를 성공 기준으로 삼지 않습니다.
+- 두 API를 비교할 때는 바퀴 속도와 `--steps`를 동일하게 맞춥니다. 이어서 좌우 속도를 `2 4`로 바꾸면 곡선 주행과 자세 변화가 나타나는지 봅니다. 두 예시 명령은 속도도 다르므로 결과 차이를 API 차이만으로 해석하지 않습니다.
 
 ## 준비
 
@@ -51,10 +58,6 @@ python3 run.py --help
 | `WheeledRobot` | 바퀴 이름을 기억하고 바퀴 배열을 전체 articulation의 올바른 인덱스로 변환합니다. |
 
 회전 관절 속도 단위는 rad/s입니다. 로봇의 전진 속도 m/s와 같지 않습니다. 바퀴 접촉, 마찰, 모터 drive가 명령을 실제 이동으로 바꿉니다. 쿼터니언은 Euler 각도가 아니며 Core API의 배열 순서는 w,x,y,z입니다.
-
-## 관찰과 성공 판정
-
-reset 뒤 Jetbot에 두 바퀴 DOF가 보이고 바퀴 목표를 보낸 뒤 실제 위치 또는 자세가 변해야 합니다. 출력된 이동량이 0 근처이면 목표 숫자만 바뀌었을 가능성을 조사합니다.
 
 ## 한 변수만 바꾸는 실험
 

@@ -4,6 +4,18 @@
 
 Jetbot의 차동 구동, Kaya의 전방향 구동, Leatherback의 Ackermann 조향을 실제 robot USD에 적용합니다. 각 controller의 출력 바퀴 속도와 로봇의 측정 포즈를 저장합니다.
 
+## 이 실습의 의도
+
+차체에 원하는 속도·회전을 주었을 때 구동 구조에 따라 바퀴 명령이 어떻게 달라지는지 비교합니다. 기본 실행은 Jetbot 한 대의 차동 controller에 전진 0.3 m/s와 yaw 0.3 rad/s를 주며, Kaya와 Leatherback은 `--robot`으로 선택해 따로 실행합니다. 각 controller가 계산한 고정 명령을 물리 로봇에 적용하고 최종 pose를 측정하므로 바퀴 명령 계산과 실제 주행을 구분할 수 있습니다.
+
+## 실행 후 확인할 것
+
+- Jetbot에서 `drive.json`의 `wheel_velocity_targets_rad_s`를 왼쪽·오른쪽 순서로 읽습니다. 양수 전진과 양수 yaw 명령에서는 오른쪽 목표가 더 크고, `--turn 0`이면 두 목표가 같아야 합니다.
+- Kaya를 `--speed 0 --lateral 0.3 --turn 0`으로 실행해 세 바퀴 목표와 측면 이동을 함께 관찰합니다. `--lateral`은 Kaya에만 전달되므로 Jetbot/Leatherback에서 바꾸어도 명령이 달라지지 않습니다.
+- Leatherback의 `steering_targets_rad` 두 개와 wheel target 네 개를 확인합니다. 조향 관절은 위치, 구동 관절은 속도로 제어되며 `--turn`은 다른 모드의 yaw 속도와 달리 차체 조향각 rad입니다.
+- `initial_position_m`, `final_position_m`, `orientation_wxyz`와 GUI의 움직임을 함께 확인합니다. 제자리 회전에서는 위치 변화가 작을 수 있고, 선회 후 시작점 근처로 돌아올 수 있으므로 변위만으로 주행 여부를 판단하지 않습니다.
+- 같은 실행 길이에서 `--turn` 부호만 바꾸어 회전 방향을 비교합니다. `drive.json`은 계산된 바퀴 목표와 최종 pose를 기록하며 실제 바퀴 속도나 전체 이동 경로를 기록하지 않으므로 정확한 속도 추종·이동 거리까지 증명하지는 않습니다.
+
 ## 준비와 실행
 
 이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.

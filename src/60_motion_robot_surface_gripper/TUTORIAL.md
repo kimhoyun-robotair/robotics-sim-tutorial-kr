@@ -4,6 +4,18 @@
 
 이 패키지는 Isaac Sim **5.1.0**의 Surface Gripper schema와 설치된 gantry stage를 사용한다. 흡착은 진공 유체 해석이 아니라 접촉점에서 부모/물체를 연결하는 **D6 joint constraint**다. `run.py`는 실제 gripper prim을 만들고 attachment joint를 연결한 뒤 close→lift→open 상태와 잡힌 물체 경로를 기록한다.
 
+## 이 실습의 의도
+
+gantry의 흡착부를 큐브까지 내린 뒤 닫기→들기→열기를 한 번 수행하여, Surface Gripper가 실제로 물체와 연결되고 해제되는 조건을 익힌다. 접촉 거리와 attachment joint를 따로 구성하는 이유는 버튼의 닫기 명령과 실제 물체 부착을 구별하기 위해서다. 기본 실행은 설치된 gantry 장면을 사용하며, 반복 파지나 진공 압력 계산 대신 gripper 상태와 잡힌 rigid body 경로를 10스텝마다 기록한다.
+
+## 실행 후 확인할 것
+
+- **접근과 닫기**: GUI에서 gantry가 큐브 위로 내려오는지 보고, 콘솔과 `output/gripper.csv`의 `step=120` 이후 `status`와 `gripped_objects`를 함께 확인한다. `Closing`은 시도 중이라는 뜻이며, `Closed`와 실제 물체 경로가 함께 있어야 부착을 확인한 것이다.
+- **들기**: `step=240`에서 z joint target이 `0.140`에서 `0.05`로 바뀔 때 잡힌 큐브가 흡착부와 함께 올라가는지 본다. target 값은 gantry 관절 이동량이며, 값이 줄어든다고 물체의 월드 높이도 내려가는 것은 아니다.
+- **해제**: `step=360` 이후 `Open`과 빈 `gripped_objects`를 확인하고 큐브가 흡착부에서 떨어지는지 관찰한다. 종료 코드만으로 최종 해제를 확인하지 말고 CSV의 뒤쪽 행도 확인한다.
+- **전체 과정과 짧은 실행**: 기본 headless 420스텝 또는 400스텝 이상 관찰로 세 동작을 포함한다. 코드의 자동 실패 검사는 실제 부착을 한 번이라도 관측했는지 확인하며, 120스텝 전에 닫은 창이나 짧은 `--steps` 실행은 파지 과정의 성공 증거가 아니다.
+- **거리 변경 실험**: `--grip-distance 0.005`로 바꾼 CSV를 기본 0.02 m 결과와 비교한다. 접근 자세가 같아도 계속 `Closing`일 수 있으며, 이것은 허용 거리 안에서 attachment를 만들었는지 점검할 근거다.
+
 ## 준비와 실행
 
 Isaac Sim 5.1의 `isaacsim.robot.surface_gripper` extension, RTX GPU와 드라이버가 필요하다. 이 실습의 stage는 설치 폴더 `exts/isaacsim.robot.surface_gripper/data/SurfaceGripper_gantry.usda`에 들어 있다. 다른 로컬 패키지나 저장소의 asset 폴더를 사용하지 않는다.

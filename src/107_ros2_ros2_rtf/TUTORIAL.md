@@ -4,6 +4,18 @@
 
 예상 결과는 `/topic`의 Float32 값이 시뮬레이션의 실측 시간 비율을 나타내는 것이다. 공식 Generic Publisher 메뉴가 만드는 그래프를 `run.py`가 구성한다. 상수 1.0을 발행하는 예제가 아니다.
 
+## 이 실습의 의도
+
+시뮬레이션이 실제 시간에 비해 얼마나 빠르게 진행되는지를 `IsaacRealTimeFactor`로 측정하고 Generic Publisher의 `Float32.data`에 연결한다. 물체 없는 작은 장면을 사용해 기본 실행과 인위적인 대기 시간을 추가한 실행을 비교한다. 기본 실행은 RTF 측정값을 `/topic`으로 발행하며, `--delay`는 물리 dt를 바꾸지 않고 매 스텝 뒤 실제 대기 시간만 늘린다.
+
+## 실행 후 확인할 것
+
+- `/RTFGraph`의 `RTF.outputs:rtf → Publisher.inputs:data` 연결과 publisher의 `std_msgs/msg/Float32` 설정을 확인한다. 외부 `ros2 topic type /topic`도 같은 타입을 보고해야 한다.
+- `ros2 topic echo /topic`의 `data`와 콘솔 `measured_rtf`가 측정값을 보여야 한다. 콘솔은 60스텝마다 읽으므로 서로 다른 순간의 수치가 정확히 같아야 하는 것은 아니다.
+- 초기 로딩 이후 값의 경향을 본다. RTF=0.5는 시뮬레이션 1초에 실제 약 2초가 걸린다는 뜻이며, 1보다 작거나 큰 값 모두 가능한 결과다. 첫 프레임의 0이나 순간적인 큰 값을 성능 결론으로 사용하지 않는다.
+- 같은 환경에서 기본 실행을 종료한 뒤 `--delay 0.04`로 재실행한다. 충분히 안정화한 구간의 RTF가 낮아지는지 비교하면 wall time 증가가 측정에 반영되는지 확인할 수 있다.
+- 발행 실행은 매 playback tick이고 콘솔 출력은 60스텝 간격이다. RTF는 단위 없는 시간 비율이므로 `/topic`의 수신 Hz나 화면 FPS와 구분한다.
+
 **실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1200스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
 
 ## 이 폴더에서 시작하기
@@ -64,4 +76,4 @@ RTF는 `시뮬레이션에서 흐른 초 / 실제 경과 초`다. 0.5이면 시�
 
 - [공식 5.1 RTF 실습](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rtf.html#publish-rtf)
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 아래 성공 기준을 실제 환경에서 관찰해야 완료한 것이다.
+공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.

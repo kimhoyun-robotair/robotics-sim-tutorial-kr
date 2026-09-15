@@ -4,6 +4,18 @@
 
 Isaac Sim **5.1.0**에서 URDF XML을 읽고 실제 USD 로봇으로 변환한다. 기본 `arm.urdf`는 이 패키지에 작성한 2-link/1-joint 예제로 mesh 다운로드가 필요 없다. `--franka`는 설치된 공식 Panda URDF를 가져와 RMPflow target-following까지 실행한다. 다른 로컬 패키지를 먼저 공부할 필요가 없다.
 
+## 이 실습의 의도
+
+같은 URDF 안의 표시 형상, 충돌 형상, 질량·관성, 관절 연결이 USD로 어떻게 옮겨지는지 작은 팔 하나로 구분한다. 기본 실행은 `base`를 고정하고 `shoulder` 관절에 0.5 rad 위치 명령을 계속 보내므로, 파일 변환뿐 아니라 가져온 articulation이 실제 제어 명령에 반응하는지도 살펴볼 수 있다. `--franka`를 선택하면 공식 Panda와 RMPflow 목표 추종을 사용하며, 기본 1축 팔 실험과 관찰 대상이 달라진다.
+
+## 실행 후 확인할 것
+
+- **가져온 구조:** 기본 입력에서 Stage의 `/tutorial_arm` 아래 `base`, `arm`, `shoulder`를 찾고 joint의 parent/child 및 Y축을 `arm.urdf`와 대조한다. 화면에 팔 모양만 보이는 것보다 강체·충돌·joint 속성이 함께 생성되었는지가 중요하다.
+- **물리 추종:** 기본 실행에서 베이스는 고정되고 팔이 Y축으로 회전해야 한다. 실행 종료 후 `report.json`의 `joint_names`가 `shoulder`를 포함하고 `joint_positions`가 목표 0.5 rad 부근으로 접근했는지 본다. 짧은 실행의 초기 오차나 정착 중 진동을 정확히 0.5가 아니라는 이유만으로 변환 실패로 판정하지 않는다.
+- **표시와 충돌의 차이:** collider 표시를 켜 두 링크의 충돌 윤곽을 확인한다. 복사한 URDF의 `visual` 크기만 바꾸면 외관만 달라지고 `collision` 크기는 유지되는 것이 비교 실험의 기대 결과다.
+- **파일의 의미:** `imported.usda`는 제어 루프 이전에 저장한 변환 장면이고 `report.json`은 실행을 마칠 때의 관절 상태다. 저장된 USD가 있다는 사실만으로 마지막 자세나 모터 추종 성공까지 확인한 것은 아니다.
+- **선택 실습:** `--franka`에서는 target을 움직였을 때 손끝이 따라오는지 직접 본다. 기본 1축 팔용 0.5 rad 기준은 적용하지 않으며, 기본 팔의 기존 실행 기록이 Franka·ROS 2 import까지 검증하지는 않는다.
+
 ## 준비와 실행
 
 Isaac Sim 5.1, RTX GPU/드라이버, `isaacsim.asset.importer.urdf`가 필요하다. Franka 선택 실습에는 설치 extension의 URDF/mesh 및 manipulator controller가 필요하다. 일반 Python은 도움말만 실행한다.
@@ -18,6 +30,8 @@ cd src/30_importers_import_urdf
 `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 360회 한도를 사용한다. 실행 중에도 물리·제어가 계속 진행되며, 결과 요약은 실행을 마칠 때 기록한다.
 
 출력 폴더는 새 경로여야 한다. `imported.usda`는 변환된 stage, `report.json`은 실제 joint 이름/위치다. 1축 예제의 목표는 0.5 rad이며 360 step 후 실제 값이 접근했는지 확인한다. 단순히 USD가 생성되었다는 사실과 안정적인 모터 추종은 구분한다.
+
+`--urdf` 비교 실험은 기본 팔처럼 움직이는 관절이 하나인 구조를 유지한다. Franka 외 경로의 제어 루프는 위치 배열 `[0.5]`를 보내므로, 여러 자유도를 가진 임의의 URDF를 가져와 제어하려면 관절 수·순서에 맞춰 제어 코드를 조정해야 한다.
 
 ## 작은 URDF를 읽으며 실습
 
@@ -49,7 +63,7 @@ Linux, ROS 2 Humble workspace, Universal Robots `ur_description`과 의존성이
 3. 터미널 3: 같은 ROS 환경에서 Isaac Sim을 열고 `isaacsim.ros2.urdf`를 활성화한다. **File > Import from ROS 2 URDF Node**에서 실제 node 이름과 새 output 폴더를 넣어 Import한다.
 4. publisher를 종료한 후 `ur_type:=ur3`으로 다시 실행하고 importer에서 **Refresh**, 다른 output 폴더, Import를 수행한다. XACRO의 ROS-side 확장 결과를 받아오는 방식이다.
 
-ROS 2는 이 패키지가 자동 설치하거나 대신 실행하지 않는다. node 검색 실패는 ROS_DOMAIN_ID와 양쪽 환경을, mesh 누락은 package resource 경로를 확인한다. URDF import 오류는 XML/상대 mesh 경로·출력 쓰기 권한부터 확인한다. 문법과 CLI 도움말은 확인했으며 GPU 물리/RMPflow와 ROS import는 미검증이다.
+ROS 2는 이 패키지가 자동 설치하거나 대신 실행하지 않는다. node 검색 실패는 ROS_DOMAIN_ID와 양쪽 환경을, mesh 누락은 package resource 경로를 확인한다. URDF import 오류는 XML/상대 mesh 경로·출력 쓰기 권한부터 확인한다. 기본 팔의 headless 120 step import·drive 실행 기록은 아래 `RUNTIME_CHECK.md`에 있으며, Franka/RMPflow와 ROS import·GUI 조작은 그 기록의 확인 범위에 포함되지 않는다.
 
 ## 출처
 

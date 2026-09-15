@@ -4,6 +4,18 @@
 
 동일한 장면에 대해 출력 스위치, 해상도와 프레임 seed가 어떤 파일을 결정하는지 비교한다.
 
+## 이 실습의 의도
+
+같은 큐브 장면을 유지하면서 전역 해상도·출력 스위치·seed가 저장 결과를 어떻게 바꾸는지 비교하는 실습이다. 기본 `scene.yaml`은 RGB와 여러 정답을, `rgb_only.yaml`은 작은 RGB와 description을 저장하도록 구성해 출력 설정의 역할을 구분한다. `run.py`만 실행하면 설정 준비까지 진행하며, 아래 파일 비교는 native 생성 또는 GUI Simulate를 마친 뒤 수행한다.
+
+## 실행 후 확인할 것
+
+- **준비 결과:** `prepared.yaml`에서 선택한 설정의 `screen_width`, `screen_height`, `output_switches`, `num_frames`를 확인한다. `@OUTPUT@` 같은 경로 표식은 해소되지만 `$[/screen_width]` 등 IRO 매크로가 남는 것은 정상이다. 준비 단계가 이미지 렌더링까지 수행한 것은 아니다.
+- **기본 설정:** 실제 `scene.yaml` 생성 후 `images/`의 기본 3장 RGB가 640×480인지 확인하고 라벨·분할·depth·normal 출력도 확인한다. 빨간 큐브와 바닥 모두 tracked 대상이므로 큐브 하나만 있다고 라벨도 하나여야 한다고 판단하지 않는다.
+- **비교 설정:** 새 출력으로 `rgb_only.yaml`을 실제 생성하면 RGB는 320×240이며 description은 유지되고 라벨·분할·depth·normal 데이터는 생성되지 않아야 한다. 이름의 `rgb_only`는 description까지 끈다는 뜻이 아니다.
+- **카메라와 파일명:** 저장 description에서 카메라 해상도가 전역 설정과 함께 바뀌었는지 확인한다. 기본 시작 seed=11·3프레임이면 파일명은 seed 11·12·13과 카메라 이름을 반영하며, description은 전체 장면의 GLOBAL 이름으로 기록된다.
+- **정적인 부분과 난수:** 기본 장면은 `gravity=0`, `simulation_time=0`이고 큐브의 Y 회전만 -90–90도에서 선택한다. 낙하가 없는 것은 정상이며, 같은 seed의 대응은 먼저 description의 선택값으로 비교한다. GPU·렌더 설정이 다른 이미지의 완전 일치를 성공 기준으로 삼지 않는다.
+
 ## 준비와 실행 방식
 
 Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
@@ -39,9 +51,7 @@ settings는 type 또는 harmonizer_type을 가진 객체 외의 설정이다. ou
 
 IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
 
-## 관찰과 성공 기준
-
-첫 실행에는 depth/normal 출력이 있고 rgb_only 실행에는 해당 데이터가 없다. description은 재현 가능한 숫자를 보존한다. 출력 개수는 num_frames × 카메라 수이며 가시성 필터를 켜면 달라질 수 있다.
+## 한 변수만 바꾸는 실험
 
 seed만 11에서 12로 바꿔 첫 프레임을 비교한다. 나머지 설정과 설치 환경이 동일할 때 이전 실행의 두 번째 seed와 대응하는지 관찰한다.
 

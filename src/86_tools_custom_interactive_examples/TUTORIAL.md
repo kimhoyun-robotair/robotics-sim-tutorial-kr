@@ -4,6 +4,18 @@
 
 Examples Browser에 **Korean Examples > Korean Falling Cube** 항목을 등록하는 독립 확장이다. 공식 `user_examples` 폴더를 수정하는 대신 이 폴더의 extension으로 같은 BaseSample 구조를 사용한다.
 
+## 이 실습의 의도
+
+하나의 낙하 장면을 Examples Browser 항목으로 등록하고 BaseSample의 Load·Play·Reset과 확장 종료가 각각 맡는 역할을 확인한다. 초록 Cube는 `DynamicCuboid`로 생성해 강체와 충돌을 포함하므로 중력 낙하 후 바닥에 멈추는 동작이 목표다. 확장을 켜는 단계에서는 Browser 항목만 등록되며, 사용자가 **Korean Falling Cube → Load → Play**를 수행해야 장면 생성과 물리 실행으로 이어진다.
+
+## 실행 후 확인할 것
+
+- 확장 활성화 후 Robotics Examples에 **Korean Examples > Korean Falling Cube**가 한 항목으로 나타나는지 확인한다. 이때 장면에 Cube가 아직 없는 것은 Load를 누르기 전의 정상 상태다.
+- **Load** 후 바닥과 `/World/LearningCube`가 생기고, Console의 `loaded pose:`와 Property에서 시작 위치 `(0, 0, 1.5)` m를 확인한다. Cube는 한 변 `0.25` m, 초록색 `(0.2, 0.7, 0.3)`이다.
+- **Play**하면 Cube 높이가 줄고 바닥 위에 머무는지 관찰한다. 단순 표시용 도형과 달리 강체·충돌이 있는 Cube이므로 바닥을 계속 통과하는 결과는 이 실습의 기대 동작이 아니다. 접촉 후 중심 높이는 반변 길이인 약 0.125 m 부근이며 정확한 접촉값은 물리 설정에 따라 달라질 수 있다.
+- **Reset** 후 `reset pose:`와 화면에서 Cube가 시작 높이 1.5 m로 복원되는지 확인한다. 낙하가 끝났다는 것과 reset callback이 정상 작동한다는 것은 각각 확인해야 한다.
+- 확장을 끄면 Browser 항목이 제거되고 다시 켜면 하나만 등록되는지 본다. `on_shutdown`은 항목 등록을 해제하므로 기존 Stage의 Cube가 자동 삭제되는 것을 종료 성공 조건으로 삼지 않는다.
+
 ## 준비
 
 Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
@@ -36,7 +48,7 @@ USD prim 생성과 rigid body runtime 초기화는 별개이므로 load 전에 �
 
 ## 검증 범위
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 아래 성공 기준을 실제 실행 후 확인해야 한다.
+제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
 
 ## 출처
 

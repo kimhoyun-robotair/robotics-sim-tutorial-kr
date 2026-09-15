@@ -4,6 +4,17 @@
 
 보이는 상자와 숨긴 상자를 포함한 로컬 subtree를 만들고 static collision의 적용 범위를 직접 비교합니다. 도구 이름은 Physics API Editor입니다.
 
+## 이 실습의 의도
+
+`/World/StaticSet` 아래의 보이는 Box0과 숨긴 Box1을 비교해, Physics API Editor가 **선택한 하위 prim과 visibility 조건에 따라** 충돌 속성을 어디에 적용하는지 확인합니다. 기본 스크립트는 충돌이 없는 두 시각 상자를 만들고 타임라인을 정지시킨 채 편집할 장면을 제공합니다. Apply/Remove 조작은 GUI에서 직접 수행하며, 움직이는 강체의 낙하나 접촉을 자동 검사하는 실행은 아닙니다.
+
+## 실행 후 확인할 것
+
+- Stage에는 `/World/StaticSet/Box0`과 `Box1`이 모두 존재하지만 viewport에는 Box0만 보여야 합니다. 처음에는 둘 다 VisualCuboid이므로 CollisionAPI가 없어야 하며, Box1이 안 보이는 것은 의도된 visibility 설정입니다.
+- `/World/StaticSet`을 선택하고 **Apply to children=On, Visible only=On**으로 Apply Static한 뒤, Raw USD Properties에서 Box0에만 CollisionAPI가 추가됐는지 확인합니다. 상자가 움직이는지보다 어느 prim에 속성이 생겼는지가 기준입니다.
+- 같은 선택에서 **Visible only=Off**로 다시 적용하면 숨긴 Box1도 CollisionAPI를 갖는지 봅니다. 충돌 시각화를 켜거나 Box1의 visibility를 복구해 적용 범위를 비교합니다.
+- Remove Collision API 후에는 두 상자의 해당 API가 제거되었는지 확인합니다. `static_scene.usda`는 GUI 조작 전 출력이므로 편집 결과를 다시 확인하려면 **File > Save As**로 별도 저장해야 합니다. headless 실행으로 파일이 생긴 것만으로 이 수동 편집 단계를 완료한 것은 아닙니다.
+
 ## 이 패키지만으로 준비하기
 
 Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.

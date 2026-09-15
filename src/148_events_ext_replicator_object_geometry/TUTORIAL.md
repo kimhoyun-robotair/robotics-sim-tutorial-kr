@@ -4,6 +4,18 @@
 
 기본 도형의 정적 충돌체와 동적 강체를 구분하고, 로컬 USD 메시와 변형 병을 각각 독립 설정으로 실행한다.
 
+## 이 실습의 의도
+
+보이는 도형의 종류와 물리 참여 방식을 별도로 설정하는 법을 배우는 실습이다. 기본 장면은 정적 바닥·녹색 큰 큐브와 동적인 빨간 구·파란 작은 큐브를 대비시켜, `collision`만 있는 물체와 `rigidbody`의 낙하·충돌 반응을 구분한다. 기본 `run.py`는 3프레임 설정을 준비하며 실제 물리·렌더링에는 native 실행 또는 GUI Simulate가 필요하고, 메시와 병은 별도 YAML을 선택한다.
+
+## 실행 후 확인할 것
+
+- **고정된 받침:** 기본 `scene.yaml`의 `floor`와 녹색 `static_cube`는 `physics: collision`이다. 물리 전후 큰 큐브 중심 `(100,50,0)` cm가 유지되는지 보고, 정적 충돌체가 중력으로 떨어지지 않는 이유를 설명한다.
+- **동적 도형:** 빨간 구는 YAML 이름 `subject`로 `(-130,180,0)` cm에서, 파란 `falling_cube`는 `(100,210,0)` cm에서 시작한다. `gravity=981`, `simulation_time=1` 적용 후 구는 바닥 쪽으로, 작은 큐브는 큰 큐브 위로 내려와 충돌하는지 확인한다. 1초가 모든 물체의 완전 정착을 보장하는 기준은 아니다.
+- **파일과 미리보기:** 초기화 화면의 공중 배치와 Simulate 후 `images/`의 기본 640×480 RGB 3장 및 라벨·분할 결과를 비교한다. `prepared.yaml`만 생성한 상태에서는 낙하나 결과 이미지가 없어도 정상이다.
+- **메시 선택 시:** `mesh.yaml`의 `subject` 참조를 펼쳐 `models/box.usda`의 Mesh와 Material을 확인한다. 배율 `(1,1.5,0.7)`에 따라 세 축 길이가 달라지며, 이 설정에는 메시 강체 물리가 없어 바닥과 겹쳐 보이더라도 자동으로 밀려나지 않는다.
+- **병 선택 시:** `bottle.yaml`은 청록색 체크무늬 병의 네 effector를 바꾼다. description에서 base=0.2–0.7, neck·horizontal·vertical=0.2–0.8 범위를 확인하고 Randomize scene에서 형상 차이를 본다. 병에 physics를 지정하지 않았으므로 낙하·충돌·물리 변형은 이 실습의 확인 대상이 아니다.
+
 ## 준비와 실행 방식
 
 Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
@@ -28,7 +40,7 @@ GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action a
 
 ## 실습
 
-1. scene.yaml을 실행한다. sphere와 falling_cube는 rigidbody이며 floor와 static_cube는 collision이다.
+1. scene.yaml을 실행한다. 구인 subject와 falling_cube는 rigidbody이며 floor와 static_cube는 collision이다.
 2. gravity 981, simulation_time 1의 결과에서 구가 바닥으로 떨어지고 작은 큐브가 큰 큐브와 충돌하는지 확인한다.
 3. --config mesh.yaml을 실행하여 models/box.usda의 Mesh를 참조한다. stage에서 참조를 펼쳐 Mesh와 Material을 확인한다.
 4. --config bottle.yaml을 embedded interface로 초기화하고 Randomize scene을 반복한다. 네 effector가 병의 몸통·목·바닥 모양을 어떻게 바꾸는지 관찰한다. 병에는 physics를 설정하지 않았다.
@@ -39,11 +51,9 @@ subtype은 cone/cube/cylinder/disk/torus/plane/sphere, bottle, mesh를 구분한
 
 IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
 
-## 관찰과 성공 기준
+## 한 변수만 바꾸는 실험
 
-정적 큐브는 고정되고 동적 도형은 바닥 또는 다른 충돌체 위에 정착한다. mesh의 scale은 세 축 길이를 다르게 바꾼다. bottle은 렌더용 변형 예제로, 공식 문서가 병의 물리 시뮬레이션을 지원하지 않는다고 명시한다.
-
-scene.yaml에서 sphere의 physics만 rigidbody에서 collision으로 바꾸어 구가 공중에 고정되는지 비교한다.
+scene.yaml에서 구인 subject의 physics만 rigidbody에서 collision으로 바꾸어 구가 공중에 고정되는지 비교한다.
 
 ## 문제 해결
 

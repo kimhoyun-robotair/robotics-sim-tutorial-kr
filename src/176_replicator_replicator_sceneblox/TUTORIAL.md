@@ -4,6 +4,18 @@
 
 공식 **Scene Generation with SceneBlox**를 로컬 구성 파일과 실제 SceneBlox API로 구현했다. 원본은 **DEPRECATED**로 표시되며 이 수업은 Isaac Sim **5.1.0**을 대상으로 한다. 다른 패키지의 공통 코드가 필요 없다.
 
+## 이 실습의 의도
+
+교차로·직선·모서리·막다른 길 tile을 인접 규칙과 경계 제약에 맞게 선택하여 7×7 미로 USD를 생성한다. 통로 구조를 결정하는 규칙과 콘·장애물 더미를 추가하는 확률 설정을 분리해, 같은 생성 과정에서 구조와 소품이 각각 어떻게 바뀌는지 관찰한다. 기본은 미로 한 장면의 생성·저장까지이며, 출발점에서 도착점까지의 연결성이나 로봇 주행은 따로 검사해야 한다. 공식 사용 중단 예제를 보존한 Isaac Sim 5.1 실습이다.
+
+## 실행 후 확인할 것
+
+- **저장 결과:** `generation.json`에 기본 variant 0의 `rows=7`, `cols=7`, `attempts`, `usd`가 기록되고 해당 `generated_0.usd`가 열리는지 확인한다. 파일 존재에 더해 tile 자산의 실제 형상까지 보여야 한다.
+- **고정 칸:** Stage에서 `/World/tile_0_0`과 `/World/tile_6_6`을 선택해 corridor 회전 0인지 확인한다. 다른 격자 크기에서는 마지막 행·열에 맞춰 경로를 바꿔 확인한다.
+- **미로 제약:** 이웃 통로가 맞물리고, 전체 dead_end가 4개 이하이며 border에 cross·dead_end가 없는지 본다. 개별 인접 규칙을 통과해도 두 지정 모서리를 잇는 전체 경로는 보장되지 않는다.
+- **소품 확률:** corridor·cross의 콘은 3개 후보 각각 `spawn_proba=0.33`으로 뽑으므로 tile마다 3개가 있어야 하는 것이 아니다. corner에는 0.7 가중치로 장애물 더미가 생기지 않을 수 있다.
+- **생성 후 상태:** 창을 유지하는 동안 미로가 계속 재생성되지 않는 것이 정상이다. `--variants`가 생성 장면 수를 정하고 GUI에는 마지막 장면을 남기므로 여러 결과는 저장된 USD별로 비교한다.
+
 ## GUI 실행과 종료
 
 GUI에서 `--steps`를 생략하면 정해진 장면 생성과 저장을 마친 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 양수 `--steps N`은 **생성 완료 후 GUI를 관찰하는 app update 횟수**입니다. 생성 작업 자체나 데이터 프레임 수를 제한하는 값은 아니며, `--variants`로 요청한 장면 수가 무한히 늘어나지 않습니다. `--headless`는 관찰 대기 없이 기존 유한 작업을 마치면 종료합니다.
@@ -14,9 +26,7 @@ GUI에서 `--steps`를 생략하면 정해진 장면 생성과 저장을 마친 
 ~/isaacsim/python.sh run.py --output output/gui
 ```
 
-## 목표와 준비
-
-교차로 `cross`, 직선 `corridor`, 모서리 `corner`, 막다른 길 `dead_end`를 7×7 격자에 놓아 인접한 통로가 맞는 USD 장면을 생성한다. 일부 칸에는 콘·장애물 더미를 더한다. **인접 규칙을 만족한다고 출발점부터 도착점까지 연결된 길이 보장되는 것은 아니다.** 경로 계획 실험에서는 별도의 연결성 검사가 필요하다.
+## 준비
 
 Linux와 RTX GPU, Isaac Sim 5.1 전체 설치, `isaacsim.replicator.scene_blox` 확장이 필요하다. 설치본 assets root에서 `/Isaac/Samples/Scene_Blox/Tutorial/`, `/Isaac/Environments/Simple_Warehouse/Props/`, `/NVIDIA/Assets/Skies/Dynamic/CumulusHeavy.usd`를 읽을 수 있어야 한다. 기본 tile 크기는 5 m이고 생성 stage 단위는 1 m다.
 

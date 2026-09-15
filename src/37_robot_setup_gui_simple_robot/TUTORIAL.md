@@ -5,6 +5,18 @@
 공식 Articulate a Basic Robot의 GUI native 실습이다. 로컬 `run.py`는 `/Isaac/Samples/Rigging/MockRobot/mock_robot_no_joints.usd`를 새 편집 layer로 연다. 이 Isaac Sim 5.1 asset이 assets root에 있어야 한다. 별도 로컬 선행 수업 없이 cube와 바퀴에 이미 강체·충돌 속성이 있는 출발점을 사용한다.
 
 
+## 이 실습의 의도
+
+독립된 몸체·바퀴 강체를 revolute joint로 연결하고, articulation과 속도 제어를 추가하여 움직이는 로봇으로 만드는 수업이다. 먼저 joint가 부품을 붙잡는 역할을 확인하고, 이후 drive와 Action Graph가 바퀴 운동을 만드는 역할을 나누어 관찰한다. `run.py`는 joint 없는 공식 출발 asset을 열 뿐이므로 두 joint·drive·root·graph의 생성과 Play는 사용자가 GUI에서 진행한다.
+
+## 실행 후 확인할 것
+
+- **출발 상태:** 기본 장면을 처음 Play하면 몸체와 바퀴가 따로 떨어질 수 있다. `mock_robot_no_joints.usd`를 연 단계의 의도된 모습이며, `initial_inventory.json`은 이 초기 구조만 기록한다.
+- **관절 연결:** GUI 작업 후 `/mock_robot/Joints`의 두 wheel joint가 몸체와 각 바퀴의 실제 강체 prim을 body0/body1으로 가리키는지 본다. axis=Y와 양쪽 local rotation을 확인하고, Play에서 한 부품을 움직여도 나머지가 연결을 유지하는지 확인한다.
+- **drive 동작:** 각 Angular Drive의 stiffness=0, damping=10000, target velocity=200 deg/s를 확인한다. 속도 목표가 있는 동안 바퀴가 계속 도는 것이 기대 결과이며, 특정 각도에서 멈추는 위치 제어를 기대하지 않는다.
+- **graph 명령:** `/mock_robot/Graphs/Velocity_Controller`를 만든 뒤 `JointCommandArray`의 두 입력을 1.0 rad/s로 주고 한쪽만 -1.0으로 바꿔 상대 회전 방향의 변화를 본다. graph가 매 step 목표를 쓰면 drive Property에서 앞서 넣은 200 deg/s가 계속 유지되는 것은 아니다.
+- **완성 구조:** 저장한 stage에서 `/mock_robot`의 articulation root, 두 joint와 graph의 Robot Prim 연결을 함께 확인한다. 실행기 종료나 headless 장면 로드 성공만으로 이 연결·제어 실습이 완료되지는 않는다.
+
 ## 실행 환경과 파일
 
 Isaac Sim **5.1.0**, 지원되는 RTX GPU와 GUI가 필요하다. `ISAAC_SIM_PATH`는 `python.sh`가 있는 설치 디렉터리다. Python CLI 도움말은 일반 Python에서도 열린다. 이 패키지는 자체 코드/설정을 가지며 다른 로컬 튜토리얼을 import하지 않는다.
