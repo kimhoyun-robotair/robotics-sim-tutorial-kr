@@ -1,64 +1,130 @@
-# 84. Extension Template Generator
+# 84. 버튼 하나에서 시작하는 확장 만들기
 
-권장 학습 순서 **84** · OmniGraph와 확장 개발 · 출처 ID `t164`
+## 이번에 배우는 것
 
-공식 생성기로 네 템플릿을 만드는 실습과 즉시 실행 가능한 작은 독립 UI extension을 함께 제공한다. 생성 결과의 README는 NVIDIA 생성기 산출물이며 이 저장소 README를 변경하는 절차가 아니다.
+**작은 큐브 생성 확장을 실행한 뒤, 공식 생성기의 네 템플릿이 장면과 사용자 입력을 어떻게 나누어 맡는지 비교합니다.**
 
-## 이 실습의 의도
+Script Editor에서 코드를 매번 붙여 넣는 대신 버튼으로 반복해서 실행하고 싶을 때 확장을 만들 수 있습니다. 확장은 앱이 켜고 끌 수 있는 기능 묶음입니다. 파일을 생성하는 단계, 앱이 확장을 찾는 단계, 사용자가 버튼을 누르는 단계는 각각 별도로 진행됩니다.
 
-공식 생성기가 만드는 네 템플릿을 각각 생성·활성화하고, 템플릿에 따라 장면과 제어를 누가 준비해야 하는지 확인한다. 함께 제공한 `kr.template.starter`는 startup→UI 버튼→USD prim 생성→shutdown의 최소 연결을 보여주며, 이를 켠다고 네 공식 템플릿이 생성되지는 않는다. 공식 생성 버튼은 파일을 만들고, 확장 검색 경로 등록·Enabled·각 템플릿의 Load/Run은 별도로 수행해야 한다.
-
-## 실행 후 확인할 것
-
-- Generate 후 `output/extensions` 아래 `kr.loaded`, `kr.scripted`, `kr.configuration`, `kr.components`의 파일과 생성 README가 각각 있는지 확인한다. 부모 search path를 등록한 뒤 각 이름이 Extensions에 검색되어 실제 메뉴/창을 여는지까지 본다.
-- Loaded Scenario에서 **Load → Run → Stop → Reset**을 수행한다. 설치된 기본 템플릿의 `/ur10e` 관절이 순차적으로 움직이고 `/Scenario/cuboid`가 로봇 주위를 돌며, Stop 시 갱신이 멈추고 Reset 후 다시 시작할 상태로 돌아오는지 확인한다.
-- Scripting에서는 Load/Run 후 로봇의 목표 이동과 gripper 개폐가 순서대로 진행되는 동안 UI가 응답하는지 본다. Configuration에서는 별도로 Franka를 추가하고 Play한 뒤 dropdown으로 선택해야 관절 UI와 실제 관절 이동을 확인할 수 있다.
-- UI Component Library에서는 FloatField·체크박스·버튼의 callback에 전달되는 값과 타입을 생성 코드와 대조한다. 필드가 보이거나 바뀌었다는 것과 연결된 callback이 호출되는 것은 별도로 확인한다.
-- 제공 starter의 **Create Cube**는 `/World/ExtensionCube`에 size=`0.3`, 높이 `0.5`의 도형을 만든다. 강체·충돌을 추가하지 않아 Cube가 떨어지지 않고, 확장을 꺼 창을 없애도 prim은 남는다. 이 결과로 공식 템플릿의 로봇 실행까지 완료했다고 판단하지 않는다.
-
-## 준비
-
-Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
-
-```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-"$ISAAC_SIM_PATH/isaac-sim.sh"
-```
-
-Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 경로로 식별하는 요소다. `File > New`는 새 장면을 여므로 보관할 작업은 먼저 저장한다. 이 패키지는 `asset/`, `docs/`, 저장소 README를 필요로 하지 않는다.
-## 공식 생성기로 네 종류 생성
-
-1. `Window > Extensions`에서 **isaacsim.examples.extension**을 켜고 `Utilities > Generate Extension Templates`를 연다.
-2. 이 패키지 안에 새 `output/extensions/` 폴더를 만들고 **Loaded Scenario Template**을 펼친다. Extension Path=`/absolute/path/to/this-package/output/extensions/kr.loaded`, Name=`kr.loaded`, Description=`Load reset run lesson`을 입력해 Generate Extension을 누른다.
-3. **Scripting Template**은 `kr.scripted`, **Configuration Tooling Template**은 `kr.configuration`, **UI Component Library**는 `kr.components`로 같은 부모 아래 각각 생성한다. 같은 폴더에 덮어쓰지 않는다.
-4. `Window > Extensions`의 메뉴→Settings→Extension Search Paths에서 **부모 output/extensions 절대 경로**를 +로 추가한다. Third Party 탭에서 각 확장을 찾아 하나씩 Enabled를 켠다.
-5. 메뉴바에 새 항목이 나타나는지 확인하고 해당 창을 연다. 공식 로봇을 쓰는 generated sample은 Isaac Sim 5.1 자산 서버/로컬 asset pack이 필요하다.
-
-| 템플릿 | 수행할 동작 | 성공 기준 |
+| 구성 | 이 실습에서 맡는 역할 | 확인할 결과 |
 |---|---|---|
-| Loaded Scenario | Load → Run → Stop → Reset | 로드 후 동작, reset 시 초기 상태 |
-| Scripting | Load → Run | 순차 동작이 프레임마다 진행되고 UI가 응답 |
-| Configuration | 새 Stage에 Franka 추가, Play, 로봇 dropdown 선택 | 관절 UI 생성 및 선택 관절 이동 |
-| UI Component Library | FloatField/체크박스/button 값 변경 | callback이 전달받는 값/타입 확인 |
+| `kr.template.starter` | 제공된 최소 UI 확장 | 버튼으로 큐브 생성 |
+| `config/extension.toml` | 의존성과 불러올 Python 모듈 선언 | 확장 활성화 |
+| `kr_template_starter/__init__.py` | 창 생성, 클릭 처리, 창 정리 | 창과 Stage의 서로 다른 수명 |
+| 공식 Template Generator | 목적에 맞는 확장 소스 생성 | 네 확장 폴더와 각 실습 창 |
 
-Franka는 Content `Isaac Sim > Robots > FrankaRobotics > FrankaPanda > franka.usd`를 새 Stage에 드래그한다. Configuration 템플릿은 Stage/타임라인을 소유하지 않으므로 사용자가 Play한 로봇을 선택해야 한다.
+**Stage**는 현재 USD 장면이고, **prim**은 `/World/ExtensionCube`처럼 경로로 식별하는 장면 요소입니다. 확장 창을 닫는 일과 Stage에서 prim을 지우는 일은 서로 다릅니다.
 
-## 제공된 최소 확장 먼저 실행하기
+## 1. 제공된 큐브 확장 실행하기
+
+Isaac Sim 5.1 GUI와 지원 NVIDIA GPU가 필요합니다. 저장소 루트에서 다음 명령을 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-"$ISAAC_SIM_PATH/isaac-sim.sh" --ext-folder /absolute/path/to/this-package/exts --enable kr.template.starter
+~/isaacsim/isaac-sim.sh \
+  --ext-folder "$PWD/src/84_tools_extension_template_generator/exts" \
+  --enable kr.template.starter
 ```
 
-Korean Extension Starter 창의 **Create Cube**를 누르면 `/World/ExtensionCube`가 생긴다. 이 최소 예제는 extension.toml의 package/dependencies/python.module, `omni.ext.IExt` startup/shutdown, `omni.ui.Button` callback의 관계를 보여준다. official generator 산출물의 대체 구현이라고 주장하지 않는다.
+1. **Korean Extension Starter** 창에서 **Create Cube**를 누릅니다.
+2. Stage에서 `/World/ExtensionCube`를 선택하고 `F`로 화면 중심에 맞춥니다.
+3. Property에서 크기와 Translate Z를 확인합니다.
+4. **Window > Extensions**에서 `kr.template.starter`를 끕니다. 창과 큐브 중 무엇이 사라지는지 보세요.
 
-생성된 확장의 `scripts/global_variables.py`는 이름/설명, `scripts/extension.py`는 메뉴/lifecycle, `scripts/ui_builder.py`는 사용자 UI/동작을 담당한다. 일반 수정 지점은 ui_builder다. ui.Button은 사용자가 클릭할 때 callback을 호출하고 Cube API는 USD에 prim을 만든다. UI창 종료와 Stage의 Cube 삭제는 서로 별개다.
+이 실습은 자동으로 앱을 종료하지 않습니다. 확인을 마치면 앱 창을 닫으세요.
 
-한 변수 실험: 제공 starter의 Cube size만 0.3→0.6으로 수정하고 확장을 껐다 켠 뒤 새 Stage에서 Create Cube를 누른다. 성공은 UI 재로드와 실제 크기 변화다. 확장 검색 실패는 search path에 확장 자체가 아닌 부모가 들어갔는지 확인한다. 생성 템플릿에서 Load가 장면을 바꾸므로 보관할 Stage는 먼저 저장한다.
+### 코드에서 볼 부분
 
-## 검증 범위
+확장 폴더의 `config/extension.toml`에는 다음 연결이 있습니다.
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
+```toml
+[[python.module]]
+name = "kr_template_starter"
+```
 
-## 출처
+앱이 이 모듈을 불러오면 `StarterExtension.on_startup()`이 창을 만들고 버튼의 클릭 함수를 연결합니다.
 
-- [Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_template_generator.html).
+```python
+ui.Button("Create Cube", clicked_fn=self.create_cube)
+```
+
+여기서 `self.create_cube` 뒤에 괄호가 없는 이유는 **지금 함수를 실행하는 것이 아니라 클릭할 때 실행할 함수를 전달하기 때문**입니다. 클릭 후에는 다음 코드가 현재 Stage에 값을 씁니다.
+
+```python
+cube = UsdGeom.Cube.Define(stage, path)
+cube.CreateSizeAttr(0.3)
+cube.AddTranslateOp().Set(Gf.Vec3d(0, 0, 0.5))
+```
+
+기본 미터 장면에서는 한 변이 0.3 m이고 중심 높이가 0.5 m인 큐브입니다. 이 코드에는 강체나 충돌 설정이 없어서 Play해도 중력으로 떨어지지 않습니다.
+
+### 실행 결과 확인하기
+
+터미널이나 Console의 `created /World/ExtensionCube` 출력과 Stage의 실제 경로를 함께 확인하세요. 확장을 끄면 `on_shutdown()`에서 `window.destroy()`가 실행되어 창이 사라집니다. 큐브 삭제 코드는 없으므로 큐브는 남습니다. USD 파일도 자동 저장하지 않습니다.
+
+같은 Stage에서 버튼을 두 번 누르면 기존 경로가 있다는 오류가 납니다. 한 번의 클릭이 이미 만든 객체를 덮어쓰지 않도록 한 동작입니다.
+
+## 2. 공식 생성기로 네 가지 확장 만들기
+
+이제 작은 확장에 장면 로드와 실행 제어를 더하려면 어떤 출발점이 필요한지 살펴봅니다. 저장소 루트에서 출력 폴더와 절대 경로를 준비하세요.
+
+```bash
+mkdir -p src/84_tools_extension_template_generator/output/extensions
+realpath src/84_tools_extension_template_generator/output/extensions
+```
+
+Isaac Sim에서 `isaacsim.examples.extension`을 활성화하고 **Utilities > Generate Extension Templates**를 엽니다. 위 명령이 출력한 경로를 아래의 `<출력 경로>` 자리에 사용하세요.
+
+| 펼칠 템플릿 | Extension Name | Extension Path |
+|---|---|---|
+| Loaded Scenario | `kr.loaded` | `<출력 경로>/kr.loaded` |
+| Scripting | `kr.scripted` | `<출력 경로>/kr.scripted` |
+| Configuration Tooling | `kr.configuration` | `<출력 경로>/kr.configuration` |
+| UI Component Library | `kr.components` | `<출력 경로>/kr.components` |
+
+각 Description을 적고 **Generate Extension**을 누르세요. 확장 관리자의 메뉴에서 **Settings > Extension Search Paths**에 `<출력 경로>`를 추가합니다. 네 폴더를 담은 **부모 경로**를 등록해야 합니다. Third Party에서 각 확장을 찾아 하나씩 켜고 생성된 메뉴를 여세요.
+
+### 설정에서 볼 부분
+
+로컬 5.1 생성기는 확장 이름의 점을 밑줄로 바꾸고 `_python`을 붙인 Python 폴더를 만듭니다. 예를 들어 `kr.loaded`의 코드는 `kr_loaded_python/` 아래에 있습니다. 이 폴더의 `global_variables.py`에는 제목과 설명이, `extension.py`에는 메뉴와 이벤트 연결이, `ui_builder.py`에는 사용자 UI와 동작이 들어 있습니다. 생성된 README를 먼저 읽고 `ui_builder.py`에서 버튼과 콜백을 찾아보세요. 공식 웹 설명의 `scripts/` 표기와 달리 실제 생성물의 모듈 경로를 사용합니다.
+
+제공 starter는 클릭 즉시 USD만 수정하지만 Loaded Scenario의 Load는 물리 객체 초기화까지 준비합니다. Configuration은 사용자가 이미 준비한 장면을 다루므로 로봇을 스스로 넣어야 합니다. 이 차이를 알고 템플릿을 선택하면 필요한 초기화 단계를 빠뜨리지 않을 수 있습니다.
+
+### 실행 결과 확인하기
+
+- **Loaded Scenario:** 보관할 장면을 저장한 뒤 Load → Run → Stop → Reset을 누릅니다. 기본 생성물에서는 UR10e의 관절이 차례로 움직이고 `/Scenario/cuboid`가 원을 그립니다. Stop 뒤 움직임이 멈추고 Reset 뒤 다시 시작할 수 있는지 확인하세요.
+- **Scripting:** Load → Run 후 Franka가 목표로 이동하고 gripper를 여닫는 동안 창이 응답하는지 봅니다. 로봇 자산을 읽을 수 있는 5.1 자산 경로가 필요합니다.
+- **Configuration:** 새 Stage에 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`를 추가하고 Play한 뒤 로봇 dropdown을 선택합니다. 관절 필드 하나를 바꾸어 실제 관절의 반응을 보세요.
+- **UI Component Library:** 숫자 필드와 체크박스를 바꾸고 버튼을 눌러 생성 코드의 콜백에 전달되는 값과 타입을 확인합니다.
+
+starter의 큐브 버튼을 눌렀다고 이 네 생성물이 실행되는 것은 아닙니다. `output/extensions`의 파일 생성과 각 확장의 실제 실행을 차례로 확인하세요.
+
+## 3. 파일 생성부터 사용자 동작까지 정리
+
+```text
+Generate → 확장 소스가 디스크에 생김
+Search Path 등록 → 앱이 확장 폴더를 발견함
+Enabled → 모듈을 읽고 메뉴·창을 준비함
+사용자 클릭 → 연결한 콜백이 USD나 물리를 변경함
+Disabled → 확장이 소유한 UI·이벤트를 정리함
+```
+
+**템플릿은 시작 구조를 마련합니다. 어떤 버튼에서 장면을 만들고 어떤 시점에 물리를 실행할지는 생성된 코드의 연결을 통해 결정됩니다.**
+
+## 4. 간단한 확인 실험
+
+제공 starter의 `cube.CreateSizeAttr(0.3)`에서 **0.3만 0.6으로** 바꾸세요. 저장 후 확장을 껐다 켜고 **File > New**로 새 Stage를 준비한 다음 Create Cube를 누릅니다.
+
+한 변 길이는 두 배가 되지만 중심 높이는 0.5로 유지됩니다. 기본 미터 장면에서 아래 면 높이는 `0.5 - 0.6/2 = 0.2 m`입니다. 화면 크기와 Property의 Size를 함께 확인하면 새 코드가 실제로 불러와졌는지 알 수 있습니다.
+
+## 실행할 때 막히면
+
+- **확장이 검색되지 않음:** `--ext-folder`나 Search Paths가 `exts/kr.template.starter`가 아닌 `exts`를 가리키는지 확인하세요.
+- **두 번째 클릭에서 ExtensionCube exists 오류:** **File > New**로 새 장면을 준비하세요. 확장을 껐다 켜도 기존 큐브는 남습니다.
+- **생성물 Load에서 로봇이 보이지 않음:** Console의 USD 자산 경로 오류를 확인하고 5.1 로봇 자산 연결을 준비하세요. starter는 외부 로봇 자산을 사용하지 않습니다.
+- **Configuration의 관절 UI가 비활성화됨:** 로봇을 추가한 뒤 Play하고 articulation을 선택하세요. 장면 로드까지 맡는 템플릿이 아닙니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Extension Template Generator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_template_generator.html)에 대응합니다. 생성물의 이벤트 구조는 [Extension Template Generator Explained](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_templates_tutorial.html)와 로컬 5.1 템플릿 소스로 대조했습니다.
+
+큐브 starter는 이 폴더의 작은 보조 예제입니다. 네 공식 템플릿은 사용자가 GUI로 생성합니다. 문서와 코드·설정의 연결을 검토했으며 GUI 활성화, 로봇 동작과 출력 파일 생성은 이번 개정에서 실행하지 않았습니다. `tutorial.json`의 검증 상태는 `not_run`입니다.

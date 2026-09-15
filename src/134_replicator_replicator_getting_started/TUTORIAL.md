@@ -1,97 +1,113 @@
-# 134. 네 가지 시작 예제로 데이터 캡처 흐름 익히기
+# 134. 같은 장면도 촬영을 요청하는 방법이 다릅니다
 
-권장 학습 순서 **134** · Replicator 합성 데이터 기초와 확장 · 출처 ID `t037`
+## 이번에 배우는 것
 
-공식 Getting Started Scripts의 네 시나리오를 `--example`으로 선택합니다. 각 실행은 자기 장면, 라벨, 카메라와 writer를 새로 만듭니다. 앞 예제의 상태나 다른 패키지를 먼저 실행할 필요가 없습니다. 결과는 모두 실제 annotator/writer가 반환한 데이터입니다.
+**고정 촬영, 다중 카메라, 무작위화, 낙하 이벤트를 비교하며 캡처의 기준을 구분합니다.**
 
-## 이 실습의 의도
+Replicator에서 한 프레임을 만든다는 말에는 “어떤 상태를”, “어느 카메라로”, “언제” 촬영하는지가 함께 들어 있습니다. 이번 `run.py`는 같은 `carton` 상자로 네 가지 질문을 따로 확인하도록 구성되어 있습니다.
 
-동일한 라벨 있는 Cube를 사용해 정지 캡처, 여러 카메라, 속성 무작위화, 물리 이벤트 캡처의 실행 시점을 비교하는 실습입니다. 기본 `basic`은 물체를 움직이지 않고 네 번 촬영하므로 이미지 배치가 그대로인 것이 정상입니다. `events`에서만 강체와 중력을 추가하며 바닥은 만들지 않아, 낙하 높이 변화로 촬영을 시작하고 같은 상태의 보이는/숨긴 이미지 쌍을 만듭니다. GUI는 캡처 완료 후 장면을 유지하지만 파일을 계속 추가하지 않습니다.
+| `--example` | 바뀌는 조건 | 주요 확인 파일 |
+|---|---|---|
+| `basic` | 고정 상태를 반복 촬영합니다. | RGB·분할·2D box, `observations.json` |
+| `multi` | 카메라 2대로 같은 상태를 봅니다. | `camera_metadata_*.json`, 카메라별 RGB |
+| `randomize` | 위치와 조명을 다른 주기로 바꿉니다. | 위치 기록과 RGB |
+| `events` | 낙하 높이 조건을 만족하면 한 쌍을 촬영합니다. | `height`, `pair` 기록 |
 
-## 실행 후 확인할 것
+각 실행은 새 장면에서 시작합니다. `events`만 강체와 중력을 추가하며, 다른 모드의 상자는 자동으로 떨어지지 않습니다.
 
-- **basic:** 출력 폴더의 RGB, semantic segmentation, tight box에서 `/World/Cube`의 `carton` 정답을 확인합니다. `observations.json`의 position은 기본 네 프레임 모두 `[0,0,0]`이며 고정 배치 반복 촬영이 의도입니다.
-- **multi:** front RGB는 512×512, side는 320×240인지 확인하고 `rgb_shapes`의 높이·너비 순서가 각각 `[512,512,...]`, `[240,320,...]`인지 봅니다. `camera_metadata_*.json`에는 각 render product의 camera_params와 3D box가 들어 있어야 하며 `pose/`는 `--pose-writer`를 지정했을 때 확인합니다.
-- **randomize:** `observations.json`에서 x/y는 [-1,1] 범위로 바뀌고 z는 0을 유지하는지 봅니다. 조명 custom event는 0부터 센 짝수 프레임에만 전송되므로 물체 위치와 조명 변화가 서로 다른 주기를 가집니다. seed가 같아도 렌더 픽셀의 완전한 동일함을 성공 기준으로 두지 않습니다.
-- **events:** `observations.json`의 height가 이전 이벤트보다 0.4 m 이상 낮아지고 `pair`가 두 연속 캡처 번호를 가리키는지 확인합니다. 각 쌍은 보이는 Cube와 숨긴 Cube를 같은 물리 상태에서 촬영하므로 숨긴 프레임의 carton 정답이 빠지는 것은 정상입니다.
-- **종료와 개수:** events의 `--frames`는 최대 이벤트 수이고 이벤트 하나에 두 캡처가 생깁니다. z<0 또는 `--steps` 상한 때문에 요청 수보다 일찍 끝날 수 있으므로 실제 개수는 `observations.json`과 `Capture steps:`로 확인합니다. 이벤트가 하나도 없으면 코드는 오류로 종료합니다.
-- **기존 검증의 범위:** [RUNTIME_CHECK.md](RUNTIME_CHECK.md)의 기록은 `basic --headless --frames 2`에서 RGB 두 장과 비어 있지 않은 정답을 확인한 사례입니다. multi/randomize/events 및 GUI는 해당 모드의 위 결과를 별도로 확인해야 합니다.
+## 1. 고정 장면에서 카메라 출력 읽기
 
-## GUI 실행과 종료
-
-GUI 실행에서 `--steps`를 생략하면 정해진 캡처와 파일 저장을 끝낸 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 추가 이미지를 무한히 생성하지 않습니다. `--steps`는 events 모드의 물리 update 상한이며 생략 시 캡처에는 기존 300회를 사용합니다. 양수 `--steps N`을 명시하면 해당 설정으로 작업을 마치고 GUI 대기 없이 종료합니다. `--headless`는 기존 유한 작업을 마치면 종료합니다.
-
-이 패키지 폴더에서 다음과 같이 실행합니다. 설치 경로는 자신의 환경에 맞추고, 이미 사용한 출력 폴더는 새 경로로 바꿉니다.
+Isaac Sim 5.1과 RTX GPU 환경에서 저장소 루트의 터미널을 사용하세요.
 
 ```bash
-~/isaacsim/python.sh run.py --output output/gui
+~/isaacsim/python.sh src/134_replicator_replicator_getting_started/run.py --example basic --headless --frames 4 --output /tmp/tutorial134-basic
+~/isaacsim/python.sh src/134_replicator_replicator_getting_started/run.py --example multi --headless --frames 4 --output /tmp/tutorial134-multi
 ```
 
-## 준비와 실행
+출력 폴더는 아직 없어야 합니다. 두 명령은 각각 네 번 촬영한 뒤 종료합니다. GUI로 보려면 `--headless`를 빼세요. `--steps`도 생략하면 파일 저장 후 창을 닫을 때까지 유지합니다. 양수 `--steps`를 지정한 실행은 작업 후 GUI 대기 없이 종료합니다.
 
-Isaac Sim 5.1.0 전체 설치, NVIDIA RTX GPU/드라이버와 저장 공간이 필요합니다. 기본 예제는 USD 기본 도형만 사용해 원격 자산을 요구하지 않습니다. Isaac Sim에서 제공하는 NumPy를 사용하고 별도로 pip install하지 않습니다.
+### 코드에서 볼 부분
+
+```python
+rep.orchestrator.set_capture_on_play(False)
+writer.attach(products)
+rep.orchestrator.step(delta_time=0.0, rt_subframes=args.rt_subframes)
+```
+
+Play에 따른 자동 기록을 끄고, 이 호출로 촬영 시점을 정합니다. `delta_time=0.0`은 물리 시간을 추가하지 않는다는 뜻입니다. 기본 `rt_subframes=4`는 같은 시점에서 렌더를 안정시키는 반복이며 사진 네 장을 의미하지 않습니다.
+
+`multi`는 기존 512×512 front 카메라에 320×240 side 카메라를 더합니다. `CameraMetadataWriter`는 `camera_params`와 `bounding_box_3d`를 받아 NumPy 배열을 JSON으로 바꿉니다. 이 변환은 측정값을 파일에 담기 위한 작업이며 새로운 카메라 값을 만들어 넣는 과정은 아닙니다.
+
+### 실행 결과 확인하기
+
+`basic`의 `observations.json`에서 `position`은 네 행 모두 `[0, 0, 0]`입니다. 물체 배치가 같은 네 사진은 정상 결과입니다. RGB의 상자와 `carton` 의미 라벨·2D box를 맞춰 보세요.
+
+`multi`에서는 같은 관찰 행의 `rgb_shapes`가 `[512, 512, ...]`와 `[240, 320, ...]`를 포함하는지 확인합니다. 배열 크기는 **높이, 너비, 채널** 순서라 카메라 해상도 표기와 순서가 다릅니다. `camera_metadata_0000.json`은 render product별 카메라 정보와 3D box를 담습니다.
+
+`--pose-writer`를 `multi`에 추가하면 `pose/`에 PoseWriter 결과와 디버그 이미지도 기록합니다. BasicWriter의 검출 배열과 PoseWriter의 포즈 파일은 저장 규약이 다르므로 파일 이름만 보고 서로 바꾸어 사용하지 마세요.
+
+## 2. 변화와 사건을 촬영 조건으로 사용하기
 
 ```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-cd src/134_replicator_replicator_getting_started
-"$ISAAC_SIM_PATH/python.sh" run.py --example basic --headless
-"$ISAAC_SIM_PATH/python.sh" run.py --example multi --headless
-"$ISAAC_SIM_PATH/python.sh" run.py --example randomize --headless
-"$ISAAC_SIM_PATH/python.sh" run.py --example events --headless
-# multi 예제에 공식 PoseWriter 출력도 추가
-"$ISAAC_SIM_PATH/python.sh" run.py --example multi --pose-writer --output output/multi_pose
+~/isaacsim/python.sh src/134_replicator_replicator_getting_started/run.py --example randomize --headless --frames 4 --output /tmp/tutorial134-random
+~/isaacsim/python.sh src/134_replicator_replicator_getting_started/run.py --example events --headless --frames 4 --steps 300 --output /tmp/tutorial134-events
 ```
 
-같은 출력 폴더는 덮어쓰지 않습니다. `output/basic`, `output/multi`, `output/randomize`, `output/events`가 각각 생깁니다. `--frames`는 기본/다중/무작위 모드의 캡처 횟수입니다. events에서는 최대 이벤트 수이고 한 이벤트에 두 장을 기록합니다. 물체가 바닥 높이 아래로 떨어지면 더 일찍 끝나므로 실제 이벤트 개수는 `observations.json`으로 확인합니다.
+`randomize`의 상자 위치는 Python이 매 프레임 x/y를 -1~1 m 범위에서 고릅니다. 조명 색은 별도 OmniGraph 이벤트를 보낼 때만 바뀝니다.
 
-## 1. BasicWriter
+```python
+if frame % 2 == 0:
+    rep.utils.send_og_event(event_name="change_light")
+```
 
-1. basic을 실행하고 RGB PNG, semantic segmentation PNG/JSON, tight bounding box 파일을 찾습니다.
-2. `class=carton`이 각 정답에서 어떻게 표현되는지 확인합니다. 화면의 색과 label ID는 별개입니다. bounding box 숫자는 픽셀 좌표이고 prim의 translate는 미터입니다.
-3. `observations.json`의 position이 모든 프레임에서 같은지 확인합니다. 이 모드에는 물리 진행이나 randomizer가 없어 같은 상태를 반복 촬영합니다.
+즉, 0부터 센 짝수 프레임에 조명 변경을 요청합니다. 물체 이동과 조명 변화가 같은 주기를 가져야 할 이유는 없습니다. `observations.json`은 위치를 기록하므로 조명 변화는 해당 RGB와 함께 판단하세요.
 
-## 2. 여러 카메라와 사용자 writer
+### 코드에서 볼 부분
 
-1. multi를 실행합니다. front는 512×512, side는 320×240입니다. `rgb_shapes`는 NumPy 배열의 **높이, 너비, 채널** 순서라 side는 `[240,320,...]`로 표시됩니다.
-2. `camera_metadata_0000.json`을 엽니다. `CameraMetadataWriter`가 camera_params와 bounding_box_3d를 `renderProduct` 관점으로 묶습니다. 투영 행렬·카메라 transform과 3D box의 정답을 RGB와 같은 프레임으로 저장합니다.
-3. `--pose-writer`로 다시 실행해 `pose` 아래 정답과 debug 이미지를 확인합니다. Writer마다 annotation 스키마가 다르므로 BasicWriter 파일을 임의로 PoseWriter 형식이라고 부르지 않습니다.
+`events`의 상자는 중심 높이 2 m에서 떨어지며 바닥은 없습니다. 이전 촬영 높이보다 0.4 m 이상 낮아졌을 때 다음 부분을 실행합니다.
 
-## 3. USD randomizer와 OmniGraph 이벤트
+```python
+if previous_height - height >= 0.4:
+    timeline.pause()
+    rep.orchestrator.step(delta_time=0.0, rt_subframes=args.rt_subframes)
+    UsdGeom.Imageable(cube).MakeInvisible()
+```
 
-1. randomize를 실행해 `observations.json`의 물체 x/y가 매 프레임 달라지는지 확인합니다. 이는 Python `random.uniform`과 USD translate 속성으로 직접 작성한 변화입니다.
-2. 코드에서 `frame % 2 == 0`일 때만 `send_og_event("change_light")`가 호출됨을 확인합니다. 이 이벤트가 Replicator 그래프의 dome light 색을 바꿉니다. `step()` 자체는 여기서 해당 custom event를 발생시키지 않습니다.
-3. 같은 seed=42로 새 출력 폴더에 실행해 배치 위치를 비교합니다. seed는 randomizer 재현성을 돕지만 GPU 렌더 픽셀의 비트 단위 동일함을 보장하지 않습니다.
+이어서 숨긴 상태를 한 번 더 촬영하고, `finally`에서 상자를 다시 보이게 합니다. 촬영하는 동안 타임라인을 멈추므로 **같은 물리 순간의 상자 있는 사진과 없는 사진**을 얻습니다. 물리 변화와 대상의 존재 여부를 따로 비교할 수 있는 구성입니다.
 
-## 4. 낙하 높이에 따른 이벤트 캡처
+### 실행 결과 확인하기
 
-1. events를 실행합니다. USD Physics Scene의 중력은 z=-9.81m/s²이며 상자는 z=2m에서 떨어집니다. World 바닥을 추가하지 않아 z<0일 때 중지합니다.
-2. 이전 캡처 높이에서 0.4m 이상 내려갔을 때 timeline을 pause합니다. 같은 물리 상태에서 상자가 보이는 이미지와 숨긴 이미지를 연속 촬영한 후 다시 표시하고 play합니다.
-3. `observations.json`의 height가 내려가는지, `pair`가 두 연속 캡처 번호를 가리키는지 확인합니다. hidden 프레임에서는 carton의 의미/검출 정답도 달라져야 합니다.
+`events`의 관찰 행에는 `step`, `height`, `pair`가 있습니다. `pair: [0, 1]`은 첫 사건에서 생성한 두 연속 캡처를 뜻합니다. 숨긴 사진에는 `carton` 검출·분할 정답도 없어지는지 확인하세요.
 
-## API와 기본 개념
+이 모드의 `--frames 4`는 **최대 사건 네 번**입니다. 사건 하나마다 두 번 촬영하므로 최대 여덟 캡처이지만, 상자 높이가 0 아래로 내려가거나 앱 갱신 한도 `--steps 300`에 도달하면 일찍 끝납니다. 정확한 결과는 관찰 행 수와 `Capture steps:` 로그로 읽으세요. 사건이 하나도 관찰되지 않으면 코드는 오류를 냅니다.
 
-USD **Stage**는 전체 장면, **prim**은 Cube/Camera/Light 같은 항목, **schema**는 해당 항목의 속성 규약입니다. `CollisionAPI`는 충돌 형태, `RigidBodyAPI`는 물리 엔진이 움직일 강체임을 표시합니다. 단순 Cube prim만 만들면 중력으로 떨어지지 않습니다.
+## 3. 촬영 요청의 차이 정리
 
-`SimulationApp`을 먼저 만든 뒤 `omni`·`pxr`를 import합니다. `rep.create.render_product`는 카메라와 해상도를 묶습니다. annotator의 `get_data()`는 GPU 렌더에서 만들어진 배열을 직접 반환하고 writer의 `write()`는 같은 데이터를 파일 단위로 조직합니다. `CameraMetadataWriter`의 JSON 변환은 NumPy 값을 보존하기 위한 직렬화이며 카메라 값을 합성하지 않습니다.
+```text
+basic / multi : 고정 상태 → step → 카메라별 출력
+randomize     : 위치 변경 → 필요한 프레임에 조명 이벤트 → step
+ events       : 물리 진행 → 높이 조건 → pause → 표시/숨김 한 쌍 → 재개
+```
 
-`set_capture_on_play(False)`는 타임라인 실행 때 원치 않는 기록을 막습니다. `step(delta_time=0.0)`은 캡처 중 물리를 진행시키지 않습니다. `pause_timeline` 기본값과 timeline.play 호출 위치를 함께 읽어야 합니다. `rt_subframes`는 렌더 안정화용 반복이고, DLSS 설정값 2는 Quality입니다. 마지막 `wait_until_complete()`는 비동기 출력이 완료되기 전 프로그램이 닫히지 않도록 합니다. writer/annotator detach 후 render product를 해제합니다.
+여기서 `step()`은 데이터 생성의 한 단위이고 `app.update()`는 앱이 처리할 일을 진행하는 호출입니다. 특히 events의 `--steps`는 앱 갱신의 상한이므로 고정된 초 단위의 낙하 시간을 직접 뜻하지 않습니다.
 
-공식 문서는 Script Editor의 `await step_async()`와 standalone의 `step()`을 모두 제공합니다. 여기서는 재실행 가능한 CLI를 위해 synchronous standalone으로 구현했습니다. Script Editor에 전체 `run.py`를 붙여넣어 두 번째 SimulationApp을 만들면 안 됩니다.
+모든 모드는 마지막에 파일 쓰기를 기다린 뒤 writer·annotator를 분리하고 render product를 해제합니다. GUI가 남는 시간과 저장할 프레임 수가 서로 독립인 이유입니다.
 
-## 하나씩 바꿔보기와 문제 해결
+## 4. 간단한 확인 실험
 
-randomize의 **빛 이벤트 간격만 2→3**으로 바꿉니다. 물체 위치 변화 간격은 유지하고 사진에서 조명 변화의 빈도를 비교합니다. 검은 영상은 카메라·조명·초기 렌더 로딩을 확인하고 `--rt-subframes 16`으로 다시 시도합니다. multi에서 bounding box가 비면 carton이 카메라 시야에 있는지 확인합니다. events가 한 장도 기록하지 않으면 실제 Physics Scene·RigidBody 적용과 USD transform 갱신을 확인합니다. 이 경우 코드는 성공을 출력하지 않고 오류로 종료합니다.
+`events`를 **`--frames 1`로만 바꾸어** 새 출력 경로에 실행해 보세요. `--steps 300`은 유지합니다.
 
-## 출처와 버전
+첫 낙하 사건이 감지되면 관찰 행 하나와 캡처 두 개가 생겨야 합니다. 요청값이 1인데 RGB가 두 장인 이유를 `pair`로 설명해 보세요. 사건을 감지하기 전까지 기다린 앱 갱신 수는 1이 아닙니다.
 
-이 해설은 NVIDIA Isaac Sim **5.1.0** 문서와 해당 설치본을 기준으로 새로 작성했습니다. 원문의 전체 문장을 번역 복제한 것이 아니라 해당 워크플로를 독립적으로 실습하도록 설명했습니다.
+## 실행할 때 막히면
 
-- [공식 Getting Started Scripts](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html)
-- [orchestrator step function](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html#orchestrator-step-function)
-- [custom writer and annotators with multiple cameras](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html#custom-writer-and-annotators-with-multiple-cameras)
-- [custom randomizations replicator graph and usd api](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html#custom-randomizations-replicator-graph-and-usd-api)
-- [event triggered data capture timeline and simulation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html#event-triggered-data-capture-timeline-and-simulation)
+- **`No falling-height event observed`**: Physics Scene, Cube의 RigidBody 설정, USD 위치 갱신을 확인하세요. `--steps`가 너무 작으면 첫 조건에 도달하지 못합니다.
+- **multi의 이미지 크기가 뒤집힌 것처럼 보임**: 해상도는 너비×높이, NumPy shape는 높이·너비 순서입니다.
+- **randomize에서 매 사진마다 빛이 바뀌지 않음**: 조명 이벤트는 두 프레임마다 보냅니다. 상자 위치 변화와 구분하세요.
+- **재실행이 출력 경로 오류로 끝남**: 각 실행에 새 `--output`을 사용하세요.
 
-## 실제 실행 기록
+## 공식 문서와 실습 범위
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+Isaac Sim **5.1.0**의 [Getting Started Scripts](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html)에 대응합니다. 공식 캡처·다중 카메라·이벤트 개념을 자체 도형과 독립 실행 CLI로 구성했습니다. `run.py` 전체를 이미 열린 Script Editor에 붙여 넣는 방식은 지원하지 않습니다.
+
+[RUNTIME_CHECK.md](RUNTIME_CHECK.md)의 기존 기록은 `basic --headless --frames 2`에서 RGB 두 장과 비어 있지 않은 검출 정답을 확인한 범위입니다. 다른 모드·GUI·PoseWriter는 별도 확인이 필요하며 이번 문서 개정에서는 GPU 실행을 추가하지 않았습니다.

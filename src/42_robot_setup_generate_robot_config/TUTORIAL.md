@@ -1,86 +1,130 @@
-# 42. UR10e URDF·Lula YAML·XRDF를 생성하고 맞춰 보기
+# 42. 같은 로봇을 USD·URDF·Lula 설정으로 표현하기
 
-권장 학습 순서 **42** · 로봇 자산 가져오기와 제작 · 출처 ID `t126`
+## 이번에 배우는 것
 
-공식 인덱스 **t126** · Isaac Sim **5.1.0**
+**UR10e의 관절 이름과 초기 자세, 충돌 구를 내보내고 서로 다른 파일이 같은 로봇을 설명하는지 확인합니다.**
 
-## 이 실습의 의도
+USD에서 잘 움직이는 로봇을 운동 계획기에 바로 넘길 수 있는 것은 아닙니다. 계획기는 링크와 관절의 구조, 움직일 관절 집합, 충돌을 판단할 형상을 별도 설정으로 읽습니다. 이번에는 그 정보를 직접 작성하고 이름과 값이 연결되는지 검사합니다.
 
-USD의 로봇을 운동 계획기가 사용할 URDF 구조, 팔의 cspace, 충돌 구 근사로 옮기고 이름과 초기 자세를 일치시키는 수업입니다. 팔 6개 joint는 Active로, 별도 제어할 그리퍼 joint는 Fixed로 두어 물리 articulation의 모든 관절과 계획에 쓰는 관절 집합이 다를 수 있음을 확인합니다. 기본 `run.py`는 인스턴스를 해제한 USD와 준비 보고서만 만들며, URDF·Lula YAML·XRDF export와 collision sphere 작성은 사용자가 GUI에서 수행합니다.
+| 결과물 | 담는 내용 | 이번 확인 방법 |
+|---|---|---|
+| `lula_ready.usda` | 편집 가능한 로봇 장면 | instance 해제와 실제 관절 목록 |
+| `ur_gripper.urdf` | 링크·관절 구조와 mesh 경로 | XML의 이름과 참조 파일 |
+| `ur10e.yaml` | Lula의 cspace·default_q·충돌 구 | URDF와 교차 검사 |
+| `ur10e.xrdf` | cuMotion용 로봇 설정 | GUI export와 파일 확인 |
 
-## 실행 후 확인할 것
+**cspace**는 계획기가 움직일 관절 좌표 집합입니다. 이번에는 팔의 여섯 관절만 넣고, 별도로 제어할 그리퍼 관절은 고정된 값으로 다룹니다.
 
-- **준비 산출물:** `lula_ready.usda`와 `preparation_report.json`의 `uninstanced_prims`, 실제 `joints` 목록을 확인합니다. 보고서의 `active_arm_joints`는 코드에 정해 둔 권장 6개 이름이며 Lula에서 Active Joint 설정까지 완료했다는 뜻은 아닙니다.
-- **관절 집합:** 직접 내보낸 URDF와 YAML에서 `cspace`가 shoulder 2개·elbow 1개·wrist 3개로 구성되고 `default_q` 길이와 일치하는지 봅니다. finger/knuckle은 이 팔 cspace에 넣지 않고 고정값을 초기 자세와 맞춥니다.
-- **충돌 구의 덮임:** Lula에서 `upper_arm_link`의 8개 빨간 preview가 링크를 덮는지 보고 Generate 후 cyan 구로 확정되는지 확인합니다. 나머지 링크에도 구를 작성하고, PhysX collider 윤곽과 계획용 sphere 근사를 구분합니다.
-- **export 완료:** Play를 유지한 채 `ur_gripper.urdf`·필요 mesh, `ur10e.yaml`, `ur10e.xrdf`를 각 경로에 저장한 뒤 실제 파일을 엽니다. `run.py`만 실행한 출력 폴더에 이 파일들이 없는 것은 정상입니다.
-- **교차 검사와 한계:** `validate_exports.py`가 출력한 `active_joints`, `collision_spheres`를 확인합니다. 도구는 URDF에 joint/link가 있는지, `default_q` 길이, sphere의 양수 반지름·3성분 중심과 비어 있지 않은 목록을 검사합니다. XRDF 내용·mesh 경로·충돌 구의 실제 덮임·motion 실행은 검사하지 않으므로 따로 확인합니다.
+## 1. 로봇을 편집할 수 있는 상태로 준비하기
 
-## 준비와 실행
-
-Isaac Sim 5.1.0과 GPU, 다음 공식 구성된 에셋이 필요합니다. 이전 로컬 패키지를 실행하지 않아도 됩니다.
-`/Isaac/Samples/Rigging/Manipulator/configure_manipulator/ur10e/ur/ur_gripper.usd`
-공식 Lula 준비 완료 파일은 같은 폴더의 `ur_gripper_lula.usd`입니다.
+Isaac Sim 5.1.0, 지원 GPU와 공식 구성 완료 에셋 접근이 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py
+~/isaacsim/python.sh src/42_robot_setup_generate_robot_config/run.py \
+  --output src/42_robot_setup_generate_robot_config/output/prepared
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 1200회 한도를 사용한다. 기존 `--frames`는 `--steps` 없는 headless 실행의 한도로만 쓰며 GUI를 닫지 않는다.
+기본 입력은 `/Isaac/Samples/Rigging/Manipulator/configure_manipulator/ur10e/ur/ur_gripper.usd`입니다. 자신의 구성 파일은 `--asset`으로 지정할 수 있습니다.
 
-`output/<고유번호>/lula_ready.usda`와 `preparation_report.json`이 생깁니다. 파일은 원본 reference 위의 local override이며 원본 에셋 접근은 계속 필요합니다. `--output`은 새 폴더만 허용합니다. 프로그램은 timeline을 자동 Play하지 않습니다. 창에서 편집을 마친 뒤 로컬 layer를 저장하고 직접 닫습니다. `--steps`를 지정한 한정 실행에서는 해당 GUI 갱신 횟수 후 종료합니다.
+실행기는 `lula_ready.usda`와 `preparation_report.json`을 만든 뒤 창을 유지합니다. **URDF·YAML·XRDF는 아직 생성하지 않습니다.** 아래 GUI 단계에서 직접 내보냅니다. `--steps`는 앱 갱신 한도이며 자동 Play가 아닙니다. Headless에서 생략하면 `--frames`의 기본값인 1200회가 적용됩니다.
 
-## 1. URDF 내보내기
+### 코드에서 볼 부분
 
-1. Window > Extensions에서 **Isaac Sim USD to URDF Exporter**를 검색해 Enable합니다. 안 보이면 검색의 `@feature` 필터를 제거합니다.
-2. `lula_ready.usda` 또는 공식 구성 에셋을 엽니다. File > Export URDF를 선택합니다.
-3. 이 폴더의 새 출력 디렉터리에 파일 이름 **ur_gripper.urdf**를 지정하고 Mesh Directory Path도 같은 작업의 새 `meshes/` 폴더로 지정합니다. Export를 누릅니다.
-4. URDF를 텍스트 편집기로 열어 link/joint 이름과 mesh 상대 경로를 확인합니다. mesh를 사용하려면 내보낸 URDF와 해당 mesh 폴더를 함께 보존합니다.
+공유된 인스턴스 내부는 개별 편집이 제한되므로 실행기는 다음 작업을 반복합니다.
 
-USD는 scene 합성/시각/물리를 담는 형식이고 URDF는 로봇 link/joint tree를 담는 형식입니다. USD의 모든 그래픽/시뮬레이션 기능이 URDF에 동일하게 표현되지는 않습니다.
+```python
+instances = [prim for prim in Usd.PrimRange(root) if prim.IsInstance()]
+for prim in instances:
+    changed.append(str(prim.GetPath()))
+    prim.SetInstanceable(False)
+```
 
-## 2. Lula에서 편집할 준비
+한 겹을 해제한 뒤 더 안쪽의 인스턴스가 보일 수 있어, 남은 인스턴스가 없을 때까지 다시 조사합니다. 이것은 mesh를 새 모양으로 만드는 작업이 아니라 각 링크의 형상을 편집 도구에서 다룰 수 있게 하는 준비입니다.
 
-1. Window > Extensions에서 **Isaac Sim Lula**를 Enable합니다.
-2. 직접 준비한다면 Stage에서 모든 visuals와 collisions Prim을 검색해 Property의 **Instantiable**을 해제합니다. `run.py` 출력은 이 과정을 현재 local layer에 적용한 상태입니다.
-3. **Play를 누릅니다.** Tools > Robotics > Lula Robot Description Editor를 엽니다. Selection Panel에서 `ur` articulation을 선택합니다.
-4. Set Joint Properties에서 팔의 `shoulder_pan_joint`, `shoulder_lift_joint`, `elbow_joint`, `wrist_1_joint`, `wrist_2_joint`, `wrist_3_joint`를 **Active Joint**로 지정합니다.
-5. Robotiq의 finger/knuckle joint는 **Fixed Joint**로 둡니다. 그리퍼는 별도 제어되므로 팔 위치 최적화 cspace에 넣지 않습니다.
-6. `default_q`와 `cspace_to_urdf_rules`의 고정 joint 값이 USD 초기 pose와 맞는지 확인합니다. 다르면 controller 초기화 때 같은 pose로 맞춰야 합니다.
+### 실행 결과 확인하기
 
-인스턴스는 공통 mesh 데이터를 공유하는 USD 방식입니다. Lula editor는 개별 mesh 편집/분석이 필요하므로 이 실습에서는 instanceable을 해제합니다. cspace는 motion solver가 실제로 움직일 일반화 좌표 집합이며 articulation의 모든 DOF와 항상 같지 않습니다.
+보고서의 `uninstanced_prims`는 실제로 해제한 경로이고 `joints`는 장면에서 읽은 관절입니다. `active_arm_joints`는 코드에 적힌 **권장 여섯 이름**입니다. 그 필드가 있다고 Lula에서 Active 설정까지 끝난 것은 아닙니다.
 
-## 3. Collision sphere 생성
+이후 GUI 편집을 보존하려면 **File > Open으로 출력된 `lula_ready.usda`를 다시 여세요.** 실행기는 메모리상의 장면을 Export했으므로, 출력 파일을 명시적으로 작업 대상으로 삼는 것이 저장 위치를 확인하기 쉽습니다.
 
-**이제 YAML/XRDF 내보내기를 끝낼 때까지 Stop을 누르거나 Lula editor를 닫지 않습니다.** 편집 중 임시 상태를 잃으면 joint 설정/구 생성을 다시 해야 할 수 있습니다.
+## 2. 관절 집합과 충돌 구를 내보내기
 
-1. Selection Panel/Select link=`upper_arm_link`를 선택합니다.
-2. Link Sphere Editor > Generate Spheres > Select Mesh에서 `/collisions/upperarm/mesh`를 선택합니다.
-3. Radius Offset=**0.03**, Number of Spheres=**8**을 지정합니다. 빨간 preview sphere 여덟 개가 긴 링크를 덮는지 봅니다.
-4. Generate Spheres를 눌러 cyan sphere로 확정합니다. 필요한 경우 위치를 드래그해 조정합니다.
-5. 나머지 팔과 그리퍼 link에도 반복합니다. 긴 link는 양 끝을 잡고 Add Spheres로 사이를 채우거나 Scale Spheres in Link로 크기를 조정합니다.
-6. 삼각형 mesh가 watertight하지 않아 자동 생성이 실패하면 수동 sphere를 추가하고 연결합니다. 모든 시각 mesh에서 자동 생성이 보장되지는 않습니다.
+### 설정에서 볼 부분: URDF와 cspace
 
-Sphere는 Lula의 충돌 근사이며 PhysX의 실제 contact collider와 다릅니다. 너무 작으면 장애물을 놓치고 너무 크면 가짜 충돌로 motion이 막힙니다. 많을수록 근사가 세밀하지만 계산량도 늘어납니다.
+1. **Window > Extensions**에서 **Isaac Sim USD to URDF Exporter**를 켭니다. 검색되지 않으면 `@feature` 필터를 제거합니다.
+2. 저장소의 `src/42_robot_setup_generate_robot_config/output/exports` 폴더를 만들고 **File > URDF Exporter**를 엽니다. 공식 튜토리얼의 **Export URDF**는 이 내보내기 도구를 가리킵니다. 파일을 이 폴더의 `ur_gripper.urdf`로 정하고 **Root Prim Path=/ur**, mesh 출력은 같은 폴더 아래 `meshes`로 지정한 뒤 내보냅니다.
+3. **Isaac Sim Lula** 확장을 켜고 **Play**합니다.
+4. **Tools > Robotics > Lula Robot Description Editor**에서 `ur` articulation을 선택합니다.
+5. 아래 여섯 joint를 **Active Joint**, 그리퍼 finger/knuckle 관절을 **Fixed Joint**로 둡니다.
 
-## 4. YAML과 XRDF 내보내기
+```text
+shoulder_pan_joint, shoulder_lift_joint, elbow_joint,
+wrist_1_joint, wrist_2_joint, wrist_3_joint
+```
 
-1. Play를 유지한 채 Export To File > Export to Lula Robot Description File에서 이 폴더 출력 경로의 **ur10e.yaml**을 지정하고 Save합니다.
-2. Export to cuMotion XRDF에서 **ur10e.xrdf**도 내보냅니다.
-3. 두 파일을 확인한 뒤에만 Stop합니다. YAML의 cspace 6개와 collision_spheres를 직접 읽습니다.
-4. 생성한 URDF와 YAML을 이 폴더의 도구로 검사합니다. 이 명령은 시뮬레이터를 시작하지 않습니다. Isaac Python에 포함된 PyYAML을 사용합니다.
+YAML에서 `cspace`와 `default_q`는 같은 순서로 대응합니다. 예를 들어 `cspace[0]`이 shoulder_pan_joint라면 `default_q[0]`은 그 관절의 시작 각도이며 단위는 rad입니다. 길이가 같더라도 순서가 다르면 다른 자세를 뜻하므로 이름과 값을 함께 확인하세요. `cspace_to_urdf_rules`의 고정 그리퍼 값도 USD에서 출발할 자세와 맞춰야 합니다.
+
+### 설정에서 볼 부분: 충돌 구
+
+Lula가 사용할 충돌 형상은 여러 구로 근사합니다. 긴 링크를 구 하나로 덮으면 불필요하게 넓어질 수 있으므로 여러 구를 배치합니다.
+
+1. Select Link에서 `upper_arm_link`를 선택합니다.
+2. Link Sphere Editor의 **Generate Spheres > Select Mesh**에서 `/collisions/upperarm/mesh`에 해당하는 mesh를 선택합니다.
+3. **Radius Offset=0.03**, **Number of Spheres=8**로 preview를 만듭니다.
+4. 빨간 구들이 링크를 덮는지 보고 **Generate Spheres**로 확정합니다. 확정된 cyan 구를 필요에 따라 조정합니다.
+5. 나머지 팔과 그리퍼 링크에도 구를 배치합니다. 자동 생성이 어려운 mesh는 수동으로 구를 추가하고 사이를 채웁니다.
+
+이 구는 PhysX Collider와 별개입니다. 너무 작은 구는 계획 단계에서 충돌을 놓칠 수 있고, 너무 큰 구는 실제로 통과할 공간까지 막을 수 있습니다. 따라서 파일 형식 검사와 별도로 **화면에서 형상을 덮는 정도**를 확인해야 합니다.
+
+설정과 구 배치를 마친 뒤 **Play와 Editor를 유지한 상태에서** Export To File을 사용합니다. **Export to Lula Robot Description File**로 앞서 만든 exports 폴더의 `ur10e.yaml`, **Export to cuMotion XRDF**로 같은 폴더의 `ur10e.xrdf`를 각각 저장하세요. 편집 중 Stop하거나 도구를 닫으면 임시 작업을 잃을 수 있으므로 파일을 확인한 뒤 종료합니다.
+
+### 실행 결과 확인하기
+
+세 파일과 mesh 폴더가 존재하는지 확인한 후 저장소 루트에서 검사기를 실행하세요. 이 도구는 시뮬레이터를 시작하지 않으며 XML과 YAML을 읽습니다.
 
 ```bash
-"$ISAAC_SIM_ROOT/python.sh" validate_exports.py output/내_내보내기/ur_gripper.urdf output/내_내보내기/ur10e.yaml
+~/isaacsim/python.sh src/42_robot_setup_generate_robot_config/validate_exports.py \
+  src/42_robot_setup_generate_robot_config/output/exports/ur_gripper.urdf \
+  src/42_robot_setup_generate_robot_config/output/exports/ur10e.yaml
 ```
 
-검사는 실제 URDF에 없는 cspace joint, 존재하지 않는 sphere link, cspace/default_q 길이 불일치, 양수가 아닌 sphere 반지름·3성분이 아닌 중심, 빈 sphere 목록을 오류로 보고합니다. XRDF는 이 검사기에 입력하지 않으며, 형식 검사 통과가 collision coverage나 motion 성능을 검증하지는 않습니다.
+| 자동 검사 | 직접 확인할 내용 |
+|---|---|
+| cspace joint가 URDF에 존재하는지 | 그 순서와 각도의 의미가 맞는지 |
+| cspace와 default_q 길이가 같은지 | 실제 USD의 출발 자세와 일치하는지 |
+| sphere link가 URDF에 존재하는지 | 구가 해당 링크의 형상을 덮는지 |
+| 반지름이 양수, 중심이 3성분인지 | 구의 크기·위치가 적절한지 |
+| 충돌 구가 하나 이상인지 | 필요한 모든 링크를 포함했는지 |
 
-성공은 유효한 세 파일을 생성하고 sphere가 링크를 덮는 것을 GUI에서 확인하는 것입니다. 한 변수 실험으로 upperarm의 sphere 수만 8→4로 바꿔 근사 빈틈을 비교합니다. 링크 이름이 `ee_link/...`와 `ee_link_...`처럼 export 과정에서 바뀌면 YAML과 URDF의 실제 이름을 일치시켜야 합니다. 이름 검사를 우회하지 않습니다.
-## 버전 고정 출처
+성공하면 `urdf_links`, `active_joints`, `collision_spheres`가 출력됩니다. **XRDF 내용과 mesh 경로는 이 검사기의 입력 대상이 아닙니다.** URDF에서 실제 mesh 참조를 열어 보고, XRDF도 별도 파일로 확인하세요.
 
-- [NVIDIA Isaac Sim 5.1.0 — Tutorial 8: Generate Robot Configuration File](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_generate_robot_config.html)
+## 3. 같은 이름이 파일을 연결하는 방식 정리
 
-한국어 절차는 새로 작성했습니다. 원문 GUI 기능과 이 폴더의 준비/검사/실행 코드를 구별해 설명합니다. 실제 runtime 검증 범위는 tutorial.json의 verification 기록을 확인합니다.
+```text
+USD의 joint/link
+    → URDF의 joint/link 이름
+    → YAML cspace와 collision_spheres의 이름
+    → 계획기가 제어하고 검사할 대상
+```
+
+계획기의 로봇 표현은 물리 articulation 전체와 같을 필요가 없습니다. 팔 여섯 관절을 움직이되 그리퍼는 고정 형상으로 취급할 수 있습니다. 다만 그 선택이 실제 제어 방식과 일치해야 합니다. 이름 하나가 달라져도 계획기가 다른 링크를 참조하거나 초기화에 실패할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+같은 `upper_arm_link`와 mesh, Radius Offset을 유지하고 **Number of Spheres만 8에서 4로** 줄여 preview를 비교하세요. 기존 확정 구를 남긴 채 새 구를 중복 추가하지 않도록 preview 단계에서 먼저 관찰합니다.
+
+구 사이의 빈틈과 링크 바깥으로 벗어나는 정도를 비교해 보세요. 적은 수가 언제나 나쁜 것은 아니지만 개수만으로 형상 충실도를 판단할 수는 없습니다. 선택한 근사를 확정했다면 새 파일로 export하고 검사 결과의 구 개수도 함께 기록하세요.
+
+## 실행할 때 막히면
+
+- **출력에 YAML이나 URDF가 없습니다**: `run.py`는 USD 준비만 합니다. Exporter와 Lula Editor에서 직접 저장하세요.
+- **Lula에서 로봇을 선택할 수 없습니다**: Play 상태, 확장 활성화, 로봇 articulation과 인스턴스 해제를 확인하세요.
+- **`Active joints absent from URDF`가 나옵니다**: YAML과 실제 URDF의 이름을 대조하세요. 내보내기 과정에서 `/`가 `_`로 바뀌는 경우도 조사합니다.
+- **구 생성이 실패하거나 엉뚱한 형상을 덮습니다**: 선택한 링크와 mesh를 확인하고, 자동 생성에 적합하지 않은 열린 mesh는 수동 구를 사용하세요.
+- **검사 통과 후 mesh가 보이지 않습니다**: 검사기는 mesh 파일을 열지 않습니다. URDF와 내보낸 mesh 폴더를 함께 보존하고 경로를 확인하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Tutorial 8: Generate Robot Configuration File](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_generate_robot_config.html)에 대응합니다. 로컬 준비기와 검사기를 원문의 GUI export 과정에 연결했습니다.
+
+`tutorial.json`은 `not_run`입니다. 실제 GUI export, 충돌 구의 덮임, XRDF 소비 도구와 운동 실행은 미검증입니다. 이름·길이·기본 구 형상 검사는 이들 동작 검증과 구분합니다.

@@ -1,58 +1,121 @@
-# 36. 세 도형으로 로봇의 몸체와 바퀴 구성하기
+# 36. 도형에 물리 속성을 붙이면 무엇이 달라질까요?
 
-권장 학습 순서 **36** · 로봇 자산 가져오기와 제작 · 출처 ID `t120`
+## 이번에 배우는 것
 
-공식 Assemble a Simple Robot의 **기하·물리·재질 편집** 수업이다. 이 패키지는 body cube와 cylinder 바퀴 두 개, 바닥, 빛, 마찰 재질을 직접 생성한다. 외부 asset과 다른 로컬 수업은 필요 없다. 아직 joint가 없으므로 Play를 누르면 세 강체는 따로 떨어진다. 이것이 이번 단계의 올바른 관찰이다.
+**몸체와 바퀴를 만들고, 모양·운동·접촉·재질이 각각 어디에 설정되는지 비교합니다.**
 
+화면에서 바퀴가 몸체 옆에 있다고 해서 두 부품이 연결된 것은 아닙니다. 이번 장면은 큐브 하나와 원기둥 두 개를 로봇처럼 배치하지만, 각 부품은 독립적으로 떨어집니다. 이 모습을 통해 로봇 제작에서 외형을 만드는 일과 물리적 연결을 만드는 일을 구분합니다.
 
-## 이 실습의 의도
+| 장면의 요소 | 실제 위치 또는 설정 | 맡은 역할 |
+|---|---|---|
+| 몸체 외형 | `/World/body/body`의 Cube | 길이 1 × 2 × 0.5 m의 상자 |
+| 바퀴 외형 | `/World/wheel_left/wheel_left`, `/World/wheel_right/wheel_right` | 반지름 0.5 m, 높이 1 m인 원기둥 |
+| Rigid Body | 위 세 geometry prim | 중력과 힘에 따라 움직이는 강체 |
+| Collider | 위 세 geometry prim | 다른 물체와 접촉하는 표면 |
+| WheelPhysics | `/World/Looks/WheelPhysics` | 바퀴 접촉의 마찰과 반발 |
 
-몸체와 바퀴의 외형을 배치하고 각각에 강체·충돌·마찰을 부여하는 로봇 제작의 첫 단계를 익힌다. 파란 cube 몸체와 어두운 cylinder 바퀴 둘은 모양상 한 로봇처럼 보이지만, 아직 joint가 없어 독립된 세 강체다. 실행기는 이 출발 장면을 작성하고 창을 유지하며, 사용자가 Play하여 부품별 낙하와 접촉을 확인한 뒤 외관 재질을 직접 편집한다.
+USD에서 **prim**은 Stage 트리에 보이는 장면 요소입니다. 부모 Xform에는 부품의 배치를, 자식 geometry에는 실제 도형과 물리 속성을 둡니다.
 
-## 실행 후 확인할 것
+## 1. 세 부품이 있는 장면 열기
 
-- **세 강체의 위치:** Stage에서 `/World/body/body`, `/World/wheel_left/wheel_left`, `/World/wheel_right/wheel_right`를 찾는다. Rigid Body와 Collider는 이 geometry prim에 적용되어 있고, 부모 Xform은 배치용 변환을 가진다.
-- **의도된 분리 낙하:** Play하면 몸체와 두 바퀴가 각각 떨어져 바닥과 접촉해야 한다. 바퀴가 몸체에서 분리되어 움직이는 것은 joint를 아직 만들지 않은 이 단계의 정상 결과이며, 함께 주행하는 로봇은 이번 출력의 성공 기준이 아니다.
-- **초기 구조 기록:** 기본 `initial_inventory.json`의 `rigid_bodies`는 위 세 prim, `joints`와 `articulation_roots`는 빈 목록이어야 한다. GUI에서 나중에 수정한 내용은 초기 목록에 자동 반영되지 않는다.
-- **바퀴의 접촉 재질:** `/World/Looks/WheelPhysics`에서 static friction `0.8`, dynamic friction `0.6`, restitution `0`을 보고, 두 cylinder의 physics material binding이 이 재질을 가리키는지 확인한다. 값만 만든 것과 실제 바퀴에 연결한 것은 구분한다.
-- **외관과 물리 비교:** 기본 색은 `displayColor`이며 OmniPBR 실습은 직접 수행한다. 복사한 stage에서 한 부품의 Collider만 제거하면 그 부품은 중력으로 떨어져도 바닥을 통과할 수 있다. 색 변경과 접촉 변경이 서로 독립적이라는 점을 확인한다.
-
-## 실행 환경과 파일
-
-Isaac Sim **5.1.0**, 지원되는 RTX GPU와 GUI가 필요하다. `ISAAC_SIM_PATH`는 `python.sh`가 있는 설치 디렉터리다. Python CLI 도움말은 일반 Python에서도 열린다. 이 패키지는 자체 코드/설정을 가지며 다른 로컬 튜토리얼을 import하지 않는다.
+Isaac Sim 5.1.0과 지원되는 RTX GPU, GUI 환경에서 진행합니다. 외부 로봇 에셋은 필요하지 않습니다. 저장소 루트에서 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-cd src/36_robot_setup_intro_assemble_robot
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/first
+~/isaacsim/python.sh src/36_robot_setup_intro_assemble_robot/run.py \
+  --output src/36_robot_setup_intro_assemble_robot/output/first
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. 창이 없는 `--headless` 실행에는 양수 `--steps`를 반드시 지정한다.
+창이 열리면 파란 몸체, 어두운 바퀴 두 개, 바닥이 보입니다. **Play를 직접 눌러** 세 물체가 각각 떨어지는지 확인하고 Stop하세요. 이 단계에는 관절이 없으므로 바퀴가 떨어져 나가는 모습이 예상한 결과입니다.
 
-기본 실행은 창을 계속 열어 두므로 아래 GUI 실습을 수행하고 **Ctrl+S**로 로컬 root layer를 저장한 뒤 창을 닫는다. `output/first/stage.usda`와 `initial_inventory.json`이 생긴다. 기존 output은 덮어쓰지 않으므로 다음 실행은 `output/second`처럼 새 경로를 쓴다. 저장한 실습을 다시 열려면 `--stage "$PWD/output/first/stage.usda" --output output/reopen`을 사용한다. 재개 시에도 새 로컬 layer가 이전 결과를 참조한다.
+실습을 끝낼 때는 **Ctrl+S**로 저장한 뒤 창을 닫으세요. `--steps`를 생략하거나 0으로 지정하면 GUI를 계속 유지합니다. 자동 종료를 원하면 `--steps 120`을 추가할 수 있지만, 이 값은 화면과 앱의 갱신 횟수입니다. 실행기가 물리를 120단계 자동 재생하는 뜻은 아닙니다. `--headless`에는 양수 `--steps`가 필요합니다.
 
-GPU/UI 자동 점검을 위한 한정 실행은 `--headless --steps 120 --output output/check`다. 이는 장면 로드 확인만 하며 GUI 작업이나 로봇 동작의 성공을 증명하지 않는다. 패키지 작성 과정에서는 문법·CLI를 확인했으며 GPU와 실제 GUI 조작은 미검증이다.
+### 코드에서 볼 부분
 
+몸체는 두 계층으로 만듭니다.
 
-## 단계별 실습
+```python
+body = UsdGeom.Xform.Define(stage, "/World/body")
+body.AddTranslateOp().Set(Gf.Vec3d(0, 0, 1))
+cube = UsdGeom.Cube.Define(stage, "/World/body/body")
+cube.CreateSizeAttr(1.0)
+cube.AddScaleOp().Set(Gf.Vec3f(1, 2, 0.5))
+```
 
-1. `/World/body`는 translate=(0,0,1)인 Xform이고 자식 `body`는 size=1, scale=(1,2,0.5)인 cube다. GUI로 만들 때 **Create → Xform**, **Create → Shape → Cube**를 사용한다. parent transform과 geometry scale은 서로 다른 계층의 값이다.
-2. `/World/wheel_left`는 translate=(1.5,0,1), Rotate XYZ=(90,0,0)이다. 자식 cylinder의 radius=0.5, height=1이다. 이 Xform을 Duplicate하고 x=-1.5로 옮겨 `wheel_right`로 이름을 바꾼다. 코드는 원본 GUI 수업의 도형 배치를 명시적으로 재현한다.
-3. cube와 두 cylinder의 Property에서 **Rigid Body**와 **Collider** section을 찾는다. 직접 만드는 경우 세 geometry를 선택하고 **+ Add → Physics → Rigid Body with Colliders Preset**을 적용한다. Xform과 자식 geometry 양쪽에 rigid body를 중복 적용하지 않는다.
-4. Play 후 세 물체가 따로 바닥에 닿는지 확인하고 Stop. 하나를 선택해 Collider API를 제거하는 실험은 복사한 stage에서 한다. rigid body만 있으면 떨어지지만 다른 물체를 통과할 수 있다. collider만 있으면 정적인 장애물이다.
-5. viewport eye → **Show By Type → Physics → Colliders → All**로 충돌 윤곽을 본다. visual mesh와 collider가 같은 개념은 아니다. dynamic mesh에는 convex hull/decomposition 등 지원되는 근사 형식을 사용한다. static triangle mesh와 dynamic convex 충돌을 혼동하지 않는다.
-6. `/World/Looks/WheelPhysics`의 static friction=0.8, dynamic friction=0.6, restitution=0을 확인한다. 직접 만드는 메뉴는 **Create → Physics → Physics Material → Rigid Body Material**이다. cylinder의 **Materials on Selected Model**에서 **physics** 목적의 material이 이 재질인지 확인한다.
-7. 외관 재질은 별도다. **Create → Materials → OmniPBR** 두 개를 만들고 이름을 body_color, wheel_color로 정한다. cube와 바퀴에 각각 visual material을 연결하고 **Material and Shader/Albedo**와 roughness를 바꾼다. 기본 fixture의 `displayColor`는 간단한 표시 색이며 OmniPBR 편집 실습을 대신하지 않는다.
-8. Ctrl+S로 저장하고 `initial_inventory.json`의 rigid body 3개, joint 0개와 실제 Stage를 비교한다. source의 비교 asset은 `/Isaac/Samples/Rigging/MockRobot/mock_robot_no_joints.usd`다.
+부모의 Translate는 몸체 중심을 높이 1 m에 놓습니다. 자식의 Scale은 한 변 1 m인 큐브를 늘려 몸체 크기를 정합니다. 부모 위치와 자식 크기를 나누면, 모양을 바꾸더라도 부품을 배치한 기준점을 유지하기 쉽습니다.
 
-## 코드·개념·실험
+같은 계층을 직접 만들어 보고 싶다면 별도 새 장면에서 **Create > Xform**으로 `body`를 만든 뒤 그 아래 **Create > Shape > Cube**를 추가하세요. Cube의 Size=1, Scale=(1, 2, 0.5), 부모 Translate=(0, 0, 1)을 위 코드와 맞춥니다. 바퀴도 Xform 아래 Cylinder를 만들고 Radius=0.5, Height=1로 정합니다. 부모를 `(1.5, 0, 1)`에 놓은 뒤 복제하여 다른 바퀴를 `(-1.5, 0, 1)`에 배치하면 코드의 세 부품과 비교할 수 있습니다.
 
-`UsdGeom.Cube/Cylinder.Define`이 geometry prim을 만들고 `AddTranslateOp`, `AddRotateXYZOp`, `AddScaleOp`가 각 좌표계 변환을 작성한다. `UsdPhysics.RigidBodyAPI`는 운동, `CollisionAPI`는 접촉을 활성화한다. `UsdPhysics.MaterialAPI`는 마찰/반발계수이며 `UsdShade.MaterialBindingAPI.Bind(..., materialPurpose="physics")`로 외관 재질과 구분해 연결한다.
+바퀴의 부모 Xform은 X축으로 90° 회전합니다. 원기둥 자체의 축을 바퀴가 놓일 방향으로 돌리는 과정입니다. Stage에서 부모와 자식을 번갈아 선택해 회전과 도형 크기가 서로 다른 곳에 있는지 확인해 보세요.
 
-한 변수 실험: WheelPhysics의 restitution만 0→0.7로 바꾸고 바퀴를 같은 높이에서 떨어뜨린다. 튕김의 변화가 있는지 실제 재생으로 확인한다. 물체가 옮겨지는 순간 위치가 틀어지면 reparent의 부모 변환 상속/월드 변환 유지 설정을 확인한다. 바퀴가 몸체와 같이 움직이지 않는 것은 이 단계에서는 joint가 없기 때문이다.
+### 실행 결과 확인하기
 
-## 출처
+지정한 출력 폴더에 다음 파일이 생깁니다.
 
-- [Isaac Sim 5.1 Tutorial 2: Assemble a Simple Robot](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_intro_assemble_robot.html)
-- 로컬 설명/코드는 해당 버전의 실제 GUI 작업을 재구성한 실습이며 NVIDIA 문서 전문을 복제하지 않는다.
+| 파일 | 확인할 내용 |
+|---|---|
+| `stage.usda` | 편집하고 저장할 로컬 USD 장면 |
+| `initial_inventory.json` | 최초 장면의 단위, 강체, 관절, articulation 목록 |
+
+기본 장면의 `meters_per_unit`은 `1.0`, `up_axis`는 `Z`, `rigid_bodies`는 세 geometry 경로입니다. `joints`와 `articulation_roots`는 빈 목록이어야 합니다. 이 JSON은 **GUI 편집 전의 기록**이며 이후 수정 사항을 자동으로 다시 조사하지 않습니다.
+
+## 2. 움직임과 접촉, 색을 따로 살펴보기
+
+먼저 `/World/body/body`를 선택하고 Property의 Rigid Body와 Collider를 찾으세요. 직접 새 도형을 만들 때는 **+ Add > Physics > Rigid Body with Colliders Preset**으로 둘을 함께 추가할 수 있습니다. 이미 강체인 부모 아래에 강체를 중복으로 추가하지 않도록 적용 위치를 확인하세요.
+
+### 설정에서 볼 부분
+
+코드는 각 도형에 두 속성을 적용합니다.
+
+```python
+UsdPhysics.RigidBodyAPI.Apply(prim)
+UsdPhysics.CollisionAPI.Apply(prim)
+```
+
+Rigid Body는 물체의 운동을 계산하게 하고, Collider는 접촉을 계산하게 합니다. 따라서 강체만 남기면 중력으로 떨어져도 바닥을 통과할 수 있습니다. Viewport의 눈 모양 메뉴에서 **Show By Type > Physics > Colliders > All**을 켜 실제 접촉 윤곽을 확인하세요.
+
+바퀴의 물리 재질은 다음 값으로 준비됩니다.
+
+```python
+physics_material.CreateStaticFrictionAttr(0.8)
+physics_material.CreateDynamicFrictionAttr(0.6)
+physics_material.CreateRestitutionAttr(0.0)
+UsdShade.MaterialBindingAPI.Apply(prim).Bind(material, materialPurpose="physics")
+```
+
+정지 마찰과 운동 마찰은 접촉면이 미끄러지기 시작하거나 이미 미끄러질 때의 저항에 관여합니다. Restitution은 충돌 후 튕기는 성질입니다. 재질 prim을 만드는 것에 더해 **바퀴에 바인딩하는 마지막 줄**이 있어야 바퀴가 그 설정을 사용합니다.
+
+색을 바꾸는 실습도 해보세요. **Create > Materials > OmniPBR**로 외관 재질을 만들고 몸체에 연결한 뒤 Albedo와 Roughness를 조절합니다. 기본 코드는 간단한 표시 색인 `displayColor`를 사용합니다. OmniPBR의 색이나 거칠기는 바퀴의 physics 재질과 다른 설정입니다.
+
+### 실행 결과 확인하기
+
+몸체의 색을 바꾸면 화면에서 즉시 차이를 볼 수 있습니다. 반면 WheelPhysics의 값은 접촉이 일어나야 운동에 영향을 줍니다. Property에서 바퀴의 **physics 목적 material binding**이 `/World/Looks/WheelPhysics`를 가리키는지 확인하고 Play하세요. 다른 부품과 연결되어 움직이는지는 아직 확인할 대상이 아닙니다.
+
+## 3. 로봇 외형의 네 가지 역할 정리
+
+```text
+Xform과 geometry → 어디에 어떤 모양으로 보일지
+Rigid Body       → 힘을 받으면 어떻게 움직일지
+Collider         → 어디에서 다른 물체와 만날지
+Physics Material → 접촉에서 얼마나 미끄러지거나 튕길지
+```
+
+**옆에 놓인 부품들을 하나의 기구로 묶으려면 관절이 추가로 필요합니다.** 이번에는 관절을 넣기 전 상태를 분명히 이해하는 것이 중요합니다. “세 부품이 모두 바닥에 닿는다”와 “세 부품이 연결되어 함께 움직인다”는 서로 다른 결과입니다.
+
+## 4. 간단한 확인 실험
+
+Stop 상태에서 `/World/Looks/WheelPhysics`의 **Restitution만 0에서 0.7로** 바꾸고 다시 Play하세요. 시작 높이와 마찰은 그대로 둡니다.
+
+바퀴가 처음 바닥에 닿은 뒤 튀어 오르는 정도를 비교해 보세요. 몸체에는 이 물리 재질을 연결하지 않았으므로 바퀴와 같은 변화가 반드시 나타나지는 않습니다. 기대한 차이가 없다면 값 자체보다 바퀴의 재질 연결을 먼저 확인하세요.
+
+## 실행할 때 막히면
+
+- **바퀴가 몸체에서 분리됩니다**: 기본 장면에는 관절이 없습니다. `initial_inventory.json`의 빈 `joints`와 함께 이번 단계의 출발 상태인지 확인하세요.
+- **색은 바뀌는데 마찰이 그대로입니다**: 외관 재질과 physics 재질을 구분하고 바퀴의 물리 재질 연결을 확인하세요.
+- **출력 폴더가 이미 있다는 오류가 납니다**: `--output`은 기존 폴더를 덮어쓰지 않습니다. `output/second`처럼 새 경로로 실행하세요.
+- **저장한 장면에서 이어가고 싶습니다**: 같은 실행 명령에 `--stage`로 저장한 `stage.usda`의 절대 경로를 지정하고 출력은 새 폴더로 바꾸세요. 이전 결과 위에 새 편집 layer가 만들어집니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Tutorial 2: Assemble a Simple Robot](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_intro_assemble_robot.html)에 대응합니다. 원문의 도형·물리·재질 편집을 직접 만든 출발 장면과 연결해 설명합니다.
+
+장면 생성과 초기 목록 저장은 `run.py`가 수행하며, Play와 재질 편집은 독자가 GUI에서 진행합니다. `tutorial.json`의 검증 상태는 `not_run`입니다. 여기에 적은 낙하와 반발은 실습에서 확인할 관찰 기준이며 실제 GUI 검증 완료 기록은 아닙니다.

@@ -1,32 +1,26 @@
-# 131. ROS 2 Custom C++ OmniGraph Node
+# 131. C++ OmniGraph 노드에서 사용자 ROS 메시지 발행하기
 
-권장 학습 순서 **131** · ROS 2 응용과 사용자 인터페이스 · 출처 ID `t032`
+## 이번에 배우는 것
 
-**목표:** ROS C API를 쓰는 C++ OmniGraph 노드를 빌드해 사용자 정의 `tutorial_interfaces/msg/Sphere`를 발행합니다. Linux + ROS 2 Humble 전용 공식 workflow입니다. 로컬 파일은 **새로 작성한 Sphere 노드 구현/OGN, 메시지 패키지, 빌드 연결 도구**입니다. Kit 템플릿과 NVIDIA 예제 확장의 공통 plugin loader는 외부 빌드 전제입니다.
+**그래프의 중심·반지름 입력을 Sphere 메시지로 보내는 C++ 노드를 빌드하고, 발행 횟수와 외부 수신값을 비교합니다.**
 
+Python 노드와 달리 C++ 노드는 컴파일된 확장을 Isaac Sim에 로드해야 합니다. 사용자 메시지의 헤더와 타입 지원 라이브러리, OGN에서 생성한 데이터베이스 헤더도 빌드에 연결해야 합니다. 이번에는 작은 메시지 하나로 이 연결을 따라갑니다.
 
-## 이 실습의 의도
+| 로컬 파일 | 맡는 일 | 따로 필요한 것 |
+|---|---|---|
+| `ros_ws/src/tutorial_interfaces` | `Sphere.msg` 인터페이스 정의 | ROS colcon 빌드 |
+| `nodes/ROS2CustomMessageNode.ogn` | 중심·반지름 입력과 발행 횟수 출력 | OGN 코드 생성 |
+| `nodes/ROS2CustomMessageNode.cpp` | ROS C API로 메시지 발행 | ROS 헤더·라이브러리 |
+| `prepare_build.py` | 로컬 소스와 외부 빌드 경로 연결 | Kit 템플릿과 공식 샘플 확장 |
 
-사용자 ROS 메시지의 C 타입 지원을 C++ OmniGraph 노드와 연결해, 그래프 입력을 외부 ROS 메시지로 전달하는 실습입니다. `.ogn`의 중심·반지름 입력을 `ROS2CustomMessageNode.cpp`가 `Sphere`에 담고 발행 성공 횟수를 출력합니다. `prepare_build.py`는 외부 템플릿의 소스와 의존성 경로를 준비하는 도구이며 컴파일, 확장 로드, 그래프 생성은 아래 절차로 따로 수행해야 합니다. Sphere는 중심과 반지름을 표현하는 메시지 데이터로, 이 노드는 USD 구체를 생성하지 않습니다.
+**이 실습은 공식 5.1 C++ 샘플이 지정한 Ubuntu 22.04/ROS 2 Humble 환경에서 진행합니다.** 저장소의 기본 Ubuntu 24.04/Jazzy 예시와 다른 예외입니다. 배포판 이름만 바꾸어 이 C++ 샘플을 검증된 Jazzy 절차로 취급하지 않습니다.
 
-## 실행 후 확인할 것
+## 1. 메시지와 외부 C++ 확장 빌드하기
 
-- **메시지와 빌드 준비:** `ros2 interface show tutorial_interfaces/msg/Sphere`에서 `center`와 `radius`를 확인합니다. prepare 도구의 `Prepared local Sphere implementation...` 출력은 파일 교체·경로 설정 완료만 뜻하며, 이어서 외부 `./build.sh`의 실제 컴파일 성공을 확인합니다.
-- **노드 로딩:** 빌드된 확장을 Isaac Sim에서 활성화하고 Action Graph 검색에 `ROS2 Publish Custom Message`가 나타나는지 봅니다. 입력을 center `(1,2,3)`, radius `0.5`로 설정하고 Tick을 연결한 뒤 Play합니다.
-- **발행과 수신:** 노드의 `publishedCount`가 늘고 별도 ROS echo의 `/custom_node/sphere_msg`에 같은 center/radius가 오는지 확인합니다. count는 `rcl_publish` 성공 횟수이므로 수신 횟수와 같다고 가정하지 않습니다.
-- **입력 변경과 거절:** radius만 `0.5→0.8`로 바꾸면 echo 값도 바뀌는지 봅니다. 음수 radius에서는 오류가 기록되고 그 입력으로 새 발행 count가 늘지 않아야 합니다.
-- **추가 노드의 출처:** `/custom_node/my_string`은 함께 추가하는 외부 공식 `ROS2 Publish String` 노드의 출력입니다. 로컬 Sphere 노드만 만든 상태에서 문자열 토픽이나 Viewport 구체가 생기기를 기대하지 않습니다.
-
-## 실행 전제와 원문 이름 정리
-
-Isaac Sim 5.1.0, Ubuntu 22.04, ROS 2 Humble 개발 환경, C++17 toolchain, colcon, Kit Extension C++ template의 `release/107.3.0`가 필요합니다. 원문 본문에는 SphereMsg 언급도 있지만 실제 다운로드 예제는 `tutorial_interfaces/msg/Sphere`와 `sphere.h`를 사용합니다. 이 폴더는 실제 코드와 같은 **Sphere.msg**를 제공합니다.
-
-## 1. 사용자 메시지 빌드
-
-ROS용 Bash에서 이 패키지 폴더로 이동합니다.
+Linux, Isaac Sim 5.1.0, 지원 GPU, Humble 개발 환경, C++17 도구와 `colcon`이 필요합니다. 저장소 루트의 Bash에서 실습 경로를 보관하고 메시지를 빌드하세요.
 
 ```bash
-export LESSON_DIR="$PWD"
+export LESSON_DIR="$PWD/src/131_ros2_ros2_omnigraph_cpp_node"
 source /opt/ros/humble/setup.bash
 cd "$LESSON_DIR/ros_ws"
 colcon build --packages-select tutorial_interfaces
@@ -34,9 +28,16 @@ source install/local_setup.bash
 ros2 interface show tutorial_interfaces/msg/Sphere
 ```
 
-출력에 `geometry_msgs/Point center`와 `float64 radius`가 있어야 합니다. 이 C++ workflow는 시스템 Humble의 **C 라이브러리**와 링크합니다. Python 메시지를 Isaac Sim에서 import하는 별도 workflow와 혼동하지 않습니다.
+출력 정의는 다음과 같습니다.
 
-## 2. 정확한 외부 템플릿/샘플 준비
+```text
+geometry_msgs/Point center
+float64 radius
+```
+
+이번 C++ 코드는 시스템 Humble의 **C 라이브러리**와 연결합니다. 129번처럼 사용자 메시지를 Isaac Sim Python에 import하기 위한 Python 3.11 빌드와는 준비 방식이 다릅니다.
+
+공식 문서가 지정한 Kit 템플릿을 새 위치에 준비하고 기본 개발 앱까지 확인합니다.
 
 ```bash
 export KIT_TEMPLATE="$HOME/kit-extension-template-cpp-107.3"
@@ -46,56 +47,113 @@ cd "$KIT_TEMPLATE"
 ./_build/linux-x86_64/release/omni.app.kit.dev.sh
 ```
 
-첫 빌드는 기본 Kit 개발 앱이 실행되는지 확인하는 단계입니다. 닫은 뒤 [5.1.0 공식 예제 확장 ZIP](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/_downloads/5418eff6891a41d71ac8b5f687bf1cbd/omni.example.cpp.omnigraph_node_ros.zip)을 다운로드하여 `source/extensions/omni.example.cpp.omnigraph_node_ros`에 풉니다. 이 다운로드는 NVIDIA가 배포한 외부 소스이며 해당 사용 조건을 따릅니다. 이 패키지에 ZIP 원본을 재배포하지 않았습니다.
+개발 앱을 닫고 [5.1 공식 ROS C++ 샘플 ZIP](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/_downloads/5418eff6891a41d71ac8b5f687bf1cbd/omni.example.cpp.omnigraph_node_ros.zip)을 다운로드하세요. 압축 안의 `omni.example.cpp.omnigraph_node_ros` 폴더를 템플릿의 `source/extensions/` 아래에 둡니다.
 
 ```bash
-python3 "$LESSON_DIR/prepare_build.py"   --template "$KIT_TEMPLATE"   --ros-install /opt/ros/humble   --interface-install "$LESSON_DIR/ros_ws/install/tutorial_interfaces"
+python3 "$LESSON_DIR/prepare_build.py" \
+  --template "$KIT_TEMPLATE" \
+  --ros-install /opt/ros/humble \
+  --interface-install "$LESSON_DIR/ros_ws/install/tutorial_interfaces"
 cd "$KIT_TEMPLATE"
 ./build.sh
 ```
 
-도구는 원본 두 노드 파일과 packman XML을 `.original`로 백업한 후 local Sphere 노드와 절대 dependency 경로를 넣습니다. 동일 checkout에 반복 실행하면 기존 백업을 보존하기 위해 중단합니다. `premake5.lua`는 공식 예제 것을 사용하며 `system_ros`의 rcl/rmw/std_msgs/geometry_msgs와 `additional_ros`의 tutorial_interfaces include/lib 경로를 연결합니다. OGN 헤더는 이 빌드에서 생성되므로 시스템 `g++ nodes/ROS2CustomMessageNode.cpp` 하나로 컴파일되지 않습니다.
+### 설정에서 볼 부분
 
-## 3. Isaac Sim에 빌드 결과 등록
+`prepare_build.py`는 외부 샘플의 두 노드 파일을 로컬 구현으로 교체하고 `deps/kit-sdk-deps.packman.xml`에 경로를 넣습니다.
 
-**시스템 ROS를 source하지 않은 새 Bash**를 엽니다. 이 쉘에는 메시지 workspace의 local overlay만 추가합니다.
+| 의존성 연결 | 실제 내용 |
+|---|---|
+| `system_ros` | `/opt/ros/humble`의 include/lib |
+| `additional_ros_workspace` → `additional_ros` | 빌드한 `tutorial_interfaces`의 include/lib를 가리키는 packman 의존성과 링크 이름 |
+| 공식 `premake5.lua` | 이 경로를 사용하여 C++ 확장 빌드 |
+
+원본 파일은 `.original`로 백업합니다. 반복 실행으로 백업을 덮어쓰지 않도록 이미 백업이나 의존성이 있으면 중단합니다. 기존 개발 checkout에서는 현재 변경을 먼저 확인하고, 새 실습 checkout에서 진행하는 편이 결과를 구분하기 쉽습니다.
+
+### 실행 결과 확인하기
+
+`Prepared local Sphere implementation...`은 **파일 배치와 경로 설정 완료**입니다. 컴파일 성공을 뜻하지 않습니다. 이어지는 `./build.sh`가 완료되어야 확장 바이너리가 만들어집니다. `ROS2CustomMessageNodeDatabase.h`는 이 빌드에서 생성되므로 C++ 파일 하나를 시스템 `g++`로 실행하는 방식은 아닙니다.
+
+## 2. 확장을 로드하고 실제 Sphere 메시지 받기
+
+**시스템 ROS를 source하지 않은 새 Bash**에서 저장소 루트로 이동합니다. 여기에는 메시지 워크스페이스의 local overlay만 추가합니다.
 
 ```bash
 export ISAAC_SIM="$HOME/isaacsim"
-export LESSON_DIR=/absolute/path/to/this/package
+export LESSON_DIR="$PWD/src/131_ros2_ros2_omnigraph_cpp_node"
 source "$LESSON_DIR/ros_ws/install/local_setup.bash"
+export ROS_DISTRO=humble
+export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/humble/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 "$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge
 ```
 
-**Window > Extensions > 메뉴 > Settings > Extension Search Paths**에 `$KIT_TEMPLATE/_build/linux-x86_64/release/exts`의 실제 절대 경로를 추가합니다. Third Party에서 **Custom ROS2 OGN Example Extension**을 Enable합니다. `libtutorial_interfaces__rosidl_typesupport_c.so`를 찾지 못하면 local_setup과 설치 lib 경로를 확인합니다. `/opt/ros/humble/setup.bash`를 여기에 source하면 Python3.10 경로가 섞일 수 있습니다.
+1. **Window > Extensions > 메뉴 > Settings > Extension Search Paths**에 `$HOME/kit-extension-template-cpp-107.3/_build/linux-x86_64/release/exts`의 실제 절대 경로를 추가합니다.
+2. **Custom ROS2 OGN Example Extension**을 Enable합니다.
+3. 새 Stage에서 **Window > Graph Editors > Action Graph**를 열고 그래프를 만듭니다.
+4. **On Playback Tick**, **ROS2 Publish Custom Message**를 추가하고 Tick을 Exec In에 연결합니다.
+5. Publish Center를 `(1,2,3)`, Publish Radius를 `0.5`로 설정하고 Play하세요.
 
-## 4. 그래프와 수신 확인
+메시지를 빌드했던 시스템 ROS 터미널에서 실행합니다.
 
-1. 새 Stage에서 **Window > Graph Editors > Action Graph**를 열고 새 그래프를 만듭니다.
-2. **On Playback Tick**, **ROS2 Publish Custom Message**, **ROS2 Publish String**를 추가합니다. Tick→두 ROS 노드 Exec In으로 연결합니다.
-3. Custom Message의 Publish Center를 `(1,2,3)`, Publish Radius를 `0.5`로 설정합니다. Play합니다.
-4. 시스템 ROS 터미널에서 메시지 workspace를 source한 후 확인합니다.
+```bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 topic echo /custom_node/sphere_msg
+```
 
-   ```bash
-   ros2 topic echo /custom_node/sphere_msg
-   ros2 topic echo /custom_node/my_string
-   ```
+### 코드에서 볼 부분
 
-5. Sphere center/radius가 GUI 입력과 같은지 확인합니다. 로컬 노드의 `publishedCount`는 `rcl_publish`가 성공한 횟수이지 DDS 수신 확인 횟수가 아닙니다. echo 결과도 함께 확인합니다.
+`compute()`는 그래프 입력을 읽고 유한한 중심과 0 이상의 반지름인지 확인합니다. 최초 실행에서는 ROS Context, node, publisher를 준비합니다. 이후 발행의 핵심은 다음과 같습니다.
 
-## C++/USD 개념과 실험
+```cpp
+message.center.x = center[0];
+message.center.y = center[1];
+message.center.z = center[2];
+message.radius = radius;
+const auto result = rcl_publish(&self.publisher, &message, nullptr);
+```
 
-`rcl_init`는 context, `rcl_node_init`는 ROS node, `rcl_publisher_init`는 publisher를 초기화합니다. `ROSIDL_GET_MSG_TYPE_SUPPORT`는 Sphere 직렬화/type support를 연결합니다. `db.internalState`는 graph instance에 수명을 묶고 `compute()`가 Tick마다 최신 OGN 입력을 메시지에 옮깁니다. `releaseInstance`와 destructor는 publisher→node→context 역순으로 정리합니다. ROS 메시지 init/fini는 발행 실패 때도 균형을 맞춥니다.
+`ROSIDL_GET_MSG_TYPE_SUPPORT(tutorial_interfaces, msg, Sphere)`는 이 메시지를 ROS가 직렬화할 때 사용할 타입 지원을 연결합니다. `.ogn`의 입력은 float이고 메시지 radius는 float64이므로, 메시지의 자료형이 더 넓어도 입력 단계의 정밀도가 자동으로 늘지는 않습니다.
 
-Sphere 메시지는 형상을 설명하는 **데이터**입니다. 이 예제가 USD sphere prim을 자동 생성하는 것은 아닙니다. USD Stage는 그래프와 입력 값을 저장하고 ROS consumer는 center/radius를 별도로 해석합니다.
+`db.internalState`에는 그래프 인스턴스별 publisher와 횟수가 보관됩니다. 노드 해제 시 publisher → node → Context 순으로 정리합니다. 메시지 자체도 init/fini를 짝지어 처리합니다.
 
-한 가지 변수 실험으로 radius만 0.5→0.8로 바꿔 echo가 바뀌는지 확인합니다. 음수 radius는 로컬 구현이 거절합니다. 컴파일 중 header를 못 찾으면 message 빌드→packman 절대 경로→premake include 순서로 확인합니다. 노드가 검색되지 않으면 extension 활성화와 빌드 경로를 봅니다. 본 작업에서는 ROS/Kit C++ 빌드 환경을 실행하지 않아 컴파일/동적 로딩/통신은 아직 검증하지 않았습니다.
+### 실행 결과 확인하기
 
-## 출처와 검증 범위
+echo에 center `(1,2,3)`, radius `0.5`가 나타나고 노드의 `publishedCount`가 증가하는지 확인하세요. 이 출력은 `rcl_publish`가 성공할 때 증가합니다. **발행 성공 횟수와 외부에서 받은 메시지 개수가 같다고 가정하지 않습니다.** DDS discovery, 수신 속도, 큐의 영향이 있으므로 echo도 함께 봅니다.
 
-- [NVIDIA Isaac Sim 5.1.0 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_omnigraph_cpp_node.html)
-- [5.1.0 ROS 설치와 Python 3.11 환경](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)
+외부 공식 샘플의 문자열 노드도 비교하려면 Action Graph에 **ROS2 Publish String**을 추가하고 같은 Tick을 그 Exec In에 연결하세요. Play한 채 메시지 workspace를 source한 별도 ROS 터미널에서 `ros2 topic echo /custom_node/my_string`을 실행합니다. Sphere와 문자열 echo는 각각 다른 터미널에서 관찰한 뒤 Ctrl+C로 종료합니다.
 
-공식 원문의 실습을 이 폴더 안에 다시 구성하고 한국어 설명을 작성했습니다. Isaac Sim/ROS를 실제로 실행한 결과는 아직 검증하지 않았습니다(`verification: not_run`). 구문 검사나 `--help` 성공은 DDS 통신, 렌더링, GPU 동작의 검증이 아닙니다.
+Sphere는 중심과 반지름을 설명하는 데이터입니다. Viewport에 USD 구체를 만드는 노드는 아닙니다. 문자열 출력은 별도로 추가한 String 노드에서 나옵니다. echo는 Ctrl+C, 시뮬레이터는 창을 닫아 종료하세요.
+
+## 3. 빌드 준비·발행·수신의 차이 정리
+
+```text
+Sphere.msg → ROS 헤더와 타입 지원 라이브러리
+OGN + C++ + 외부 템플릿 → 컴파일된 확장
+확장 로드 → 그래프 입력 → rcl_publish → DDS → 외부 echo
+```
+
+각 단계에는 다른 확인 기준이 있습니다. 준비 도구 출력은 파일 연결을, 확장 활성화는 로딩을, `publishedCount`는 로컬 발행을, echo는 수신값을 확인합니다. 어느 한 단계의 성공을 전체 과정의 성공으로 확대하지 않습니다.
+
+## 4. 간단한 확인 실험
+
+그래프에서 **Publish Radius만 0.5에서 0.8**로 바꾸어 보세요. 중심과 Tick 연결은 유지합니다.
+
+외부 echo의 radius만 약 0.8로 바뀌어야 합니다. float 입력 변환 때문에 `0.8000000119...`처럼 보일 수 있습니다. 중심은 그대로이며 Viewport에 구체가 커지는 장면은 나타나지 않습니다. 이번 실험에서 바뀌는 것은 ROS 메시지의 값입니다.
+
+## 실행할 때 막히면
+
+- **`Missing prerequisite`**: 공식 샘플의 `premake5.lua`, packman XML, ROS include, 메시지 설치 lib 경로를 오류에 나온 순서대로 확인하세요.
+- **`Backup exists`**: 같은 checkout에 준비 도구를 이미 실행했습니다. 백업을 지워 재실행하기 전에 현재 수정·빌드 상태를 확인하세요.
+- **C++ 헤더를 못 찾음**: 메시지 빌드 완료와 두 의존성의 절대 경로를 확인하세요.
+- **노드가 검색되지 않음**: 소스 폴더가 아니라 `_build/.../exts`를 등록했는지, 확장 활성화 로그에 오류가 없는지 확인하세요.
+- **`libtutorial_interfaces...so`를 못 찾음**: 앱 터미널에 메시지 workspace의 `local_setup.bash`를 source했는지 확인하세요. `/opt/ros/humble/setup.bash` 전체를 추가하면 Python 버전 충돌이 생길 수 있습니다.
+- **횟수가 멈추고 오류가 남음**: 중심의 유한성, 음수 반지름 여부를 확인하세요. 잘못된 입력은 발행 전에 거절합니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [ROS 2 Custom C++ OmniGraph Node](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_omnigraph_cpp_node.html)에 대응합니다. 공식 페이지의 Linux/Humble 지원 조건과 Kit `release/107.3.0` 지정을 따릅니다.
+
+로컬 파일은 Sphere 구현·OGN·메시지 패키지·준비 도구입니다. Kit 템플릿과 공식 샘플의 공통 로더는 별도 다운로드해야 합니다. 이번 개정에서 ROS/Kit C++ 컴파일, 동적 로딩, 실제 통신은 수행하지 않았습니다. `tutorial.json`은 `verification: not_run`입니다.

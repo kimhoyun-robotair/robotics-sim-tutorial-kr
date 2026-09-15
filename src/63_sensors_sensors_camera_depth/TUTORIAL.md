@@ -1,81 +1,159 @@
-# 63. 이상적 깊이와 깊이 센서 후처리 비교
+# 63. 같은 장면에서 두 깊이 값이 다른 이유
 
-권장 학습 순서 **63** · 센서와 측정 데이터 · 출처 ID `t146`
+## 이번에 배우는 것
 
-두 높이의 상자를 위에서 촬영해 이상적 image-plane depth와 stereo를 근사하는 단일 시점 depth 후처리를 함께 저장합니다. 외부 환경 없이 독립 실행하며 원문의 SingleViewDepthSensor 경로를 사용합니다.
+**카메라의 기하학적 깊이와 센서 후처리를 거친 깊이를 나란히 읽고, 거리·노이즈·시차 설정이 무엇을 바꾸는지 이해합니다.**
 
-## 이 실습의 의도
+장면의 표면까지 거리를 정확히 안다고 해서 실제 깊이 센서와 같은 출력이 되는 것은 아닙니다. 깊이 센서 모델에는 시차 범위, 노이즈, 측정 거리 제한 등이 들어갑니다. 이번에는 한 카메라에서 두 종류의 깊이를 함께 얻어 그 차이를 살펴봅니다.
 
-동일한 카메라에서 기하학적 깊이와 stereo 특성을 근사한 후처리 깊이를 동시에 얻어, 센서 모델의 출력이 이상적 거리와 어떻게 다른지 익힌다. 높이 0.5 m와 1.2 m의 고정 상자를 높이 4 m에서 내려다보도록 만들어 거리 차이를 장면 치수로 해석할 수 있게 했다. 기본 실행은 두 깊이 배열의 마지막 프레임과 유효 픽셀 통계를 저장하며, 별도 `add_depth_sensor.py`는 재사용할 Camera/RenderProduct 설정을 USD로 작성한다.
+| 구성 | 값 또는 역할 |
+|---|---|
+| 카메라 위치 | 높이 4 m에서 아래를 바라봄 |
+| 두 상자 높이 | 0.5 m와 1.2 m |
+| `distance_to_image_plane` | 카메라 이미지 평면에 대한 기하학적 깊이 |
+| `DepthSensorDistance` | 단일 시점 깊이 센서 후처리 결과 |
+| `depth.npz` | 마지막 프레임의 두 깊이 배열 |
+| `add_depth_sensor.py` | 깊이 설정을 가진 재사용 USD 자산을 만드는 별도 실행 파일 |
 
-## 실행 후 확인할 것
+두 배열은 같은 장면을 보지만 생성 과정이 다릅니다. 먼저 장면 치수로 설명할 수 있는 기준 깊이를 찾고, 그 위에 센서 모델의 영향을 비교하겠습니다.
 
-- **장면 치수와 이상적 깊이**: `depth.npz`의 `distance_to_image_plane`에서 바닥은 약 4 m, 낮은 상자 윗면은 약 3.5 m, 높은 상자 윗면은 약 2.8 m인지 해당 표면 픽셀을 비교한다. 전체 이미지 중앙값이 각각의 상자 거리와 같아야 하는 것은 아니다.
-- **두 출력의 유효성**: `measurements.json`에서 `DepthSensorDistance`와 `distance_to_image_plane` 각각의 `shape`, `valid_pixels`, `median_m`을 확인한다. 유한한 양수 픽셀이 두 출력 모두에 있어야 하며, 초기 AOV가 비어 있다가 채워지는 것과 마지막까지 유효 깊이가 없는 상태를 구별한다.
-- **후처리 변수의 의미**: baseline 기본 55와 비교값 110의 단위는 mm이고 저장 깊이는 m다. `--noise-sigma 0`은 분산을 줄이지만 코드의 `noise_mean=0.5`와 disparity·거리 제한은 남으므로 이상적 깊이와 완전히 같아질 것을 요구하지 않는다.
-- **한 프레임의 저장과 GUI**: 카메라 30 Hz를 물리·렌더 60 Hz로 갱신한 뒤 기본 240스텝 시점의 배열 한 쌍을 저장한다. 이후 GUI의 Disparity 색은 시각화이며, 기존 NPZ가 계속 갱신되거나 색 자체가 m 단위 거리가 되는 것은 아니다.
-- **자산 작성의 별도 결과**: `add_depth_sensor.py`를 실행했다면 `/root/Camera`, `/root/TemplateRenderProduct` 아래 설정과 baseline 42 mm가 저장된 USD를 확인한다. 이 파일을 작성한 것만으로 장면의 깊이 측정을 수행한 것은 아니다.
+## 1. 두 종류의 깊이 저장하기
 
-## 이 패키지만으로 준비하기
-
-Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.
-
-```bash
-export ISAAC_SIM_PATH=/path/to/isaacsim
-cd src/63_sensors_sensors_camera_depth
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/run-01
-```
-
-출력 폴더는 **존재하지 않는 새 경로**를 지정합니다. 이미 있으면 오류로 멈추어 이전 결과를 보호합니다. `--output`을 생략하면 이 패키지의 `output/날짜_시간/`에 저장합니다.
-
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 렌더링·깊이 센서 갱신이 계속됩니다. 처음 240스텝을 마친 시점의 두 깊이 배열과 통계를 한 번 저장하며, 이후 관찰 중에는 파일을 추가하거나 바꾸지 않습니다. `--steps N`에 양수를 주면 N스텝 뒤 스냅샷을 저장하고 종료합니다. `--headless`만 사용하면 기존과 같이 240스텝 후 종료합니다. `--interactive`는 기존 명령 호환용이며 이제 필요하지 않습니다. 명시한 `--steps`의 종료 조건을 해제하지 않고, `--headless`와 함께 사용할 수 없습니다.
-
-run.py는 standalone 실행용이므로 Script Editor에 전체를 붙이지 않습니다. 처음 240스텝을 마치기 전에 창을 닫으면 결과 파일은 완성되지 않을 수 있습니다.
-
-창 없이 유한 실행으로 결과만 만들 때는 별도의 새 출력 경로를 사용합니다.
+Isaac Sim 5.1과 지원 NVIDIA GPU가 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --steps 240 --output output/batch-01
+~/isaacsim/python.sh src/63_sensors_sensors_camera_depth/run.py --steps 240 --output src/63_sensors_sensors_camera_depth/output/base
 ```
 
-## 실습 순서와 관찰
+설치 위치가 다르면 `~/isaacsim`을 바꾸세요. 240단계 후 `depth.npz`, `measurements.json`, `scene.usda`를 저장하고 종료합니다. 출력은 아직 없는 폴더를 지정합니다. `--output`을 생략하면 이 튜토리얼의 `output/날짜_시간/`에 저장합니다.
 
-1. 실행 후 `depth.npz`의 `DepthSensorDistance`와 `distance_to_image_plane`을 비교합니다. `measurements.json`에는 각 유효 픽셀 수와 거리 중앙값이 있습니다. 바닥까지의 높이는 4 m이고 상자 표면은 더 가깝습니다.
-2. `--headless`와 `--steps` 없이 실행해 `/World/Depth` 카메라로 viewport를 전환합니다. **Render Settings > Post Processing > Depth Sensor**를 켜고 **RGB Depth Output Mode > Disparity**를 선택하면 disparity를 볼 수 있습니다.
-3. `--baseline-mm 110 --output output/baseline-110`으로 다시 실행해 기존 55 mm와 비교합니다. 다른 값은 유지하세요.
-4. `--noise-sigma 0 --output output/noise-0`으로 실행하여 노이즈가 있는 기본 출력과 구별합니다. 깊이 AOV와 시각화 이미지의 색을 실제 m 값으로 혼동하지 마세요.
-5. 원문의 에셋 wrapper 실습은 Script Editor에서 아래 코드를 실행합니다. stage가 이미 열려 있는 GUI에서만 실행하며 센서 카메라 경로 목록을 보고 해당 render product의 depth schema를 확인합니다.
+화면 없이 실행하려면 `--headless`를 추가하세요. GUI를 계속 관찰하려면 `--steps 240`을 뺍니다. 이 경우 첫 240단계의 마지막 프레임을 한 번 저장하고 카메라 갱신은 계속하지만, 파일은 더 이상 갱신하지 않습니다.
 
-## API와 USD 개념
+### 실행 결과 확인하기
 
-`SingleViewDepthSensor`는 `Camera`를 감싸며 **render product별** depth 후처리 속성을 설정합니다. GUI의 전역 Render Settings는 모든 render product에 영향을 주므로 비교할 때 전역 설정을 바꿨는지 기록하세요. `DepthSensorDistance`에는 disparity, noise, confidence, min/max 거리의 영향이 있고 `distance_to_image_plane`은 기하학적 기준 깊이입니다.
+`measurements.json`에는 두 배열 각각의 `shape`, `valid_pixels`, `median_m`이 있습니다. 유효 픽셀은 **유한한 양수**인 깊이만 셉니다. 코드도 두 배열 중 하나에 이런 값이 전혀 없으면 오류를 냅니다.
 
-stereo의 disparity는 대략 `fx × baseline / depth`와 연결됩니다. baseline은 이 API에서 mm, fx는 픽셀, 반환 거리의 장면 단위는 m입니다. 이는 하나의 렌더 시점으로 stereo 특성을 근사하는 모델이며 ToF·structured light의 공통 모델이 아닙니다.
+장면의 수직 치수로 이상적 깊이를 예상해 보세요.
 
-## 확장 실습·성공 기준·문제 해결
+| 관찰할 표면 | 높이 계산 | `distance_to_image_plane`의 기대 깊이 |
+|---|---|---|
+| 바닥 | 4 - 0 | 약 4 m |
+| 낮은 상자 윗면 | 4 - 0.5 | 약 3.5 m |
+| 높은 상자 윗면 | 4 - 1.2 | 약 2.8 m |
+
+전체 이미지의 중앙값은 바닥 픽셀의 비중에 크게 영향을 받습니다. 두 상자의 깊이를 비교하려면 **각 상자 윗면 픽셀**을 비교해야 합니다. `median_m` 하나만 보고 상자 높이 차이가 사라졌다고 판단하지 마세요.
+
+NPZ를 읽을 때는 다음처럼 두 키를 확인할 수 있습니다. 이 코드는 일반 NumPy 환경에서 저장된 데이터를 읽는 용도입니다.
+
+```python
+import numpy as np
+
+data = np.load('src/63_sensors_sensors_camera_depth/output/base/depth.npz')
+ideal = data['distance_to_image_plane']
+modeled = data['DepthSensorDistance']
+valid = np.isfinite(ideal) & np.isfinite(modeled) & (ideal > 0) & (modeled > 0)
+print(ideal.shape, modeled.shape, np.count_nonzero(valid))
+print('차이의 중앙값(m):', np.median(modeled[valid] - ideal[valid]))
+```
+
+차이는 같은 픽셀에서 계산해야 합니다. 두 배열에서 유효값만 각각 뽑은 뒤 순서대로 빼면 서로 다른 표면을 비교할 수 있습니다.
+
+## 2. 깊이 후처리와 재사용 자산 살펴보기
+
+### 코드에서 볼 부분
+
+```python
+camera.set_baseline_mm(args.baseline_mm)
+camera.set_focal_length_pixel(320)
+camera.set_max_disparity_pixel(110)
+camera.set_noise_mean(.5)
+camera.set_noise_sigma(args.noise_sigma)
+camera.attach_annotator('DepthSensorDistance')
+camera.attach_annotator('distance_to_image_plane')
+```
+
+Annotator는 render product에서 어떤 데이터를 읽을지 지정합니다. 여기서는 RGB를 붙이지 않고 깊이 출력 두 개를 요청합니다. 따라서 PNG가 없는 것은 정상이며 NPZ의 수치를 확인해야 합니다.
+
+Stereo에서 시차는 같은 표면 점이 두 카메라 이미지의 서로 다른 픽셀에 나타나는 간격입니다. `baseline_mm`은 그 두 시점 사이 간격에 대응하는 모델 값입니다. 기본 55는 **55 mm**, 저장 깊이는 **m**입니다. 초점 값 320은 **픽셀**입니다. 단위가 서로 다른 이유는 깊이를 시차로 바꾸는 관계에 각각 다른 역할로 들어가기 때문입니다.
+
+```text
+시차(픽셀) ≈ 초점 값(픽셀) × baseline(m) / 깊이(m)
+```
+
+이 설정에서 깊이 4 m의 시차는 약 `320 × 0.055 / 4 = 4.4` 픽셀입니다. 먼 표면은 시차가 작아 같은 시차 변화가 거리값에 더 크게 반영될 수 있습니다. `SingleViewDepthSensor`는 이런 특성을 하나의 렌더 시점에 후처리로 적용합니다. 실제 좌우 영상의 stereo 매칭 전체를 수행하는 코드는 아닙니다.
+
+### 설정을 USD로 저장하기
+
+측정과 별도로, 깊이 카메라 설정을 자산으로 만들 수 있습니다.
+
+```bash
+~/isaacsim/python.sh src/63_sensors_sensors_camera_depth/add_depth_sensor.py --headless --output src/63_sensors_sensors_camera_depth/output/depth_camera.usd
+```
+
+위 headless 명령은 장면 깊이를 측정하지 않고 파일을 만든 뒤 한 번 앱을 갱신하고 종료합니다. `--headless`를 빼면 창을 직접 닫을 때까지 작성된 Stage를 볼 수 있습니다. GUI에서도 유한하게 실행하려면 양수 `--steps`로 앱 업데이트 횟수를 지정하세요.
+
+```python
+SingleViewDepthSensorAsset.add_template_render_product(
+    parent_prim_path='/root/TemplateRenderProduct',
+    camera_prim_path='/root/Camera',
+    **{'omni:rtx:post:depthSensor:baselineMM': 42},
+)
+```
+
+`/root/Camera`와 연결된 템플릿 render product에 baseline 42 mm를 저장합니다. 앞의 측정 실행 기본값 55 mm와는 다른, **이 자산 작성 예제의 설정**입니다. 자산을 저장했다는 사실과 깊이 배열을 생성했다는 사실을 구별하세요.
+
+### 뷰포트와 기존 센서 자산에서 확인하기
+
+기본 장면을 `--steps` 없이 열어 두고 뷰포트를 `/World/Depth`로 전환하세요. **Render Settings > Post Processing > Depth Sensor**를 켠 뒤 **RGB Depth Output Mode > Disparity**를 선택하면 시차를 색으로 볼 수 있습니다. 전역 설정은 다른 render product에도 적용되므로 이 관찰은 NPZ 비교를 마친 뒤 진행합니다. 색의 밝기를 곧바로 미터 거리로 해석하지 마세요.
+
+기존 자산의 템플릿을 읽는 방식도 확인할 수 있습니다. 새 Isaac Sim 창의 빈 stage에서 **Window > Script Editor**를 열고 다음 코드를 실행하세요. 5.1 Assets의 RealSense D455와 종속 자산에 접근할 수 있어야 하며, 이 코드는 `run.py`에 붙이는 코드가 아닙니다.
 
 ```python
 from isaacsim.sensors.camera import SingleViewDepthSensorAsset
 from isaacsim.storage.native import get_assets_root_path
-asset = SingleViewDepthSensorAsset('/World/D455', asset_path=get_assets_root_path() + '/Isaac/Sensors/Intel/RealSense/rsd455.usd')
+
+asset = SingleViewDepthSensorAsset(
+    '/World/D455',
+    asset_path=get_assets_root_path() + '/Isaac/Sensors/Intel/RealSense/rsd455.usd',
+)
 asset.initialize()
 print(asset.get_all_depth_sensor_paths())
 depth = asset.get_child_depth_sensor('/World/D455/RSD455/Camera_Pseudo_Depth')
 depth.attach_annotator('DepthSensorDistance')
 ```
 
-D455 자산은 NVIDIA 5.1 에셋 접근이 필요합니다. 기본 로컬 실습에는 필요 없습니다. 기존 Camera 자산에 depth 속성을 저장하는 원문 절차는 이 패키지의 `add_depth_sensor.py`로 실행합니다. 생성된 `example_camera_with_depth_sensor.usd`와 현재 열린 Stage에서 Camera에 연결된 RenderProduct와 `omni:rtx:post:depthSensor:baselineMM`을 검사합니다. 이 스크립트도 `--steps`를 생략하면 창을 직접 닫을 때까지 유지합니다. `--steps N`은 Kit 업데이트 N회 후 종료하며, `--headless`만 지정하면 파일을 저장하고 1회 업데이트 후 종료합니다.
+출력 목록의 카메라 경로와 Stage의 경로를 대조하세요. wrapper는 저장된 템플릿에서 후처리 속성을 읽고 실제 render product에 복사합니다. 목록이 생긴 것은 자산과 카메라 연결을 확인한 것이며, 깊이 값은 재생과 렌더링 후에 얻습니다. D455의 pseudo depth 역시 실제 stereo 펌웨어를 실행한 결과는 아닙니다. [공식 깊이 자산 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera_depth.html)을 함께 확인할 수 있습니다.
 
-```bash
-"$ISAAC_SIM_PATH/python.sh" add_depth_sensor.py --output output/depth-asset-01/example_camera_with_depth_sensor.usd
+## 3. 기준 깊이와 센서 모델의 차이 정리
+
+```text
+같은 카메라·같은 표면
+    ├─ 기하학적 깊이 → distance_to_image_plane
+    └─ 깊이 후처리 → 시차·노이즈·거리 제한 → DepthSensorDistance
 ```
 
-새 센서 자산은 외형 import→Camera 배치→실제 영상과 intrinsics/extrinsics 비교→render product depth schema 적용→실제 깊이와 후처리 값 비교 순서로 구성합니다. 초기 첫 프레임의 texture-size/AOV 오류는 원문에 알려진 현상이지만, 이후에도 지속되거나 유효 깊이가 없으면 정상 완료로 보지 마세요.
+장면 치수는 기준 깊이를 확인하는 데 쓰고, 두 배열의 픽셀별 차이는 후처리 영향을 확인하는 데 씁니다. 카메라가 30 Hz이고 물리·렌더링은 60 Hz이므로, 이번 NPZ는 240개의 독립 깊이 영상을 담은 파일이 아니라 마지막 깊이 한 쌍입니다.
 
-## 출처와 검증 범위
+## 4. 간단한 확인 실험
 
-- [NVIDIA Isaac Sim 5.1.0 — Depth Sensors](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera_depth.html)
-- 구현 API는 설치된 5.1 `exts/`와 해당 `standalone_examples/` 원본을 함께 확인했습니다. 원문과 다른 작은 장면·GUI 관찰 루프·측정 스냅샷 저장은 이 패키지에서 추가했습니다.
+노이즈의 표준편차만 1에서 0으로 바꿔 보세요.
 
-Python 문법·도움말과 파일 구성을 검사했으며, RTX 영상/점군과 PhysX 런타임·GUI 상호작용은 작성 작업에서 실행하지 않았습니다. 실제 성공 여부는 위 단계의 **측정 파일과 화면 결과**로 확인합니다. `tutorial.json`의 verification은 그 이유로 `not_run`입니다.
+```bash
+~/isaacsim/python.sh src/63_sensors_sensors_camera_depth/run.py --steps 240 --noise-sigma 0 --output src/63_sensors_sensors_camera_depth/output/sigma-zero
+```
+
+두 실행에서 바닥이나 상자 윗면의 같은 영역을 골라 후처리 깊이의 퍼짐을 비교하세요. 노이즈의 무작위 변동은 줄어들 것으로 예상하지만 `noise_mean=0.5`, 시차 제한, 거리 제한은 그대로입니다. 따라서 **표준편차 0이 이상적 깊이와 완전히 같다는 뜻은 아닙니다.**
+
+## 실행할 때 막히면
+
+- **`No finite positive depth`**: 새 출력 경로에서 `--steps 480`으로 렌더 준비 시간을 늘려 보세요. 마지막까지 유효 깊이가 없으면 결과를 사용할 수 없습니다.
+- **첫 프레임의 texture-size/AOV 오류**: 공식 5.1 문서에 초기 프레임 문제가 기록되어 있습니다. 이후 배열이 실제로 채워지는지 확인하고, 계속 반복되는 오류까지 정상으로 처리하지 마세요.
+- **GUI의 색과 깊이 수치가 맞지 않음**: Disparity 등 시각화 모드의 색은 미터값 자체가 아닙니다. NPZ의 깊이 배열을 읽으세요.
+- **비교할 때 두 출력이 함께 달라짐**: 전역 Render Settings를 바꿨다면 다른 render product에도 영향을 줄 수 있습니다. 비교 실행은 동일한 장면 설정에서 시작하세요.
+- **USD는 생겼지만 `depth.npz`가 없음**: `add_depth_sensor.py`는 자산 작성용입니다. 깊이 측정에는 `run.py`를 사용하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Depth Sensors](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera_depth.html)에 대응합니다. 로컬 두 상자로 두 annotator를 비교하고, 별도 스크립트로 깊이 카메라 설정의 USD 저장을 다룹니다.
+
+이번 개정에서는 두 실행 파일과 공식 후처리·자산 작성 절차를 대조했습니다. 실제 깊이 렌더링은 실행하지 않았으며 `tutorial.json`의 검증 상태는 `not_run`입니다. 위 거리와 차이는 실행 시 확인할 기준입니다.

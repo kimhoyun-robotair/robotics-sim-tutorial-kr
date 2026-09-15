@@ -1,77 +1,136 @@
-# 162. USD Instanceable Asset의 공유 구조
+# 162. 위치는 따로 바꾸고 모양은 함께 공유하기
 
-권장 학습 순서 **162** · 병렬 환경과 학습 정책 활용 · 출처 ID `t006`
+## 이번에 배우는 것
 
-geometry 정의 파일과 이를 참조하는 Stage를 직접 만들고, 네 개의 로봇 링크가 동일 USD prototype을 공유하는지 출력합니다. 공식 문서의 계층 제약과 importer 설정을 설명하고 재현 가능한 작은 USD 실습을 제공합니다.
+**동일한 큐브를 여러 링크에서 참조하고, 링크의 위치는 독립적으로 바꾸면서 내부 geometry는 하나의 prototype으로 공유합니다.**
 
-## 이 실습의 의도
+로봇이 여러 대 있어도 같은 부품의 메시를 매번 별도로 정의할 필요는 없습니다. 다만 각 로봇의 링크는 서로 다른 위치로 움직여야 합니다. 이번에는 “개별 위치”와 “공유 모양”을 USD 계층의 다른 위치에 놓는 이유를 작은 장면으로 확인합니다.
 
-동일한 Cube 정의를 여러 링크에서 참조하면서 geometry만 하나의 USD prototype으로 공유하는 구조를 직접 만듭니다. 링크의 변환을 공유 root 밖에 두어 위치는 개별적으로 바꿀 수 있고, 공유 자식인 instance proxy의 직접 편집 제한을 `--no-instancing` 결과와 비교합니다. 기본 실행은 새 USD 두 파일을 만들고 화면 업데이트만 수행하는 예이므로 상자의 낙하·관절 구동·GPU 메모리 절감량 측정은 포함하지 않습니다.
+| 항목 | 이번 예제의 역할 |
+|---|---|
+| `meshes.usda` | 한 변 0.5 m인 큐브 원본 정의 |
+| `instances.usda` | 원본을 참조하는 네 링크의 배치 |
+| `Link` | 각각 따로 바꿀 수 있는 위치 |
+| `Geometry` | reference와 instanceable을 가진 공유 루트 |
+| `instances.json` | 실제 instance·prototype·proxy 상태 기록 |
 
-## 실행 후 확인할 것
+여기서 prototype은 여러 instance가 공유하는 USD 내부 정의이고, instance proxy는 그 공유된 자식을 각 instance 경로로 바라보는 방식입니다.
 
-- **참조 구조:** 새 출력의 `meshes.usda`는 `/Geometry/Cube` 크기 0.5를 정의하고 `instances.usda`는 각 `/World/Robot_i/Link/Geometry`에서 `./meshes.usda`의 `/Geometry`를 참조해야 합니다. 두 파일을 함께 보존해야 상대 참조가 유지됩니다.
-- **공유 상태 기록:** 실행을 종료한 뒤 생성되는 `instances.json`에서 기본 4행 모두 `is_instance=true`, `child_is_instance_proxy=true`이고 `prototype` 값이 같은지 확인합니다. 이 기록은 장면을 생성할 때 수집한 상태이며 GUI에서 나중에 편집한 상태를 다시 측정한 값은 아닙니다.
-- **독립적인 위치:** Stage에서 Link의 translate가 `(i*0.8,0,0.25)`(m)인지 확인하고 하나의 Link를 옮겼을 때 다른 Link가 따라 움직이지 않는지 봅니다. 고정된 큐브가 공중 또는 지면 높이에 유지되는 것은 이 예제에 물리 시뮬레이션이 없기 때문입니다.
-- **편집 제한과 비교 실행:** 기본 실행의 `Geometry/Cube` 직접 편집이 제한되는 것은 instance proxy의 정상 동작입니다. `--no-instancing`을 새 출력으로 실행하면 reference는 남지만 JSON의 `is_instance`와 `child_is_instance_proxy`는 false, `prototype`은 null이어야 합니다. prototype의 구체적인 경로 문자열은 성공 기준으로 고정하지 않습니다.
+## 1. 네 개의 공유 큐브 만들기
 
-## 준비와 실행
-
-이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
-
-외부 로봇 자산은 필요 없습니다.
-
-터미널에서 이 패키지 폴더(`162_motion_instanceable_assets`)로 이동한 뒤 아래를 실행합니다. 설치 위치가 다르면 첫 줄만 바꿉니다. Windows에서는 설치 폴더의 `python.bat`에 동일한 인수를 전달합니다.
+Isaac Sim 5.1과 지원 GPU·드라이버가 필요합니다. 외부 로봇 자산은 사용하지 않습니다. 저장소 루트에서 실행하세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --count 4
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --count 4 --no-instancing
+~/isaacsim/python.sh src/162_motion_instanceable_assets/run.py --count 4 --steps 120
 ```
 
-`--steps`는 물리 스텝 수(USD 전용 예제에서는 화면 업데이트 수)입니다. `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 계속됩니다. `--steps 600`처럼 양수를 지정하면 해당 횟수 후 종료하며, `--headless`에서 생략하면 기존 기본값인 600회로 제한됩니다. 각 실행 결과는 이 폴더의 새 `output/run_*` 디렉터리에 저장됩니다. `--output /절대경로/새폴더`를 지정할 수도 있지만 기존 폴더를 덮어쓰지 않습니다. 코드는 `SimulationApp`을 만든 뒤 Isaac/Omni/USD 모듈을 가져오고 마지막에 `close()`로 종료합니다.
+120번의 **앱 업데이트** 후 종료합니다. 이 예제에는 물리 장면과 `world.step()`이 없으므로 120번을 물리 시간으로 환산하지 않습니다. `--steps`를 빼면 창을 닫을 때까지 유지하고, `--headless`를 추가하면 창 없이 실행합니다. Headless에서 단계 수를 생략하면 600번 업데이트합니다.
 
-## 단계별 실습
+실행마다 이 폴더의 새 `output/run_*`에 결과를 저장합니다. `--output /절대경로/새폴더`로 지정할 수도 있지만 기존 경로는 거부합니다.
 
-1. 기본 실행의 `output/run_*/meshes.usda`와 `instances.usda`를 확인합니다. 전자는 `/Geometry/Cube`를 정의하고 후자는 여러 링크에서 `./meshes.usda`의 `/Geometry`를 참조합니다.
-2. Stage에서 `/World/Robot_0/Link/Geometry`를 선택합니다. `Instanceable`이 켜져 있고 자식 Cube가 instance proxy임을 `instances.json`에서도 확인합니다.
-3. `/World/Robot_0/Link`의 Translate를 변경합니다. 이 링크는 instance root 밖이므로 다른 Robot의 위치를 바꾸지 않고 이동할 수 있습니다.
-4. `Geometry/Cube`의 크기를 그 복사본에서 직접 수정하려 해 봅니다. instance proxy 내부 편집은 제한됩니다. 공유 geometry 변경은 원본 `meshes.usda`에서 수행하거나 해당 instance root의 Instanceable을 끈 뒤 별도 의견으로 작성해야 합니다.
-5. `--no-instancing` 실행의 `instances.json`과 비교합니다. reference는 유지되지만 `is_instance=false`, prototype은 null이어야 합니다. prototype 경로 문자열 자체는 세션마다 달라질 수 있습니다.
+### 코드에서 볼 부분
 
-## 왜 Xform을 한 단계 넣는가
+먼저 원본 파일에 `/Geometry/Cube`를 만들고, 각 링크에서 다음 두 호출을 수행합니다.
 
-로봇 링크는 관절에 따라 각자 움직이지만 mesh는 동일합니다. `Link → Geometry(Xform, reference, instanceable) → Cube` 구조에서는 Link의 변환을 독립적으로 바꾸며 geometry 자식을 공유합니다. mesh 자체에만 flag를 켜는 것으로 모든 로봇 구조가 자동 공유되지는 않습니다. composition arc(reference 등)가 있는 부모와 공통 mesh 정의가 필요합니다.
+```python
+geometry.GetReferences().AddReference('./meshes.usda', '/Geometry')
+geometry.SetInstanceable(not args.no_instancing)
+```
 
-`GetReferences().AddReference('./meshes.usda', '/Geometry')`는 파일/prim 참조를 추가하고, `SetInstanceable(True)`는 가능한 공통 prototype 생성을 요청합니다. `IsInstance()`와 `IsInstanceProxy()`는 각각 root와 공유된 자식 상태를 관찰합니다. 이것은 물리 환경 복제나 RL 정책이 아닙니다. 출력은 공유 여부이며 실제 GPU 메모리 절감량을 측정했다고 주장하지 않습니다.
+`AddReference()`의 첫 인수는 USD **파일 경로**, 둘째는 그 파일 안의 **Prim 경로**입니다. 상대 파일 참조이므로 `meshes.usda`와 `instances.usda`를 함께 옮겨야 합니다. `SetInstanceable(True)`는 같은 구성을 가진 참조가 공통 prototype을 사용할 수 있게 합니다.
 
-## 5.1 URDF/MJCF importer에서 같은 구조 만들기
+```text
+/World/Robot_0/Link              ← 개별 translate
+                 /Geometry     ← reference + instanceable
+                          /Cube ← 공유된 자식
+```
 
-1. 새 Stage에서 `File > Import`로 URDF(`.urdf`) 또는 MJCF(`.xml`)를 선택합니다. 필요한 확장은 `Window > Extensions`에서 `isaacsim.asset.importer.urdf` 또는 `isaacsim.asset.importer.mjcf`로 찾습니다. 입력 robot description과 그 파일이 참조하는 mesh/texture를 함께 준비합니다.
-2. 오른쪽 import 옵션의 Model 영역에서 **Referenced Model**을 선택하고 **USD Output**의 폴더 선택 버튼으로 이 패키지 아래 새 출력 위치를 정합니다. **Create in Stage**는 현재 Stage에 직접 생성하는 다른 방식입니다. 두 importer의 실제 5.1 File > Import 패널은 이 Model/출력 선택을 사용합니다.
-3. Import를 실행한 뒤 생성된 robot의 링크를 펼칩니다. geometry 참조를 가진 부모 prim의 Instanceable 상태와 자식의 instance proxy 여부를 확인합니다. Script Editor에서 선택한 geometry 자식에 대해 `prim.IsInstanceProxy()`를 호출하면 공유 자식인지 확인할 수 있습니다. 링크 transform은 별도로 움직일 수 있습니다.
-4. 새 Stage에는 출력한 주 robot USD를 참조합니다. importer가 만든 하위 USD·mesh·재질 파일도 함께 보존합니다. 출력 계층의 composition을 확인한 뒤 이동하며, 모든 버전이 `instanceable_meshes.usd`라는 단일 파일 이름을 만든다고 가정하지 않습니다.
+각 Link의 translate는 `(i × 0.8, 0, 0.25)`입니다. 따라서 네 큐브의 중심 X는 0, 0.8, 1.6, 2.4 m이고 Z는 0.25 m입니다. 물리를 추가하지 않았으므로 큐브가 떨어지거나 관절이 움직이는 예제는 아닙니다.
 
-공식 5.1 Instanceable Assets 본문에는 이전 **Create Instanceable Asset / Instanceable USD Path** 옵션 설명이 남아 있습니다. 실제 5.1 URDF importer는 해당 선택 옵션을 폐기하고 mesh를 instanceable로 가져옵니다. MJCF의 현재 File > Import 경로도 instanceable prim을 만들며 **Referenced Model / USD Output** 패널을 사용합니다. 설치 소스에 남아 있는 과거 UI 생성 함수의 checkbox 이름을 활성 화면에서 찾을 필요가 없습니다. 이 설명은 설치본 URDF CHANGELOG 1.15.0, `impl/ui/UrdfOptionWidget.py`, MJCF CHANGELOG 2.2.3, `impl/option_widget.py` 및 import delegate 연결을 대조한 것입니다.
+### 실행 결과 확인하기
 
-## 기존 자산 변환 절차
+루프가 끝나면 `instances.json`과 같은 내용의 콘솔 출력이 생성됩니다.
 
-원본을 복사한 작업 파일에서 mesh/primitive마다 부모 Xform을 추가하고, mesh가 가진 reference를 새 부모에 옮깁니다. 공통 geometry USD를 만든 뒤 그 부모가 외부 geometry prim을 참조하도록 작성하고 instanceable을 켭니다. 원문 `create_parent_xforms()`/`convert_asset_instanceable()`은 출발점이지만 임의 자산에 대한 안전한 일괄 변환기를 제공하는 것은 아닙니다. material binding, physics material, filtered collision 관계가 원래 Stage 밖 대상을 가리키면 참조 후 유효하지 않을 수 있습니다. 부모 Xform 또는 공유 파일 안의 유효 경로로 관계를 옮긴 뒤 검사해야 합니다. 이 패키지의 새 장면 생성 방식은 사용자 자산을 덮어쓰지 않고 그 최종 계층을 직접 보여 줍니다.
+| 필드 | 기본 실행의 확인 기준 |
+|---|---|
+| `path` | `/World/Robot_i/Link/Geometry` 네 경로 |
+| `is_instance` | 네 항목 모두 `true` |
+| `prototype` | 네 항목이 같은 prototype을 가리킴 |
+| `child_is_instance_proxy` | Cube 자식이므로 `true` |
 
-## 공유 수와 원본 변경 비교
+prototype의 구체적인 경로 문자열은 실행마다 달라질 수 있습니다. 이름 자체보다 공유 관계를 확인하세요. JSON은 장면 생성 당시 수집한 상태이며, GUI에서 나중에 수정한 결과를 다시 측정하지는 않습니다.
 
-`--count`만 4에서 20으로 바꾸고 여전히 공유되는지 확인합니다. 원본 Cube 크기를 바꾸면 모든 참조에서 변경이 보이는 것이 기대 결과입니다.
+## 2. 공유를 끈 결과와 편집 범위 비교하기
 
-## 문제 해결
+다음 실행은 같은 참조 구조에서 instanceable만 끕니다.
 
-일부 geometry가 instance가 아니라면 instance root에 유효한 reference가 있는지 확인합니다. Cube 편집 실패는 instance proxy의 정상 제한일 수 있습니다. 파일을 옮긴 뒤 geometry가 사라지면 두 USD 파일의 상대 위치를 확인합니다.
+```bash
+~/isaacsim/python.sh src/162_motion_instanceable_assets/run.py --count 4 --no-instancing --steps 120
+```
 
-## 검증 범위
+### 코드에서 볼 부분
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 앞의 **실행 후 확인할 것** 기준으로 직접 결과를 확인합니다.
+관찰 함수는 서로 다른 계층을 조사합니다.
 
-## 출처
+```python
+geometry.IsInstance()
+geometry.GetPrototype()
+stage.GetPrimAtPath(str(geometry.GetPath()) + '/Cube').IsInstanceProxy()
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — Instanceable Assets](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_instanceable_assets.html)
-- 원문의 학습 목적과 API를 유지하면서 한국어 설명, 명령행 옵션, 제한된 실행 루프와 실제 상태 기록을 추가한 독립 예제입니다. 원문 전체를 복제한 문서가 아닙니다.
+`IsInstance()`는 공유 루트인 Geometry를, `IsInstanceProxy()`는 공유 자식인 Cube를 확인합니다. `--no-instancing` 결과에서는 두 상태가 false이고 prototype이 null이어야 합니다. reference 자체는 여전히 남습니다. **참조와 instancing은 같은 말이 아닙니다.**
+
+편집 차이는 `--steps` 없이 GUI를 열어 관찰할 수 있습니다.
+
+1. 기본 실행에서 `/World/Robot_0/Link`의 Translate를 바꿔 보세요. 다른 Link 위치는 그대로입니다.
+2. 그 아래 `Geometry/Cube`의 속성을 직접 바꾸려 해 보세요. 공유 자식의 개별 편집은 제한됩니다.
+3. 공통 모양을 바꾸려면 원본 `meshes.usda`를 수정합니다. 특정 instance만 다르게 만들려면 해당 Geometry의 instanceable을 끈 뒤 별도 속성을 작성합니다.
+
+파일이 USD reference로 연결되어 있으면 instancing을 끈 상태에서도 원본 수정이 전달될 수 있습니다. 공유 자식 편집 제한과 원본 참조의 변경 전파를 구별하세요.
+
+### 실제 로봇 자산에 적용하기
+
+URDF/MJCF를 가져올 때도 링크의 개별 변환과 공유 geometry 계층을 확인합니다. 사용할 URDF·MJCF와 그 파일이 참조하는 메시·재질을 함께 준비한 뒤 다음 순서로 진행하세요.
+
+1. 새 Stage에서 **Window > Extensions**의 `isaacsim.asset.importer.urdf` 또는 `isaacsim.asset.importer.mjcf`를 확인하고 **File > Import**로 `.urdf` 또는 `.xml`을 선택합니다.
+2. Model 영역에서 **Referenced Model**을 선택하고 **USD Output**에 새 출력 폴더를 지정해 Import합니다. **Create in Stage**는 현재 Stage에 직접 만드는 별도 선택입니다.
+3. 가져온 로봇의 링크를 펼쳐 geometry 부모의 Instanceable과 자식의 instance proxy 상태를 확인합니다. 링크를 옮겼을 때 다른 로봇의 위치와 구별되는지도 살펴보세요.
+4. 새 Stage에서 출력한 주 robot USD를 참조해 구조가 유지되는지 확인합니다. 하위 USD·메시·재질 파일도 함께 보존합니다.
+
+공식 Instanceable Assets 본문의 과거 `Create Instanceable Asset` 옵션을 현재 화면에서 찾기보다, 생성된 geometry 부모와 자식의 instance 상태를 확인하세요. 설치본 URDF·MJCF는 instanceable 가져오기 변경이 반영되어 있습니다. 출력 하위 USD와 재질을 함께 보존해야 참조가 유지됩니다.
+
+기존 자산을 변환할 때는 원본 복사본에서 메시 위에 Xform을 만들고, 메시가 가진 reference를 그 부모로 옮깁니다. 공통 geometry를 별도 USD로 만든 뒤 부모가 그 파일을 참조하도록 연결하고 instanceable을 켭니다. 계층을 옮겼다면 재질·충돌 관계가 여전히 유효한 Prim을 가리키는지도 확인해야 합니다. 참조된 공유 파일 밖으로 나간 관계는 새 부모 또는 공유 파일 안의 유효한 경로로 정리해야 합니다. 이 폴더는 사용자 자산 변환기가 아니라 올바른 최종 계층을 직접 만드는 예제입니다.
+
+## 3. 무엇을 공유하고 무엇을 따로 두는지 정리
+
+| 위치 | 독립적인 값 | 공유되는 값 |
+|---|---|---|
+| `Robot_i/Link` | 링크 위치 | 없음 |
+| `Geometry` | 각 instance의 경로 | 동일한 참조 구성 |
+| `Geometry/Cube` | 개별 proxy 편집은 제한 | 크기 등 원본 geometry 정의 |
+
+링크의 움직임과 메시의 정의를 분리하면 같은 모양을 다른 위치에 놓을 수 있습니다. 이 결과는 USD의 공유 구조를 보여 줍니다. GPU 메모리 절감량이나 환경 복제 성능을 측정한 결과는 아닙니다.
+
+## 4. 간단한 확인 실험
+
+`--count`만 4에서 20으로 바꿔 실행해 보세요.
+
+- JSON 항목은 20개로 늘어야 합니다.
+- `is_instance`와 `child_is_instance_proxy`가 여전히 true인지 확인합니다.
+- 서로 다른 prototype 경로의 개수는 같은 모양을 공유하는 경우 하나로 유지되는지 봅니다.
+
+큐브 수와 공유 정의 수를 별도로 세는 것이 이 실험의 핵심입니다.
+
+## 실행할 때 막히면
+
+- **파일을 옮긴 뒤 큐브가 사라짐**: 두 USD의 상대 위치가 유지됐는지 확인하세요.
+- **Cube 속성을 편집할 수 없음**: instance proxy인지 확인하세요. 공유 자식의 정상적인 제한일 수 있습니다.
+- **JSON이 아직 없음**: JSON은 루프 종료 후 씁니다. 창을 닫거나 유한한 `--steps`로 실행하세요.
+- **물체가 떨어지지 않음**: 이 코드는 USD 구조를 만들고 `app.update()`만 호출합니다. 물리 낙하는 포함하지 않습니다.
+- **`No module named isaacsim`**: 시스템 Python 대신 설치본 `python.sh`를 사용하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Instanceable Assets](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_instanceable_assets.html)에 대응합니다. 외부 로봇 없이 두 USD 파일을 만들어 참조 계층과 instance 상태를 비교합니다. importer 설명은 설치본의 UI와 변경 기록도 대조했습니다.
+
+`tutorial.json`은 `not_run`입니다. 공유 상태의 기대값은 실제 실행 시 확인할 기준이며, 물리 동작이나 메모리 성능 검증을 포함하지 않습니다.

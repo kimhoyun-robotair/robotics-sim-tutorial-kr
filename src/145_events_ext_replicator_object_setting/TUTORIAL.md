@@ -1,83 +1,129 @@
-# 145. Setting — 한국어 실습
+# 145. 같은 장면에서 어떤 데이터를 저장할지 정하기
 
-권장 학습 순서 **145** · 물체 시뮬레이션과 YAML 무작위화 · 출처 ID `t059`
+## 이번에 배우는 것
 
-동일한 장면에 대해 출력 스위치, 해상도와 프레임 seed가 어떤 파일을 결정하는지 비교한다.
+**큐브 장면은 유지하면서 해상도·출력 스위치·seed가 결과 파일을 어떻게 바꾸는지 비교합니다.**
 
-## 이 실습의 의도
+물체를 더 많이 만드는 것과 데이터를 더 많이 저장하는 것은 다른 선택입니다. RGB만 필요한 작업과 깊이·분할 정답도 필요한 작업은 같은 장면을 사용해도 출력 구성이 달라집니다. 이번에는 두 개의 완전한 YAML 설정을 비교하며 장면 전역 설정이 카메라와 writer까지 전달되는 흐름을 살펴봅니다.
 
-같은 큐브 장면을 유지하면서 전역 해상도·출력 스위치·seed가 저장 결과를 어떻게 바꾸는지 비교하는 실습이다. 기본 `scene.yaml`은 RGB와 여러 정답을, `rgb_only.yaml`은 작은 RGB와 description을 저장하도록 구성해 출력 설정의 역할을 구분한다. `run.py`만 실행하면 설정 준비까지 진행하며, 아래 파일 비교는 native 생성 또는 GUI Simulate를 마친 뒤 수행한다.
+| 비교 항목 | `scene.yaml` | `rgb_only.yaml` |
+|---|---|---|
+| RGB 해상도 | 640×480 | 320×240 |
+| RGB·description | 저장 | 저장 |
+| 2D·3D 라벨, 분할 | 저장 | 저장 안 함 |
+| 깊이·법선 | 저장 | 저장 안 함 |
+| 큐브 배치·회전 규칙 | 동일 | 동일 |
 
-## 실행 후 확인할 것
+두 설정 모두 물리 시간과 중력이 0입니다. 큐브는 중심 `(0,50,0)` cm에 머물고 Y 회전만 -90~90도에서 선택됩니다. 여기서 Y는 위쪽이며 1단위는 1 cm입니다.
 
-- **준비 결과:** `prepared.yaml`에서 선택한 설정의 `screen_width`, `screen_height`, `output_switches`, `num_frames`를 확인한다. `@OUTPUT@` 같은 경로 표식은 해소되지만 `$[/screen_width]` 등 IRO 매크로가 남는 것은 정상이다. 준비 단계가 이미지 렌더링까지 수행한 것은 아니다.
-- **기본 설정:** 실제 `scene.yaml` 생성 후 `images/`의 기본 3장 RGB가 640×480인지 확인하고 라벨·분할·depth·normal 출력도 확인한다. 빨간 큐브와 바닥 모두 tracked 대상이므로 큐브 하나만 있다고 라벨도 하나여야 한다고 판단하지 않는다.
-- **비교 설정:** 새 출력으로 `rgb_only.yaml`을 실제 생성하면 RGB는 320×240이며 description은 유지되고 라벨·분할·depth·normal 데이터는 생성되지 않아야 한다. 이름의 `rgb_only`는 description까지 끈다는 뜻이 아니다.
-- **카메라와 파일명:** 저장 description에서 카메라 해상도가 전역 설정과 함께 바뀌었는지 확인한다. 기본 시작 seed=11·3프레임이면 파일명은 seed 11·12·13과 카메라 이름을 반영하며, description은 전체 장면의 GLOBAL 이름으로 기록된다.
-- **정적인 부분과 난수:** 기본 장면은 `gravity=0`, `simulation_time=0`이고 큐브의 Y 회전만 -90–90도에서 선택한다. 낙하가 없는 것은 정상이며, 같은 seed의 대응은 먼저 description의 선택값으로 비교한다. GPU·렌더 설정이 다른 이미지의 완전 일치를 성공 기준으로 삼지 않는다.
+## 1. 기본 출력 만들기
 
-## 준비와 실행 방식
-
-Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
-
-이 학습은 공식 **IRO 확장의 native YAML workflow**다. `run.py`는 전체 설정을 가진 로컬 YAML의 경로를 정리하고 실제 Isaac Sim을 실행하는 도구다. 렌더러나 물리를 자체적으로 흉내 내지 않는다. `@PACKAGE@`와 `@OUTPUT@`는 준비 단계의 경로 표식이고, `$[...]`는 실행 시 IRO가 처리하는 매크로다. 원본 `scene.yaml` 대신 준비된 `prepared.yaml`을 IRO에 입력한다.
+Isaac Sim 5.1과 RTX GPU 환경에서 실행합니다. 저장소 루트에서 아래 폴더로 이동하세요.
 
 ```bash
-cd src/145_events_ext_replicator_object_setting  # 저장소 루트에서 실행; 폴더를 복사했다면 그 위치로 이동
-ISAAC_ROOT="$HOME/isaacsim"
-"$ISAAC_ROOT/python.sh" run.py --frames 3
-# GUI 실행: configuration: 뒤의 절대 경로를 복사한다.
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch
-# 파일로 생성하고 끝내는 native 실행:
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch --headless --frames 3
+cd src/145_events_ext_replicator_object_setting
+~/isaacsim/python.sh run.py --launch --headless --frames 3
 ```
 
-`--config rgb_only.yaml`처럼 이 폴더의 다른 설정을 선택할 수 있다(아래 파일 목록 참조). 기본 출력은 이 폴더의 `output/<UTC시간>-<고유값>/`이다. `--output /절대/새폴더`로 지정할 수 있으며 기존 경로를 덮어쓰지 않는다. 출력 폴더 안 `prepared.yaml`은 사용한 설정이고, `images/`, `labels/`, `3d_labels/`, `segmentation/`, `descriptions/` 등이 IRO 결과다. 비활성화한 스위치의 데이터는 생성되지 않는다.
+`run.py`는 새 `output/<UTC시간>-<고유값>/`에 `prepared.yaml`을 만든 다음 실제 IRO 확장을 실행합니다. 정상 생성이 끝나면 창 없이 종료합니다. `--launch`를 빼면 YAML 준비만 수행합니다. 설치 위치가 다르면 Python 경로와 `--isaac-root /설치/경로`를 함께 바꾸세요.
 
-GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action and Event Data Generation > Object SDG**로 간다. 공식 5.1 문서에는 이 패널이 **Object Detection SDG**로 표시되어 있지만 5.1에 설치된 0.4.13 확장 메뉴 이름은 Object SDG다. **Description File**에 `configuration:` 경로를 넣는다. **Initialize scene randomization**과 **Randomize scene**은 미리보기, **Simulate**는 결과 저장이다. 데이터 생성은 현재 stage를 새 장면으로 바꾸므로 작업 중인 stage는 먼저 별도로 저장한다.
+### 설정에서 볼 부분
 
-`--steps`를 생략한 `--launch` GUI 실행은 데이터 생성이 끝나도 사용자가 창을 닫을 때까지 유지됩니다. `--frames`는 저장할 데이터 프레임 수이며 창의 수명과 별개입니다. `--steps 600`처럼 지정하면 native Kit 업데이트 600회 후 종료합니다. 시작·장면 로딩도 이 횟수에 포함되므로 짧게 제한하면 생성이 끝나기 전에 종료될 수 있습니다. `--headless`는 기존처럼 정해진 데이터 생성 후 종료합니다. 이 설정은 Kit의 공식 [`/app/quitAfter`](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html#app-quitafter-default-1)를 사용합니다.
+```yaml
+screen_width: 640
+screen_height: 480
+camera_parameters:
+  screen_width: $[/screen_width]
+  screen_height: $[/screen_height]
+  focal_length: 24
+  horizontal_aperture: 24
+  near_clip: 1
+  far_clip: 5000
+```
 
-## 실습
+`$[/screen_width]`의 `/`는 설정 루트에서 값을 찾는다는 뜻입니다. 카메라에 640을 다시 적는 대신 전역 값을 참조하므로, 출력 해상도를 바꿀 때 카메라의 영상 크기도 같이 바뀝니다. 준비 단계에서는 이 참조가 남고 IRO가 실행될 때 숫자로 해석됩니다.
 
-1. scene.yaml의 필수 키 여섯 개(version, num_frames, seed, output_path, screen_width, screen_height)를 찾는다.
-2. scene.yaml을 실행해 640×480 RGB와 depth/normal 출력을 확인한다.
-3. --config rgb_only.yaml로 다시 실행한다. 생성된 description에서 카메라의 screen_width도 320으로 바뀌었는지 확인한다.
-4. output_name의 $[seed]와 $(camera_name)을 파일명과 대조한다. 시작 seed 11이면 프레임별 seed는 11, 12, 13이다.
+`output_switches`에서는 `images`, `labels`, `3d_labels`, `segmentation`, `descriptions`, `depth`, `normal`이 켜져 있습니다. 각 키는 **별도 종류의 결과를 저장할지** 정합니다. 렌더링한 RGB 한 장에서 깊이나 법선을 자동으로 추정해 만드는 설정으로 이해하지 마세요. IRO가 해당 센서·주석 출력을 함께 기록합니다.
 
-## 개념과 사용한 설정
+### 실행 결과 확인하기
 
-settings는 type 또는 harmonizer_type을 가진 객체 외의 설정이다. output_switches의 생략된 키는 기본적으로 켜질 수 있으므로 이 패키지는 모든 주요 스위치를 명시한다. camera_parameters가 전역 해상도를 매크로로 참조하므로 영상과 카메라 모델을 함께 바꾼다. parent_config는 상속을 위한 문법이지만 여기서는 각 YAML에 전체 설정을 반복하여 외부 파일에 의존하지 않는다.
+콘솔의 `output:` 경로를 열고 `images/`의 RGB 세 장이 640×480인지 확인하세요. `labels/`, `3d_labels/`, `segmentation/`, `depth/`, `normal/`, `descriptions/`도 대조합니다. 라벨은 빨간 큐브와 `tracked: true`인 바닥을 포함할 수 있습니다.
 
-IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
+깊이와 법선은 각각 `depth/`·`normal/`의 `.npy` 배열로 저장됩니다. 깊이에는 `distance_to_image_plane`이 사용됩니다. 카메라의 앞쪽 축을 따른 깊이이므로, 화면 가장자리까지 카메라 중심에서 잰 직선거리와는 다릅니다. 법선은 표면 방향 정보이며 RGB의 밝기를 깊이나 표면 방향으로 해석하면 안 됩니다.
 
-## 한 변수만 바꾸는 실험
+IRO의 저장 코드는 깊이 배열의 양의 무한대와 NaN을 0으로 바꿉니다. 따라서 배경 등에 있는 0을 카메라에 붙어 있는 표면으로 해석하지 마세요. 먼저 RGB와 깊이 배열의 같은 픽셀을 짝지어 물체 영역과 유효하지 않은 영역을 구분해 봅니다.
 
-seed만 11에서 12로 바꿔 첫 프레임을 비교한다. 나머지 설정과 설치 환경이 동일할 때 이전 실행의 두 번째 seed와 대응하는지 관찰한다.
+## 2. 작은 RGB와 description만 저장하기
 
-## 문제 해결
+앞의 실행이 끝난 뒤 같은 터미널에서 비교 설정을 실행합니다.
 
-- `mapping values are not allowed here`는 YAML 들여쓰기/콜론을 먼저 확인한다. 탭 대신 공백을 사용한다.
-- `ModuleNotFoundError: yaml`이면 위 명령의 Isaac Sim `python.sh`로 준비한다. `--help`는 PyYAML 없이도 실행된다.
-- 카메라/물체가 안 보이면 F로 선택 물체에 초점을 맞추고, 시선 -Z와 단위 cm, clip 범위, transform 순서를 확인한다. 물리를 켠 장면은 초기 겹침 때문에 물체가 튀어나갈 수도 있다.
-- 확장 메뉴가 없으면 Extensions에서 `isaacsim.replicator.object`가 실제로 활성화되었는지 확인한다. RGB 파일이 없으면 오류 로그와 카메라 존재 여부를 확인한다. 창이 떠 있다는 사실은 데이터 생성 성공이 아니다.
-- 같은 seed는 장면 난수 재현을 돕지만 GPU/렌더 모드/자산 버전이 다르면 픽셀의 완전한 일치를 보장하지 않는다.
+```bash
+~/isaacsim/python.sh run.py --config rgb_only.yaml --launch --headless --frames 3
+```
 
-simulation_time은 물리 적분 시간, extra_rendering_time은 렌더링을 기다리는 시간이다. friction은 마찰, linear_damping/angular_damping은 운동 감쇠다. occlusion_threshold, min_area_threshold, max_area_threshold는 라벨 포함 조건을 바꾼다. skip_frames_with_no_visible_tracked_mutables를 켜면 빈 장면을 건너뛴다. 서로 다른 USD를 가져올 때 같은 basename을 쓰면 라벨 이름 충돌이 생길 수 있다.
+이번 실행의 새 `output:` 경로를 확인하세요. 이름이 `rgb_only`여도 **description은 유지**됩니다. 영상만 보고는 난수 회전을 구분하기 어려울 수 있으므로 장면 기록을 함께 남긴 구성입니다.
 
-## 포함 파일과 검증 범위
+### 설정에서 볼 부분
 
-- `scene.yaml`: 기본 실습 설정
-- `rgb_only.yaml`: 위 실습 단계에서 설명한 비교 설정
-- `run.py`: 설정 준비 및 실제 확장 실행. `--help`로 옵션을 본다.
+```yaml
+output_name: frame_$[seed]_$(camera_name)
+output_switches:
+  images: true
+  labels: false
+  3d_labels: false
+  segmentation: false
+  descriptions: true
+  depth: false
+  normal: false
+```
 
-현재 확인한 실행 조건과 실제 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에 기록했습니다. `tutorial.json`의 `partial_runtime_verified`는 그 조건에 한정된 검증이며, 다른 모드와 GUI·외부 통합 전체의 검증을 뜻하지 않습니다.
+이 코드는 주요 스위치만 발췌한 것입니다. 전체 `rgb_only.yaml`은 그 밖의 출력도 명시적으로 끕니다. **키를 삭제하는 것과 `false`로 지정하는 것은 다릅니다.** 설치 IRO는 생략된 키에 기본값을 적용하며, 깊이·법선·라벨 등에는 켜진 기본값이 있습니다. 필요 없는 결과를 확실히 제외하려면 제공 파일처럼 해당 스위치를 `false`로 유지하세요.
 
-## 출처
+파일명은 두 단계로 완성됩니다. IRO가 `$[seed]`를 프레임 seed로 바꾸고, writer가 `$(camera_name)`을 카메라 이름으로 바꿉니다. 시작 seed가 11이고 세 프레임이면 RGB 이름은 `frame_11_default_camera.jpg`부터 seed 12·13으로 이어집니다. 전체 장면 description은 `frame_11_GLOBAL.yaml`처럼 저장됩니다.
 
-- [NVIDIA Isaac Sim 5.1 — Setting](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/setting.html)
-- [IRO native 실행, embedded interface 및 출력 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html#run-from-the-ui)
+### 실행 결과 확인하기
 
-설정과 한국어 실습은 위 문서를 기준으로 새로 작성했다. 설치된 5.1의 `isaacsim.replicator.object` 0.4.13 소스(`description/symbol.py`, `mutables/scene_dev.py`, `ui/object_detection_sdg_window.py`)에서 입력 키·장면 단위·UI 명칭을 대조했다.
+| 관찰 지점 | 비교할 내용 |
+|---|---|
+| `prepared.yaml` | 전역 해상도 320×240, 출력 스위치의 참·거짓 |
+| `images/` | 실제 RGB 크기 320×240, 기본 실행과 대응하는 seed |
+| `descriptions/`의 카메라 설정 | 해석된 `screen_width: 320`, `screen_height: 240` |
+| 기타 출력 | 꺼 둔 라벨·분할·깊이·법선 파일이 생성되지 않는지 |
 
-설치 버전 차이: 공식 문서의 output_name 예시 $[camera] 대신, 0.4.13 `simple_writer.py`가 처리하는 $(camera_name)을 사용한다. `frame_$[seed]_$(camera_name)`은 IRO에서 seed를 먼저 정하고 writer에서 카메라 이름을 나중에 치환한다. descriptions는 카메라별 파일 대신 GLOBAL 이름으로 전체 장면을 기록한다.
+가로·세로가 각각 절반이면 픽셀 수는 307,200개에서 76,800개로 4분의 1이 됩니다. 화각에 사용하는 초점거리와 aperture는 같으므로 해상도 감소를 줌아웃으로 해석하지 마세요. 같은 장면을 더 적은 픽셀로 표현합니다.
+
+GUI로 확인하려면 `--headless`를 빼고 실행한 뒤 **Tools > Action and Event Data Generation > Object SDG**의 **Description File**에 이번 `configuration:` 경로를 넣고 **Simulate**를 누르세요. GUI는 생성 후에도 유지됩니다. `--steps`는 앱 업데이트 제한이므로 데이터 수를 정할 때는 `--frames`를 사용합니다.
+
+## 3. 설정이 결과로 전달되는 과정 정리
+
+```text
+전역 해상도 → 카메라 파라미터 참조 → 실제 영상의 픽셀 수
+output_switches → writer의 저장 종류 → 결과 폴더 구성
+시작 seed + 프레임 순서 → 난수 선택과 파일명 → 대응 장면 비교
+```
+
+저장 description의 물체 변환은 IRO 0.4.13에서 최종 `global_transform`과 단일 `transform` 행렬로 정리됩니다. 원래 `rotateY` 항목을 찾기보다 같은 seed의 변환 행렬을 비교하세요. `prepared.yaml`은 규칙, description은 촬영 시점의 장면 기록입니다.
+
+## 4. 간단한 확인 실험
+
+기본 명령에서 **시작 seed만 12로** 바꿔 보세요.
+
+```bash
+~/isaacsim/python.sh run.py --launch --headless --frames 3 --seed 12
+```
+
+이 실행의 첫 프레임을 seed 11 실행의 두 번째 프레임과 비교합니다. 같은 장면 설정과 환경에서는 seed 12에 대응하는 물체 변환을 확인할 수 있습니다. 먼저 description의 `global_transform`을 대조하고 RGB를 보세요. 서로 다른 GPU·렌더 설정 사이의 픽셀 완전 일치를 재현성의 기준으로 삼지는 않습니다.
+
+## 실행할 때 막히면
+
+- **작은 RGB 실행에도 라벨이 보임**: 이전 출력 폴더를 열지 않았는지 확인하세요. 호출마다 새 경로를 출력합니다.
+- **전역 해상도를 바꿨는데 카메라 값이 그대로임**: 카메라 파라미터를 숫자로 덮어썼는지 확인하세요. 제공 설정은 루트 해상도를 참조합니다.
+- **파일명에 `$(camera_name)`이 남음**: `prepared.yaml`에서는 정상입니다. writer가 저장하는 최종 이미지 이름에서 치환 여부를 확인하세요.
+- **`--output`에서 경로 존재 오류**: 이 도구는 기존 폴더를 덮어쓰지 않습니다. 새 경로를 지정하거나 기본 출력을 사용하세요.
+- **RGB가 생성되기 전에 종료됨**: 앱 업데이트를 제한하는 `--steps`를 제거하고 다시 생성하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Setting](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/setting.html)에 대응합니다. 설정 상속까지 확장하기 전에 출력 차이를 비교하도록 두 YAML에 전체 설정을 넣었습니다. 현재 `run.py`는 `parent_config`가 있는 입력을 거부합니다.
+
+[RUNTIME_CHECK.md](RUNTIME_CHECK.md)에는 2026-09-14 기본 설정 한 프레임의 640×480 이미지, 주석 2개, 깊이·법선 출력 확인이 기록되어 있습니다. 설정 파일은 기록 당시와 같지만 현재 `run.py`는 그 뒤 변경되었습니다. 따라서 이 기록은 당시 실행 조건에 한정되며 현재 실행 파일·비교 설정·GUI 전체의 검증을 뜻하지 않습니다. `tutorial.json`의 검증 범위를 함께 참고하세요.

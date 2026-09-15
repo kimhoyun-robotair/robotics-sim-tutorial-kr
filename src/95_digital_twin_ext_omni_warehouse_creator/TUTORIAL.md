@@ -1,43 +1,147 @@
-# 95. t077 · 모듈형 Warehouse Creator로 창고 외곽과 기둥 편집
+# 95. 창고 외곽을 그리고 벽과 기둥 배치 바꾸기
 
-권장 학습 순서 **95** · 환경 구축과 로봇 행동 · 출처 ID `t077`
+## 이번에 배우는 것
 
-직사각형 외곽에서 벽·내부 tile·기둥을 생성한 다음 벽의 용도와 기둥 배치를 바꾸는 **공식 GUI 실습**이다. `floor_plan.json`은 사용할 외곽 꼭짓점과 실험 순서를 tile 단위로 기록한 로컬 설계도다. 자동 warehouse generator를 흉내 낸 코드가 아니라 설치된 `omni.warehouse_creator`를 직접 조작한다.
+**Warehouse Creator로 4×3 tile 외곽을 만들고, 벽 style과 기둥 편집의 Confirm·Cancel이 어떤 결과를 남기는지 확인합니다.**
 
-## 이 실습의 의도
+모듈형 창고는 정해진 크기의 벽·모서리·바닥 부품을 이어서 만듭니다. 외곽을 자유로운 meter 좌표로 그리는 대신 부품의 tile 격자에 맞추면 연결되는 구조를 만들기 쉽습니다. 여기서는 작은 직사각형을 기준으로 생성과 편집을 이어서 수행합니다.
 
-모듈형 자산의 격자에 맞춰 창고 외곽을 닫고, 생성된 구조의 벽 스타일과 내부 기둥을 전용 편집기로 변경하는 과정을 배운다. 4×3 tile 직사각형은 외곽 생성 결과를 쉽게 확인하면서 같은 구조 안에서 variant와 기둥 편집을 비교하기 위한 기준이다. 로컬 JSON은 사람이 따라 그릴 설계도이며 자동으로 읽어 창고를 생성하는 실행 파일은 제공하지 않는다.
+| 구성 | 역할 | 이 실습의 기준 |
+|---|---|---|
+| `omni.warehouse_creator` | 공식 생성·편집 UI | Tools의 Modular Warehouse Creator |
+| Dataset Source | 조립할 모듈 자산 위치 | Modular_Warehouse의 Props 폴더 |
+| `floor_plan.json` | 사람이 따라 그릴 로컬 설계도 | 4×3 tile, 반시계 방향 |
+| wall style | 같은 종류 부품의 형태 선택 | 직선 벽 하나만 변경 |
+| column editor | 여러 부품에 걸친 기둥 배치 조정 | 한 기둥 Confirm, Flip All 후 Cancel |
 
-## 실행 후 확인할 것
+`floor_plan.json`은 자동 생성기가 읽는 실행 입력이 아닙니다. 이 폴더에는 JSON을 불러와 창고를 만드는 Python 코드가 없으며, 아래 단계에서 사용자가 GUI로 외곽을 그립니다.
 
-- **외곽과 바닥:** GUI에서 `vertices_tiles` 순서대로 그리고 Finish한 뒤 닫힌 직사각형 벽과 내부 바닥 tile이 생성되는지 본다. 4×3은 meter가 아닌 tile 수이므로 실제 크기는 선택한 dataset의 모듈 크기와 비교한다.
-- **벽 variant:** Component 선택으로 직선 벽 하나의 style을 바꿨을 때 해당 벽이 loading dock/access 등 선택한 형태로 바뀌고 외곽은 유지되는지 확인한다.
-- **기둥 Confirm:** `Edit Column Placement`에서 기둥 하나를 disabled로 바꾸면 편집 중 반투명 녹색으로 표시되고, Confirm 후 그 배치가 적용되는지 본다. 편집할 때 천장과 세부 요소가 숨겨지는 것도 이 모드의 일부다.
-- **기둥 Cancel:** 다시 편집하여 Flip All을 누른 뒤 Cancel하면 직전에 Confirm한 기둥 배치가 유지되어야 한다. 편집 중 미리보기와 확정된 상태를 비교한다.
-- **USD 저장:** `output/warehouse.usd`를 새로 저장하고 다시 열었을 때 벽 style과 확정한 기둥 상태를 확인한다. 참조 자산을 사용하는 결과이므로 dataset 연결이 끊긴 상태의 빈 장면을 정상 생성 결과로 판단하지 않는다.
+## 1. 설계도를 따라 창고 외곽 만들기
 
-## 순서대로 만들기
+Isaac Sim 5.1 GUI, 지원 NVIDIA RTX GPU·드라이버, Warehouse Creator와 모듈 자산 접근 환경이 필요합니다. 저장소 루트에서 앱을 시작하세요.
 
-1. Isaac Sim에서 새 stage를 만든다. `Window > Extensions`에서 `Warehouse Creator`를 검색하여 `omni.warehouse_creator`를 설치/활성화한다. 이미 있는 버전은 5.1 환경에 맞는 것을 사용한다.
-2. `Tools > Modular Warehouse Creator`를 연다. Dataset Source는 기본 원격 자산 또는 로컬 `[Isaac Sim Assets]/Isaac/Environments/Modular_Warehouse/Props`를 선택한다. 폴더 경로는 해당 Props 폴더 자체여야 한다.
-3. `Build Warehouse`를 누른다. 나타나는 curve draw dialog는 직접 조작하지 않는다. drawing mode에서 viewport 클릭이 벽 segment가 된다.
-4. `floor_plan.json`의 `(0,0) → (4,0) → (4,3) → (0,3) → (0,0)`을 tile 격자에 맞춰 반시계 방향으로 그린다. 이것은 meter 좌표 입력이 아니라 **4×3 tile 크기**의 도형 기준이다. 실제 길이는 선택한 dataset tile 크기를 따른다.
-5. 시작점 가까이 마지막 점을 찍어 닫거나 마지막 점이 첫 점과 일직선이면 `Finish`를 누른다. 외곽이 닫히며 내부 tile이 채워져야 한다. 자기 교차 외곽은 지원되지 않는다.
-6. viewport toolbar를 우클릭하여 Select Mode를 `Component`로 바꾼다. 직선 벽 block 하나를 고르고 Property의 style에서 loading dock/access 등 dataset이 제공하는 다른 variant를 선택한다. 같은 type을 다중 선택하면 선택한 block들에 같은 style이 적용된다.
-7. floor plan prim을 선택하고 `Edit Column Placement`를 누른다. 천장과 세부 요소가 숨겨진다. 내부 기둥 하나를 클릭하여 disabled 상태의 반투명 녹색을 확인한 뒤 `Confirm`한다.
-8. 다시 편집해서 `Flip All`을 누른 뒤 `Cancel`한다. 이전에 Confirm한 배치로 되돌아가야 한다. enable/disable all 버튼과 드래그 다중 선택도 각각 시도한다.
-9. `File > Save As`로 이 패키지의 새 `output/warehouse.usd`에 저장한다. 자산 reference와 custom 변경사항이 보존되므로 원격 source가 계속 필요할 수 있다.
+```bash
+~/isaacsim/isaac-sim.sh
+```
 
-## 개념과 관찰
+1. 새 Stage를 준비합니다.
+2. **Window > Extensions**에서 Warehouse Creator를 검색하고 `omni.warehouse_creator`를 설치·활성화합니다. 5.1 환경과 맞는 확장을 사용합니다.
+3. **Tools > Modular Warehouse Creator**를 엽니다.
+4. Dataset Source에 원격 모듈 자산 또는 다운로드한 `[Isaac Sim Assets]/Isaac/Environments/Modular_Warehouse/Props` 폴더를 선택합니다.
+5. **Build Warehouse**를 누릅니다. 이때 나타나는 curve draw dialog는 따로 조작하지 마세요.
+6. Viewport의 격자에 맞추어 아래 순서로 외곽을 그립니다.
 
-USD **reference**는 벽 부품을 장면에 합성하고, **variant**는 같은 부품의 스타일 선택을 나타낸다. floor plan은 창고 구조를 모으는 parent prim이다. 내부 기둥은 인접 block의 네 부분이 합쳐져 보이므로 하나의 mesh를 지우는 방식보다 전용 column editor를 쓴다. 이 실습에서 Python API를 호출하지 않으며 extension UI가 USD 편집을 수행한다.
+### 설정에서 볼 부분
 
-성공 기준은 닫힌 외곽, 내부 바닥 tile, 한 벽의 style 변경, Confirm/Cancel에 맞는 기둥 상태이다. 한 변수 실험은 외곽을 유지하고 같은 직선 벽의 style만 바꾸는 것이다. generation 실패 시 선 교차, 너무 가까운 점, dataset 연결을 확인한다. 시작점 선택이 어렵다면 해당 부분을 확대한다. 원격 자산 최초 로딩이 늦으면 로컬 다운로드 자산 경로를 사용한다.
+로컬 `floor_plan.json`의 핵심은 다음 좌표입니다.
 
-## 독립 실행과 출처
+```json
+"vertices_tiles": [
+  [0, 0],
+  [4, 0],
+  [4, 3],
+  [0, 3],
+  [0, 0]
+]
+```
 
-이 폴더만 복사해 사용할 수 있다. Isaac Sim **5.1.0**, 지원 NVIDIA RTX GPU/드라이버와 GUI 세션이 필요하다. NVIDIA asset browser를 사용하는 단계는 5.1 자산 또는 해당 Digital Twin dataset에 접근할 수 있어야 한다. 명시한 extension이 검색되지 않으면 설치/registry 연결 상태부터 확인한다. 이 패키지는 다른 로컬 튜토리얼이나 공통 모듈을 요구하지 않는다.
+`(0,0)`에서 오른쪽으로 4 tile, 위로 3 tile, 왼쪽으로 4 tile, 아래로 3 tile을 이동하는 직사각형입니다. 마지막 점은 시작점과 같아서 닫힌 외곽을 나타냅니다.
 
-앱 실행은 `"$HOME/isaacsim/isaac-sim.sh"`로 하고 설치 위치가 다르면 경로를 바꾼다. USD Stage는 전체 장면이고 prim은 장면 트리의 객체다. reference는 외부 USD를 합성하며 transform은 parent 기준의 위치·회전·스케일이다. 저장은 패키지의 새 `output/` 경로에 Save As하고 원본/기존 결과를 덮어쓰지 않는다.
+```text
+(0,3) ←──────── (4,3)
+  │                ↑
+  │                │
+  ↓                │
+(0,0) ────────→ (4,0)
+```
 
-[Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/ext_omni_warehouse_creator.html)의 하위 workflow를 위 순서에 모았다. 이 문서는 한국어 독립 실습이며 공식 GUI를 실행하는 방식과 로컬 보조 artifact를 구분해 설명한다. 작성 시 로컬 파일/문법만 확인했고 실제 GPU·GUI 상호작용 및 외부 service는 실행하지 않았다. `tutorial.json`의 검증 상태는 `not_run`이다.
+위 좌표는 **tile 단위의 설계 기준**입니다. GUI는 선택한 dataset의 모듈 크기에 맞춰 위치를 정렬합니다. 한 tile의 한 변이 s m인 정사각 격자라면 기준 외곽 길이는 4s와 3s m입니다. 4×3을 곧바로 4 m×3 m로 읽지 마세요.
+
+마지막 클릭을 시작점 근처에 두어 닫거나, 마지막 점이 시작점과 정렬된 상태에서 Finish를 누릅니다. `crossing_edges: false`는 선이 서로 교차하지 않는 설계라는 뜻입니다. 생성기가 JSON 값을 검사하는 것이 아니므로 실제로 그린 선도 교차하지 않아야 합니다.
+
+### 실행 결과 확인하기
+
+외곽이 닫힌 직사각형이 되고 내부 tile이 채워지는지 확인합니다. 벽만 일부 생겼다면 완료된 창고로 판단하지 마세요. 시작점을 닫았는지와 자산 로딩이 끝났는지 확인해야 합니다.
+
+Stage에서 창고 구조를 묶는 floor plan prim을 찾아두세요. 다음 절의 기둥 편집은 그 prim을 선택한 상태에서 시작합니다.
+
+## 2. 벽 style과 기둥 배치 편집하기
+
+### 설정에서 볼 부분
+
+먼저 벽 하나의 용도를 바꿉니다.
+
+1. Viewport toolbar를 우클릭하여 **Select Mode > Component**로 바꿉니다.
+2. 직선 벽 block 하나를 선택합니다.
+3. Property의 style에서 dataset이 제공하는 다른 형태를 선택합니다. 예를 들어 loading dock이나 access 형태를 사용합니다.
+4. 선택한 벽만 바뀌고 외곽은 유지되는지 확인합니다.
+
+USD의 **variant**는 같은 부품에 준비된 여러 구성을 선택하는 방식입니다. 직선 벽, 바깥 모서리, 안쪽 모서리와 중앙 부품은 종류가 다르므로 가능한 style도 다릅니다. 여러 block을 선택하면 같은 종류의 선택된 block들에 style이 함께 적용될 수 있습니다. 처음에는 한 개만 고르세요.
+
+다음으로 기둥을 편집합니다.
+
+1. floor plan prim을 선택하고 **Edit Column Placement**를 누릅니다.
+2. 천장과 세부 요소가 숨겨진 상태에서 내부 기둥 하나를 클릭합니다.
+3. disabled 미리보기인 **반투명 녹색**을 확인합니다.
+4. **Confirm**을 눌러 배치를 확정합니다.
+5. 다시 기둥 편집 모드로 들어가 **Flip All**을 누릅니다.
+6. 이번에는 **Cancel**을 누릅니다.
+
+다시 편집 모드에 들어가 클릭·드래그로 여러 기둥을 선택하거나 전체 Enable/Disable 버튼도 비교할 수 있습니다. 미리보기를 관찰한 뒤 Cancel을 누르면 이번 편집을 시작하기 전의 배치가 유지됩니다.
+
+왜 기둥 메시를 바로 지우지 않을까요? 각 모듈의 안쪽 모서리에 기둥의 일부가 들어 있고, 인접 모듈들의 부분이 모여 기둥 하나처럼 보이기 때문입니다. 전용 편집기는 이 연결을 함께 다룹니다.
+
+### 실행 결과 확인하기
+
+| 작업 | 편집 중 모습 | 편집 모드를 나온 뒤 |
+|---|---|---|
+| 기둥 하나 끄기 → Confirm | 해당 기둥이 반투명 녹색 | 바뀐 기둥 배치 유지 |
+| Flip All → Cancel | 모든 기둥 상태가 뒤집힌 미리보기 | 두 번째 편집 진입 전 상태로 복귀 |
+
+**Cancel은 창고를 처음 만든 상태로 되돌리는 버튼이 아닙니다.** 앞에서 Confirm한 변경은 남고, 이번 편집에서만 바꾼 내용을 취소합니다.
+
+기둥 배치를 확인한 뒤 저장소 루트의 별도 터미널에서 출력 폴더를 만드세요.
+
+```bash
+mkdir -p src/95_digital_twin_ext_omni_warehouse_creator/output
+realpath src/95_digital_twin_ext_omni_warehouse_creator/output
+```
+
+**File > Save As**로 위 폴더의 `warehouse.usd`에 저장합니다. 다른 Stage를 열었다가 저장 파일을 다시 열어 변경한 wall style과 확정한 기둥 상태가 유지되는지 확인하세요. 앱 종료는 관찰과 저장을 마친 뒤 직접 수행합니다.
+
+## 3. 설계·미리보기·저장의 차이 정리
+
+```text
+floor_plan.json의 tile 설계 → 사람이 외곽 클릭 → 창고 모듈 생성
+                                                       ↓
+벽 variant 선택 + 기둥 편집 미리보기
+                   ├─ Confirm → 현재 Stage에 변경 유지
+                   └─ Cancel  → 편집 시작 시 상태로 복귀
+                                                       ↓
+                                           Save As → USD 파일
+```
+
+**생성, 편집 확정, 파일 저장은 별도의 단계입니다.** Confirm으로 모양을 정해도 파일에 보관하려면 Save As가 필요합니다.
+
+저장한 창고는 dataset의 자산을 참조할 수 있습니다. USD 하나를 옮겼다고 모든 모듈과 텍스처가 함께 복사되는 것은 아니므로 다시 열 때도 reference 경로가 유효해야 합니다. 이 실습은 창고 구조와 편집 상태를 다루며 로봇 주행이나 충돌 품질을 검사하지 않습니다.
+
+## 4. 간단한 확인 실험
+
+외곽과 기둥 배치를 그대로 둔 채 **같은 직선 벽 한 개의 style만** 두 번 바꿔 보세요. 각 선택의 이름과 벽의 변화를 기록합니다.
+
+관찰할 것은 벽의 기능적 모양이 달라지는지, 벽이 차지한 tile 위치와 나머지 구조는 유지되는지입니다. 여러 벽이 함께 바뀌면 다중 선택 상태를 확인하세요. 실험 후 사용할 style 하나를 정하고 저장하면 파일을 다시 열어 선택이 보존되는지도 확인할 수 있습니다.
+
+## 실행할 때 막히면
+
+- **Warehouse Creator가 검색되지 않음:** 5.1 환경의 extension registry 연결과 설치 상태를 확인하세요.
+- **외곽은 그렸지만 내부가 채워지지 않음:** 시작점으로 닫았는지, 마지막 점이 Finish로 닫을 수 있는 위치인지 확인하세요.
+- **마지막 점을 찍기 어려움:** 시작점 주변을 확대하세요. 너무 가까운 점을 새로 추가하지 못하도록 UI가 제한할 수 있습니다.
+- **벽이나 바닥이 비어 있음:** Dataset Source가 Props 폴더인지, 참조 자산 다운로드가 완료되었는지 확인하세요.
+- **기둥 편집 버튼이 원하는 대상을 찾지 못함:** 개별 벽 대신 floor plan prim을 선택하세요.
+- **Cancel 후 처음 상태로 돌아오지 않음:** 직전 Confirm 상태가 이번 편집의 시작 상태입니다. 취소 범위를 앞 표와 비교하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Warehouse Creator Extension](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/ext_omni_warehouse_creator.html)에 대응합니다. 로컬 JSON은 작은 직사각형과 관찰 순서를 정한 학습용 설계도입니다.
+
+이번 개정에서는 JSON 좌표와 공식 GUI의 생성·style·기둥 편집 절차를 대조했습니다. 확장 설치, dataset 로딩, 창고 생성·재열기는 실행하지 않았으며 `tutorial.json`의 검증 상태는 `not_run`입니다.

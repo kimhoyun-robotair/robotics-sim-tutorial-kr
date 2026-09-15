@@ -1,71 +1,136 @@
-# 58. 새 Manipulator에 RMPflow 설정하기: Cobotta Pro 900
+# 58. Cobotta의 관절과 그리퍼에 맞춰 RMPflow 설정하기
 
-권장 학습 순서 **58** · 로봇 제어와 동작 계획 · 출처 ID `t140`
+## 이번에 배우는 것
 
-기존 Franka용 template을 6축 Cobotta에 맞추고, 그리퍼 중심 frame을 URDF에 추가하고, self-collision 근사 모델을 개선합니다. 이 패키지는 **원문의 native Lula Test Widget 실습**과 실제 URDF/YAML 생성 도구를 제공합니다. 완성 robot USD를 대체하는 간이 모델은 만들지 않습니다.
+**6축 Cobotta의 입력 파일을 만들고, 그리퍼 중심과 충돌 근사 크기가 목표 추종에 어떤 의미를 갖는지 확인합니다.**
 
-## 이 실습의 의도
+다른 로봇의 설정을 가져와도 관절 수와 말단 기준점이 다르면 그대로 사용할 수 없습니다. 이번에는 Franka 기반 template을 Cobotta Pro 900에 맞추고, 손가락 한쪽 대신 집게 중심을 목표에 맞추도록 frame을 추가합니다.
 
-6축 Cobotta의 관절 수와 말단 frame에 맞게 RMPflow 입력을 준비하고 제한적인 self-collision 근사의 크기가 작업공간에 주는 영향을 비교합니다. `prepare_config.py`는 그리퍼 중심 frame을 추가한 URDF와 descriptor·정책 YAML 세 파일을 생성하며 시뮬레이터나 controller를 실행하지 않습니다. 이후 실제 Cobotta USD를 Lula Test Widget에서 선택해 basic과 conservative 설정의 추종·접근 범위를 사용자가 직접 시험합니다.
+| 파일·도구 | 역할 |
+|---|---|
+| `prepare_config.py` | URDF와 YAML을 읽어 새 설정 세 파일 생성 |
+| `cobotta_gripper_frame.urdf` | 운동학 연결과 새 `gripper_center` frame |
+| `robot_description.yaml` | 제어할 6축, 기본 자세와 collision sphere |
+| `rmpflow.yaml` | 관절 제한 여유, 속도 반응, 몸체 충돌 근사 |
+| Cobotta USD | 실제 장면의 물리 로봇 |
+| Lula Test Widget | 위 설정을 실제 articulation에 연결해 시험 |
 
-## 실행 후 확인할 것
+설정 생성 도구는 시뮬레이터를 켜거나 로봇을 움직이지 않습니다. **파일 준비와 GUI 추종 시험을 순서대로** 진행합니다.
 
-- 생성한 각 output에 `cobotta_gripper_frame.urdf`, `robot_description.yaml`, `rmpflow.yaml`이 있는지 확인합니다. 파일 생성 성공과 콘솔의 `설정 생성:` 출력은 설정 작성 완료이며 로봇이 움직였다는 결과가 아닙니다.
-- URDF에서 `gripper_center_joint`가 `onrobot_rg6_base_link`와 새 `gripper_center`를 fixed로 연결하고 offset이 `(0, 0, 0.24)` m인지 확인합니다. 제어 DOF는 6개로 유지되며 추가한 frame은 계산 기준점입니다.
-- 생성 YAML에서 cspace 길이와 `joint_limit_buffers`가 각각 6개이고 velocity cap=1.0, damping region=0.3인지 확인합니다. basic과 conservative의 `body_cylinders`, `body_collision_controllers`만 달라지는 비교 구성을 읽습니다.
-- Lula Test Widget에 생성 파일을 직접 로드하고 `gripper_center`를 선택한 뒤 Follow Target을 실행합니다. target을 옮겼을 때 손가락 한쪽이 아닌 그리퍼 중심이 추종하는지 보고, `right_inner_finger`를 선택한 결과와 비교합니다.
-- 같은 target 이동을 basic과 conservative에서 반복해 base와 손가락 주변 접근 여유를 관찰합니다. 더 큰 근사가 정상 자세의 접근도 제한할 수 있으며, 이 두 설정이 모든 링크 쌍의 self-collision을 검사하거나 실제 접촉 부재를 보장하지는 않습니다.
+## 1. 원본 파일에서 실행용 설정 만들기
 
-## 준비
+Isaac Sim 5.1, GUI와 지원 GPU, 설치 Python의 PyYAML이 필요합니다. [공식 Cobotta 자산 압축 파일](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/_downloads/43f1f07841f3ef71cc54f320218ced44/Cobotta_Pro_900_Assets.zip)을 내려받아 이 폴더의 `input/` 아래에 풀어 두세요.
 
-Isaac Sim **5.1.0**, GUI 화면, 지원 GPU/드라이버가 필요합니다. [공식 Cobotta_Pro_900_Assets.zip](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/_downloads/43f1f07841f3ef71cc54f320218ced44/Cobotta_Pro_900_Assets.zip)을 이 패키지의 `input/` 아래 풀어 둡니다. 실제 5.1 다운로드 zip에는 `robot_description.yaml`, Cobotta URDF, `rmpflow_configs/template_rmpflow_config.yaml`이 들어 있습니다. 원문 본문은 USD도 제공한다고 설명하지만 현재 다운로드 archive에는 USD가 없으므로, **5.1 Assets의 `Isaac/Robots/Denso/CobottaPro900/cobotta_pro_900.usd`를 별도로 사용합니다.** Content Browser의 해당 경로에서 로드하며 이 USD의 mesh/재질 참조도 접근 가능해야 합니다. 원본을 보존하며 출력 폴더를 따로 만듭니다. URDF가 참조하는 mesh는 원래 자산의 상대 구조를 유지합니다. 이 패키지 이외의 로컬 학습 모듈은 필요 없습니다.
+압축 파일에는 URDF와 descriptor, RMPflow YAML들이 있습니다. **USD는 포함되어 있지 않습니다.** GUI 실습에는 5.1 Assets의 `Isaac/Robots/Denso/CobottaPro900/cobotta_pro_900.usd`를 별도로 사용합니다. 해당 USD의 mesh·재질 참조에도 접근할 수 있어야 합니다.
 
-이 패키지 폴더에서 다음을 실행합니다. zip 안의 최상위 폴더 이름에 따라 `INPUT`을 실제 압축 해제 위치로 지정하고 `--urdf`에 원본 URDF 파일명을 선택합니다. `find` 대신 파일 관리자에서 URDF 이름을 확인해도 됩니다. Python 도구는 Isaac Sim에 포함된 PyYAML을 사용합니다.
+다음은 **저장소 루트** 기준입니다. 압축을 풀면 아래의 `Cobotta_Pro_900_Assets` 폴더가 생깁니다. 위치를 달리했다면 첫 변수만 맞추세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-INPUT="$PWD/input/Cobotta_Pro_900_Assets"
-python3 prepare_config.py --help
-"$ISAAC_SIM_ROOT/python.sh" prepare_config.py   --template "$INPUT/rmpflow_configs/template_rmpflow_config.yaml"   --urdf "$INPUT/cobotta_pro_900.urdf"   --descriptor "$INPUT/robot_description.yaml"   --output "$PWD/output/basic"
-"$ISAAC_SIM_ROOT/python.sh" prepare_config.py   --template "$INPUT/rmpflow_configs/template_rmpflow_config.yaml"   --urdf "$INPUT/cobotta_pro_900.urdf"   --descriptor "$INPUT/robot_description.yaml"   --output "$PWD/output/conservative" --conservative
-"$ISAAC_SIM_ROOT/isaac-sim.sh"
+COBOTTA_INPUT="$PWD/src/58_motion_manipulators_configure_rmpflow_denso/input/Cobotta_Pro_900_Assets"
+
+~/isaacsim/python.sh src/58_motion_manipulators_configure_rmpflow_denso/prepare_config.py \
+  --template "$COBOTTA_INPUT/rmpflow_configs/template_rmpflow_config.yaml" \
+  --urdf "$COBOTTA_INPUT/cobotta_pro_900.urdf" \
+  --descriptor "$COBOTTA_INPUT/robot_description.yaml" \
+  --output src/58_motion_manipulators_configure_rmpflow_denso/output/basic
 ```
 
-도구는 cspace 길이 6과 필요한 gripper link들을 확인하고 기존 output 경로는 거부합니다. URDF에 이미 gripper_center가 있으면 중복 생성하지 않고 오류로 알려 줍니다. 생성된 URDF는 Lula의 kinematics 입력에 쓰며 시각 mesh 재수입용 파일로 간주하지 않습니다. Lula는 URDF의 질량/mesh 대신 link/joint 구조와 관절 한계를 사용합니다.
+설치 위치가 다르면 `~/isaacsim`을 바꾸세요. 원본 URDF를 입력으로 선택해야 합니다. 압축에 함께 있는 `cobotta_pro_900_gripper_frame.urdf`는 이미 새 frame이 있어 이 도구의 입력으로 쓰면 중복 오류가 납니다. 출력 폴더는 새 경로여야 합니다.
 
-## 단계별 native 실습
+### 코드에서 볼 부분
 
-1. 새 Stage를 열고 Content Browser의 5.1 Assets에서 `Isaac/Robots/Denso/CobottaPro900/cobotta_pro_900.usd`를 Stage로 드래그합니다. Stage에서 articulation root가 있는 로봇을 확인합니다. USD는 실제 강체/관절/drive를 정의하며 URDF는 Lula의 운동학 정의입니다.
-2. `Window > Extensions`에서 **Lula Test Widget**을 검색해 활성화하고 `Tools > Robotics > Lula Test Widget`을 엽니다.
-3. Play를 누른 뒤 위젯의 **Select Articulation**에서 Stage의 Cobotta articulation을 선택합니다. 기본 비교는 zip의 robot_description, 원본 URDF와 template YAML을 살펴보는 것부터 시작합니다. template의 joint_limit_buffers 7개는 Cobotta cspace 6개와 맞지 않으므로 실행 설정에는 생성된 `output/basic` 파일을 사용합니다.
-4. **Robot Description YAML**에 `output/basic/robot_description.yaml`, **Robot URDF**에 `output/basic/cobotta_gripper_frame.urdf`를 선택하고 **Load Selected Config > Load**를 누릅니다. **Select End Effector Frame**은 **gripper_center**로 지정합니다. RmpFlow 패널을 펼쳐 **RmpFlow Config YAML**에 `output/basic/rmpflow.yaml`을 선택합니다. 이 패널의 **Follow Target**을 누르고 target을 gripper 앞쪽의 도달 가능한 위치로 옮깁니다.
-5. 최소 구성의 body cylinder는 원점에서 z=0.333 m까지 반지름 0.05 m인 capsule이며 collision controller는 right_inner_finger에 있습니다. target을 base 주변으로 옮겨 어떤 self-collision이 여전히 가능한지 관찰합니다.
-6. 테스트를 멈추고 `output/conservative`의 동일 세 파일로 바꿉니다. base capsule 반지름은 0.08 m, 두 번째 링크를 넓게 근사하는 구의 반지름은 0.16 m입니다. J5/J6/양쪽 finger와 knuckle에 작은 sphere를 두어 충돌 근사를 넓힙니다. 같은 target 이동에서 덜 접근하지만 움직일 수 있는 공간도 줄어드는지 확인합니다.
-7. gripper_center 대신 **right_inner_finger**를 end-effector로 선택하고 같은 target을 따라가게 합니다. 손가락 frame과 실제 집게 중심이 서로 다른 지점을 추종한다는 차이를 확인한 뒤 gripper_center로 되돌립니다.
-8. 생성된 RMPflow YAML에서 joint_velocity_cap_rmp의 max_velocity=1.0 rad/s, velocity_damping_region=0.3 rad/s를 확인합니다. URDF의 1 rad/s 제한에 맞춘 값입니다. 제공 USD의 drive gain도 확인합니다. 원문은 이 설정에서 P=10000, D=10000인 자산을 사용하며, D=1000으로 남기면 진동이 생겼음을 설명합니다. 이 값을 모든 로봇의 보편적인 gain으로 복사하지 않습니다.
+생성 URDF에는 다음 구조가 추가됩니다.
 
-## 새 frame을 만드는 계산
+```xml
+<link name="gripper_center" />
+<joint name="gripper_center_joint" type="fixed">
+  <origin rpy="0 0 0" xyz="0 0 0.24" />
+  <parent link="onrobot_rg6_base_link" />
+  <child link="gripper_center" />
+</joint>
+```
 
-기존 gripper의 부모는 `onrobot_rg6_base_link`입니다. 코드가 새 `gripper_center` link와 fixed joint `gripper_center_joint`를 만들고 `origin xyz="0 0 0.24" rpy="0 0 0"`를 추가합니다. 0.24 m는 finger 끝 쪽에 둔 중심 frame의 offset입니다. fixed joint이므로 새로운 제어 DOF는 생기지 않습니다. 이 변경은 그리퍼 위치를 보고 계산하는 Lula URDF에 필요하며 USD에 같은 이름의 prim이 반드시 존재해야 한다는 뜻은 아닙니다.
+그리퍼 base에서 로컬 Z 방향으로 0.24 m 떨어진 점을 기준으로 삼습니다. **fixed joint이므로 제어할 자유도는 늘지 않습니다.** 새로운 운동 부품을 만드는 대신 집게 중심을 계산할 좌표계를 추가하는 것입니다.
 
-## 설정 파일을 읽는 순서
+YAML에서는 다음 값을 맞춥니다.
 
-`robot_description.yaml`의 cspace는 제어할 관절 이름/순서와 default 자세, collision sphere를 정의합니다. `joint_limit_buffers=[0.01]*6`은 각 관절의 실제 limit에서 0.01 rad 안쪽으로 제한을 둡니다. prismatic joint라면 같은 숫자의 단위는 m입니다.
+```python
+config['joint_limit_buffers'] = [0.01] * 6
+config['rmp_params']['joint_velocity_cap_rmp'].update(
+    max_velocity=1.0, velocity_damping_region=0.3)
+```
 
-`body_cylinders`는 base 좌표계의 고정 capsule 근사이고 `body_collision_controllers`는 지정 URDF frame에 붙은 sphere입니다. 둘은 gripper와 base 간 self-collision을 줄이는 제한된 기능입니다. RMPflow가 모든 link 쌍의 mesh self-collision을 자동 검사한다고 해석하지 않습니다. 지나치게 큰 capsule은 정상 작업 자세도 배제할 수 있습니다.
+관절 제한 안쪽으로 둘 여유는 여섯 관절 각각 0.01 rad입니다. 최대 속도 반응은 1 rad/s, 한계에 접근하며 감속을 시작할 영역은 0.3 rad/s로 정합니다. template의 7개 buffer를 Cobotta의 6축에 맞추는 것이 중요한 변경입니다.
 
-## 관찰 기준과 한 변수 실험
+### 실행 결과 확인하기
 
-생성된 두 출력 폴더에 URDF/YAML 세 개씩 있고 gripper_center frame이 위젯 목록에 보여야 합니다. basic과 conservative 설정에서 같은 target을 이동하여 접근 가능한 공간과 self-collision 차이를 비교합니다. 다음 실험은 conservative의 `second_link.radius`만 0.16에서 0.14로 낮추는 것입니다. 여유 공간이 늘어나는 만큼 충돌도 다시 확인합니다. 원문 본문의 0.12 언급과 code block의 0.16이 다르며 이 패키지는 code block의 구성을 사용합니다.
+이 튜토리얼 폴더의 `output/basic`에 있는 파일 세 개와 터미널의 `설정 생성:` 경로를 확인하세요. descriptor의 `cspace`와 정책의 `joint_limit_buffers`가 각각 6개인지, 생성 URDF에 `gripper_center`가 한 번만 정의되는지 읽어 봅니다.
 
-## 문제 해결과 검증 범위
+생성 URDF는 Lula의 운동학 입력입니다. 출력 폴더로 옮겨진 URDF의 상대 mesh 참조까지 복사하는 도구는 아니므로 이를 그대로 시각 로봇 재수입용 파일로 사용하지 않습니다. 화면의 로봇은 별도의 Cobotta USD에서 읽습니다.
 
-frame을 못 찾으면 잘못된 URDF를 선택했는지 확인합니다. cspace mismatch는 6개 robot joints와 buffer 길이를 맞춥니다. mesh가 안 보이는 문제는 USD의 상대 asset 참조를 확인하고 Lula config 오류와 분리합니다. 위젯 설정을 바꾼 뒤 재시작/리셋하여 이전 controller와 동시에 로봇을 구동하지 않습니다.
+## 2. Lula Test Widget에서 새 frame 추종하기
 
-이 패키지는 config 생성과 native 실습 절차를 구현했습니다. 실제 Cobotta 자산 로딩·위젯 조작·충돌/추종은 `verification`이 not_run이면 미검증입니다. 문법 검사만으로 물리 동작을 성공했다고 판단하지 않습니다.
+`~/isaacsim/isaac-sim.sh`로 새 창을 열고 다음 순서로 진행하세요.
 
-## 출처
+1. 빈 Stage에 5.1 Assets의 Cobotta USD를 reference로 추가합니다.
+2. **Window > Extensions**에서 Lula Test Widget을 활성화하고 **Tools > Robotics > Lula Test Widget**을 엽니다.
+3. Play한 뒤 **Select Articulation**에서 Cobotta를 선택하세요.
+4. **Robot Description YAML**에는 `output/basic/robot_description.yaml`, **Robot URDF**에는 `output/basic/cobotta_gripper_frame.urdf`의 절대 경로를 선택하고 **Load Selected Config > Load**를 누릅니다.
+5. **Select End Effector Frame**에서 `gripper_center`를 선택합니다. RmpFlow 패널의 **RmpFlow Config YAML**에는 `output/basic/rmpflow.yaml`을 지정하세요.
+6. **Follow Target**을 실행하고 그리퍼 앞쪽의 도달 가능한 위치로 target을 조금 옮겨 보세요.
 
-- [Isaac Sim 5.1.0 — Configuring RMPflow for a New Manipulator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_configure_rmpflow_denso.html)
-- [Template와 Cobotta 설정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_configure_rmpflow_denso.html#modifying-the-template-for-the-cobotta-pro-900)
-- [End Effector Frame](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_configure_rmpflow_denso.html#creating-an-end-effector-frame)
+### 설정에서 볼 부분
+
+basic 설정의 `body_cylinders`는 base 원점부터 z=0.333 m까지 반지름 0.05 m인 capsule을 정의합니다. `body_collision_controllers`는 `right_inner_finger` frame에 반지름 0.05 m인 구를 둡니다. 이 구와 base 근사가 가까워질 때 회피 반응이 생기는 구조입니다.
+
+더 넓은 근사를 준비하려면 1절 생성 명령의 `--output` 경로 끝에서 `basic`을 `conservative`로 바꾸고 `--conservative`를 추가하세요. 다른 입력 파일은 그대로 사용합니다.
+
+| 구성 | basic | conservative |
+|---|---|---|
+| base capsule | 반지름 0.05 m, z=0~0.333 m | 반지름 0.08 m, z=0~0.12 m |
+| `second_link` 근사 | 없음 | `(0, 0, 0.12)` m 중심, 반지름 0.16 m 구 |
+| 움직이는 회피 구 | 오른쪽 finger 하나 | J5·J6, 양쪽 finger·knuckle |
+
+`second_link`는 근사의 이름입니다. `pt1`과 `pt2`가 같아 구 모양이 되며, 실제 J2 링크에 자동 부착되어 따라다니는 형상이 아닙니다. base 좌표계에서 두 번째 링크 부근을 넓게 덮습니다. `body_collision_controllers`의 이름들은 실제 URDF frame이어야 하므로 생성 코드가 존재 여부를 검사합니다.
+
+### 실행 결과 확인하기
+
+테스트를 멈추고 conservative의 세 파일을 로드해 같은 target 위치를 시험하세요. base 근처에서 더 일찍 피하는지, 접근 가능한 공간도 줄어드는지 관찰합니다. 다음으로 end-effector frame을 `right_inner_finger`로 바꿔 보면 집게 중심과 손가락 frame이 서로 다른 위치를 맞춘다는 점을 확인할 수 있습니다.
+
+이 GUI는 로컬 도구의 결과 JSON을 자동으로 만들지 않습니다. 선택 파일·frame·target 위치를 기록하고 화면의 추종을 직접 확인하세요. 구체적인 설정 배경은 [공식 Cobotta RMPflow 실습](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_configure_rmpflow_denso.html)을 참고할 수 있습니다.
+
+## 3. 로봇에 맞게 바꿔야 할 것 정리
+
+```text
+관절 수 → cspace와 buffer 길이
+관절 속도 → velocity cap과 감속 영역
+집게의 제어 지점 → URDF의 end-effector frame
+피해야 할 몸체 부위 → capsule과 frame별 구
+실제 로봇 응답 → USD drive와 물리 상태
+```
+
+큰 충돌 근사는 더 넓은 여유를 만들지만 정상 작업 자세도 제한할 수 있습니다. 이 구성은 모든 링크 쌍의 mesh 충돌을 검사하는 방식이 아닙니다. 실제 접촉 여부와 필요한 작업 범위를 함께 관찰해야 합니다.
+
+설정에서 속도 반응을 바꾸어도 USD의 drive가 그 목표를 잘 따라야 합니다. 추종이 흔들리면 RMPflow 숫자만 계속 바꾸기보다 실제 관절 응답도 확인하세요.
+
+공식 Cobotta 예제는 속도 cap을 1 rad/s로 줄였을 때 기존 P=10000, D=1000 설정에서 진동을 관찰하고 D=10000을 사용했다고 설명합니다. 같은 증상이 보이면 테스트를 멈춘 뒤 USD 관절의 stiffness/damping을 확인하고, 로드한 자산이 어떤 값을 사용하는지 기록하세요. 이 값은 해당 로봇과 설정의 사례이며 모든 로봇에 적용할 보편적인 gain은 아닙니다.
+
+## 4. 간단한 확인 실험
+
+conservative의 `rmpflow.yaml`을 별도 파일로 복사하고 **`body_cylinders`의 `second_link` 반지름만 0.16에서 0.14 m로** 줄이세요. 다른 값은 유지하고 위젯에서 새 YAML을 로드합니다.
+
+같은 목표를 base 근처로 움직여 접근 공간이 늘어나는지 보세요. 구가 줄어든 만큼 실제 링크와의 여유도 다시 살펴야 합니다. 모든 설정을 한꺼번에 바꾸는 basic/conservative 비교보다 이 실험이 반지름 하나의 영향을 읽기 쉽습니다.
+
+## 실행할 때 막히면
+
+- **`gripper_center`가 이미 있다는 오류**: 원본 `cobotta_pro_900.urdf`를 입력으로 사용하세요.
+- **위젯에 `gripper_center`가 없음**: 생성된 URDF를 선택하고 다시 Load했는지 확인하세요. USD prim 이름 목록과는 다릅니다.
+- **6개 관절 조건 오류**: Cobotta의 `robot_description.yaml`을 선택했는지 확인하세요. 다른 로봇 descriptor와 섞지 않습니다.
+- **로봇 mesh가 보이지 않음**: USD의 자산 참조를 확인하세요. 설정 생성 성공은 시각 자산 로딩 성공을 뜻하지 않습니다.
+- **설정을 바꿔도 이전처럼 움직임**: 기존 테스트를 멈추고 새 파일을 로드한 뒤 다시 시작하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Configuring RMPflow for a New Manipulator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_configure_rmpflow_denso.html)에 대응합니다. 파일 생성 도구와 실제 Cobotta의 Lula Test Widget 절차를 연결합니다.
+
+`tutorial.json`은 `not_run` 상태입니다. 이번 개정에서 공식 zip의 파일 목록과 생성 코드를 대조했으며, Cobotta 자산 로딩·GUI 조작·추종·충돌 회피를 새로 실행해 검증하지 않았습니다.

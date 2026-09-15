@@ -1,58 +1,124 @@
-# 83. Adding and Updating Extensions Guide
+# 83. 로컬 확장을 찾아 켜고 버전 확인하기
 
-권장 학습 순서 **83** · OmniGraph와 확장 개발 · 출처 ID `t172`
+## 이번에 배우는 것
 
-로컬 extension 경로 추가, 활성화, 버전 변경 확인과 registry UPDATE 동작을 구분한다. 이 폴더의 실제 작은 UI 확장으로 검색/활성/재로드를 연습한다.
+**작은 UI 확장을 등록해 큐브 생성 버튼을 실행하고, 검색 경로·활성화·버전 변경이 각각 무엇을 바꾸는지 확인합니다.**
 
-## 이 실습의 의도
+확장이 검색된다고 그 코드가 실행 중인 것은 아닙니다. 반대로 창이 열려 있어도 지금 선택된 것이 내가 수정한 폴더인지 확인해야 할 때가 있습니다. 이번에는 로컬 확장 하나로 발견부터 실제 버튼 동작까지 연결합니다.
 
-로컬 확장을 검색할 수 있는 상태, 실제 Python 모듈이 활성화된 상태, 선택된 package 버전이 바뀐 상태를 각각 확인하는 실습이다. `kr.version.lesson`은 버튼 한 번으로 USD Cube를 만들어 경로 검색과 버전 표시를 실제 callback 실행까지 연결한다. 제공 확장에는 registry 다운로드나 UPDATE 자동화가 없으며, 로컬 metadata 변경과 원격 registry 업데이트는 아래에서 따로 수행한다.
+| 구성 | 위치 또는 값 | 역할 |
+|---|---|---|
+| 확장 부모 폴더 | 이 폴더의 `exts` | Extension Search Paths에 등록할 위치 |
+| 확장 ID | `kr.version.lesson` | 검색할 패키지 이름 |
+| 메타데이터 | `config/extension.toml` | 버전 1.0.0, 의존성, 모듈 지정 |
+| Python 코드 | `kr_version_lesson/__init__.py` | 창과 버튼 callback 구현 |
+| 생성할 prim | `/World/ExtensionCube` | 버튼 실행 결과 |
 
-## 실행 후 확인할 것
+Callback은 버튼을 눌렀을 때 호출하도록 연결한 함수입니다. 확장 목록의 표시뿐 아니라 그 함수가 현재 Stage에 실제 큐브를 만드는지 확인합니다.
 
-- Extension Search Paths에 `exts` 부모 경로를 추가한 뒤 Third Party에서 `kr.version.lesson`, version=`1.0.0`이 발견되는지 확인한다. 검색 결과의 실제 경로도 보아 같은 이름의 다른 설치본을 활성화하지 않았는지 확인한다.
-- Enabled 후 **Korean Extension Starter** 창에서 **Create Cube**를 누르면 Stage의 `/World/ExtensionCube`와 Console의 `created /World/ExtensionCube`가 나타나야 한다. Cube의 size=`0.3`, translate=`(0, 0, 0.5)`를 Property에서 확인한다.
-- Cube는 `UsdGeom.Cube`만 정의하므로 강체·충돌 동작이 없고 Play해도 떠 있는 것이 정상이다. 같은 Stage에서 버튼을 다시 누르면 `ExtensionCube exists` 오류를 내어 기존 prim을 덮어쓰지 않는다.
-- 확장을 끄면 창이 없어지고 기존 Cube는 Stage에 남는지 확인한다. version을 `1.0.1`로 바꾼 후 목록에서 새 버전을 확인하고, 새 Stage에서 버튼까지 다시 실행해 실제 선택된 코드가 동작하는지 본다. 창 제목은 Python 문자열이므로 TOML title 변경과 자동으로 일치하지 않을 수 있다.
-- registry 실습에서는 현재 제공되는 버전과 INSTALL/UPDATE 표시를 확인한다. UPDATE가 없는 상태도 가능한 결과이며, 로컬 version 숫자만 바꾼 것은 원격 패키지를 내려받아 갱신한 결과가 아니다.
+## 1. 로컬 경로를 등록하고 버튼 실행하기
 
-## 준비
-
-Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
+Isaac Sim 5.1.0 GUI와 지원 NVIDIA GPU 환경에서 실행합니다. 저장소 루트에서 다음 명령을 사용하세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-"$ISAAC_SIM_PATH/isaac-sim.sh"
+~/isaacsim/isaac-sim.sh
 ```
 
-Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 경로로 식별하는 요소다. `File > New`는 새 장면을 여므로 보관할 작업은 먼저 저장한다. 이 패키지는 `asset/`, `docs/`, 저장소 README를 필요로 하지 않는다.
+1. **File > New**로 새 Stage를 엽니다.
+2. **Window > Extensions**의 우측 메뉴에서 **Settings**를 엽니다.
+3. **Extension Search Paths**의 `+`를 누르고 `src/83_tools_updating_extensions/exts`의 절대 경로를 추가합니다.
+4. **Third Party**에서 `kr.version.lesson` 또는 `Korean Extension Starter`를 검색합니다.
+5. 선택된 항목의 경로와 버전 `1.0.0`을 확인하고 Enabled를 켭니다.
+6. 열린 **Korean Extension Starter** 창에서 **Create Cube**를 누릅니다.
 
-## 로컬 경로 추가와 활성화
+검색 경로에는 `kr.version.lesson` 자체가 아니라 그 **부모인 `exts`**를 넣습니다. 이 폴더 안의 여러 확장을 함께 찾도록 하는 구조입니다. 같은 이름의 확장을 다른 위치에서도 등록했다면 실제 선택된 경로를 확인하세요.
 
-1. `Window > Extensions`를 열고 우측 메뉴→**Settings**로 들어간다.
-2. **Extension Search Paths**의 +를 눌러 이 패키지의 `/absolute/path/to/this-package/exts`를 추가한다. `kr.version.lesson` 폴더 자체가 아닌 **부모** 경로다.
-3. **Third Party** 탭에서 `kr.version.lesson` 또는 Korean Extension Starter를 검색한다. package version=`1.0.0`을 확인하고 Enabled를 켠다.
-4. 창의 **Create Cube**를 눌러 `/World/ExtensionCube`가 생기는지 확인한다. 로컬 경로를 검색한 것과 실제 코드를 활성화한 것은 서로 다른 단계다.
+### 실행 결과 확인하기
 
-## 로컬 버전 수정
+Stage에 `/World/ExtensionCube`가 생기고 Console에는 `created /World/ExtensionCube`가 나오는지 확인합니다. Property에서 크기 `0.3`, 위치 `(0, 0, 0.5)`를 확인하세요. m 단위 Stage에서는 한 변이 0.3 m인 큐브입니다.
 
-1. 확장을 끈다. 이 패키지 `exts/kr.version.lesson/config/extension.toml`의 version을 `1.0.0 → 1.0.1`로 바꾼다. title도 구분 가능한 이름으로 변경한다.
-2. Extensions 목록을 다시 검색/refresh하고 필요하면 Isaac Sim을 재시작한다. version 1.0.1이 선택되는지 확인한다.
-3. 새 Stage에서 확장을 켜고 Create Cube를 다시 실행한다. 버전 metadata 변경만으로 잘못된 코드가 고쳐지는 것은 아니므로 실제 callback도 확인한다.
+같은 Stage에서 버튼을 다시 누르면 `ExtensionCube exists` 오류가 납니다. 기존 큐브를 덮어쓰지 않게 한 코드의 동작입니다. 반복하려면 결과를 저장한 뒤 새 Stage를 열어 실행하세요.
 
-## Registry 설치/업데이트
+## 2. TOML과 Python이 연결되는 방식 읽기
 
-1. 이미 등록된 registry의 확장은 Search로 찾는다. 공식 예시는 `omni.kit.window.tests`이며 없다면 다른 이름으로 추측하지 말고 현재 registry의 제공 여부를 확인한다.
-2. 아직 설치되지 않은 항목은 **INSTALL**, 설치된 항목의 새 호환 버전이 있으면 **UPDATE**가 표시된다. UPDATE가 없다고 실패가 아니라 새 버전이 없거나 현재 app과 호환되지 않을 수 있다.
-3. 원문은 `isaacsim.asset.importer.mjcf`를 업데이트 예시로 든다. 이 실습의 5.1 재현성을 유지하려면 먼저 현재 버전/dependency를 기록하고 **5.1 호환 버전**을 선택한다. 일부 확장은 재시작이 필요하다.
-4. 새 registry를 추가할 때는 Settings의 **Extension Registries** +에 실제 제공자의 전체 URL을 넣는다. 로컬 search path와 registry URL은 서로 다른 입력란이다. 임의 URL을 예제로 실제 등록하지 않는다.
+### 설정에서 볼 부분
 
-extension.toml의 package version은 코드 배포 버전, dependency는 필요한 확장이다. extension 활성 상태는 USD Stage에 저장되는 geometry와 별개다. 한 변수 실험은 로컬 version만 1.0.1로 바꾸어 표시와 선택 버전이 바뀌는지 확인한다. 성공은 경로 발견, 실제 UI callback, 버전 표시 일치다. 예제가 안 보이면 Third Party 탭과 부모 경로, 중복 이름의 다른 설치본을 점검한다.
+`exts/kr.version.lesson/config/extension.toml`의 핵심은 다음과 같습니다.
 
-## 검증 범위
+```toml
+[package]
+version = "1.0.0"
+title = "Korean Extension Starter"
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
+[dependencies]
+"omni.kit.uiapp" = {}
+"omni.usd" = {}
 
-## 출처
+[[python.module]]
+name = "kr_version_lesson"
+```
 
-- [Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/updating_extensions.html).
+`package`는 목록에 표시할 패키지 정보입니다. `dependencies`는 UI와 USD를 사용하기 위해 필요한 확장을 나타냅니다. `python.module`은 활성화 시 불러올 Python 모듈 이름이며, 폴더의 `kr_version_lesson`과 연결됩니다.
+
+### 코드에서 볼 부분
+
+Python의 `on_startup()`은 창을 만들고 버튼에 함수를 연결합니다.
+
+```python
+ui.Button("Create Cube", clicked_fn=self.create_cube)
+```
+
+여기서 `self.create_cube`는 지금 함수를 실행한 결과가 아니라, 나중에 클릭할 때 부를 함수 자체입니다. 버튼을 누르면 그 함수에서 현재 Stage를 가져와 다음을 실행합니다.
+
+```python
+cube = UsdGeom.Cube.Define(stage, path)
+cube.CreateSizeAttr(0.3)
+cube.AddTranslateOp().Set(Gf.Vec3d(0, 0, 0.5))
+```
+
+크기와 이동값을 USD에 작성합니다. 강체나 충돌 schema를 적용하는 코드는 없으므로, Play해도 큐브가 공중에 머무는 것이 정상입니다. 큐브 생성은 시뮬레이션 재생을 기다리지 않고 버튼 클릭으로 이루어집니다.
+
+### 실행 결과 확인하기
+
+Extensions에서 이 확장을 끄세요. `on_shutdown()`이 창을 파괴하므로 창은 사라집니다. 그러나 그 함수는 Stage의 Cube를 삭제하지 않습니다. **확장 UI의 수명과 장면 데이터의 수명은 다릅니다.** 생성 결과를 보존하려면 File > Save As로 USD를 저장해야 합니다.
+
+다시 켜면 창이 새로 생깁니다. 이전 Cube가 있는 장면에서 버튼을 누르면 여전히 중복 오류가 나는지 확인하세요. 이것으로 비활성화가 장면을 초기화하는 동작이 아니라는 점을 알 수 있습니다.
+
+## 3. 로컬 버전과 Registry 업데이트 정리
+
+| 조작 | 바꾸는 대상 | 확인할 결과 |
+|---|---|---|
+| Search Path 추가 | 발견할 로컬 폴더 | 목록에 패키지 표시 |
+| Enabled 켜기 | 실행 중인 모듈과 UI | 창과 버튼 callback |
+| 로컬 `version` 편집 | 내가 가진 패키지의 메타데이터 | 선택된 버전 표시 |
+| Registry의 INSTALL / UPDATE | 제공자가 배포한 패키지 | 설치 또는 갱신된 패키지와 코드 |
+
+Registry는 배포된 확장을 찾고 내려받는 저장소입니다. Extensions의 Settings에서 로컬 경로는 **Extension Search Paths**, 제공자의 URL은 **Extension Registries**에 들어갑니다. 두 입력란을 서로 바꾸어 사용하지 않습니다.
+
+공식 안내의 설치 예시는 `omni.kit.window.tests`, 업데이트 예시는 `isaacsim.asset.importer.mjcf`입니다. 현재 Registry에서 항목과 호환 버전이 제공되는지 먼저 확인하세요. INSTALL은 패키지를 설치하고, 설치된 항목에 새 버전이 있으면 UPDATE로 갱신합니다. 일부 변경은 앱 재시작이 필요합니다.
+
+이 로컬 실습의 확인에는 원격 패키지 설치가 필요하지 않습니다. Registry 동작을 이어서 살펴볼 때는 현재 버전과 의존성을 기록하고 Isaac Sim 5.1과 호환되는 항목을 선택하세요. UPDATE 버튼이 없다는 것만으로 로컬 등록이 실패한 것은 아닙니다.
+
+## 4. 간단한 확인 실험
+
+확장을 끈 상태에서 `extension.toml`의 **version만 `1.0.0`에서 `1.0.1`로** 바꿔 보세요. title과 Python 코드는 유지합니다.
+
+1. Extensions 목록을 다시 검색하거나 새로 고침합니다. 이전 정보가 남으면 앱을 재시작합니다.
+2. 선택된 경로가 자신의 로컬 폴더이고 버전이 `1.0.1`인지 확인합니다.
+3. 새 Stage에서 확장을 켜고 Create Cube를 다시 누릅니다.
+
+예상하는 변화는 목록의 버전 표시입니다. 창 제목과 큐브 생성 동작은 코드를 바꾸지 않았으므로 같아야 합니다. 버전 번호를 높이는 것만으로 새 기능이 생기거나 원격 업데이트가 이루어지지 않는다는 점을 확인하세요.
+
+## 실행할 때 막히면
+
+- **확장이 검색되지 않음**: 등록한 경로가 `exts`의 절대 경로인지, Third Party 탭을 보고 있는지 확인하세요.
+- **다른 버전이 켜짐**: 같은 ID의 다른 설치본이 있는지 실제 패키지 경로를 확인하고 목록을 갱신하세요.
+- **목록에는 있지만 창이 없음**: Enabled 상태와 Console의 모듈 로딩 오류를 확인하세요. 검색과 활성화는 다른 단계입니다.
+- **`ExtensionCube exists`**: 이미 같은 경로의 prim이 있습니다. 결과를 저장하고 새 Stage에서 버튼을 다시 누르세요.
+- **확장을 껐는데 큐브가 남음**: 종료 함수는 UI만 정리합니다. Stage geometry가 남는 것이 이 코드의 동작입니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Adding and Updating Extensions Guide](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/updating_extensions.html)에 대응합니다. 공식 검색·활성화 절차에 로컬 UI 확장을 제공하여 실제 callback과 버전 표시까지 확인하도록 구성했습니다.
+
+이번 개정에서는 TOML과 Python 구현을 대조했습니다. GUI 로딩·버튼 클릭·Registry 설치는 실행하지 않았고 `tutorial.json`은 `not_run`입니다. 원격 패키지 갱신을 완료한 예제로 해석하지 않습니다.

@@ -1,91 +1,129 @@
-# 55. Lula Trajectory Generator: 점을 시간 궤적으로
+# 55. 지나갈 점에 시간을 붙여 궤적으로 만들기
 
-권장 학습 순서 **55** · 로봇 제어와 동작 계획 · 출처 ID `t139`
+## 이번에 배우는 것
 
-UR10으로 c-space 최적 시간 궤적, timestamped 궤적, task-space 직선 경로, 복합 path spec을 각각 생성합니다. 공식 예제의 핵심 모드를 독립 실행 옵션으로 제공하고 실제 관절 추종 상태를 기록합니다.
+**UR10의 관절 경유점과 말단 경로를 시간에 따른 목표열로 바꾸고, 실제 관절이 그 목표를 따라가는지 확인합니다.**
 
-## 이 실습의 의도
+도착 자세 하나만 정하는 것과 여러 점을 순서대로 지나가는 것은 다른 문제입니다. 경유점을 어떤 선으로 연결할지, 각 구간을 얼마나 빨리 통과할지 정해야 합니다. Lula Trajectory Generator는 이 경로에 시간을 부여하고 로봇이 받을 관절 목표를 만듭니다.
 
-UR10의 관절 waypoint 또는 말단 경로를 시간에 따른 관절 목표열로 바꾸고 실제 drive가 그 목표를 따라가는지 확인합니다. 기본 cspace 모드는 6축 관절 waypoint를 연결하며, 빨간 marker는 해당 waypoint의 말단 FK 위치를 보여 줍니다. 로봇 원점 아래로도 지나가는 경로를 위해 바닥을 z=−2 m에 두고, 시작 자세만 한 번 직접 설정한 뒤 물리 drive로 궤적을 재생합니다.
+| `--trajectory` | 입력 | 비교할 특징 |
+|---|---|---|
+| `cspace` | UR10 6축 관절값 네 점 | 관절 공간에서 연결, 시간이 계산됨 |
+| `timestamped` | 같은 네 점과 `[0, 5, 10, 13]`초 | 지정한 시각에 맞춰 통과 |
+| `taskspace` | 말단 위치 다섯 점과 방향 | `ee_link`의 직사각형 경로 |
+| `composite` | 이동·회전·원호와 관절 경로 | 서로 다른 경로 표현을 연결 |
 
-## 실행 후 확인할 것
+여기서 c-space는 **관절값을 좌표로 하는 공간**, task-space는 **말단의 위치와 방향을 표현하는 공간**입니다.
 
-- GUI에서 `/World/ur10`과 빨간 `/World/waypoint_*`를 확인합니다. base가 바닥보다 위에 고정되어 보이는 것은 열린 작업공간을 마련한 구성이고, cspace의 말단 이동이 marker 사이 직선일 필요는 없습니다.
-- `trajectory.json`의 `mode`, `action_count`, `duration_s`, `ground_plane_z_m`를 확인합니다. 생성된 action이 있다는 사실은 궤적 계산 성공이며 실제 전체 재생과 추종은 다음 항목으로 구분합니다.
-- `completed_sequence=true`는 모든 action을 적용할 만큼 스텝을 실행했다는 뜻입니다. 제한 실행에서는 `--steps`를 `action_count` 이상으로 잡고, timestamped의 13초 경로는 headless 기본 600스텝(10초)으로 완료되지 않을 수 있음을 확인합니다.
-- 15스텝마다 기록한 `trace`의 `target_positions`와 `measured_positions`를 비교해 6개 관절의 물리 추종을 확인합니다. `completed_sequence`가 true여도 오차가 크면 목표열 전달과 실제 추종 결과가 다른 상태입니다.
-- GUI를 계속 열어 두면 경로 재생 후 마지막 목표를 유지합니다. 끝에서 로봇이 멈춰 있는 것은 반복 재생을 하지 않는 설계이며, marker 통과와 관절 추종을 확인해도 전체 경로의 충돌 부재까지 검증한 것은 아닙니다.
+## 1. 먼저 관절 경유점 궤적 재생하기
 
-## 준비와 실행
+Isaac Sim 5.1과 5.1 Assets의 `Isaac/Robots/UniversalRobots/ur10/ur10.usd`가 필요합니다. 설정은 설치된 motion generation 확장의 `motion_policy_configs/universal_robots/ur10/`에서 읽습니다.
 
-이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
-
-5.1 Assets의 `Isaac/Robots/UniversalRobots/ur10/ur10.usd`와 종속 파일이 필요합니다. 설정은 설치된 `isaacsim.robot_motion.motion_generation/motion_policy_configs/universal_robots/ur10/ur10_robot.urdf`와 `rmpflow/ur10_robot_description.yaml`에서 읽습니다. 별도 학습 모델은 필요 없습니다.
-
-터미널에서 이 패키지 폴더(`55_motion_manipulators_lula_trajectory_generator`)로 이동한 뒤 아래를 실행합니다. 설치 위치가 다르면 첫 줄만 바꿉니다. Windows에서는 설치 폴더의 `python.bat`에 동일한 인수를 전달합니다.
+**저장소 루트**에서 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --trajectory cspace
-"$ISAAC_SIM_ROOT/python.sh" run.py --trajectory timestamped
-"$ISAAC_SIM_ROOT/python.sh" run.py --trajectory taskspace
-"$ISAAC_SIM_ROOT/python.sh" run.py --trajectory composite
+~/isaacsim/python.sh src/55_motion_manipulators_lula_trajectory_generator/run.py \
+  --trajectory cspace --steps 600
 ```
 
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 물리·제어 루프가 계속 실행됩니다. `--steps 600`처럼 양수를 지정하면 그 물리 스텝 수까지 실행하고 종료합니다. GUI의 `--steps 0`도 무제한이며, `--headless`에서 생략하면 기존 기본값인 600스텝을 실행합니다. headless의 0과 음수는 허용하지 않습니다. 창을 닫거나 지정한 스텝에 도달하면 실행 결과가 이 폴더의 새 `output/run_*` 디렉터리에 저장됩니다. `--output /절대경로/새폴더`를 지정할 수도 있지만 기존 폴더를 덮어쓰지 않습니다. 코드는 `SimulationApp`을 만든 뒤 Isaac/Omni/USD 모듈을 가져오고 마지막에 `close()`로 종료합니다.
+600번의 물리 계산, 즉 시뮬레이션 시간 10초가 지나면 결과를 저장하고 종료합니다. `--headless`를 추가하면 창 없이 실행합니다. GUI에서 `--steps`를 생략하면 경로를 재생한 뒤 **마지막 목표를 유지하면서** 창을 계속 열어 둡니다. 처음부터 반복 재생하는 코드는 아닙니다.
 
-## 작업공간과 바닥
+바닥이 로봇 원점보다 2 m 아래에 있습니다. 주어진 관절 경로가 원점 아래로도 내려가므로 작업 공간을 확보한 구성입니다. 이 실습에서 UR10은 고정 base를 사용하며 실제 설치대는 모델링하지 않습니다.
 
-UR10의 고정 base는 월드 원점에 두고, 참조용 바닥은 **z=−2 m**에 둡니다. 원문의 관절 waypoint를 그대로 유지하면 로봇의 일부 링크가 base보다 아래로 내려갑니다. 예를 들어 첫 waypoint의 shoulder lift 0.5 rad에서는 elbow frame의 높이가 URDF 기준 `0.1273 − 0.612·sin(0.5) ≈ −0.166 m`입니다. 여기에 z=0의 물리 바닥을 추가하면 관절 구동이 바닥 충돌에 막혀 trajectory target을 따라가지 못합니다.
+### 코드에서 볼 부분
 
-이 장면은 고정된 로봇을 열린 작업공간에서 움직이는 궤적 실습입니다. 바닥을 낮추어 원문의 경로를 위한 공간을 확보하며, 로봇의 collision과 물리 drive는 유지합니다. base mount가 실제 어떤 구조에 고정되는지는 이 실습에서 모델링하지 않습니다. 결과의 `ground_plane_z_m`에 사용한 바닥 높이를 기록합니다. 실제 작업대·장애물을 추가하려면 먼저 전체 링크 경로의 충돌 여유를 확인해야 합니다.
+`points`의 각 행은 여섯 관절 위치(rad)입니다. 기본 분기에서는 이 점들을 다음 호출로 연결합니다.
 
-## 단계별 실습
+```python
+trajectory = generator.compute_c_space_trajectory(points)
+actions = ArticulationTrajectory(
+    robot, trajectory, physics_dt=1./60.).get_action_sequence()
+```
 
-1. cspace 실행에서 빨간 waypoint marker를 확인합니다. 6개 값으로 된 UR10 관절 waypoint를 FK로 변환하여 표시합니다. joint 공간에서 부드럽게 이어도 end-effector가 task-space 직선으로 움직인다는 뜻은 아닙니다.
-2. timestamped 모드는 같은 waypoint를 `[0,5,10,13]`초에 통과하도록 요구합니다. 물리 시간 13초 분량이므로 제한 실행은 실제 생성된 `action_count` 이상으로 스텝 수를 잡고, 재생 완료 뒤 마지막 target을 유지하는지 확인합니다.
-3. taskspace 모드는 `[0.3,−0.3,0.1]`에서 시작하는 직사각형의 다섯 점과 고정 quaternion `[0,1,0,0]`을 전달합니다. `ee_link` frame의 위치/orientation을 task space에서 연결합니다.
-4. composite 모드는 task-space의 translation, rotation, three-point arc에 c-space 경로를 연결합니다. 초기 configuration과 path 사이에는 `TransitionMode.FREE`를 사용합니다. 이 연결 구간은 직선 task-space 이동으로 제한되지 않습니다.
-5. `trajectory.json`의 action_count와 duration_s를 확인합니다. completed_sequence가 false라면 창을 더 오래 열어 두거나, 제한 실행에서 `--steps`를 늘려 전체 궤적을 재생합니다. GUI는 궤적 재생 뒤에도 마지막 목표를 유지하며 물리를 계속 갱신합니다. trace의 target_positions와 measured_positions 차이는 물리 drive의 추종 오차입니다.
+첫 줄은 연속적인 시간 궤적을 만들고, 두 번째 줄은 그 궤적을 **1/60초 간격의 ArticulationAction 목록**으로 바꿉니다. `World`의 물리 간격도 1/60초로 맞춥니다. 목록을 적용하는 간격과 생성할 때 가정한 간격이 같아야 의도한 속도로 재생됩니다.
 
-## API와 시간간격
+시작 상태는 첫 action의 관절값으로 한 번 맞춥니다. 이후에는 다음처럼 물리 drive에 목표를 전달합니다.
 
-`LulaCSpaceTrajectoryGenerator.compute_c_space_trajectory()`는 위치 waypoint를 joint velocity/acceleration/jerk 제한 안에서 spline으로 잇고 시간을 선택합니다. `compute_timestamped_c_space_trajectory()`는 지정한 통과 시각도 사용합니다. 제한에 맞는 해를 못 찾으면 None을 반환하므로 이 코드는 명시적인 오류를 내며 멈춥니다.
+```python
+action = actions[min(step, len(actions)-1)]
+robot.apply_action(action)
+world.step(render=not args.headless)
+```
 
-`LulaTaskSpaceTrajectoryGenerator.compute_task_space_trajectory_from_points()`는 위치와 w,x,y,z quaternion을 각 점에 요구합니다. `compute_task_space_trajectory_from_path_spec()`는 여러 방식으로 정의된 경로를 받습니다. `ArticulationTrajectory(..., physics_dt=1/60)`는 그 연속 궤적을 로봇이 사용할 ArticulationAction 열로 샘플링합니다. 실제 World의 dt도 1/60로 맞춥니다.
+`min(...)` 덕분에 마지막 점을 지난 뒤에도 마지막 action을 계속 사용합니다. 매번 실제 관절 상태를 강제로 바꾸는 것이 아니므로 측정값과 목표값을 비교할 수 있습니다.
 
-첫 action의 joint_positions로 시작 상태를 한 번 설정합니다. 이는 예제 시작을 맞추기 위한 teleport이며 재생 중에는 `apply_action()`으로 drive target을 전달합니다. 반대 순서로 매 스텝 `set_joint_positions()`를 호출하면 실제 물리 추종을 측정하지 못합니다.
+### 실행 결과 확인하기
 
-## 고급 path spec 실험
+결과는 이 폴더의 새 `output/run_*/trajectory.json`입니다.
 
-코드의 composite 분기에서 `lula.create_task_space_path_spec(Pose3(rotation, translation))` 이후 다음 중 한 동작만 교체하여 실행합니다.
+| 항목 | 의미 |
+|---|---|
+| `action_count` | 생성한 목표 표본 수 |
+| `duration_s` | `(action_count - 1) / 60`으로 기록한 목표열의 시간 길이 |
+| `completed_sequence` | 모든 action을 적용할 만큼 물리 단계를 진행했는지 |
+| `ground_plane_z_m` | 이번 장면의 바닥 높이, −2 m |
+| `trace` | 15단계마다 기록한 관절 목표와 실제 위치 |
 
-- `add_linear_path(Pose3(...))`: 위치와 회전을 함께 보간합니다.
-- `add_translation(...)`, `add_rotation(...)`: 나머지 pose 성분을 고정합니다.
-- `add_three_point_arc(target, midpoint, constant_orientation=True)`: 중간점을 통과하는 원호에 고정 방향을 사용합니다. false면 접선 방향을 사용합니다.
-- `add_three_point_arc_with_orientation_target(Pose3(...), midpoint)`: 끝 orientation도 요구합니다.
-- `add_tangent_arc(target, constant_orientation=True/False)` 또는 `add_tangent_arc_with_orientation_target(Pose3(...))`: 이전 경로 접선에 맞는 원호를 연결합니다.
+`trace`의 `target_positions`와 `measured_positions`를 관절별로 빼 보세요. 두 배열의 차이가 추종 오차입니다. `completed_sequence=true`는 목표열을 끝까지 적용했다는 뜻이며, 실제 관절이 모두 정확히 도착했다는 판정은 아닙니다.
 
-`create_c_space_path_spec(q)`와 `add_c_space_waypoint(q_next)`는 관절 경로를 정의합니다. composite에 추가할 때 FREE는 연결 방법을 자유롭게, LINEAR_TASK_SPACE는 새 task path까지 말단 직선으로, SKIP은 새 path의 첫 점을 건너뛰어 연결합니다. geometry가 성립하지 않는 arc나 한계 근처 waypoint는 생성 실패가 될 수 있습니다. 원문 고급 예제의 모든 arc 종류를 위 실험에서 독립적으로 바꿔 볼 수 있게 설명합니다.
+화면의 빨간 경유점은 관절 waypoint를 FK로 계산한 말단 위치입니다. 관절 공간에서 점들을 연결했으므로 **말단이 빨간 점 사이를 직선으로 움직일 필요는 없습니다.**
 
-## 관찰 기준과 한 변수 실험
+## 2. 같은 점에 통과 시각을 지정하기
 
-동일 cspace waypoint에서 `--trajectory`만 cspace와 timestamped로 바꾸어 duration과 관절 추종을 비교합니다. marker를 통과하는 것과 collision-free라는 것은 다릅니다. trajectory generator는 이 예제에서 장애물 검사나 전역 계획을 수행하지 않습니다.
+이번에는 목표 자세는 그대로 두고 각 점을 지날 시각을 지정합니다.
 
-## 문제 해결
+```bash
+~/isaacsim/python.sh src/55_motion_manipulators_lula_trajectory_generator/run.py \
+  --trajectory timestamped --steps 900
+```
 
-UR10 대신 다른 robot USD를 쓰면 descriptor/URDF/frame/6개 waypoint가 모두 맞아야 합니다. None 반환 시 joint limit에 너무 가까운 점, 도달 불가능한 pose, 불가능한 통과 시간을 확인합니다. 일부 관절의 측정값만 목표와 크게 벌어진 채 고정되면 바닥·작업대와의 접촉을 먼저 확인합니다. 특히 shoulder lift가 약 0.109 rad에 막히는 현상은 원점 높이의 바닥을 추가했을 때 관찰된 증상입니다. 그래픽이 느려도 simulation dt는 설정값이므로 벽시계 시간으로 trajectory duration을 판단하지 않습니다.
+### 코드에서 볼 부분
 
-## 검증 범위
+```python
+trajectory = generator.compute_timestamped_c_space_trajectory(
+    points, np.array([0., 5., 10., 13.]))
+```
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 아래 관찰 기준으로 직접 결과를 확인합니다.
+네 행의 관절 waypoint가 각각 0, 5, 10, 13초에 대응합니다. 처음과 마지막 관절 자세는 같으므로 한 바퀴의 자세 변화를 거쳐 처음 자세로 돌아옵니다. 13초를 재생하려면 60 Hz에서 약 780개의 시간 간격이 필요합니다. 첫 표본까지 포함한 실제 `action_count`를 기준으로 실행 길이를 확인하세요. 위 명령은 900단계로 여유를 둡니다.
 
-## 출처
+### 실행 결과 확인하기
 
-- [NVIDIA Isaac Sim 5.1.0 — Lula Trajectory Generator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_trajectory_generator.html)
-- 원문의 학습 목적과 API를 유지하면서 한국어 설명, 명령행 옵션, 실행 길이 선택과 실제 상태 기록을 추가한 독립 예제입니다. 원문 전체를 복제한 문서가 아닙니다.
+두 실행의 `mode`, `action_count`, `duration_s`, `completed_sequence`를 비교하세요. 같은 경유점을 쓰더라도 통과 시간 조건 때문에 목표열과 길이가 달라집니다. 특히 headless 기본값 600단계는 10초이므로 timestamped의 전체 13초 구간을 재생하기에 부족합니다.
 
-## 실제 실행 기록
+말단 경로를 직접 지정하는 두 모드도 있습니다.
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+- **`taskspace`**: x=0.3 m 평면의 직사각형 다섯 점과 quaternion `[0, 1, 0, 0]`을 사용합니다. 위치와 방향을 지정한 `ee_link` 경로가 관절 목표로 변환됩니다.
+- **`composite`**: 위로 이동, 회전, 세 점으로 정한 원호에 관절 경로를 이어 붙입니다. 코드의 `TransitionMode.FREE`는 연결 구간을 말단 직선으로 제한하지 않습니다.
+
+이 두 모드는 위 명령의 `--trajectory` 값을 바꿔 실행할 수 있습니다. 생성 결과가 `None`이면 코드가 오류를 내며, 가능한 궤적을 만들지 못한 상태를 빈 재생으로 넘기지 않습니다. 경로 표현은 [공식 Lula Trajectory Generator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_trajectory_generator.html)에서 이어서 볼 수 있습니다.
+
+## 3. 경로, 시간 궤적, 실제 추종 정리
+
+```text
+경유점: 어디를 지나갈까?
+    → 경로: 점들을 어떻게 이을까?
+    → 시간 궤적: 언제 어디에 있을까?
+    → 60 Hz action: 이번 단계의 관절 목표는?
+    → 물리 drive: 실제 관절이 얼마나 따라왔을까?
+```
+
+바닥을 낮춘 것도 이 구분과 연결됩니다. 궤적 생성에 성공해도 장면에 추가한 바닥이 경로를 막으면 실제 관절은 목표를 따라갈 수 없습니다. 이 프로그램의 generator는 외부 장애물의 충돌 없는 경로를 탐색하지 않습니다. 실제 작업대나 장애물을 추가할 때는 경로와 물리 접촉을 함께 확인해야 합니다.
+
+## 4. 간단한 확인 실험
+
+2절의 timestamped 실행에서 **`--steps`만 900에서 600으로** 줄이세요. 같은 궤적을 생성하지만 중간에 실행을 마칩니다.
+
+`action_count`와 `duration_s`는 같은 설정의 궤적을 설명하고, `completed_sequence`는 `false`가 되어야 합니다. trace도 앞부분만 남습니다. **궤적을 만드는 데 성공한 것과 끝까지 재생한 것은 다른 결과**임을 확인해 보세요.
+
+## 실행할 때 막히면
+
+- **궤적을 만들지 못했다는 오류**: 바꾼 waypoint의 관절 한도, 말단 도달 가능성, 통과 시각을 확인하세요.
+- **로봇이 바닥에 걸려 일부 관절이 멈춤**: 바닥을 z=0으로 바꾸지 않았는지 확인하세요. 제공 경로는 base 아래로 내려갑니다.
+- **마지막 점까지 못 감**: `--steps`와 `action_count`를 비교하세요. GUI에서는 종료 한도를 생략하고 전체 재생을 관찰할 수 있습니다.
+- **끝에서 멈춘 채 창이 계속 열려 있음**: 전체 재생 뒤 마지막 목표를 유지하는 정상 동작입니다. 창을 닫으면 JSON을 저장합니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Lula Trajectory Generator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_trajectory_generator.html)에 대응합니다. 네 경로 모드를 명령행으로 선택하고 실제 관절 추종을 기록하도록 구성했습니다.
+
+기존 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에는 기본 cspace를 headless 600단계 실행해 **349개 action을 전부 적용**하고 기록된 최대 관절 오차가 약 **7.25×10⁻⁶ rad**였다는 관찰이 있습니다. 과거 기본 모드의 기록이며 현재 코드 재실행이나 다른 세 모드·GUI 동작의 결과는 아닙니다. 각 실행의 목표열 길이, 재생 완료, 실제 추종 오차를 구분해 확인하세요.

@@ -1,51 +1,165 @@
-# 05. Python 실행 방식: 내 반복문과 앱의 이벤트 루프
+# 05. 시뮬레이션은 누가 진행시키는가?
 
-권장 학습 순서 **05** · Python 실행 환경과 USD 기초 · 출처 ID `t092`
+## 이번에 배우는 것
 
-## 이 실습의 의도
+**같은 큐브 낙하를 두 가지 방식으로 실행하고, 물리 계산을 진행시키는 주체가 누구인지 비교합니다.**
 
-같은 0.4 m 낙하 큐브를 독립 Python과 Script Editor로 실행하여 누가 물리 시간을 전진시키는지 구분한다. 독립 실행은 자신의 `world.step()` 반복문을 사용하고, 대화형 실행은 앱의 이벤트 루프에 제어를 양보하면서 콜백으로 관찰한다. 원문 개념을 확인하도록 추가한 이 예제는 독립 실행의 `timeline.csv`와 대화형 실행의 높이 목록을 남기며, 두 방식의 앱 생성·초기화·종료 책임을 비교한다.
+01번에서는 `World`에 콜백을 등록해 큐브의 상태를 관찰했습니다. 이번에는 그 콜백이 실행되도록 **누가 시뮬레이션을 진행하는지** 살펴봅니다.
 
-## 실행 후 확인할 것
+| 구분 | 독립 Python 실행 | Isaac Sim의 Script Editor 실행 |
+|---|---|---|
+| 실습 파일 | `run.py` | `script_editor.py` |
+| 시작 장소 | 터미널 | 이미 열린 Isaac Sim 창 |
+| 앱 실행 | 코드에서 `SimulationApp` 생성 | 이미 앱이 실행 중 |
+| 물리 진행 | 내 반복문에서 `world.step()` 호출 | 재생 중인 앱이 진행 |
+| 내 코드의 역할 | 물리를 진행하고 결과 기록 | 앱을 기다리며 콜백으로 결과 관찰 |
+| 실습 완료 후 | 코드에서 앱 종료 | 물리 재생만 일시정지하고 창 유지 |
 
-- 독립 실행에서 `/World/FallingCube`가 Z=2 m에서 내려와 충분한 물리 시간 후 중심 높이 약 0.2 m에 놓이는지 확인한다. 강체와 충돌이 모두 있는 큐브이므로 공중에 계속 머무는 장면이 목표는 아니다.
-- `--steps 120`을 끝까지 실행한 `timeline.csv`의 `loop_iteration`, `physics_callbacks`, `simulated_time_s`를 비교한다. 기본 1/60초 간격에서 반복과 콜백이 120회이고 누적 물리 시간이 약 2초인지 확인한다. 이 시간은 앱 시작이나 렌더링에 걸린 실제 시간이 아니다.
-- Script Editor 실행은 물리 콜백으로 `(dt, 높이)`를 수집해 콘솔의 `Interactive callback samples`로 출력하고 타임라인을 일시정지해야 한다. 종료 판단은 앱 업데이트 120회가 아니라 물리 관찰이 120개 이상 모였는지에 따른다.
-- 대화형 task가 기다리는 동안 GUI가 반응하는지 확인한다. 수동 Pause를 누르면 샘플 수집이 멈춰 출력이 아직 나오지 않을 수 있으며, Play를 재개하면 이어진다. 이 경로는 CSV를 만들거나 GUI 앱을 닫지 않는다.
+두 방식 모두 한 변이 0.4 m인 큐브를 중심 높이 2 m에서 떨어뜨립니다. 바닥에 놓이면 중심 높이는 약 0.2 m가 됩니다.
 
-## 독립 패키지 준비와 실행 규칙
+## 1. 먼저 `run.py` 실행하기
 
-이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
+Isaac Sim 5.1이 설치된 환경에서 실행합니다. 아래는 저장소 루트에서 실행하는 Linux 명령입니다. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
-이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
+```bash
+~/isaacsim/python.sh src/05_python_usd_python_scripting_concepts/run.py --steps 120
+```
 
-## 순서대로 실습
+큐브가 떨어지고, 물리 계산 120 step이 끝나면 앱이 종료됩니다. 화면을 계속 열어 두고 싶으면 `--steps 120`을 빼세요. 창 없이 실행하려면 `--headless`를 추가합니다.
 
-1. 이 폴더에서 `~/isaacsim/python.sh run.py`를 실행한다. 화면이 필요 없으면 `--headless`를 추가한다.
-2. `run.py`의 `SimulationApp` 생성 전후 import를 비교한다. 옵션 읽기는 앱 없이 가능하지만 `omni`와 Core API는 Kit가 로드되어야 한다.
-3. `World`가 미터 단위 장면과 1/60초 물리 간격을 만들고, 지면과 높이 2 m의 큐브를 등록하는 부분을 찾는다.
-4. `world.reset()` 후 물리 콜백을 등록한다. 별도로 `--steps 120`을 지정해 실행하고 콜백의 `dt`를 누적한 시간이 약 2초인지 `timeline.csv`에서 확인한다. 실제 실행에 걸리는 벽시계 시간과 구분한다.
-5. GUI를 새로 실행하고 **File > New > Window > Script Editor** 순서로 작업 공간을 연다. `script_editor.py` 전체를 붙여 넣어 실행한다. 초기화는 `await reset_async()`로 진행한다.
-6. 자동으로 재생되어 120개 이상의 물리 콜백을 수집하고 멈추는지 확인한다. 앱 업데이트 한 번에 여러 물리 단계가 진행되면 정확히 120개보다 많을 수 있다. 스크립트가 앱의 `next_update_async()`에 제어를 양보하기 때문에 UI도 계속 반응한다.
-7. 콜백 수집 후에는 `remove_physics_callback`으로 자기 콜백만 제거한다. 대화형 실습 재실행은 새 GUI 인스턴스에서 한다.
+### 코드에서 볼 부분
 
-## API와 개념 해설
+실행 흐름은 다음과 같습니다.
 
-`Stage`는 객체와 속성을 담는 USD 문서다. `/World/FallingCube`는 객체의 Prim 경로다. `DynamicCuboid`는 시각 도형에 질량·강체·충돌을 함께 만든다. `World`는 초기화, 물리 시간, 객체 등록을 관리한다. 독립 Python에서 `world.step()`은 물리를 전진시킨다. 대화형 Python에서는 이미 돌아가는 Kit 앱이 스텝을 발생시키므로 콜백에 관찰 동작을 넣는다.
+```text
+SimulationApp으로 앱 시작
+    → World와 큐브 생성
+    → world.reset()으로 초기화
+    → 물리 콜백 등록
+    → 반복문에서 world.step() 호출
+    → 콜백 제거 및 앱 종료
+```
 
-`asyncio.ensure_future`는 앱의 비동기 루프에 일을 예약한다. `await`를 제거하고 긴 반복문을 Script Editor에서 돌리면 앱이 다른 일을 처리할 기회를 잃는다. 비동기 task의 오류는 완료 콜백에서 `task.result()`로 노출한다. 대화형 창에 독립 `run.py`를 붙여 넣어 앱을 중복 생성하지 않는다.
+이 예제의 콜백은 두 값을 셉니다.
 
-## 한 가지 변수 실험
+```python
+callback_count = 0
+elapsed_time = 0.0
 
-`--steps 120`으로 제한해 실행한 뒤 `--steps 60`으로 바꾼다. 독립 실행의 물리 시간이 절반이 되는지 CSV로 확인한다. 큐브는 이미 지면에 도달했을 수 있으므로 최종 높이만으로 시간 차이를 판단하지 않는다.
+def on_physics(dt):
+    nonlocal callback_count, elapsed_time
+    callback_count += 1
+    elapsed_time += float(dt)
 
-## 문제 해결
+world.add_physics_callback("count_physics", on_physics)
+```
 
-`World already exists` 오류는 이전 실습의 World가 살아 있는 경우다. 새 GUI 인스턴스를 연다. Script Editor를 수동 Pause한 경우 콜백 120개를 기다리는 task는 아직 종료하지 않으므로 Play를 다시 누른다. `timeline.csv`의 헤더만 있으면 앱 창을 너무 일찍 닫았는지 확인한다.
+- `callback_count`: 물리 콜백이 실행된 횟수
+- `dt`: 이번 물리 단계의 시간 간격(초)
+- `elapsed_time`: `dt`를 더해 구한 시뮬레이션 경과 시간
+- `nonlocal`: 함수 바깥에서 만든 두 변수를 함수 안에서 수정한다는 뜻
 
-## 출처와 검증 범위
+**콜백 등록만으로 물리가 계속 진행되지는 않습니다.** 이 파일에서는 반복문 안의 다음 호출이 물리를 진행시킵니다.
 
-- NVIDIA Isaac Sim **5.1.0**, [Python Scripting Concepts](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/python_scripting_concepts.html): 이 패키지가 대응하는 공식 페이지. 문장과 실행 코드는 초심자용으로 재구성했다.
-- 구현 API는 로컬 Isaac Sim 5.1 설치의 해당 `isaacsim`/Kit/USD 소스와 대조했다. 원문의 외부 최신 버전 링크는 5.1 설치와 UI/API가 다를 수 있다.
+```python
+world.step(render=not args.headless)
+```
 
-Python 구문 컴파일과 일반 Python의 `--help`는 앱 없이 확인할 수 있다. 이 검사는 GPU, 자산 로딩, GUI 표현, 물리 결과의 실제 실행 검증을 대신하지 않는다. `tutorial.json`의 verification이 `not_run`이면 해당 시뮬레이터 실행은 아직 검증되지 않은 상태다.
+물리 단계 직전에 `on_physics(dt)`가 호출됩니다. `world.step()`이 끝나면 반복문에서 콜백 횟수, 누적 시간, 큐브 높이를 CSV 한 행으로 기록합니다.
+
+### 실행 결과 확인하기
+
+결과는 이 튜토리얼 폴더의 `output/날짜-시간/timeline.csv`에 저장됩니다.
+
+| CSV 열 | 의미 | 120단계를 끝낸 마지막 행의 기대값 |
+|---|---|---|
+| `loop_iteration` | 반복문 실행 횟수 | `120` |
+| `physics_callbacks` | 물리 콜백 실행 횟수 | `120` |
+| `simulated_time_s` | 누적 물리 시간 | 약 `2.0`초 |
+| `cube_height_m` | 큐브 중심의 높이 | 약 `0.2` m |
+
+코드에서 물리 간격을 `1/60초`로 설정했으므로 **120 × 1/60 = 2초**입니다.
+
+여기서 2초는 **시뮬레이션 속 시간**입니다. 앱을 켜거나 화면을 그리는 데 시간이 더 걸리면, 실제 시계로 잰 실행 시간은 더 길 수 있습니다.
+
+## 2. 같은 장면을 Script Editor에서 실행하기
+
+이번에는 Isaac Sim 앱을 먼저 켜고, 그 안에서 코드를 실행합니다.
+
+1. 앞의 `run.py` 실행을 종료합니다.
+2. `~/isaacsim/isaac-sim.sh`로 **새 Isaac Sim 창**을 엽니다.
+3. **File > New**로 빈 장면을 준비합니다.
+4. **Window > Script Editor**를 엽니다.
+5. 이 폴더의 `script_editor.py` 전체를 붙여 넣고 실행합니다.
+
+`run.py`가 아니라 **`script_editor.py`를 붙여 넣으세요.** 이미 실행 중인 앱 안에서는 `SimulationApp`을 다시 생성하지 않습니다.
+
+### 코드에서 볼 부분
+
+장면을 만들고 `await world.reset_async()`로 초기화한 뒤, 다음 콜백을 등록합니다.
+
+```python
+samples = []
+
+def record(dt):
+    samples.append((float(dt), float(cube.get_world_pose()[0][2])))
+
+world.add_physics_callback("interactive_record", record)
+```
+
+앱이 물리를 진행할 때마다 `record()`가 호출되어 **시간 간격과 큐브 높이**를 저장합니다. 내 코드는 다음 반복문에서 관찰값이 충분히 모이기를 기다립니다.
+
+```python
+while len(samples) < 120:
+    await omni.kit.app.get_app().next_update_async()
+```
+
+여기서 `await`는 **“내 작업은 잠시 기다릴 테니, 앱이 화면 갱신과 물리 계산 등 다른 작업을 처리하게 하자”**는 뜻입니다. 이 반복문에는 `world.step()`이 없습니다. 물리는 재생 중인 앱이 진행합니다.
+
+앱이 이런 작업을 반복해서 처리하는 흐름을 **이벤트 루프**라고 부릅니다. `await` 없이 기다리는 반복문만 계속 돌리면 앱이 다른 작업을 처리하지 못해 화면이 멈출 수 있습니다.
+
+파일 마지막의 `asyncio.ensure_future(run_interactive())`는 이 비동기 작업을 앱의 루프에서 실행하도록 예약합니다.
+
+### 실행 결과 확인하기
+
+- 큐브가 떨어집니다.
+- 물리 관찰값이 **120개 이상** 모이면 콜백을 제거하고 재생을 일시정지합니다.
+- 출력 영역에 `Interactive callback samples:`와 `(dt, 높이)` 목록이 나타납니다.
+- Isaac Sim 창은 그대로 남습니다. 이 방식은 CSV를 저장하지 않습니다.
+
+앱 업데이트 한 번과 물리 단계 한 번은 항상 같지는 않으므로, 이 코드는 앱 업데이트 횟수 대신 **실제 콜백으로 모은 관찰값 수**를 확인합니다.
+
+## 3. 두 방식의 차이 정리
+
+```text
+run.py
+내 반복문 → world.step() → 물리 콜백 실행 및 물리 계산 → 결과 기록
+
+script_editor.py
+앱의 재생 흐름 → 물리 콜백 실행 및 물리 계산
+내 비동기 작업 → await로 기다림 → 관찰값이 충분한지 확인
+```
+
+**두 방식 모두 콜백을 사용합니다. 차이는 독립 실행에서는 내가 물리 진행을 호출하고, Script Editor에서는 앱의 진행 흐름에 맞춰 내 코드를 실행한다는 점입니다.**
+
+## 4. 간단한 확인 실험
+
+`run.py`를 `--steps 60`으로 실행해 보세요.
+
+- 반복 횟수와 콜백 횟수: 60회
+- 누적 물리 시간: 약 1초
+
+큐브는 1초와 2초 모두 바닥에 놓여 있을 수 있습니다. **시간 차이는 마지막 큐브 모습보다 CSV의 `simulated_time_s`로 확인**하세요.
+
+## 실행할 때 막히면
+
+- **`No module named isaacsim`**: 일반 Python 대신 Isaac Sim의 `python.sh`로 실행하세요. Windows에서는 `python.bat`을 사용합니다.
+- **Script Editor에서 기존 World 관련 오류**: 새 Isaac Sim 창에서 실습하세요. 이 코드는 이미 World가 있으면 실행을 중단합니다.
+- **Script Editor에서 결과 출력이 안 나옴**: 수동으로 Pause했다면 Play를 재개하세요. 물리가 멈추면 콜백 관찰값도 늘어나지 않습니다.
+- **`run.py`가 계속 실행됨**: `--steps`를 생략한 GUI 실행의 정상 동작입니다. 창을 닫거나 단계 수를 지정하세요. Headless 실행은 생략 시 120단계입니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Python Scripting Concepts](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/python_scripting_concepts.html)에 대응하는 한국어 실습입니다. 앱 시작과 독립 Python 실행은 [Python Environment](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/manual_standalone_python.html), 물리 콜백은 [Hello World](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_world.html)를 함께 참고하세요.
+
+큐브 설정, CSV 기록, 120개 관찰값 수집은 개념을 비교하기 위해 이 폴더에 구성한 실습 코드입니다. 위 기대값은 실행 시 확인할 기준이며, 실행 검증 상태는 `tutorial.json`을 참고하세요.

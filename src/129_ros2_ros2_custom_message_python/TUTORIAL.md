@@ -1,80 +1,132 @@
-# 129. ROS 2 Python Custom Messages
+# 129. 내가 정의한 ROS 메시지를 Isaac Sim에서 보내기
 
-권장 학습 순서 **129** · ROS 2 응용과 사용자 인터페이스 · 출처 ID `t030`
+## 이번에 배우는 것
 
-**목표:** 로컬 `.msg`에서 ROS 인터페이스를 빌드하고 Isaac Sim 내부 Python에서 가져와 실제로 발행합니다. `ros_ws/src/custom_message`에 CMake, package.xml, SampleMsg 정의를 모두 포함합니다. Linux 실습이며 원문 기준 Windows/WSL custom Python workflow는 지원되지 않습니다.
+**같은 `.msg` 정의를 시뮬레이터와 외부 ROS 환경에 맞게 빌드하고, Isaac Sim의 Python에서 만든 메시지를 외부 터미널로 받습니다.**
 
-## 이 실습의 의도
+메시지 정의가 같아도 Python에서 가져올 수 있는 빌드 결과는 실행 환경에 따라 다릅니다. Isaac Sim 5.1은 Python 3.11을 사용하고 Ubuntu 24.04의 시스템 Jazzy는 Python 3.12를 사용합니다. 이번에는 이 두 환경이 같은 메시지를 DDS로 주고받게 합니다.
 
-같은 사용자 메시지 정의를 Isaac Sim의 Python 3.11 환경과 외부 시스템 ROS 환경에서 각각 사용할 수 있게 빌드하고 DDS로 교환하는 실습입니다. `SampleMsg`의 중첩 문자열과 정수 두 필드로 타입 생성·import·발행·수신을 단계별로 구분합니다. 기본 `run.py`는 메시지를 구성해 30 app update마다 반복 발행하며 로봇이나 USD 물체를 만들지 않습니다. 메시지 빌드와 외부 echo는 실행기가 자동 처리하지 않으므로 아래 두 환경 준비가 필요합니다.
+| 구성 | 사용하는 환경 | 만들어지는 것 |
+|---|---|---|
+| `ros_ws/src/custom_message` | 공통 소스 | `SampleMsg.msg`, CMake, 패키지 정의 |
+| 공식 `build_ros.sh` | Docker 기반 Python 3.11 빌드 | Isaac Sim에서 import할 ROS와 메시지 |
+| 로컬 `ros_ws`의 colcon 빌드 | 시스템 ROS Python | 외부 CLI가 읽을 메시지 |
+| `run.py` | Isaac Sim `python.sh` | `/custom_sample` 반복 발행 |
 
-## 실행 후 확인할 것
+이 예제는 로봇이나 USD 물체를 만들지 않습니다. 화면보다 메시지 생성·수신을 관찰하는 실습입니다.
 
-- **양쪽 메시지 정의:** 외부 ROS의 `ros2 interface show custom_message/msg/SampleMsg`에서 `std_msgs/String my_string`과 `int64 my_num`을 확인합니다. 시뮬레이터용 빌드도 같은 `.msg`를 사용해야 합니다.
-- **로컬 구성과 실제 수신:** Isaac Sim 터미널의 `Constructed custom message:`는 import와 필드 대입 결과입니다. 별도 ROS 터미널의 `/custom_sample` echo에 `my_string` 안의 `data`가 `hello from Isaac Sim 5.1`, 기본 `my_num`이 23으로 도착해야 통신까지 확인한 것입니다.
-- **한 필드 변경:** `--number 24`로 새로 실행하면 수신 문자열은 유지되고 정수만 24로 바뀌는지 확인합니다. `.msg` 자체의 구조를 바꾸었다면 양쪽 workspace를 다시 빌드·source해야 합니다.
-- **화면과 발행 주기:** GUI에 로봇이나 물체가 없어도 이 예제에서는 정상입니다. 발행 간격은 30 app update 기준이므로 고정 30 Hz 또는 고정 벽시계 주기로 해석하지 않습니다.
-- **관찰 시간:** 제한 없는 GUI는 창을 닫을 때까지 메시지를 보내며, 짧은 `--steps` 실행은 DDS discovery 전에 끝날 수 있습니다. 외부 수신기를 준비하고 실제 메시지를 받은 뒤 종료 여부를 판단합니다.
+## 1. 같은 메시지를 두 환경에서 빌드하기
 
+아래는 **Linux Ubuntu 24.04, ROS 2 Jazzy, Isaac Sim 5.1.0** 기준입니다. 지원 GPU, 동작하는 Docker, ROS 개발 도구와 `colcon`이 필요합니다. 원문의 사용자 Python 메시지 과정은 Windows/WSL에서 지원되지 않습니다.
 
-**실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 앱 업데이트와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 지정하면 해당 횟수 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1200회를 사용합니다. 이전 `--frames` 옵션은 `--steps` 없는 headless 실행의 횟수만 정하며, GUI 종료에는 영향을 주지 않습니다. `--steps`를 지정하면 `--frames`보다 우선하며 0과 음수는 허용하지 않습니다.
+저장소 루트의 Bash에서 경로를 보관하고, 실습용 공식 워크스페이스를 준비하세요.
 
-## 메시지 구조
+```bash
+export LESSON_DIR="$PWD/src/129_ros2_ros2_custom_message_python"
+export ROS_WS_REPO="$HOME/IsaacSim-ros_workspaces-5.1.0"
+git clone --branch IsaacSim-5.1.0 --recurse-submodules https://github.com/isaac-sim/IsaacSim-ros_workspaces.git "$ROS_WS_REPO"
+```
 
-`SampleMsg`는 `std_msgs/String my_string`과 `int64 my_num` 두 필드입니다. `my_string`은 문자열 자체가 아닌 중첩 메시지이므로 Python에서는 `message.my_string.data`에 씁니다. `my_num`은 부호 있는 64비트 정수입니다. ROS `.msg`는 Python 클래스만 만드는 파일이 아니며 DDS 직렬화와 C type support도 생성합니다.
+공식 `jazzy_ws/src/custom_message`에는 같은 이름의 예제가 있습니다. 새 실습 checkout의 해당 패키지를 로컬 정의와 맞춥니다. 같은 이름의 패키지를 다른 경로에 하나 더 넣으면 colcon이 중복 패키지로 판단하므로 기존 경로를 사용하세요.
 
-## 준비와 두 종류의 빌드
+```bash
+cp "$LESSON_DIR/ros_ws/src/custom_message/msg/SampleMsg.msg" "$ROS_WS_REPO/jazzy_ws/src/custom_message/msg/SampleMsg.msg"
+cp "$LESSON_DIR/ros_ws/src/custom_message/CMakeLists.txt" "$ROS_WS_REPO/jazzy_ws/src/custom_message/CMakeLists.txt"
+cp "$LESSON_DIR/ros_ws/src/custom_message/package.xml" "$ROS_WS_REPO/jazzy_ws/src/custom_message/package.xml"
+cd "$ROS_WS_REPO"
+./build_ros.sh -d jazzy -v 24.04
+```
 
-Isaac Sim 5.1.0의 Python은 3.11입니다. Ubuntu 22.04의 Humble은 기본 3.10, Ubuntu 24.04의 Jazzy는 기본 3.12이므로 **시뮬레이터용**과 **외부 ROS용**을 각각 빌드합니다. 아래는 Ubuntu 22.04/Humble 기준이며 Docker와 ROS 개발 도구가 설치돼 있어야 합니다.
+기존 checkout을 재사용할 때는 자신의 패키지 변경을 먼저 보존하세요. 이 빌드 도구는 `build_ws/jazzy`의 기존 생성물을 다시 만듭니다. 새 checkout에서 시작하면 이전 빌드와 혼동하지 않고 결과를 확인할 수 있습니다.
 
-1. 이 패키지 폴더에서 절대 경로를 저장합니다.
+### 설정에서 볼 부분
 
-   ```bash
-   export LESSON_DIR="$PWD"
-   export ROS_WS_REPO="$HOME/IsaacSim-ros_workspaces-5.1.0"
-   git clone --branch IsaacSim-5.1.0 https://github.com/isaac-sim/IsaacSim-ros_workspaces.git "$ROS_WS_REPO"
-   ```
+`SampleMsg.msg`는 다음 두 필드입니다.
 
-2. 공식 workspace의 `humble_ws/src/custom_message`에는 같은 이름의 예제가 있으므로 **동시에 두 custom_message 패키지를 넣지 않습니다**. 이 실습을 위한 새 checkout에서 해당 패키지의 msg/CMakeLists.txt/package.xml을 로컬 파일로 교체하거나 내용이 일치하는지 확인합니다. 다른 패키지를 삭제하지 않습니다. 예:
+```text
+std_msgs/String my_string
+int64 my_num
+```
 
-   ```bash
-   cp "$LESSON_DIR/ros_ws/src/custom_message/msg/SampleMsg.msg" "$ROS_WS_REPO/humble_ws/src/custom_message/msg/SampleMsg.msg"
-   cd "$ROS_WS_REPO"
-   git submodule update --init --recursive
-   ./build_ros.sh -d humble -v 22.04
-   ```
+`my_string`은 문자열을 담은 **중첩 메시지**이므로 Python에서는 `message.my_string.data`에 씁니다. `my_num`은 부호 있는 64비트 정수입니다.
 
-   이 명령은 Docker에서 Python 3.11 ROS 및 workspace를 빌드하므로 시간/디스크/네트워크가 필요합니다. Python 실행 파일 옵션 하나만 3.11로 바꾸는 것은 ROS type support의 ABI를 바꾸지 못합니다.
-3. **깨끗한 시뮬레이터용 Bash**에서 시스템 `/opt/ros` 대신 아래 두 경로를 source합니다.
+CMake의 핵심은 다음 호출입니다.
 
-   ```bash
-   export ISAAC_SIM="$HOME/isaacsim"
-   export ROS_WS_REPO="$HOME/IsaacSim-ros_workspaces-5.1.0"
-   source "$ROS_WS_REPO/build_ws/humble/humble_ws/install/local_setup.bash"
-   source "$ROS_WS_REPO/build_ws/humble/isaac_sim_ros_ws/install/local_setup.bash"
-   export ROS_DOMAIN_ID=0
-   export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-   # 이 패키지 폴더로 이동 후
-   "$ISAAC_SIM/python.sh" run.py --number 23
-   ```
+```cmake
+rosidl_generate_interfaces(${PROJECT_NAME} "msg/SampleMsg.msg" DEPENDENCIES std_msgs)
+```
 
-4. 별도 **시스템 ROS 터미널**에서는 이 패키지 자체의 workspace를 빌드합니다.
+이 빌드는 Python 클래스뿐 아니라 메시지 직렬화에 필요한 타입 지원도 생성합니다. 일반 Python 경로만 바꾸어서는 이미 다른 Python 버전으로 만들어진 바이너리를 호환되게 만들 수 없습니다.
 
-   ```bash
-   source /opt/ros/humble/setup.bash
-   cd /absolute/path/to/this/package/ros_ws
-   colcon build --packages-select custom_message
-   source install/local_setup.bash
-   export ROS_DOMAIN_ID=0
-   ros2 interface show custom_message/msg/SampleMsg
-   ros2 topic echo /custom_sample
-   ```
+### 실행 결과 확인하기
 
-   `my_string.data`와 `my_num: 23`이 실제 수신되어야 합니다. GUI는 창을 닫을 때까지 유지되므로 DDS discovery와 메시지 수신을 기다릴 수 있습니다. Jazzy는 `jazzy_ws`, `-d jazzy -v 24.04`와 `build_ws/jazzy/...`를 대응시킵니다.
+외부 수신기를 준비할 **시스템 ROS 터미널**에서 저장소 루트로 이동하여 로컬 메시지 패키지도 빌드합니다.
 
-## Script Editor 방식
+```bash
+export LESSON_DIR="$PWD/src/129_ros2_ros2_custom_message_python"
+source /opt/ros/jazzy/setup.bash
+cd "$LESSON_DIR/ros_ws"
+colcon build --packages-select custom_message
+source install/local_setup.bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 interface show custom_message/msg/SampleMsg
+ros2 topic echo /custom_sample custom_message/msg/SampleMsg
+```
 
-위 Python 3.11 workspace 두 개를 source한 터미널에서 `"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge`로 시작합니다. **Window > Script Editor**에서 다음을 실행합니다.
+인터페이스에 두 필드가 나타나는지 확인합니다. echo는 발행자가 시작할 때까지 기다리게 둡니다. 여기까지는 외부 타입과 수신기를 준비한 상태입니다.
+
+## 2. Isaac Sim에서 메시지 만들고 발행하기
+
+**시스템 `/opt/ros`를 source하지 않은 새 Bash**를 열고 저장소 루트로 이동합니다. 이쪽에는 Python 3.11로 빌드한 두 워크스페이스를 source하세요.
+
+```bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_WS_REPO="$HOME/IsaacSim-ros_workspaces-5.1.0"
+source "$ROS_WS_REPO/build_ws/jazzy/jazzy_ws/install/local_setup.bash"
+source "$ROS_WS_REPO/build_ws/jazzy/isaac_sim_ros_ws/install/local_setup.bash"
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+"$ISAAC_SIM/python.sh" src/129_ros2_ros2_custom_message_python/run.py --number 23
+```
+
+### 코드에서 볼 부분
+
+`run.py`는 SimulationApp을 만든 뒤 브리지를 활성화하고 `rclpy`와 사용자 메시지를 가져옵니다.
+
+```python
+publisher = node.create_publisher(SampleMsg, '/custom_sample', 10)
+message = SampleMsg()
+message.my_string.data = 'hello from Isaac Sim 5.1'
+message.my_num = args.number
+```
+
+`10`은 publisher 큐 깊이입니다. 반복문에서는 30번의 앱 업데이트마다 발행합니다.
+
+```python
+if frame % 30 == 0:
+    publisher.publish(message)
+rclpy.spin_once(node, timeout_sec=0.0)
+app.update()
+```
+
+`spin_once(..., timeout_sec=0.0)`는 메시지를 기다리느라 앱 업데이트를 붙잡지 않도록 바로 반환합니다. 여기에는 `World`나 `world.step()`이 없습니다. **30 app update 간격을 30 Hz나 30 물리 단계로 읽지 마세요.** 실제 발행 간격은 앱의 업데이트 속도에 영향을 받습니다.
+
+### 실행 결과 확인하기
+
+시뮬레이터 터미널의 `Constructed custom message:`는 import와 필드 대입이 끝났다는 뜻입니다. 외부 echo에서 다음 값을 받아야 통신까지 확인한 것입니다.
+
+```yaml
+my_string:
+  data: hello from Isaac Sim 5.1
+my_num: 23
+```
+
+GUI는 창을 닫을 때까지 유지됩니다. 유한 실행은 `--steps 1200`을 추가하고, 창 없이 실행하려면 `--headless`를 사용하세요. Headless에서 `--steps`를 생략하면 기본 `--frames 1200`이 적용됩니다. `--frames`는 GUI 종료 횟수를 정하지 않으며 `--steps`가 있으면 그 값이 우선합니다.
+
+### Script Editor의 import 확인과 비교하기
+
+standalone을 종료한 뒤 같은 Python 3.11 환경에서 `"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge`로 GUI를 시작합니다. **Window > Script Editor**에서 다음을 실행하세요.
 
 ```python
 from custom_message.msg import SampleMsg
@@ -84,21 +136,36 @@ sample.my_num = 23
 print(sample)
 ```
 
-이 출력은 import/필드 대입 확인이며 DDS 수신 검증은 아닙니다. standalone `run.py`와 별도 echo를 사용하면 통신까지 확인합니다.
+이 방식은 메시지 import와 필드 대입을 확인합니다. Publisher를 만들지 않았으므로 외부 echo에 새 메시지가 오는 것을 기대하지 않습니다. 같은 타입이라도 **Python 객체 생성과 ROS 발행은 별도 동작**이라는 차이를 확인하세요.
 
-## API와 개념
+## 3. 정의·빌드·전송의 관계 정리
 
-`rosidl_generate_interfaces`는 `.msg`에서 언어별 인터페이스를 생성하고 `DEPENDENCIES std_msgs`는 중첩 타입을 찾아줍니다. `ament_export_dependencies`는 설치 후 소비자가 runtime 의존성을 찾도록 합니다. `create_publisher(SampleMsg, '/custom_sample', 10)`에서 10은 큐 깊이입니다. `publish`는 전송 요청이며 수신 보장이 아닙니다.
+```text
+같은 SampleMsg.msg
+  ├─ Python 3.11 빌드 → Isaac Sim rclpy → 발행
+  └─ 시스템 ROS 빌드 → 외부 ROS CLI  ← 수신
+```
 
-이 예제에는 USD 로봇이 없습니다. ROS 메시지 정의/언어 바인딩을 분리해서 배우기 위한 원문 범위이며, SimulationApp은 내부 ROS 브리지를 로드할 Kit 프로세스를 제공합니다.
+**양쪽에서 같은 메시지 정의를 사용하고, 각 프로세스는 자신의 실행 환경에 맞는 빌드 결과를 읽습니다.** `.msg` 필드를 바꾸면 양쪽을 다시 빌드해야 하지만, `--number`처럼 값만 바꾸면 메시지 구조는 같으므로 다시 빌드할 필요가 없습니다.
 
-## 한 가지 변수 실험과 문제 해결
+## 4. 간단한 확인 실험
 
-`--number 24`로 다시 실행하고 echo의 정수만 바뀌는지 확인합니다. `.msg`의 필드를 바꾸는 실험은 **양쪽 빌드와 source를 모두 다시** 수행해야 합니다. `ModuleNotFoundError`는 workspace source/path를, `_rclpy_pybind11`/undefined symbol은 Python ABI와 기본 ROS 혼입을 확인합니다. 같은 이름의 message package가 두 workspace에서 서로 다른 정의로 설치되면 먼저 overlay 순서를 정리합니다.
+열려 있는 Isaac Sim을 종료하고 2절의 `run.py` 명령에서 **`--number 23`만 `--number 24`**로 바꾸어 다시 실행해 보세요. 외부 echo는 그대로 유지합니다.
 
-## 출처와 검증 범위
+문자열은 같고 `my_num`만 24로 바뀌어야 합니다. 이 실험은 타입 생성 과정을 건드리지 않고 실행 시 입력값이 메시지 필드까지 도달하는지 확인합니다.
 
-- [NVIDIA Isaac Sim 5.1.0 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_custom_message_python.html)
-- [5.1.0 ROS 설치와 Python 3.11 환경](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)
+## 실행할 때 막히면
 
-공식 원문의 실습을 이 폴더 안에 다시 구성하고 한국어 설명을 작성했습니다. Isaac Sim/ROS를 실제로 실행한 결과는 아직 검증하지 않았습니다(`verification: not_run`). 구문 검사나 `--help` 성공은 DDS 통신, 렌더링, GPU 동작의 검증이 아닙니다.
+- **`No module named custom_message`**: 실행하는 터미널에 맞는 설치 결과를 source했는지 확인하세요. 시뮬레이터는 `build_ws/jazzy/...`의 Python 3.11 빌드입니다.
+- **`_rclpy_pybind11` 또는 undefined symbol 오류**: 시스템 Python 3.12용 ROS가 Isaac Sim 환경에 섞였는지 확인하세요. 새 Bash에서 3.11 빌드만 source합니다.
+- **duplicate package 오류**: 공식 `jazzy_ws/src`에 `custom_message`가 두 군데 들어갔는지 확인하세요.
+- **구성 로그는 있는데 echo가 안 나옴**: Domain ID·RMW·양쪽 메시지 정의를 확인하고 짧은 `--steps` 제한을 제거하여 discovery 시간을 확보하세요.
+- **GUI가 비어 보임**: 이 스크립트는 메시지만 발행합니다. 결과는 외부 ROS 터미널에서 확인합니다.
+
+Ubuntu 22.04/Humble은 `humble_ws`, `build_ws/humble`, `-d humble -v 22.04`를 사용하며 외부 Python은 3.10입니다. 이 경우에도 Isaac Sim용 빌드는 Python 3.11입니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [ROS 2 Python Custom Messages](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_custom_message_python.html)에 대응합니다. [ROS 설치의 사용자 패키지 경로](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)와 [고정 버전 build_ros.sh](https://github.com/isaac-sim/IsaacSim-ros_workspaces/blob/50de00358f220d790d17050c6368cfe9a9cb9f51/build_ros.sh)를 참고하세요.
+
+원문의 import·필드 대입 확인에 로컬 반복 발행과 외부 수신을 연결했습니다. Docker 빌드, Isaac Sim 실행, DDS 수신은 이번 개정에서 수행하지 않았습니다. `tutorial.json`의 검증 상태는 `not_run`입니다.

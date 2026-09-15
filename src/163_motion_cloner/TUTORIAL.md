@@ -1,73 +1,140 @@
-# 163. 환경을 복제하는 Cloner
+# 163. 낙하 상자 하나를 여러 환경으로 복제하기
 
-권장 학습 순서 **163** · 병렬 환경과 학습 정책 활용 · 출처 ID `t005`
+## 이번에 배우는 것
 
-동일한 낙하 상자를 4개의 환경으로 복제하고 모든 상자의 포즈를 배열 하나로 읽고 수정합니다. 공식 Script Editor 예제를 독립 실행 프로그램으로 옮겼으며, `Cloner`, `GridCloner`, 일괄 포즈 처리, physics replication과 충돌 필터를 모두 실습합니다.
+**상자가 있는 환경을 네 개로 복제하고, 모든 상자의 위치를 배열 하나로 읽고 바꿉니다.**
 
-## 이 실습의 의도
+병렬 환경에서는 같은 구조를 여러 곳에 만들고 각 환경의 상태를 함께 읽어야 합니다. Cloner는 환경 계층을 복제하고, 여러 Prim을 묶은 view는 그 안의 물체를 한 번에 다룹니다. 이번에는 상자 낙하를 이용해 복제·배치·일괄 관찰을 연결합니다.
 
-낙하 상자 하나를 환경 단위로 복제하고 모든 상자의 위치를 한 배열로 읽고 바꾸는 흐름을 익힙니다. 기본은 파란 상자 네 개를 격자에 놓고 공통 바닥은 공유하며, `--layout line`, `--copy`, `--replicate-physics`로 배치·USD 속성 공유·물리 생성 방식을 각각 비교합니다. 이 코드는 실제 물리 step을 진행하지만 기본 환경 간격이 넓어서 화면의 낙하만으로 환경 간 충돌 필터의 효과나 복제 성능 향상까지 입증할 수는 없습니다.
+| 선택 | 기본값 | 바뀌는 내용 |
+|---|---|---|
+| `--layout` | `grid` | 격자 또는 일렬 배치 |
+| `--count` | `4` | 환경 개수 |
+| `--spacing` | `3.0` m | 환경 원점 사이 간격 |
+| `--copy` | 꺼짐 | 원본 속성을 물려받는 구조 대신 독립 복사 |
+| `--replicate-physics` | 꺼짐 | 물리 환경 생성에 복제 최적화 사용 |
 
-## 실행 후 확인할 것
+복제되는 환경에는 한 변 0.5 m의 상자 하나가 있고, 지면은 모든 환경이 공유합니다.
 
-- **복제된 대상:** Stage에서 `/World/envs/env_0`부터 요청한 개수의 환경까지 각 `cube`가 하나씩 있는지 확인합니다. 기본 상자는 한 변 0.5 m이고 바닥 `/World/defaultGroundPlane`은 환경 밖에서 공유됩니다.
-- **배치와 기록 수:** 실행 종료 후 `poses.json`의 `paths`, `initial_positions_m`, `final_positions_m` 행 수가 모두 `--count`인지 확인합니다. line 모드의 X 간격은 `--spacing`, Y는 0이며 grid 모드는 격자 배치입니다. 초기 배열은 코드에서 일괄 Z 이동을 적용하고 `world.reset()`한 뒤 읽은 값입니다.
-- **낙하와 접촉:** 충분히 진행했을 때 final Z가 initial Z보다 낮아지고, 바닥에서 안정된 상자 중심이 대략 0.25 m인지 화면과 숫자로 확인합니다. 짧은 `--steps`는 낙하 중에 끝날 수 있습니다. [RUNTIME_CHECK.md](RUNTIME_CHECK.md)의 60스텝 final Z 약 0.56 m는 해당 시점의 예이며 접촉 안정 높이나 모든 실행의 정답이 아닙니다.
-- **복사 방식:** 기본 `copy_from_source=false`와 `--copy` 실행의 `cloned_scene.usda` 구성을 비교합니다. 기본 Inherits에서는 원본 cube 색 수정이 clone에 전달되는지, copy 모드에서는 독립적으로 남는지 관찰합니다.
-- **물리 복제·충돌 범위:** `poses.json`에서 요청한 `replicate_physics`가 기록됐는지 확인하고, Stage의 `/World/collisionGroups`가 환경별 그룹과 공통 바닥을 참조하는지 봅니다. 이 플래그의 기록만으로 물리 성능이나 환경 간 충돌 차이를 검증한 것은 아닙니다.
+## 1. 격자 환경 네 개 실행하기
 
-## 준비와 실행
-
-이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
-
-외부 로봇 자산은 필요 없습니다.
-
-터미널에서 이 패키지 폴더(`163_motion_cloner`)로 이동한 뒤 아래를 실행합니다. 설치 위치가 다르면 첫 줄만 바꿉니다. Windows에서는 설치 폴더의 `python.bat`에 동일한 인수를 전달합니다.
+Isaac Sim 5.1과 지원 GPU·드라이버가 필요합니다. 외부 자산은 사용하지 않습니다. 저장소 루트에서 실행하세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --layout grid --count 4
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --layout line --count 4
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --replicate-physics --count 16
+~/isaacsim/python.sh src/163_motion_cloner/run.py --layout grid --count 4 --steps 240
 ```
 
-`--steps`는 물리 스텝 수(USD 전용 예제에서는 화면 업데이트 수)입니다. `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 계속됩니다. `--steps 600`처럼 양수를 지정하면 해당 횟수 후 종료하며, `--headless`에서 생략하면 기존 기본값인 600회로 제한됩니다. 각 실행 결과는 이 폴더의 새 `output/run_*` 디렉터리에 저장됩니다. `--output /절대경로/새폴더`를 지정할 수도 있지만 기존 폴더를 덮어쓰지 않습니다. 코드는 `SimulationApp`을 만든 뒤 Isaac/Omni/USD 모듈을 가져오고 마지막에 `close()`로 종료합니다.
+물리 단계 240회를 수행한 뒤 종료합니다. `--steps`를 빼면 창을 닫을 때까지 진행합니다. `--headless`를 추가하면 화면 없이 실행하고, Headless에서 단계 수를 생략하면 600회로 제한합니다.
 
-## 단계별 실습
+결과는 이 폴더의 새 `output/run_*`에 저장합니다. 직접 지정하려면 `--output /절대경로/새폴더`를 사용하세요. 기존 폴더는 덮어쓰지 않습니다.
 
-1. 기본 실행 후 Stage에서 `/World/envs/env_0`부터 `env_3`까지 펼칩니다. 각 환경에는 `cube` 하나가 있습니다. 바닥과 PhysicsScene은 환경 밖에서 공유됩니다.
-2. `GridCloner(spacing=3)`는 환경 원점을 격자로 배치합니다. `--layout line`에서는 `Cloner.clone(positions=...)`에 `[0,0,0]`, `[3,0,0]`, `[6,0,0]`, `[9,0,0]`을 직접 전달합니다.
-3. 코드의 `XFormPrim('/World/envs/env_.*/cube')`가 네 상자를 하나의 view로 잡는 부분을 찾습니다. `get_world_poses()`의 위치 배열은 `(N,3)`, 회전 배열은 `(N,4)`이며 quaternion 순서는 **w,x,y,z**입니다. 모든 z에 1.5 m를 더한 뒤 `set_world_poses()`로 적용합니다.
-4. 상자가 바닥에 떨어져 안정될 만큼 진행한 후 `poses.json`의 초기/최종 z를 비교합니다. 안정된 한 변 0.5 m 상자는 바닥 위에서 중심이 대략 0.25 m에 있어야 하며, 짧은 실행은 그 높이에 도달하기 전에 끝날 수 있습니다. 물리 오차를 고려하여 정확한 문자열 일치 대신 수치와 화면을 비교합니다.
-5. `--copy`를 넣어 실행하고 `cloned_scene.usda`에서 inherit 구성이 사라지는지 비교합니다. GUI에서 원본 `env_0/cube`의 displayColor를 수정하면 기본 Inherits 구성은 다른 clone에도 전달됩니다. `--copy` 결과에서는 독립적입니다.
-6. `--replicate-physics`로 복제를 반복합니다. `define_base_env('/World/envs')`와 `generate_paths()`를 먼저 호출하여 replication에 필요한 공통 조상과 순차 접미사를 명확히 합니다. 실행 중 마찰/재질/shape 속성을 바꾸는 실험은 replication을 끈 상태로 합니다.
+### 코드에서 볼 부분
 
-## 개념과 API
+```python
+cloner = GridCloner(spacing=args.spacing)
+cloner.define_base_env('/World/envs')
+paths = cloner.generate_paths('/World/envs/env', args.count)
+```
 
-USD Stage는 장면 문서이며 prim은 `/World/envs/env_0/cube`처럼 경로로 식별되는 항목입니다. Xform은 위치·회전·크기를 가진 좌표계입니다. **USD Inherits**는 원본의 속성 의견을 공유하지만 일반 복사는 이후 원본 변경을 전달하지 않습니다. `copy_from_source`의 두 모드를 선택하는 이유입니다.
+`define_base_env()`는 환경들이 들어갈 공통 부모를 정하고, `generate_paths()`는 `env_0`부터 순차적인 경로를 만듭니다. 코드에서는 첫 경로 안에 DynamicCuboid를 만든 뒤 그 환경을 나머지 경로로 복제합니다.
 
-`replicate_physics=True`는 USD 복사와 별도로 PhysX의 파싱/환경 생성을 복제하는 최적화입니다. instanceable mesh와 서로 다른 기능입니다. `filter_collisions('/physicsScene', '/World/collisionGroups', paths, global_paths=[...])`는 서로 다른 환경 간 충돌을 걸러내면서 공통 바닥과의 충돌을 유지합니다. 이 예제는 환경들이 떨어져 있으므로 기본 화면만으로 필터 효과를 입증할 수는 없습니다. 필터 구성을 확인한 뒤 환경 간격을 줄이는 후속 실험이 필요합니다.
+```text
+/World/envs/env_0/cube  ← 원본
+/World/envs/env_1/cube  ← 복제
+/World/envs/env_2/cube  ← 복제
+/World/envs/env_3/cube  ← 복제
+/World/defaultGroundPlane ← 공통 지면
+```
 
-5.1 문서 일부는 `XFormPrimView`라는 이전 이름을 보여 줍니다. 설치된 5.1 API의 복수 prim 클래스 `XFormPrim`을 사용합니다. 이 클래스의 정규식과 단일 prim 클래스 `SingleXFormPrim`을 혼동하지 않습니다.
+### 실행 결과 확인하기
 
-## 한 변수 실험
+종료 후 `poses.json`을 열어 다음 내용을 확인합니다.
 
-`--spacing 3`만 `--spacing 1`로 바꾸어 배열을 더 조밀하게 만듭니다. 로봇 정책 학습은 포함하지 않으며 복제된 환경에서 관측을 모을 기초를 구현합니다.
+| 필드 | 확인할 내용 |
+|---|---|
+| `paths` | 환경 경로 네 개 |
+| `initial_positions_m` | 일괄 위치 변경과 reset 후의 실제 초기 좌표 |
+| `final_positions_m` | 마지막으로 읽은 물리 진행 후 좌표 |
+| `copy_from_source` | `--copy` 선택 상태 |
+| `replicate_physics` | 물리 복제 옵션 선택 상태 |
 
-## 문제 해결
+상자가 떨어지면 final Z가 initial Z보다 낮아집니다. 충분히 안정된 상자는 한 변 0.5 m이므로 중심 높이가 약 0.25 m입니다. 짧은 실행은 낙하 도중 끝날 수 있으니 모든 결과를 0.25 m와 비교하지 마세요.
 
-`XFormPrimView` import 오류는 오래된 코드의 클래스 이름을 확인합니다. 환경 안의 shape 속성을 runtime에 바꿔야 한다면 replication을 끕니다. clone 수가 많은 경우 GPU/메모리 제한을 고려해 `--count 4`로 먼저 확인합니다. 바닥이 없다면 global collision 경로와 Stage의 실제 바닥 prim 경로가 같은지 확인합니다.
+`cloned_scene.usda`에는 복제 계층과 충돌 그룹이 남습니다. 실행 중 실제 숫자는 JSON으로, 배치와 공유 관계는 USD로 읽으면 좋습니다.
 
-## 검증 범위
+## 2. 모든 상자의 위치를 배열로 다루기
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 앞의 **실행 후 확인할 것** 기준으로 직접 결과를 확인합니다.
+### 코드에서 볼 부분
 
-## 출처
+```python
+boxes = XFormPrim('/World/envs/env_.*/cube', name='all_boxes')
+positions, orientations = boxes.get_world_poses()
+positions[:, 2] += 1.5
+boxes.set_world_poses(positions, orientations)
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — Getting Started with Cloner](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_cloner.html)
-- 원문의 학습 목적과 API를 유지하면서 한국어 설명, 명령행 옵션, 제한된 실행 루프와 실제 상태 기록을 추가한 독립 예제입니다. 원문 전체를 복제한 문서가 아닙니다.
+`env_.*`는 여러 환경 경로를 선택합니다. 위치 배열은 `(N, 3)`, 회전 배열은 `(N, 4)`이며 quaternion 순서는 **w, x, y, z**입니다. `positions[:, 2]`는 모든 행의 Z 열이므로 한 줄로 모든 상자를 1.5 m 올립니다.
 
-## 실제 실행 기록
+이후 `world.reset()`을 수행하고 위치를 다시 읽어 초기 기록을 만듭니다. 따라서 initial 값을 소스 생성 높이만 보고 추측하기보다 **reset 이후 실제 배열**에서 확인합니다. 물리 진행은 반복문의 `world.step(render=not args.headless)`가 담당합니다.
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+일렬 배치는 좌표를 직접 전달합니다.
+
+```bash
+~/isaacsim/python.sh src/163_motion_cloner/run.py --layout line --count 4 --steps 240
+```
+
+기본 간격 3 m에서 환경 원점은 `(0,0,0)`, `(3,0,0)`, `(6,0,0)`, `(9,0,0)`입니다. GridCloner가 계산하던 배치를 이번에는 `positions` 배열로 지정하는 차이입니다.
+
+### 공유와 물리 복제 구별하기
+
+기본 `copy_from_source=false`에서는 USD Inherits를 사용합니다. 원본 속성을 물려받는 관계입니다. GUI에서 원본 `env_0/cube`의 색을 바꿨을 때 복제본에 전달되는지 확인하고, `--copy`를 추가한 새 실행과 비교하세요. 독립 복사는 이후 원본 변경을 같은 방식으로 전달하지 않습니다.
+
+`--replicate-physics`는 별도 선택입니다. USD 속성의 공유 여부와 달리 PhysX 환경 생성 비용을 줄이는 복제 기능입니다. 물리 형상이나 재질을 실행 중 바꾸는 실험에서는 이 옵션을 끄고 진행하세요. 같은 네 환경에서 이 옵션만 켜려면 다음 명령을 사용합니다.
+
+```bash
+~/isaacsim/python.sh src/163_motion_cloner/run.py --headless --count 4 --steps 240 --replicate-physics
+```
+
+새 결과의 `replicate_physics`와 환경 경로 수, 초기·최종 Z를 확인하세요. 로봇을 더 만드는 옵션은 `--count`이며 물리 복제 옵션 자체가 개체 수를 늘리지는 않습니다.
+
+```python
+cloner.filter_collisions('/physicsScene', '/World/collisionGroups', paths,
+                         global_paths=['/World/defaultGroundPlane'])
+```
+
+이 호출은 서로 다른 환경 간 충돌을 걸러내면서 공통 지면과의 충돌은 유지하도록 구성합니다. 기본 배치는 멀리 떨어져 있어 필터가 없어도 상자가 서로 닿지 않습니다. 따라서 낙하 화면만으로 충돌 필터의 효과를 입증할 수는 없습니다.
+
+## 3. 복제와 일괄 관찰의 역할 정리
+
+```text
+원본 환경 생성 → Cloner로 여러 경로에 복제
+             → GridCloner 또는 positions로 배치
+             → XFormPrim으로 모든 cube 선택
+             → 위치 배열 수정 → reset → 물리 진행 → 최종 배열 기록
+```
+
+`--copy`는 USD 변경 전파를, `--replicate-physics`는 물리 환경 생성을, `filter_collisions()`는 환경 사이 접촉 범위를 다룹니다. 옵션 이름이 모두 복제와 관련 있어도 바꾸는 대상은 서로 다릅니다.
+
+## 4. 간단한 확인 실험
+
+일렬 실행에서 `--spacing 3`만 `--spacing 1`로 바꿔 보세요.
+
+- X 좌표가 0, 1, 2, 3 m 간격으로 배치되는지 확인합니다.
+- 상자 수와 상자 크기는 유지됩니다.
+- 간격이 달라져도 공통 지면 위 안정 높이는 비슷해야 합니다.
+
+이 실험은 배치 옵션을 확인합니다. 1 m 간격에도 상자끼리 닿지 않으므로 충돌 필터 성능 실험으로 해석하지 않습니다.
+
+## 실행할 때 막히면
+
+- **`XFormPrimView` import 오류**: 이 파일은 5.1의 복수 Prim 클래스 `XFormPrim`을 사용합니다. 과거 예제 이름과 섞지 마세요.
+- **최종 Z가 0.25 m보다 큼**: 낙하 중 끝났을 수 있습니다. 초기·최종 좌표와 실행 길이를 함께 확인하세요.
+- **상자가 지면을 통과함**: 실제 지면 경로가 `global_paths`와 같은지, 충돌 그룹이 올바른지 조사하세요.
+- **결과 JSON이 아직 없음**: 루프 종료 후 작성합니다. 유한한 `--steps`를 쓰거나 창을 닫으세요.
+- **많은 환경에서 메모리 부족**: `--count 4`로 기본 배치부터 확인하세요. 옵션을 켰다는 사실만으로 특정 성능 향상이 보장되지는 않습니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Getting Started with Cloner](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_cloner.html)에 대응합니다. 원문의 복제·배치·충돌 필터를 독립 실행과 초기·최종 위치 기록으로 연결했습니다.
+
+기존 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)는 2026-09-14의 **기본 Headless 60스텝**에서 네 상자 생성과 낙하를 확인한 기록입니다. 최종 Z 약 0.56 m는 그 시점의 관찰값이며 안정 높이가 아닙니다. `tutorial.json`의 `partial_runtime_verified`도 다른 배치·복사·물리 복제 모드나 GUI 조작까지 확인했다는 뜻은 아닙니다.

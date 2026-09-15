@@ -39,7 +39,7 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=False)
 
     from isaacsim import SimulationApp
-
+    # isaac sim 시작
     app = SimulationApp({"headless": args.headless})
     try:
         import numpy as np
@@ -110,6 +110,8 @@ def main() -> None:
                 raise RuntimeError(
                     f"Asset has unexpected joints: missing {sorted(missing)}; see joint_info.json."
                 )
+        arm_indices = [arm.get_dof_index(name) for name in arm_names]
+        wheel_indices = [car.get_dof_index(name) for name in wheel_names]
         home = np.array([[0.0, -0.4, 0.0, -1.8, 0.0, 1.4, 0.5, 0.04, 0.04]])
         moved = np.array([[-1.5, 0.0, 0.0, -1.5, 0.0, 1.5, 0.5, 0.04, 0.04]])
         previous_phase = -1
@@ -124,7 +126,7 @@ def main() -> None:
                 phase = (step // 120) % 4 if args.steps is None else min(3, 4 * step // args.steps)
                 if phase != previous_phase:
                     arm.set_joint_positions(
-                        moved if phase in (1, 3) else home, joint_names=arm_names
+                        moved if phase in (1, 3) else home, joint_indices=arm_indices
                     )
                     previous_phase = phase
                     print(
@@ -132,7 +134,7 @@ def main() -> None:
                     )
                 speed = args.wheel_speed if phase in (1, 3) else 0.0
                 car.set_joint_velocity_targets(
-                    np.array([[speed, speed]]), joint_names=wheel_names
+                    np.array([[speed, speed]]), joint_indices=wheel_indices
                 )
                 world.step(render=not args.headless)
                 car_position = car.get_world_poses()[0][0]

@@ -1,70 +1,129 @@
-# 54. Lula Kinematics Solver: FK와 IK
+# 54. IK가 성공하면 로봇도 목표에 도착했을까?
 
-권장 학습 순서 **54** · 로봇 제어와 동작 계획 · 출처 ID `t138`
+## 이번에 배우는 것
 
-원하는 end-effector 위치에서 관절 해를 구하고, 실제 관절 위치로부터 말단 좌표를 다시 계산합니다. IK 수렴 플래그와 FK 거리 오차를 함께 기록하여 해의 존재와 물리 추종을 구분합니다.
+**목표 위치에서 관절 해를 구하는 IK와 실제 관절값에서 말단 위치를 구하는 FK를 연결해, 계산 성공과 물리 추종을 구분합니다.**
 
-## 이 실습의 의도
+손을 `(0.3, 0, 0.5)` m에 놓으려면 팔의 관절들을 얼마나 움직여야 할까요? 이 질문을 푸는 계산이 **역기구학, IK**입니다. 반대로 지금의 관절 각도에서 손이 어디에 있는지 계산하는 것은 **순기구학, FK**입니다.
 
-빨간 목표의 월드 위치에 도달할 Franka 관절 해를 IK로 찾고, 물리가 진행된 실제 관절값의 FK로 목표까지 남은 거리를 계산합니다. 기본 목표는 `(0.3, 0, 0.5)` m이며 추종 frame은 `right_gripper`입니다. 위치만 목표로 지정해 IK 계산 성공과 실제 말단의 위치 추종을 비교하며, 손의 방향이나 충돌 없는 이동 경로는 따로 요구하지 않습니다.
+| 이번 실습의 요소 | 의미 |
+|---|---|
+| `/World/panda` | 실제 물리 관절을 가진 Franka |
+| `/World/target` | 원하는 월드 위치를 표시하는 빨간 cube |
+| `right_gripper` | 위치를 맞출 Lula의 말단 frame |
+| IK 결과 | 목표를 만족할 관절 목표와 성공 여부 |
+| FK 결과 | 현재 관절 상태로 계산한 말단 위치·회전행렬 |
+| `kinematics.json` | IK 성공 여부와 실제 FK 오차의 기록 |
 
-## 실행 후 확인할 것
+## 1. 먼저 도달 가능한 위치를 지정하기
 
-- GUI에서 `/World/panda`의 `right_gripper` 위치가 빨간 `/World/target` 쪽으로 접근하는지 봅니다. 빨간 cube는 충돌 없는 위치 표시이므로 잡거나 밀어야 하는 물체가 아닙니다.
-- `kinematics.json`의 `frame`이 선택한 frame이고 `available_frames`에 포함되는지 확인합니다. frame 이름은 URDF의 이름이며 USD prim 경로를 그대로 넣는 인수가 아닙니다.
-- `trace`의 `ik_success=true`는 그 시점의 관절 해를 찾았다는 뜻입니다. 같은 행의 `fk_position_m`, `target_m`, `position_error_m`를 함께 읽어 물리 drive가 아직 따라가는 중인지 확인합니다.
-- 정지한 도달 가능 목표에서 30스텝 간격의 오차가 전반적으로 줄어드는지 확인합니다. 마지막 행은 마지막 저장 표본이며 반드시 종료 직전 step은 아닙니다. 짧은 실행은 IK가 성공해도 추종을 끝내지 못할 수 있습니다.
-- 도달 불가능한 `--target 3 0 3`은 유한 `--steps` 또는 창 닫기로 실행을 끝낸 뒤 실패 처리를 확인합니다. IK 성공이 한 번도 없으면 JSON을 저장하고 오류로 종료하며, 성공한 해가 있었다는 사실만으로 최종 도달을 자동 판정하지는 않습니다.
+Isaac Sim 5.1과 5.1 Assets의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`가 필요합니다. Lula 설정은 설치된 motion generation 확장의 Franka 설정을 읽습니다.
 
-## 준비와 실행
-
-이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
-
-Isaac Sim 5.1 Assets의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`가 필요합니다. `get_assets_root_path()`가 반환하는 asset 서버 또는 로컬 asset 팩에서 읽습니다. 첫 로딩에는 네트워크가 필요할 수 있습니다. 이 로봇 USD와 해당 재질/mesh 참조를 함께 사용할 수 있어야 합니다.
-
-터미널에서 이 패키지 폴더(`54_motion_manipulators_lula_kinematics`)로 이동한 뒤 아래를 실행합니다. 설치 위치가 다르면 첫 줄만 바꿉니다. Windows에서는 설치 폴더의 `python.bat`에 동일한 인수를 전달합니다.
+다음은 **저장소 루트** 기준 명령입니다. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --target 0.3 0 0.5
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --target 0.4 0.1 0.6
+~/isaacsim/python.sh src/54_motion_manipulators_lula_kinematics/run.py \
+  --target 0.3 0 0.5 --steps 180
 ```
 
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 물리·제어 루프가 계속 실행됩니다. `--steps 600`처럼 양수를 지정하면 그 물리 스텝 수까지 실행하고 종료합니다. GUI의 `--steps 0`도 무제한이며, `--headless`에서 생략하면 기존 기본값인 600스텝을 실행합니다. headless의 0과 음수는 허용하지 않습니다. 창을 닫거나 지정한 스텝에 도달하면 실행 결과가 이 폴더의 새 `output/run_*` 디렉터리에 저장됩니다. `--output /절대경로/새폴더`를 지정할 수도 있지만 기존 폴더를 덮어쓰지 않습니다. 코드는 `SimulationApp`을 만든 뒤 Isaac/Omni/USD 모듈을 가져오고 마지막에 `close()`로 종료합니다.
+Franka가 빨간 목표에 접근하는 동안 180단계, 즉 물리 시간 3초를 진행하고 종료합니다. 물리 간격은 1/60초입니다. 창 없이 실행하려면 `--headless`를 추가하세요. GUI에서 `--steps`를 생략하면 목표를 계속 읽으며 창을 닫을 때까지 실행합니다.
 
-## 단계별 실습
+### 코드에서 볼 부분
 
-1. `load_supported_lula_kinematics_solver_config('Franka')`로 URDF와 robot description을 가져옵니다. `LulaKinematicsSolver`는 robot kinematics를 계산하며 `ArticulationKinematicsSolver`는 simulator의 관절 상태와 연결합니다.
-2. `--frame right_gripper`가 기본 end-effector입니다. `kinematics.json`의 available_frames는 실제 URDF에서 읽은 목록입니다. USD prim 경로와 URDF frame 이름은 같은 문자열 체계를 사용하지 않으므로 `/World/panda/...`를 frame 인수로 넣지 않습니다.
-3. target의 월드 위치를 읽고 solver에 현재 base pose를 지정합니다. base가 원점이라는 가정을 없애야 target도 월드 좌표로 해석됩니다.
-4. `compute_inverse_kinematics(position)`의 `(action, success)`를 확인합니다. success일 때만 action을 적용합니다. 이 예제는 위치 목표만 사용하며 원문처럼 orientation도 제한하려면 normalized quaternion을 두 번째 인수로 전달합니다.
-5. 물리 스텝 후 `compute_end_effector_pose()`로 실제 관절 상태의 FK를 계산합니다. 반환값은 위치와 **3×3 회전행렬**입니다. 이것을 quaternion 4개와 혼동하지 않습니다.
-6. `kinematics.json`의 trace에서 IK success와 FK position_error를 비교합니다. IK가 즉시 성공해도 로봇의 drive가 따라가는 데는 시간이 필요합니다.
+```python
+config = interface_config_loader.load_supported_lula_kinematics_solver_config('Franka')
+solver = LulaKinematicsSolver(**config)
+kinematics = ArticulationKinematicsSolver(robot, solver, args.frame)
+```
 
-## 핵심 개념
+`LulaKinematicsSolver`는 URDF와 robot description으로 기구학을 계산합니다. `ArticulationKinematicsSolver`는 시뮬레이터의 실제 관절 상태를 읽고 Lula 관절 순서에 맞추는 연결 역할을 합니다. 그리퍼를 포함한 articulation의 배열을 무조건 그대로 IK 입력에 쓰지 않는 이유입니다.
 
-Forward Kinematics(FK)는 관절 값 q를 말단 pose로 보내는 계산입니다. Inverse Kinematics(IK)는 목표 pose에 맞는 q를 찾으며 해가 여러 개이거나 없을 수 있습니다. 7축 Franka는 같은 위치에 도달하는 여러 자세를 가질 수 있습니다. warm start를 현재 자세로 잡는 wrapper가 연속 움직임에 도움이 되지만 경로의 collision이나 최적성을 보장하지 않습니다.
+반복문에서는 목표 위치와 로봇 base의 pose를 먼저 읽습니다.
 
-`LulaKinematicsSolver`를 단독으로 사용할 때는 `compute_forward_kinematics(frame_name, active_joint_positions)`로 원하는 관절 벡터의 pose를 계산할 수 있습니다. 여기서는 `ArticulationKinematicsSolver`가 actual articulation state를 읽고 Lula active joint 순서로 매핑합니다. USD articulation의 gripper를 조립/변경했다면 URDF frame과 offset도 일치시켜야 합니다.
+```python
+solver.set_robot_base_pose(*robot.get_world_pose())
+action, success = kinematics.compute_inverse_kinematics(position)
+if success:
+    robot.apply_action(action)
+world.step(render=not args.headless)
+```
 
-## 관찰 기준과 한 변수 실험
+목표는 월드 좌표입니다. solver에도 로봇 base가 월드의 어디에 있는지 알려야 두 위치를 같은 기준으로 계산할 수 있습니다. `success`가 참일 때만 새 관절 목표를 전달합니다.
 
-정지된 도달 가능 target에서 `ik_success=true`가 나타나고 `position_error_m`가 줄어드는지 확인합니다. `--target`의 z만 0.5에서 0.6으로 바꾸어 결과를 비교합니다. 그 뒤 `--target 3 0 3`으로 도달 불가능한 목표의 실패 처리도 확인합니다. 실패한 action을 이전 성공값으로 꾸며 기록하지 않습니다.
+이 호출은 **위치만 요구**합니다. 손의 방향까지 맞추도록 지정한 실습은 아니며, 빨간 cube도 집을 물체가 아닌 위치 표시입니다.
 
-## 문제 해결
+### 실행 결과 확인하기
 
-알 수 없는 frame 오류는 출력 가능한 frame 목록을 확인합니다. 좌표가 일정하게 어긋나면 base pose, frame offset, 단위를 확인합니다. IK success가 true인데 물체를 통과하는 것은 IK 자체가 collision-free path planner가 아니기 때문입니다. 실제 pick-and-place 경로를 계획했다는 의미로 사용하지 않습니다.
+결과는 이 폴더의 새 `output/run_*/kinematics.json`에 저장됩니다.
 
-## 검증 범위
+| 항목 | 해석 |
+|---|---|
+| `frame`, `available_frames` | 선택한 말단과 URDF에서 읽은 frame 목록 |
+| `trace[].ik_success` | 해당 반복에서 IK 해를 찾았는지 |
+| `fk_position_m`, `target_m` | 실제 관절로 계산한 위치와 목표 위치 |
+| `position_error_m` | 두 위치 사이의 3차원 거리 |
+| `fk_rotation_matrix` | 실제 FK의 3×3 회전행렬 |
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 아래 관찰 기준으로 직접 결과를 확인합니다.
+`ik_success=true`인 첫 행에서도 위치 오차는 클 수 있습니다. IK는 가능한 관절값을 찾았지만 물리 drive는 이제 그 값으로 움직이기 시작했기 때문입니다. 뒤의 표본에서 오차가 어떻게 변하는지 읽어 보세요.
 
-## 출처
+기록은 `step=0, 30, 60, ...`에서 물리 계산 후 남깁니다. 180단계 실행의 마지막 기록은 `step=150`이므로 종료 직전 값과 같다고 단정하지 않습니다. `step=0`도 초기 상태가 아니라 **첫 물리 단계 뒤**의 표본입니다.
 
-- [NVIDIA Isaac Sim 5.1.0 — Lula Kinematics Solver](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_kinematics.html)
-- 원문의 학습 목적과 API를 유지하면서 한국어 설명, 명령행 옵션, 실행 길이 선택과 실제 상태 기록을 추가한 독립 예제입니다. 원문 전체를 복제한 문서가 아닙니다.
+## 2. frame과 FK를 기준으로 결과 다시 읽기
 
-## 실제 실행 기록
+`right_gripper`는 USD prim 경로가 아니라 **Lula URDF에 정의된 frame 이름**입니다. 같은 팔 자세라도 손목, 손가락 끝, 집게 중심은 서로 다른 위치에 있습니다. 무엇을 목표에 맞췄는지 먼저 확인해야 합니다.
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+### 코드에서 볼 부분
+
+```python
+ee_position, rotation = kinematics.compute_end_effector_pose()
+error = np.linalg.norm(position - ee_position)
+```
+
+두 번째 줄은 저장하는 거리 오차를 풀어 쓴 것입니다. 차이가 `(dx, dy, dz)`라면 거리는 `sqrt(dx² + dy² + dz²)`입니다. 예를 들어 높이만 0.01 m 어긋나면 오차는 1 cm입니다.
+
+첫 번째 호출은 전달한 목표 관절값이 아니라 **실제 articulation 상태**로 FK를 계산합니다. 목표값으로만 FK를 계산하면 IK가 만든 해가 맞는지는 볼 수 있어도 실제 팔이 따라왔는지는 알 수 없습니다.
+
+### 실행 결과 확인하기
+
+1. JSON의 `frame`이 `right_gripper`인지 확인하세요.
+2. 같은 행의 `target_m - fk_position_m`을 계산해 어느 축으로 오차가 남았는지 읽어 보세요.
+3. `fk_rotation_matrix`가 3행 3열인지 확인하세요. 네 성분의 quaternion과는 다른 표현입니다.
+4. GUI에서 target을 움직였다면 각 행의 `target_m`도 달라졌는지 확인하세요. 움직이는 목표의 오차와 정지 목표의 수렴을 같은 조건으로 비교하지 않습니다.
+
+Franka처럼 7축 팔은 같은 위치에 도달하는 자세가 여러 개일 수 있습니다. 이 연결 객체는 현재 자세를 IK의 출발점으로 활용합니다. 그래도 해를 찾았다는 사실이 그 자세로 가는 모든 중간 경로의 충돌 부재를 뜻하지는 않습니다. 기구학 계산의 역할은 [공식 Lula Kinematics Solver](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_kinematics.html)에서 더 볼 수 있습니다.
+
+실패한 입력을 읽는 방법도 확인하려면 별도 실행에서 `--target 3 0 3 --steps 180`을 사용하세요. 이 목표는 기본 Franka의 작업영역 밖입니다. 성공한 IK가 한 번도 없으면 프로그램은 `kinematics.json`을 저장한 뒤 오류로 종료합니다. 저장된 `ik_success=false`와 큰 위치 오차를 확인하세요. 실패를 종료 시 판정하므로 이 비교에서는 유한 `--steps`를 유지합니다.
+
+## 3. 두 계산을 연결한 흐름 정리
+
+```text
+목표 위치 → IK → 관절 목표
+                    ↓ drive와 물리 계산
+실제 관절값 → FK → 실제 말단 위치 → 목표와 거리 비교
+```
+
+**IK 성공은 해의 존재를, FK 오차는 현재 추종 상태를 설명합니다.** 전자는 계산 문제이고 후자는 실제로 움직인 결과를 포함합니다. 두 값을 함께 봐야 “계산은 되지만 아직 움직이는 중”인 상태를 구분할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+1절의 명령에서 **목표 z만 0.5에서 0.6으로** 바꾸세요.
+
+```bash
+~/isaacsim/python.sh src/54_motion_manipulators_lula_kinematics/run.py \
+  --target 0.3 0 0.6 --steps 180
+```
+
+목표 높이는 10 cm 올라갑니다. `target_m`의 z와 FK 위치의 z가 함께 달라지는지, IK 성공 뒤 오차가 줄어드는지 비교하세요. 바뀐 말단 위치를 만들기 위해 여러 관절의 회전 조합이 달라집니다.
+
+## 실행할 때 막히면
+
+- **알 수 없는 frame 오류**: 오류에 출력된 목록에서 이름을 고르세요. `/World/panda/...` 경로는 `--frame` 입력이 아닙니다.
+- **IK가 한 번도 수렴하지 않았다는 오류**: 목표가 작업영역 밖인지 확인하세요. 코드는 실행 종료 후 JSON을 저장하고, 성공이 한 번도 없으면 오류로 끝냅니다.
+- **성공 표시가 있는데 오차가 남음**: 실행 길이, 실제 관절 drive와 접촉을 살펴보세요. IK 플래그만으로 물리 추종을 판정하지 않습니다.
+- **위치가 일정하게 어긋남**: base pose, 선택한 frame의 offset, m 단위를 순서대로 확인하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Lula Kinematics Solver](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_kinematics.html)에 대응합니다. 로컬 실습은 위치 IK와 실제 상태 FK를 연결하고 30단계 간격으로 기록합니다.
+
+기존 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에는 headless 180단계 기본 목표에서 마지막 저장 오차가 약 **0.00104 m**였던 관찰이 있습니다. 과거 실행의 참고값이며 현재 코드 재실행이나 다른 목표·frame·GUI 조작의 결과는 아닙니다. 목표별 성공 여부와 실제 FK 오차는 새 실행의 기록으로 확인하세요.

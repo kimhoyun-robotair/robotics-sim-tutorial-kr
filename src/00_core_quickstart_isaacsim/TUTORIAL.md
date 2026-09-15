@@ -1,99 +1,137 @@
-# 00. Isaac Sim 기본 사용: 보이는 큐브와 물리 큐브
+# 00. Visual만 있는 큐브에 물리를 더하면 무엇이 달라질까요?
 
-권장 학습 순서 **00** · 첫 실행과 로봇 만나기 · 출처 ID `t001`
+## 이번에 배우는 것
 
-이 패키지는 Isaac Sim 5.1 공식 **Isaac Sim Basic Usage Tutorial**을 세 가지 방식으로 실습한다. GUI에서 직접 만든 장면, Script Editor로 만든 장면, 터미널에서 실행한 장면이 같은 USD/PhysX 데이터를 다룬다는 것을 확인한다. 다른 로컬 튜토리얼이나 공통 모듈을 읽을 필요가 없다.
+**같은 큐브에 강체와 충돌 속성을 차례로 추가하며, 화면에 보이는 모양과 물리 동작을 구분합니다.**
 
-## 이 실습의 의도
+큐브가 화면에 나타났다고 중력이나 충돌이 자동으로 적용되지는 않습니다. 외형은 객체의 모양을 정하고, 강체는 중력에 따라 움직일 대상을 정하며, 충돌은 다른 물체와 접촉할 모양을 정합니다. 이 실습은 이 차이를 다섯 큐브로 보여줍니다.
 
-화면에 보이는 도형, 중력에 반응하는 강체, 다른 물체와 부딪히는 충돌체가 서로 다른 설정임을 같은 장면에서 비교한다. 독립 실행은 노란 `Visual`, 빨간 `RigidOnly`, 청록색 `Converted`, 파란 `Dynamic`을 나란히 두어 물리 속성을 추가한 단계에 따라 결과가 달라지도록 만들었다. 보라색 `RawUsd`와 노란 큐브의 변환은 원시 USD와 Core API가 같은 종류의 장면 속성을 작성한다는 것을 보여준다. Script Editor 예제는 별도 빨간 큐브 없이 시작하고, 노란 큐브에 속성을 직접 추가하며 같은 차이를 확인한다.
+| `run.py`의 Prim 경로 | 색·생성 방식 | 관찰할 동작 |
+|---|---|---|
+| `/World/Visual` | 노랑, `VisualCuboid` | 회전·스케일이 있어도 공중에 머뭅니다. |
+| `/World/RigidOnly` | 빨강, 외형에 `RigidPrim` 추가 | 중력으로 떨어지지만 바닥을 통과합니다. |
+| `/World/Converted` | 청록, 강체와 충돌을 순서대로 추가 | 떨어져 바닥에서 멈춥니다. |
+| `/World/Dynamic` | 파랑, `DynamicCuboid` | 강체와 충돌을 한 번에 만들어 낙하하며 바닥에서 멈춥니다. |
+| `/World/RawUsd` | 보라, `pxr.UsdGeom.Cube` | USD를 직접 작성한 외형이며 공중에 머뭅니다. |
 
-## 실행 후 확인할 것
+Stage는 장면 전체이고, Prim은 `/World/Visual`처럼 경로로 찾는 장면 요소입니다. `VisualCuboid`와 `UsdGeom.Cube`는 접근 방식이 다르지만 둘 다 Stage에 큐브 Prim을 작성합니다.
 
-- 독립 실행의 Stage에서 `/World/Visual`을 선택한다. 노란 큐브는 회전·스케일이 적용되어 있지만 중심 높이는 `--height`에 머문다. 보이는 도형만으로는 중력이 적용되지 않는다는 뜻이다.
-- 빨간 `/World/RigidOnly`는 떨어져 **바닥을 통과하고 화면 밖으로 사라지는 것이 정상**이다. `heights.csv`의 `rigid_only_z_m`이 계속 감소하는 것으로도 확인한다. 이 큐브에는 강체만 있고 충돌 속성이 없다.
-- 청록색 `/World/Converted`와 파란 `/World/Dynamic`은 충분히 실행하면 바닥 위에 멈춘다. 기본 높이에서 `--steps 240`으로 실행한 `converted_z_m`, `dynamic_z_m`은 한 변 0.3 m의 절반인 약 0.15 m여야 한다. 짧은 실행에서는 아직 낙하 중일 수 있다.
-- `initial_scene.usda`를 열면 낙하 전의 설정을 볼 수 있고, `heights.csv`는 실행 중 측정값이다. 저장 장면에 큐브가 다시 공중에 있다고 해서 낙하 결과가 사라진 오류로 해석하지 않는다.
-- Script Editor에서 Run한 직후에는 도형 생성만 확인한다. Play 후 청록색·파란색이 낙하하는지 보고, 노란 큐브에 `RigidPrim`만 추가했을 때의 통과와 `GeometryPrim.apply_collision_apis()`까지 추가했을 때의 접촉을 비교한다.
+## 1. 다섯 큐브를 한 번에 실행하기
 
-## 준비와 결과
-
-Isaac Sim **5.1.0**을 설치하고 해당 버전이 지원하는 NVIDIA GPU/드라이버를 준비한다. 아래 명령은 Linux 설치 경로가 `~/isaacsim`인 경우다. Windows에서는 동일한 파일을 설치 폴더의 `python.bat`으로 실행한다. `python3 run.py --help`는 옵션 확인용이며 시뮬레이션 실행에는 설치에 포함된 Python을 사용한다. 기본 도형만 사용하므로 로봇 자산 다운로드는 필요하지 않다.
-
-독립 실행의 보라색 원시 USD 큐브는 물리 속성 없이 회전·스케일 변환만 받는다. `heights.csv`에는 비교 대상 네 큐브의 실제 높이가 기록된다.
-
-## 1. 독립 Python 실행
-
-이 패키지 폴더에서 실행한다. 패키지를 다른 곳에 복사해도 같은 명령을 사용할 수 있다.
+Isaac Sim 5.1과 지원 NVIDIA GPU·드라이버를 준비하세요. 큐브와 지면은 코드로 만들므로 외부 로봇 자산은 필요하지 않습니다. 아래는 저장소 루트에서 실행하는 Linux 명령입니다.
 
 ```bash
-python3 run.py --help
-~/isaacsim/python.sh run.py
-~/isaacsim/python.sh run.py --headless --steps 240 --height 2.0
+~/isaacsim/python.sh src/00_core_quickstart_isaacsim/run.py --steps 240
 ```
 
-1. `run.py`는 먼저 옵션을 읽고 `SimulationApp`을 만든다. 이후에만 `omni`, `pxr`, Core API를 가져온다.
-2. 지면과 평행광을 만들고, 네 가지 큐브를 서로 떨어진 위치에 배치한다. 초기 높이는 중심 기준 1.5 m다.
-3. `Visual`은 렌더링만 담당한다. `RigidOnly`는 `RigidPrim`으로 강체 속성만 추가한다. `Converted`에는 `GeometryPrim.apply_collision_apis()`도 추가한다. `Dynamic`은 `DynamicCuboid` 한 번으로 강체와 충돌을 함께 만든다.
-4. `RawUsd`에는 `UsdGeom.Cube`와 세 개의 xform 연산을 직접 작성한다. 노란 큐브에도 Core API로 회전과 스케일을 적용해 두 표현을 비교한다.
-5. `world.reset()`으로 물리 객체를 초기화한 뒤 1/60초씩 전진한다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 물리를 계속 계산한다. `--steps 240`을 명시하면 물리 시간 4초 후 종료하며, `--headless`에서 생략한 경우도 240스텝으로 끝난다.
-6. 출력 경로에 생성된 `initial_scene.usda`를 GUI의 **File > Open**으로 열면 초기 장면을 다시 살펴볼 수 있다. `heights.csv` 마지막 줄에서 `visual_z_m`은 초기 높이, `rigid_only_z_m`은 음수, 나머지 두 높이는 약 0.15 m인지 확인한다. 충돌의 작은 허용 오차는 정상이다. 짧은 `--steps` 값은 아직 낙하 중일 수 있다.
+설치 위치가 다르면 `~/isaacsim`을 바꾸세요. Windows에서는 설치의 `python.bat`을 사용합니다. 240단계가 끝나면 앱이 종료됩니다. 창을 계속 보려면 `--steps 240`을 빼고, 창 없이 실행하려면 `--headless`를 추가하세요. Headless에서 단계 수를 생략하면 240단계입니다.
 
-기본 출력은 이 패키지의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있으며 기존 폴더는 덮어쓰지 않는다. CSV의 시간은 벽시계 시간이 아니라 물리 스텝 수 × 1/60초다.
+### 코드에서 볼 부분
 
-## 2. GUI로 같은 개념 만들기
+먼저 `SimulationApp`으로 앱을 시작한 뒤 `omni`, `pxr`, Core API를 가져옵니다. 이 모듈들은 실행 중인 앱의 확장을 사용합니다. `World`는 길이를 미터로, 물리 간격을 1/60초로 설정합니다.
 
-1. `~/isaacsim/isaac-sim.selector.sh`에서 앱을 시작하고 **File > New**로 빈 Stage를 만든다.
-2. **Create > Physics > Ground Plane**, **Create > Lights > Distant Light**를 차례로 선택한다. Light의 Property에서 Intensity를 1000으로 둔다.
-3. **Create > Shape > Cube**로 큐브를 만든다. Stage 트리에서 선택하고 Property의 Transform에서 중심 위치 Z를 `1.5`, 모든 Scale을 `0.15`로 지정한다. 기본 USD Cube Size가 2인 경우 실제 한 변은 0.3 m다. Size가 다른 경우 한 변이 0.3 m가 되도록 조정한다.
-4. **Play**를 누른다. 큐브가 떠 있는 이유는 아직 강체가 아니기 때문이다. **Stop**을 누른다.
-5. 큐브를 선택한 상태에서 Property의 **Add > Physics > Rigid Body with Colliders Preset**을 선택한다. **Play**를 누르면 떨어져 바닥에서 멈춘다.
-6. **Stop** 후 `W` 이동, `E` 회전, `R` 스케일 도구를 각각 사용한다. 이동/회전 아이콘을 길게 눌러 Local/World 좌표계를 비교한다. 정확한 값은 Property에 입력하며 파란 초기화 버튼으로 복원한다. `Esc`는 선택 해제다.
-7. **File > Save As**로 본인이 정한 새 USD 경로에 저장한다. 기존 장면을 덮어쓰지 않도록 새 이름을 사용한다.
+청록 큐브를 만드는 부분은 외형과 두 물리 기능을 분리해 보여줍니다.
 
-## 3. Script Editor 방식
+```python
+converted = world.scene.add(
+    RigidPrim("/World/Converted", name="converted", masses=np.array([1.0]))
+)
+GeometryPrim("/World/Converted").apply_collision_apis()
+```
 
-새 GUI 인스턴스에서 **File > New**, **Window > Script Editor**를 연다. 로컬 `script_editor.py` 내용을 탭에 붙여 넣고 **Run**을 누른다. 이 파일은 이미 실행 중인 앱을 사용하므로 `SimulationApp`을 만들지 않는다. 이어서 **Play**를 누르면 청록색/파란색 큐브만 떨어진다. 같은 Stage에서 재실행하면 중복 생성을 막는 오류가 나므로 **File > New** 후 실행한다.
+이 앞에서 같은 경로에 `VisualCuboid`를 생성했습니다. `RigidPrim`이 새 큐브를 하나 더 만드는 것이 아니라, 이미 있는 큐브에 강체 기능을 추가합니다. 질량 배열의 `1.0`은 kg 단위이며, 충돌 기능은 그 아래 줄에서 별도로 붙입니다. 빨간 큐브에는 마지막 줄에 해당하는 처리가 없습니다.
 
-기존 큐브의 물리/충돌 속성을 직접 분리해 보려면 **Stop** 후 새 탭에서 아래를 실행한다. 기존 노란 큐브가 강체가 되지만 충돌이 없으므로 지면을 통과한다.
+노란 큐브의 `visual`과 `core_transform`도 같은 `/World/Visual`에 접근하는 두 Python 변수입니다. `XFormPrim.set_world_poses()`는 위치와 `[w, x, y, z]` 쿼터니언을 받고, `set_local_scales()`는 축별 배율을 받습니다. 코드의 `euler_angles_to_quat()`는 Z축 `π/4` 라디안 회전을 쿼터니언으로 바꿉니다.
+
+보라 큐브에는 USD 변환 연산을 직접 작성합니다.
+
+```python
+raw.AddTranslateOp().Set(Gf.Vec3d(0.0, 1.0, 1.0))
+raw.AddRotateXYZOp().Set(Gf.Vec3f(0.0, 0.0, 45.0))
+raw.AddScaleOp().Set(Gf.Vec3f(1.0, 1.5, 0.5))
+```
+
+여기의 `RotateXYZ`는 **도 단위**입니다. 앞의 `π/4` 라디안과 이곳의 45도는 같은 회전입니다. 스케일 `[1, 1.5, 0.5]`는 y 길이를 1.5배, z 길이를 절반으로 만듭니다. 회전이나 크기를 바꾸는 작업만으로 중력이 생기지는 않습니다.
+
+### 실행 결과 확인하기
+
+기본 중심 높이는 1.5 m입니다. 빨간 큐브가 바닥 아래로 사라지는 것이 이 비교에서 예상한 동작입니다. 종료 후 이 폴더의 `output/날짜-시간/`을 열어 보세요.
+
+| 파일·열 | 읽는 방법 |
+|---|---|
+| `initial_scene.usda` | `world.reset()`과 낙하 전에 저장한 장면입니다. GUI에서 열면 초기 설정을 조사할 수 있습니다. |
+| `heights.csv`의 `visual_z_m` | 기본값 1.5 m를 유지하는지 확인합니다. |
+| `rigid_only_z_m` | 계속 감소해 음수가 되는지 확인합니다. |
+| `converted_z_m`, `dynamic_z_m` | 충분히 실행하면 약 0.15 m로 정착하는지 확인합니다. |
+| `step`, `time_s` | 240단계 완료 시 마지막 행은 240과 4.0초입니다. |
+
+청록·파랑 큐브의 한 변은 0.3 m라서 바닥 위 중심은 약 0.15 m입니다. `RawUsd`의 높이는 CSV에 기록하지 않으며, 시작 위치도 고정된 Z=1 m입니다. `--height`가 모든 도형의 높이를 바꾸는 것은 아닙니다.
+
+## 2. GUI와 Script Editor에서 속성 추가하기
+
+독립 실행을 종료한 뒤 `~/isaacsim/isaac-sim.sh`로 새 창을 여세요. 다음 두 방법은 각각 **File > New**로 빈 장면을 준비하고 시작합니다.
+
+### GUI에서 볼 부분
+
+1. **Create > Physics > Ground Plane**, **Create > Lights > Distant Light**를 추가합니다. 광원 Intensity를 1000으로 지정하세요.
+2. **Create > Shape > Cube**로 큐브를 만듭니다. Property에서 중심 Z=1.5, 실제 한 변=0.3 m가 되도록 Size와 Scale을 맞춥니다. Size가 2라면 각 Scale은 0.15입니다.
+3. **Play**를 눌러 공중에 머무는지 보고 **Stop**을 누릅니다.
+4. 큐브를 선택해 Property의 **Add > Physics > Rigid Body with Colliders Preset**을 적용합니다. 다시 Play하면 낙하해 바닥과 접촉하는지 확인하세요.
+5. Stop 후 `W` 이동, `E` 회전, `R` 스케일 도구를 사용해 보세요. 이동·회전 아이콘을 길게 누르면 Local/World 좌표 기준을 비교할 수 있습니다. 정확한 값은 Property에 입력하고 파란 초기화 버튼으로 복원합니다. `Esc`는 선택 해제입니다.
+6. 장면을 남기려면 **File > Save As**로 새 USD 이름을 지정합니다.
+
+### Script Editor 코드에서 볼 부분
+
+빈 장면에서 **Window > Script Editor**를 열고 이 폴더의 `script_editor.py` 전체를 실행합니다. 이 파일은 `/World/Quickstart` 아래에 네 큐브를 만들며, 독립 실행의 별도 빨간 큐브는 포함하지 않습니다. **Run**으로 장면을 작성한 다음 **Play**로 물리를 진행하세요.
+
+처음에는 청록·파랑만 떨어집니다. Stop 후 새 탭에서 노란 큐브에 강체만 추가해 보세요.
 
 ```python
 from isaacsim.core.prims import RigidPrim
 RigidPrim("/World/Quickstart/Visual")
 ```
 
-다시 **Stop** 후 아래를 실행하고 **Play**한다. 필요하면 Property에서 노란 큐브의 Z를 1.5로 복원한다.
+Play하면 노란 큐브도 떨어지지만 지면을 통과합니다. 다시 Stop하고, 필요하면 Property에서 중심 Z를 1.5로 복원한 뒤 충돌을 추가합니다.
 
 ```python
 from isaacsim.core.prims import GeometryPrim
 GeometryPrim("/World/Quickstart/Visual").apply_collision_apis()
 ```
 
-Script Editor에서 **Run**은 Python 문장을 한 번 실행한다. GUI의 Play가 이후의 물리 시간을 전진시킨다. 독립 스크립트에서는 `world.step()`을 호출하는 반복문이 이 역할을 맡는다. 공식 페이지의 Extensions 탭도 이 Script Editor 워크플로를 사용한다.
+### 실행 결과 확인하기
 
-## API와 USD를 읽는 법
+이제 Play하면 노란 큐브가 지면에서 멈추는지 확인하세요. **강체 추가 전 → 강체만 추가 → 충돌까지 추가**의 세 상태를 같은 큐브에서 비교한 것입니다. Script Editor는 CSV를 저장하지 않으므로 화면과 Property가 관찰 대상입니다. 이 파일의 RawUsd 큐브에는 별도 보라색 설정이 없으므로 경로로 구분하세요.
 
-| 이름 | 이 실습에서의 의미 |
-|---|---|
-| Stage / Prim | Stage는 장면 전체이고 Prim은 `/World/Converted`처럼 경로가 있는 객체다. USD 파일은 이 구조와 속성을 저장한다. |
-| Schema / API schema | `Cube` 같은 종류와 Rigid Body/Collision 같은 추가 기능을 표현한다. 화면에 보이는 모양만으로 물리 기능을 알 수 없다. |
-| `World` | 미터 단위, 물리 시간 간격, 객체 등록, 초기화, 스텝 실행을 관리한다. `scene.add`는 초기화할 객체를 등록한다. |
-| `VisualCuboid` / `DynamicCuboid` | 각각 시각적 큐브와 강체·충돌 큐브를 만드는 편의 API다. 색은 이 구현에서 0~1 RGB 값이다. |
-| `RigidPrim` / `GeometryPrim` | 이미 존재하는 Prim에 각각 강체와 충돌 기능을 추가하거나 접근한다. 질량과 충돌 표면은 서로 다른 개념이다. |
-| `XFormPrim.set_world_poses` | 월드 위치와 **w,x,y,z 순서의 단위 quaternion**을 사용한다. quaternion 성분은 각도값이 아니다. Euler 라디안은 `euler_angles_to_quat`으로 변환한다. |
-| `UsdGeom.Xformable` 연산 | `AddTranslateOp`, `AddRotateXYZOp`, `AddScaleOp`는 USD 변환 연산을 작성한다. `RotateXYZ`는 도 단위다. |
-| `UsdLux.DistantLight` | 매우 먼 광원처럼 평행광을 만든다. 지면이나 물체가 빛을 반사해야 화면에서 밝기를 볼 수 있다. |
+## 3. 외형·물리·실행 방식 정리
 
-공식 페이지 일부 변환 예제의 `XformPrim` 표기와 회전 배열은 5.1 설치 소스의 API와 일치하지 않는 부분이 있다. 이 구현은 설치된 `XFormPrim`, `set_local_scales`, 단위 quaternion을 사용한다. 공식 예제의 순차적인 기능 추가는 독립 실행에서 동시 비교로 재구성했고, Script Editor 단계에서는 직접 속성을 추가하도록 유지했다.
+```text
+외형만 작성 → 보이지만 중력으로 움직이지 않음
+외형 + 강체 → 중력으로 움직임
+외형 + 강체 + 충돌 → 중력으로 움직이고 바닥과 접촉
+```
 
-## 한 가지 변수 실험과 문제 해결
+GUI의 Preset과 Python의 `DynamicCuboid`는 강체·충돌을 함께 준비하는 편리한 방법입니다. 속성을 나눠 추가하면 바닥을 통과하는 이유도 설명할 수 있습니다. 물리 진행은 독립 실행에서 `world.step()`이, Script Editor 실습에서는 앱의 Play가 맡습니다.
 
-`--height`만 1.5에서 2.0으로 바꾼다. 낙하 시간은 늘어나지만 충돌한 큐브의 최종 중심 높이는 같아야 한다. `RigidOnly`는 계속 떨어져 화면에서 사라지는 것이 의도된 결과다.
+## 4. 간단한 확인 실험
 
-`ModuleNotFoundError: isaacsim/omni`이면 시스템 Python 대신 설치 폴더의 `python.sh`를 사용한다. 검은 화면에서는 Light와 카메라 방향을 확인하고 Stage 트리에서 큐브를 선택해 프레임을 맞춘다. GUI에서 움직이지 않으면 Play 상태와 Rigid Body/Collision 속성을 각각 확인한다. `--output` 오류는 새 폴더를 지정해 해결한다. 정적 컴파일과 옵션 도움말 검사는 GPU 실행을 검증하지 않는다.
+독립 실행의 시작 높이만 1.5에서 2.0 m로 바꿔 보세요.
 
-## 출처
+```bash
+~/isaacsim/python.sh src/00_core_quickstart_isaacsim/run.py --steps 240 --height 2.0
+```
 
-- NVIDIA, Isaac Sim **5.1.0**, [Isaac Sim Basic Usage Tutorial — Tutorial](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/quickstart_isaacsim.html#tutorial): GUI, Extensions, Standalone Python의 지면/광원/큐브/물리/변환 절차.
-- NVIDIA, Isaac Sim **5.1.0**, [Workflows](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/workflows.html): GUI 타임라인과 독립 Python 실행의 구분.
-- 설치본의 `standalone_examples/tutorials/getting_started.py`와 `exts/isaacsim.core.prims/isaacsim/core/prims/impl/xform_prim.py`를 API 대조에 사용했다. 이 패키지의 코드는 해당 실습을 설명하기 위해 별도로 작성했다.
+`visual_z_m`은 2.0 m를 유지하고, 청록·파랑은 낙하 시간이 길어져도 최종 중심 높이는 약 0.15 m입니다. 첫 실행과 CSV의 중간 행을 비교하면 낙하 과정의 차이가 보입니다. RawUsd는 여전히 Z=1 m에 있습니다.
+
+## 실행할 때 막히면
+
+- **빨간 큐브만 사라짐**: 충돌이 없는 강체의 예상 결과입니다. `rigid_only_z_m`으로 계속 낙하하는지 확인하세요.
+- **Script Editor에 `already exists` 오류**: 같은 장면에 예제가 남아 있습니다. File > New 후 파일 전체를 다시 실행하세요.
+- **Run 후 큐브가 움직이지 않음**: Script Editor는 장면을 작성합니다. 물리 관찰에는 Play가 필요합니다.
+- **출력 경로 오류**: `--output`으로 지정한 폴더는 새 경로여야 합니다. 생략하면 실행별 폴더를 만듭니다.
+- **모듈 import 실패**: 설치의 `python.sh`를 사용하고 `SimulationApp`보다 앞에 `omni`·`pxr` import를 옮기지 마세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Isaac Sim Basic Usage Tutorial](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/quickstart_isaacsim.html)에 대응합니다. GUI의 생성·변환·물리 속성 추가를 Python과 비교하도록 구성했습니다. 실행 방식의 배경은 [Workflows](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/workflows.html)를 참고하세요.
+
+다섯 큐브 비교와 CSV는 이 폴더의 실습 구성입니다. 변환 API는 제공 코드의 `XFormPrim`, `set_local_scales`, 단위 쿼터니언 표현을 기준으로 읽으세요. `tutorial.json`의 실행 상태는 `not_run`이며, 위 값은 실행 시 확인할 기준입니다.

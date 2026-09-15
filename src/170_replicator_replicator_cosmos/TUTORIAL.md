@@ -1,109 +1,135 @@
-# 170. t043 · Carter 주행 영상을 Cosmos 입력 데이터로 저장하기
+# 170. 주행 영상과 다섯 가지 제어 영상을 같은 시점에 저장하기
 
-권장 학습 순서 **170** · 고급 데이터 생성과 외부 시스템 통합 · 출처 ID `t043`
+## 이번에 배우는 것
 
-창고를 주행하는 Nova Carter의 전방 카메라에서 RGB, 깊이 시각화, 객체 분할, 음영이 있는 분할, edge 영상을 같은 프레임 번호로 저장한다. 이 결과는 Cosmos Transfer의 입력 제어 신호이다. **이 실습의 `run.py`는 Isaac Sim 렌더링을 실행하며, 생성형 Cosmos 모델 추론은 실행하지 않는다.** `prepare_transfer.py`는 실제 캡처 결과를 검사하고 원문 형식의 Transfer 입력 JSON을 만든다.
+**Carter의 전방 카메라에서 RGB·깊이·분할·경계 영상을 함께 저장하고 Cosmos Transfer 입력을 준비합니다.**
 
-공식 튜토리얼의 standalone 방식을 로컬 실행 코드로 구현했다. 카메라·창고·Carter 경로와 Writer API는 Isaac Sim **5.1.0**을 따른다. 다른 로컬 패키지나 공통 모듈이 필요 없다.
+생성형 모델에 장면의 모양을 전달하려면 보기 좋은 RGB만으로는 부족할 수 있습니다. 물체 사이 거리나 경계를 별도 영상으로 전달하면 다른 외형의 영상을 만들 때도 장면 구조를 참고하게 할 수 있습니다. 이번에는 그런 입력을 만드는 과정까지 다룹니다.
 
-## 이 실습의 의도
+| 구성 | 역할 | 결과 |
+|---|---|---|
+| `run.py` | 창고에서 Carter를 주행시키고 CosmosWriter로 캡처 | clip별 PNG와 MP4 |
+| `semantic_mapping.json` | 선택적으로 클래스 이름에 분할 색 지정 | 의미 기반 분할 설정 |
+| `prepare_transfer.py` | 모달리티 간 프레임 번호 검사 | Transfer 제어 JSON |
+| 외부 Cosmos Transfer | 준비된 영상을 받아 모델 추론 | 별도 환경에서 생성하는 영상 |
 
-Carter의 같은 주행 시점을 RGB·깊이 시각화·분할·음영 분할·edge라는 다섯 표현으로 저장하고, 이들이 Cosmos Transfer에 넘길 제어 입력으로 어떻게 대응하는지 익힌다. 여러 clip으로 나누어도 로봇 위치를 초기화하지 않아 연속 주행의 구간을 비교할 수 있다. 기본 실행은 시뮬레이션 캡처와 영상 인코딩까지이며, `prepare_transfer.py`도 입력 JSON만 만들고 Cosmos 모델 추론을 시작하지 않는다.
+**CosmosWriter는 데이터를 저장하는 writer입니다. 이 실행기만으로 Cosmos 모델의 영상 생성까지 수행하지는 않습니다.**
 
-## 실행 후 확인할 것
+## 1. 두 개의 짧은 주행 clip 만들기
 
-- **주행 장면:** GUI에서 `/NavWorld/CarterNav`와 그 아래 `targetXform`, 전방 카메라가 존재하고 목표 방향으로 장면이 변하는지 본다. 기본 두 clip × 10프레임은 짧은 캡처이므로 목표 도달까지 요구하지 않는다.
-- **프레임 대응:** 각 `clip_0000`, `clip_0001`에서 같은 번호의 `rgb`, `depth`, `segmentation`, `shaded_seg`, `edges` PNG를 열어 물체 위치와 경계가 대응하는지 확인한다. depth는 미터값 원본 배열이 아니라 시각화 영상이다.
-- **clip 저장:** 각 clip의 다섯 MP4가 존재하고 실제 재생되는지 본다. 번호는 다음 clip에서 다시 시작하지만 주행은 이어지므로, clip 경계에서 첫 로봇 위치로 되돌아가야 하는 것은 아니다.
-- **시간 해석:** `capture_times.json`의 `clip`, `frame`, `timeline_seconds`를 비교한다. 파일의 시뮬레이션 시각을 기준으로 표본 간격을 읽고, MP4 재생 FPS를 물리 진행 속도로 대신 해석하지 않는다.
-- **Transfer 준비 범위:** `prepare_transfer.py`가 같은 PNG 번호 집합을 확인한 뒤 만든 JSON의 `input_video_path`, `depth.input_control`, `seg.input_control`이 실제 clip 파일을 가리키는지 확인한다. 이 검사는 영상 디코딩이나 생성형 모델 결과를 검증하지 않는다.
+Isaac Sim 5.1, RTX GPU와 지원 드라이버를 준비하세요. 자산 루트의 창고 장면 `full_warehouse_worker_and_anim_cameras.usd`와 `OmniGraph/nova_carter_nav_only.usd`, 두 파일의 참조 자산에도 접근할 수 있어야 합니다. 공식 로봇의 navigation graph는 Script Node를 사용하므로 실행기가 해당 기능을 활성화합니다.
 
-## GUI 실행과 종료
-
-GUI에서 `--steps`를 생략하면 정해진 데이터 생성과 저장을 마친 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 양수 `--steps N`은 **생성 완료 후 GUI를 관찰하는 app update 횟수**입니다. 생성 작업 자체나 데이터 프레임 수를 제한하는 값은 아니며, `--frames` 등으로 요청한 데이터가 무한히 늘어나지 않습니다. `--headless`는 관찰 대기 없이 기존 유한 작업을 마치면 종료합니다.
-
-이 패키지 폴더에서 다음과 같이 실행합니다. 설치 경로는 자신의 환경에 맞추고, 이미 사용한 출력 폴더는 새 경로로 바꿉니다.
+저장소 루트에서 실행합니다.
 
 ```bash
-~/isaacsim/python.sh run.py --output output/gui
+~/isaacsim/python.sh src/170_replicator_replicator_cosmos/run.py \
+  --headless --clips 2 --frames 10 \
+  --output src/170_replicator_replicator_cosmos/output/first
 ```
 
-## 준비 및 첫 실행
+`--frames`는 clip 하나의 프레임 수입니다. 위 명령은 총 20개 시점을 저장합니다. 출력 경로는 새 폴더여야 합니다. GUI를 관찰하려면 `--headless`를 빼세요. 생성과 저장 후 창이 남으며, `--steps 120`을 추가하면 **저장 후** 120회 업데이트 뒤 닫힙니다.
 
-- Isaac Sim 5.1.0, RTX GPU와 지원 드라이버가 필요하다. `CosmosWriter`의 CUDA annotator 및 video encoding 기능을 사용한다.
-- 5.1 asset root에서 `/Isaac/Samples/Replicator/Stage/full_warehouse_worker_and_anim_cameras.usd`와 `/Isaac/Samples/Replicator/OmniGraph/nova_carter_nav_only.usd` 및 해당 참조 자산을 읽을 수 있어야 한다. 원격 자산 사용 시 네트워크가 필요하다.
-- 이 두 stage에는 주행을 위한 OmniGraph와 Script Node가 포함된다. 프로그램은 공식 예제처럼 Script Node opt-in을 켠다. 사용자 로봇으로 교체하려면 같은 navigation target/camera prim 경로 계약을 직접 맞춰야 한다.
+### 코드에서 볼 부분
+
+Carter는 `/NavWorld/CarterNav` 아래에 추가됩니다. 시작 이동 값은 `(-6,4,0)`, 그 아래 `targetXform`의 이동 값은 기본 `(3,3,0)`입니다. 두 값은 각각 **해당 Prim의 부모 기준 translate**입니다. 특히 `--target`을 세계 좌표의 목적지로 해석하면 부모의 이동을 빠뜨리므로, Stage의 목표 월드 변환과 로봇 위치를 함께 확인하세요. 전방 카메라를 1280×720 render product에 연결한 뒤 writer를 붙입니다.
+
+```python
+rep.orchestrator.set_capture_on_play(False)
+writer = rep.WriterRegistry.get("CosmosWriter")
+writer.attach(render_product)
+```
+
+자동 Play 캡처를 끄는 이유는 **저장할 시점을 반복문에서 직접 정하기 위해서**입니다. 타임라인은 주행을 계속 진행하고, 아래 호출에서 데이터를 수집합니다.
+
+```python
+rep.orchestrator.step(pause_timeline=False)
+observations.append({"clip": clip, "frame": frame,
+                     "timeline_seconds": timeline.get_current_time()})
+```
+
+프레임 사이에는 `capture_interval - 1`회의 앱 업데이트를 추가합니다. 기본 `--capture-interval 2`라면 추가 업데이트가 1회입니다. 최초 `--start-delay 0.1`초는 주행 준비를 위한 타임라인 시간이며 저장 프레임에 포함하지 않습니다.
+
+clip이 끝날 때 `writer.next_clip()`을 호출해 PNG 쓰기와 영상 인코딩을 마칩니다. 마지막 clip에도 이 호출이 필요합니다. 다음 clip에서 프레임 번호는 다시 시작하지만 로봇 위치를 초기화하지 않으므로 주행의 다음 구간을 이어서 촬영합니다.
+
+### 실행 결과 확인하기
+
+`output/first/clip_0000/` 아래에서 같은 번호의 영상을 비교하세요.
+
+| 모달리티 | 파일 예 | 읽을 때 주의할 점 |
+|---|---|---|
+| RGB | `rgb/rgb_0000.png`, `rgb.mp4` | 카메라에 보이는 장면입니다. |
+| 깊이 | `depth/depth_0000.png`, `depth.mp4` | 거리의 시각화이며 픽셀 값을 그대로 m로 읽지 않습니다. |
+| 분할 | `segmentation/segmentation_0000.png` | 기본은 instance ID로 개체를 구분합니다. |
+| 음영 분할 | `shaded_seg/shaded_seg_0000.png` | 경계 추출에도 사용되는 중간 표현입니다. |
+| 경계 | `edges/edges_0000.png`, `edges.mp4` | shaded segmentation에 Canny를 적용한 결과입니다. |
+
+각 물체의 경계가 같은 화면 위치에 대응해야 합니다. 기본 instance 색은 학습 클래스 이름을 의미하지 않습니다. MP4 재생도 확인하고, `capture_times.json`의 타임라인 초를 함께 읽으세요. 영상 인코딩 FPS와 저장 시점 간 시뮬레이션 시간 차이를 같은 것으로 가정하지 않습니다.
+
+## 2. 저장한 영상을 Transfer 설정으로 연결하기
+
+데이터가 만들어졌다면 일반 Python으로 다음 검사를 실행합니다.
 
 ```bash
-cd /path/to/170_replicator_replicator_cosmos
-python3 run.py --help
-"$HOME/isaacsim/python.sh" run.py --headless --clips 2 --frames 10 --output output/first
+python3 src/170_replicator_replicator_cosmos/prepare_transfer.py \
+  --clip src/170_replicator_replicator_cosmos/output/first/clip_0000 \
+  --output src/170_replicator_replicator_cosmos/output/first/transfer_control.json
 ```
 
-`--headless`와 `--steps`를 생략하면 정해진 프레임의 캡처와 저장을 마친 뒤에도 창을 직접 닫을 때까지 유지한다. 기존 출력 경로에는 쓰지 않는다. `--frames`는 **clip 하나당** 프레임 수다. 기본값으로 두 clip, 각 10장, 총 20개의 동기화된 시점을 저장한다.
+다섯 모달리티의 PNG 번호 집합이 같고 MP4가 비어 있지 않아야 JSON을 작성합니다. 이 검사는 MP4를 디코딩하거나 영상 정렬을 눈으로 확인하는 검사를 대신하지 않습니다.
 
-## 단계별 실습
+### 설정에서 볼 부분
 
-1. 먼저 도움말을 읽고 기본 `capture-interval=2`, `start-delay=0.1`을 확인한다. 최초 0.1초는 자산·주행 준비 시간이며 저장할 데이터에는 포함하지 않는다.
-2. 위 명령을 실행한다. 창고 stage를 연 뒤 `/NavWorld/CarterNav`에 로봇을 참조로 추가하고 시작 위치 `(-6,4,0)`, 목표 위치 `(3,3,0)`를 설정한다.
-3. `output/first/clip_0000/rgb/rgb_0000.png`와 같은 번호의 `depth`, `segmentation`, `shaded_seg`, `edges` 파일을 비교한다. 물체 경계가 같은 영상 위치에 있어야 한다. depth는 거리값을 색으로 변환한 **시각화**이며, PNG 채널 값을 미터 단위 거리로 직접 읽으면 안 된다.
-4. 각 clip의 `rgb.mp4`, `depth.mp4`, `segmentation.mp4`, `shaded_seg.mp4`, `edges.mp4`를 재생한다. clip 전환 시 프레임 번호는 0000부터 다시 시작한다. 로봇 위치는 reset하지 않아 연속 주행의 다음 구간이 된다.
-5. `capture_times.json`을 열어 실제 관측한 timeline 초를 비교한다. capture 사이에 app update를 넣기 때문에 장면이 진행한다. 이 값은 측정값이며 영상 인코딩 FPS와 같다고 가정하지 않는다.
-6. 다음 명령으로 다섯 모달리티의 PNG 번호 집합과 비어 있지 않은 MP4 파일을 검사하고 Transfer 입력을 만든다.
+생성된 JSON에는 RGB의 절대 경로인 `input_video_path`와 네 제어 가지가 들어갑니다.
+
+| 제어 가지 | 기본 가중치 | 추가 영상 경로 |
+|---|---|---|
+| `vis` | 0.25 | 입력 RGB를 사용합니다. |
+| `edge` | 0.25 | 이 스키마에는 별도 `input_control`을 쓰지 않습니다. |
+| `depth` | 0.25 | `depth.mp4` |
+| `seg` | 0.25 | `segmentation.mp4` |
+
+가중치의 합은 1입니다. `--edge-only`를 지정하면 `edge`의 가중치가 1인 별도 설정을 만들 수 있습니다. 캡처한 `edges.mp4`가 있다는 사실과 제어 JSON이 그 파일을 명시적으로 참조하는지는 구분해서 읽으세요.
+
+의미별 색이 필요하면 다음처럼 mapping을 전달합니다.
 
 ```bash
-python3 prepare_transfer.py --clip output/first/clip_0000 \
-  --output output/first/transfer_control.json
+~/isaacsim/python.sh src/170_replicator_replicator_cosmos/run.py \
+  --headless --semantic-mapping src/170_replicator_replicator_cosmos/semantic_mapping.json \
+  --output src/170_replicator_replicator_cosmos/output/semantic
 ```
 
-검사는 PNG 번호의 일치와 MP4 존재·크기를 확인한다. 동영상 디코딩, 물리 주행 정확성, 모델 추론 품질은 별도 관찰 대상이다.
+제공한 파일은 `floor`, `wall`, `rack`을 RGBA 색에 대응시킵니다. 장면에 해당 semantic class가 붙어 있어야 효과가 있으며, mapping 자체가 자산에 라벨을 새로 붙이지는 않습니다.
 
-## 코드에서 배우는 API와 USD
+실제 Transfer 추론은 [5.1 문서의 Transfer 연결 절차](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_cosmos.html#using-data-with-cosmos-transfer)에 해당하는 모델 환경과 가중치를 별도로 준비한 뒤 진행하세요. 선택한 모델 버전의 GPU 메모리, 해상도와 입력 길이 조건을 확인해야 합니다. 이 실습의 10프레임 clip이 모든 모델의 길이 조건에 맞는 것은 아닙니다.
 
-| 코드 | 이 실습에서의 역할 |
-|---|---|
-| `SimulationApp` | standalone 프로세스에서 Kit 런타임을 시작한다. `omni`, `carb`, `pxr` 기반 scene 작업은 이 뒤에 실행한다. |
-| `open_stage()` | 창고 USD와 그 reference를 합성하여 Stage를 만든다. Stage는 전체 장면, prim은 경로로 찾는 개별 객체다. |
-| `add_reference_to_stage()` | 로봇 파일을 `/NavWorld/CarterNav` prim 아래에 합성한다. 파일을 직접 수정하지 않고 현재 장면의 위치를 설정한다. |
-| `UsdGeom.Xformable` / `xformOp:translate` | prim의 이동 연산이다. 목표점은 `/targetXform`, 카메라는 `/chassis_link/sensors/front_hawk/left/camera_left`이다. |
-| `rep.create.render_product` | 전방 Camera prim과 1280×720 렌더 출력을 연결한다. 이것이 writer의 입력이다. |
-| `rep.WriterRegistry.get("CosmosWriter")` | 다섯 모달리티를 같이 저장하는 내장 writer를 얻는다. 별도 학습 모델을 불러오는 API가 아니다. |
-| `set_capture_on_play(False)` | Play에 따른 자동 저장을 끄고, 명시한 `step()`만 저장하게 한다. |
-| `step(pause_timeline=False)` | 렌더 데이터 한 시점을 수집하면서 주행 timeline을 계속 실행한다. |
-| `writer.next_clip()` | 현재 clip의 PNG 쓰기를 완료하고 MP4를 인코딩한 뒤 다음 clip 번호를 준비한다. 마지막 clip에도 호출하여 인코딩을 마친다. |
-| `wait_until_complete()` / `detach()` | 남은 데이터를 기다리고 writer 연결을 해제한다. `finally`에서 render product와 앱도 정리한다. |
+## 3. 캡처 시간과 모델 입력의 관계 정리
 
-`use_instance_id=True`는 semantic label 없이 개체를 구분하는 기본 방식이다. 분할 색은 학습 클래스 이름을 뜻하지 않는다. 제공한 `semantic_mapping.json`은 `floor`, `wall`, `rack` 클래스에 RGBA를 지정한다. 다음 실행은 **stage에 그 semantic class가 실제로 붙어 있을 때** 의미가 있다.
-
-```bash
-"$HOME/isaacsim/python.sh" run.py --headless --frames 10 \
-  --semantic-mapping semantic_mapping.json --output output/semantic
+```text
+주행 타임라인 → 전방 카메라의 한 시점 → 다섯 모달리티
+                                           ↓
+                             프레임 번호 검사 → 제어 JSON
+                                           ↓
+                                  별도 Transfer 모델 추론
 ```
 
-mapping이 있으면 writer는 instance ID 설정보다 semantic mapping을 우선한다. class label이 없는 사용자 자산에 mapping 파일만 공급해도 라벨이 자동 생성되지는 않는다.
+같은 번호는 모달리티를 묶는 기준이고, `timeline_seconds`는 장면 속 시점을 해석하는 기준입니다. 생성형 모델의 결과를 얻은 뒤에는 원래 깊이·분할과 구조가 얼마나 유지되는지 다시 확인해야 합니다. 입력 라벨이 있다고 생성 영상이 자동으로 완벽한 정답 영상이 되는 것은 아닙니다.
 
-## Cosmos Transfer로 넘기는 경계
+## 4. 간단한 확인 실험
 
-`transfer_control.json`에는 `input_video_path`와 `vis`, `edge`, `depth`, `seg` 제어 가지가 있다. 기본은 각 weight 0.25로 합이 1이다. `depth`와 `seg`의 `input_control`은 캡처한 파일의 절대 경로다. 단일 edge 실험은 `prepare_transfer.py --edge-only`로 별도 JSON을 만든다.
+`--canny-low`만 **10 → 30**으로 바꾸고 새 출력 경로에 실행해 보세요. `--canny-high`는 기본 100으로 유지합니다.
 
-이 JSON 스키마는 [Isaac Sim 5.1의 Using Data with Cosmos Transfer](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_cosmos.html#using-data-with-cosmos-transfer)에 수록된 Transfer 방식이다. 모델을 실제 실행하려면 [NVIDIA Cosmos Transfer 공식 참조](https://docs.nvidia.com/cosmos/latest/transfer/reference.html)의 **해당 Transfer 모델 버전** 환경, 모델 가중치, 요구 GPU 메모리, 입력 해상도/길이 조건을 별도로 준비한다. 짧은 10프레임 검증 clip이 선택한 모델의 길이 조건을 충족한다고 가정하지 않는다. 외부 문서의 `latest`는 Isaac Sim 5.1에 고정되지 않으므로 선택한 모델 버전과 명령을 결과와 함께 기록한다. 생성형 결과가 원본 semantic/depth의 완벽한 정답 영상이라고도 가정하지 않는다.
+약한 경계가 연결되는 범위와 노이즈가 어떻게 달라지는지 `edges.mp4`에서 비교하세요. RGB의 모든 텍스처가 경계로 나와야 한다고 예상하지 않습니다. 이 writer의 경계 입력은 shaded segmentation이기 때문입니다.
 
-## 한 변수 실험
+## 실행할 때 막히면
 
-`--canny-low 30 --canny-high 150`만 바꾸고 새로운 출력 경로에 실행한다. 기본 10/100과 `edges.mp4`의 약한 경계·노이즈 양을 비교한다. 이 Writer의 edge 입력은 shaded segmentation annotator에 Canny를 적용한 결과이다. 단순히 RGB의 모든 텍스처 경계가 추출될 것이라고 예상하면 관찰이 어긋난다.
+- **Carter 카메라나 목표 prim이 없음**: 창고만 열린 상태일 수 있습니다. navigation USD와 참조 자산을 확인하세요.
+- **로봇이 움직이지 않음**: Script Node, navigation graph, 목표 위치와 장애물을 확인하세요. 짧은 clip의 끝이 목표 도달을 뜻하지는 않습니다.
+- **의미 분할이 비어 보임**: mapping의 클래스명과 장면 라벨을 대조하고 기본 instance 모드와 비교하세요.
+- **PNG만 있고 MP4가 없음**: video encoding 로그를 확인하세요. 파일 저장과 인코딩은 별도 단계입니다.
+- **Transfer 준비 검사 실패**: 같은 번호의 PNG가 모든 모달리티에 있는지 확인하세요. 불완전한 clip의 누락 파일을 임의로 복사하지 않습니다.
 
-또 다른 실험으로 `--capture-interval`만 4로 바꾸면 저장 프레임 사이 장면 변화가 커질 수 있다. MP4 인코딩은 writer가 읽은 timeline FPS를 사용하므로 `capture_times.json` 없이 영상 재생 시간만으로 시뮬레이션 속도를 추론하지 않는다.
+## 공식 문서와 실습 범위
 
-## 문제 해결과 검증 범위
+Isaac Sim **5.1.0**의 [Cosmos Synthetic Data Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_cosmos.html)에 대응합니다. 공식 창고·Carter 장면과 CosmosWriter를 사용하고, 로컬 실행기에 타임라인 기록과 Transfer 입력 검사를 추가했습니다.
 
-- stage/camera 누락 오류: 5.1 공식 자산 경로와 asset root 연결을 확인한다. warehouse만 열리고 Carter reference가 실패하면 카메라도 없다.
-- 움직이지 않는 로봇: Script Node opt-in, navigation graph, 장애물과 target 위치를 확인한다. `--target X Y Z`로 창고 내부의 접근 가능한 목표를 설정한다.
-- 분할이 배경뿐이면 semantic label 유무를 확인하고 기본 instance ID 모드로 돌아가 비교한다.
-- PNG만 있고 MP4가 없으면 video encoding 오류를 확인한다. 코드는 파일 누락을 실제 실패로 보고하며 성공 메시지를 내지 않는다.
-- 작성 과정에서는 Python compile·도움말 및 설치본 API 대조만 수행했다. GPU 캡처, MP4 디코딩 및 Cosmos 모델 추론은 실행하지 않았다.
-
-## 출처
-
-- [Isaac Sim 5.1 · Cosmos Synthetic Data Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_cosmos.html)
-- [출력 구조](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_cosmos.html#output-structure), [semantic mapping와 edge 조절](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_cosmos.html#advanced-usage)
-- API 대조: 설치본 `standalone_examples/api/isaacsim.replicator.examples/cosmos_writer_warehouse.py`, `omni.replicator.core` 1.12.27의 `scripts/writers_default/cosmos.py`. 공식 문서의 여러 clip 실습을 로컬 argparse 실행으로 재구성했다.
+실행기·설정·writer 연결을 문서와 대조했으며 GPU 캡처, MP4 재생, 외부 모델 추론은 이번 개정에서 실행하지 않았습니다. `tutorial.json`의 검증 상태는 `not_run`입니다.

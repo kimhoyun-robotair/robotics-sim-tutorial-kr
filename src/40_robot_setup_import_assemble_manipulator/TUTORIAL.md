@@ -1,115 +1,165 @@
-# 40. UR10e와 Robotiq 2F-140을 하나의 로봇으로 조립하기
+# 40. 로봇 팔과 그리퍼를 하나의 기구로 조립하기
 
-권장 학습 순서 **40** · 로봇 자산 가져오기와 제작 · 출처 ID `t124`
+## 이번에 배우는 것
 
-공식 인덱스 **t124** · Isaac Sim **5.1.0**
+**UR10e 손목에 Robotiq 2F-140을 연결하고, 고정 관절·articulation·USD variant가 서로 다른 문제를 해결하는지 확인합니다.**
 
-## 이 실습의 의도
+팔 끝에 그리퍼가 보이도록 배치해도 물리적으로 붙은 것은 아닙니다. 손목과 그리퍼 base를 고정 관절로 연결해야 하며, 하나의 articulation으로 다루려면 두 자산에 있던 root도 정리해야 합니다. 이번에는 먼저 완성 샘플을 조사하고 그 구조를 직접 조립한 결과와 비교합니다.
 
-UR10e 손목과 Robotiq 그리퍼를 fixed joint로 연결하고 articulation root를 하나로 정리하여, 두 자산을 하나의 제어 가능한 로봇으로 조립하는 과정을 배웁니다. 수동 연결과 Robot Assembler의 variant 구성을 각각 GUI에서 수행하고 결과의 구조를 비교합니다. 기본 `run.py`는 이미 조립된 공식 샘플을 열어 구조를 기록하는 검사기이며, 직접 만든 로봇은 `--asset`으로 지정해야 검사 대상이 됩니다. `prepare_xacro.py`는 선택한 Robotiq 소스의 작업 복사본과 경로만 준비하며 XACRO 확장·URDF import·조립은 해당 절차에서 따로 수행합니다.
+| 파일 또는 기능 | 입력 | 결과 |
+|---|---|---|
+| `run.py` | 조립된 USD | 관절 연결과 root 목록 보고서 |
+| 수동 Fixed Joint 조립 | 팔 USD + 그리퍼 USD | 손목에 고정된 그리퍼 |
+| Robot Assembler | 두 로봇과 장착점 | 조립 결과와 선택 가능한 구성 |
+| `prepare_xacro.py` | Robotiq XACRO 소스 | 경로를 정리한 별도 작업 복사본 |
 
-## 실행 후 확인할 것
+**`run.py`는 조립 검사기입니다.** 기본 실행에서는 공식 완성 샘플을 읽고, 직접 만든 USD는 `--asset`으로 지정합니다.
 
-- **검사 대상:** `assembly_report.json`의 `asset`이 공식 `ur_gripper.usd`인지 자신의 조립 결과인지 먼저 확인합니다. 기본 샘플이 보이는 것만으로 사용자가 만든 조립 결과가 검사된 것은 아닙니다.
-- **articulation 통합:** 보고서의 `articulation_roots`가 하나이고 `single_articulation=true`인지 확인합니다. 이 값은 기록만 되므로 `false`여도 실행 종료 코드가 자동으로 오류가 되지는 않습니다.
-- **손목 연결:** `joints`에서 그리퍼 고정 joint의 `body0`가 `/ur/wrist_3_link`, `body1`이 그리퍼 base 강체를 가리키는지 확인합니다. GUI에서 Play하여 장착 위치를 유지하는지도 봅니다. 이 검사기는 물리를 자동 재생하거나 팔 목표를 보내지 않습니다.
-- **조립 방식별 결과:** Robot Assembler로 만든 경우 `variant_sets`의 `ee_link` 선택지와 GUI의 `None`↔`robotiq_2f_140` 전환을 확인합니다. 보고서는 선택지 이름을 기록할 뿐 전환을 실행하지 않으며, 수동 Fixed Joint 조립에는 같은 variant가 없어도 됩니다.
-- **보존할 파일:** `inspection_scene.usda`는 검사 장면이고 실제 조립 편집은 작업한 로컬 USD에 저장합니다. ROS/XACRO 경로를 택했다면 생성 URDF가 `robotiq_work`의 mesh를 계속 참조하는지도 확인합니다.
+## 1. 완성 샘플의 연결 구조부터 읽기
 
-## 준비
-
-Isaac Sim 5.1.0, NVIDIA GPU와 정상 드라이버, 5.1 asset root가 필요합니다. **ROS를 설치하지 않아도** Content Browser에서 다음 준비된 공식 에셋으로 조립 실습 전체를 진행할 수 있습니다. 경로는 대소문자를 구별합니다.
-
-- 팔: `Isaac Sim/Samples/Rigging/Manipulator/import_manipulator/ur10e/ur/ur.usd`
-- 그리퍼: `Isaac Sim/Samples/Rigging/Manipulator/import_manipulator/robotiq_2f_140/robotiq_2f_140.usd`
-- 수동 조립 참고: `.../ur10e/ur/ur_gripper_manual.usd`
-- Assembler 조립 참고: `.../ur10e/ur/ur_gripper.usd`
-
-원본 설치 에셋을 덮어쓰지 않도록 File > Save As로 이 패키지 `output/` 아래 새 파일에 작업합니다. 프로그램의 저장 파일은 원본 USD reference를 유지하므로 외부 asset root의 접근은 계속 필요합니다.
-
-## 1. Linux에서 URDF로 시작하는 선택 경로
-
-처음부터 import하려면 Linux, 시스템 ROS 2 Humble 또는 Jazzy, `xacro`, `colcon`, `rosdep`, `robot_state_publisher`, `rqt_graph`가 필요합니다. Isaac 내부 rclpy는 Python 3.11용입니다. 시스템 ROS의 Python 모듈을 Isaac의 Python 경로에 직접 섞지 않습니다. ROS 노드 발행을 시스템 ROS 프로세스에서 하고 Isaac은 호환되는 bridge 환경으로 실행할 수 있습니다.
-
-사용할 ROS workspace를 `$UR_WORKSPACE`에 지정한 뒤 다음을 실행합니다. 아래는 Humble이며 Jazzy라면 source 경로와 git branch를 모두 jazzy로 바꿉니다. 설치 명령은 사용자의 ROS 환경에 실행하는 절차입니다.
+Isaac Sim 5.1.0, 지원 GPU와 공식 Manipulator 에셋 접근이 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-source /opt/ros/humble/setup.bash
-sudo apt install ros-humble-xacro
-UR_WORKSPACE="$HOME/ur_description_ws"
-mkdir -p "$UR_WORKSPACE/src"
-git clone --branch humble https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git "$UR_WORKSPACE/src/ur_description"
-cd "$UR_WORKSPACE"
-rosdep install -i --from-path src --rosdistro humble -y
-colcon build
-source install/setup.bash
-ros2 launch ur_description view_ur.launch.py ur_type:=ur10e
+~/isaacsim/python.sh src/40_robot_setup_import_assemble_manipulator/run.py \
+  --output src/40_robot_setup_import_assemble_manipulator/output/reference
 ```
 
-다른 같은 ROS 환경 터미널에서 `rqt_graph`를 실행하고 robot_state_publisher가 있는지 확인합니다. Isaac의 Window > Extensions에서 **ROS 2 Robot Description URDF Importer**를 Enable합니다. 검색되지 않으면 `@feature` 필터를 지웁니다. File > Import from the ROS 2 URDF Node에서 Node=`robot_state_publisher`, Refresh, 새 로컬 Model 출력 폴더를 선택합니다. Joint Configuration을 **Natural Frequency**, 모든 팔 관절을 **300**으로 설정하고 Import합니다.
+기본 입력은 `/Isaac/Samples/Rigging/Manipulator/import_manipulator/ur10e/ur/ur_gripper.usd`입니다. 창은 직접 닫을 때까지 유지됩니다. 양수 `--steps`는 앱 갱신 후 종료할 한도이며 자동 물리 실행 횟수가 아닙니다. Headless에서는 생략 시 1200회, `--frames` 지정 시 그 값을 사용하고 `--steps`가 있으면 우선합니다.
 
-Isaac용 Python 3.11 ROS workspace를 사용하는 경로는 Isaac 공식 `IsaacSim-ros_workspaces`의 `build_ros.sh`로 ROS와 ur_description을 함께 빌드하고 `build_ws/humble/humble_ws/install/local_setup.bash`, `build_ws/humble/isaac_sim_ros_ws/install/local_setup.bash`를 source한 뒤 Isaac을 시작합니다. 이 패키지가 ROS 빌드 자체를 포함하거나 실행하지는 않습니다. 이 방식이 필요할 때의 전체 준비 출처는 아래 Python 3.11 ROS 가이드입니다.
+### 코드에서 볼 부분
 
-## 2. Robotiq XACRO를 URDF로 바꾸기
+검사기는 `/ur` 아래를 순회하면서 articulation root와 관절 관계를 읽습니다.
+
+```python
+roots = [str(prim.GetPath()) for prim in Usd.PrimRange(root)
+         if prim.HasAPI(UsdPhysics.ArticulationRootAPI)]
+```
+
+보고서의 `single_articulation`은 이 목록의 길이가 1인지 계산한 값입니다. `false`를 기록해도 프로그램이 반드시 오류로 종료하지는 않습니다. 따라서 종료 코드만으로 조립 완성을 판단하지 마세요.
+
+### 실행 결과 확인하기
+
+| 출력 파일·항목 | 읽는 방법 |
+|---|---|
+| `assembly_report.json`의 `asset` | 실제 검사한 입력 파일 |
+| `articulation_roots`, `single_articulation` | root가 하나로 정리되었는지 |
+| `joints[].body0/body1` | 각 관절이 어떤 두 강체를 연결하는지 |
+| `variant_sets` | 루트 prim의 variant 이름과 선택지 |
+| `inspection_scene.usda` | 입력 로봇을 참조한 검사 장면 |
+
+손목 연결 관절에서 Body0가 `/ur/wrist_3_link`, Body1이 그리퍼 base 강체인지 찾아보세요. `variant_sets`는 선택지를 읽을 뿐 실제 전환 동작을 시험하지 않습니다.
+
+## 2. 두 자산을 연결하고 자기 결과 검사하기
+
+### 설정에서 볼 부분: 수동 조립
+
+Content Browser에서 다음 두 준비 에셋을 사용하면 ROS 없이 진행할 수 있습니다.
+
+- 팔: `/Isaac/Samples/Rigging/Manipulator/import_manipulator/ur10e/ur/ur.usd`
+- 그리퍼: `/Isaac/Samples/Rigging/Manipulator/import_manipulator/robotiq_2f_140/robotiq_2f_140.usd`
+
+1. 팔 USD를 열고 **File > Save As**로 새 로컬 작업 파일에 저장합니다.
+2. 그리퍼 USD를 `/ur` 아래에 추가하고 prim 이름을 `ee_link`로 정합니다.
+3. `/ur/ee_link`의 Translate를 `(1.18425, 0.2907, 0.06085)`, Rotate를 `(-90, 0, -90)`°로 맞춥니다. 손목 끝과 장착면이 만나는지 확인하세요.
+4. `/ur/ee_link/root_joint`의 **Articulation Root를 제거**합니다. 팔의 root는 유지합니다.
+5. 같은 고정 관절의 **Body0를 `/ur/wrist_3_link`로** 변경하고, 그리퍼 base를 가리키는 Body1은 유지합니다.
+6. `/ur`의 IsaacRobotAPI에서 `isaac:physics:robotjoints`와 `isaac:physics:robotLinks`에 `/ur/ee_link`를 추가하여 그리퍼의 로봇 정보를 포함합니다.
+7. Play하여 장착이 유지되는지 확인하고 Stop 후 저장합니다.
+
+4번과 5번은 다른 작업입니다. Root 제거는 articulation 구성을 정리하고, Body0 수정은 원래 world 쪽에 연결된 그리퍼를 손목에 연결합니다. 한쪽만 처리하면 “root는 하나지만 그리퍼가 떨어짐” 또는 “붙어 있지만 제어 구조가 나뉨” 같은 결과가 생길 수 있습니다.
+
+### 설정에서 볼 부분: Robot Assembler
+
+같은 팔과 그리퍼를 새 작업 사본에 놓고 **Tools > Robotics > Asset Editor > Robot Assembler**를 엽니다.
+
+1. Base Robot=`/ur`, Attach Point=`wrist_3_link`로 지정합니다.
+2. Attach Robot=`/ur/ee_link`, Attach Point=`robotiq_arg2f_base_link`로 지정합니다.
+3. Assembly Namespace=`ee_link`로 두고 **Begin Assembling Process**를 누릅니다.
+4. 장착 방향을 **Z +90**으로 맞추고 **Assemble and Simulate**로 관찰합니다.
+5. **End Simulation And Finish** 후 새 파일에 저장합니다.
+
+수동 조립의 전체 transform과 Assembler의 Z +90은 서로 다른 장착 과정에서 입력하는 값입니다. 같은 작업에 두 보정을 무조건 누적하지 마세요. 조립 후 `/ur`의 `ee_link` variant에서 `None`과 `robotiq_2f_140`을 바꾸어 구성 전환을 확인합니다. Variant는 한 USD 안에 선택 가능한 구성을 표현하는 장치입니다.
+
+### XACRO에서 시작하고 싶다면
+
+준비된 USD 대신 원본 기술 형식을 다루려면 **Ubuntu 24.04의 ROS 2 Jazzy**, xacro, colcon과 초기화된 rosdep이 추가로 필요합니다. [공식 ROS 2 Description 저장소](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description)의 `jazzy` 브랜치로 입력을 준비합니다. 다음은 시스템 ROS를 사용하는 별도 Bash 터미널에서 실행하세요. `~/ur_description_t40_ws`는 새 작업 공간이어야 합니다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+sudo apt install ros-jazzy-xacro
+mkdir -p ~/ur_description_t40_ws/src
+git clone --branch jazzy https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git ~/ur_description_t40_ws/src/ur_description
+(
+  cd ~/ur_description_t40_ws
+  rosdep install -i --from-path src --rosdistro jazzy -y
+  colcon build
+  source install/setup.bash
+  ros2 launch ur_description view_ur.launch.py ur_type:=ur10e
+)
+```
+
+마지막 명령은 설명을 발행하는 노드를 계속 실행합니다. 다른 Jazzy 터미널의 `ros2 node list`에서 `/robot_state_publisher`가 있는지 확인하세요. 이 노드를 켜 둔 상태에서 Isaac Sim의 **ROS 2 Robot Description URDF Importer** 확장을 활성화하고 **File > Import from the ROS 2 URDF Node**를 엽니다. Node에 `robot_state_publisher`를 넣고 Refresh한 뒤 새 로컬 Model 출력 폴더를 선택합니다. 팔 관절을 모두 선택해 Joint Configuration의 Natural Frequency=300을 입력하고 Import하세요.
+
+시스템 ROS 노드와 Isaac Sim은 별도 프로세스입니다. Isaac 측에서 rclpy나 사용자 패키지를 직접 불러오는 구성은 5.1의 [Python 3.11 ROS 환경 구성](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)이 필요합니다. 시스템 Python 패키지를 Isaac Python 경로에 직접 섞지 마세요. 위 작업 공간 빌드와 ROS 발행은 `run.py`나 `prepare_xacro.py`가 대신 수행하지 않습니다.
+
+Robotiq 변환 명령도 `source /opt/ros/jazzy/setup.bash`를 실행한 Bash 터미널에서 진행합니다. UR10e 발행 터미널은 그대로 두고 새 터미널을 사용하세요. Robotiq는 [원본 모델 저장소](https://github.com/ros-industrial-attic/robotiq)의 작업 복사본을 사용합니다. 다음은 저장소 루트에서 시작하는 명령입니다.
 
 ```bash
 git clone https://github.com/ros-industrial-attic/robotiq.git /tmp/robotiq_source
-# 이 패키지 폴더에서 실행
-python3 prepare_xacro.py /tmp/robotiq_source/robotiq_2f_140_gripper_visualization output/robotiq_work
-cd output/robotiq_work/urdf
-xacro robotiq_arg2f_140_model.xacro > robotiq_2f_140.urdf
+python3 src/40_robot_setup_import_assemble_manipulator/prepare_xacro.py \
+  /tmp/robotiq_source/robotiq_2f_140_gripper_visualization \
+  src/40_robot_setup_import_assemble_manipulator/output/robotiq_work
+(
+  cd src/40_robot_setup_import_assemble_manipulator/output/robotiq_work/urdf
+  xacro robotiq_arg2f_140_model.xacro > robotiq_2f_140.urdf
+)
 ```
 
-ROS1의 `$(find robotiq_2f_140_gripper_visualization)`와 `package://...`를 복사본의 절대 경로로 바꿉니다. 원본 clone은 수정하지 않습니다. 출력 URDF가 이 복사본의 mesh를 참조하므로 `robotiq_work`를 유지합니다. 공식 repo는 ROS1의 보관된 모델 저장소이며 ROS1 노드를 실행할 필요는 없습니다.
+`prepare_xacro.py`는 복사한 `urdf/*.xacro`의 `$(find ...)`와 `package://...` 경로를 작업 복사본의 절대 경로로 바꿉니다. **XACRO 확장은 마지막 `xacro` 명령이 수행합니다.** 생성 URDF의 mesh 경로가 작업 복사본을 계속 가리키므로 그 폴더를 보존하세요.
 
-Isaac File > New → File > Import → `robotiq_2f_140.urdf`를 선택합니다. USD 출력은 새 로컬 폴더로 지정합니다. **finger_joint Natural Frequency=300**, **Mimic joint Natural Frequency=2500**으로 설정합니다. Mimic 기준 joint는 `/robotiq_arg2f_140_model/joints/finger_joint`, axis는 rotX, damping ratio는 **0.005**입니다.
+Isaac Sim의 **File > Import**로 URDF를 가져올 때 finger_joint Natural Frequency=300, Mimic joint Natural Frequency=2500을 시작점으로 사용합니다. Mimic Reference Joint는 `/robotiq_arg2f_140_model/joints/finger_joint`, Reference Axis는 `rotX`, Damping Ratio는 0.005입니다.
 
-| 관절/종류 | lower–upper (USD degree) | gearing |
-|---|---|---|
-| finger_joint | 0–40.107 | 직접 drive |
-| left/right inner finger | -8.021–48.128 | -1 |
-| left inner knuckle, right inner/outer knuckle | -48.128–8.021 | 1 |
+Gearing은 inner finger 두 개가 -1, inner knuckle 두 개와 right outer knuckle이 1입니다. 원문의 USD 각도 범위는 finger_joint 0~40.107°, inner finger -8.021~48.128°, 나머지 mimic 관절 -48.128~8.021°입니다. 생성한 joint의 실제 이름·축·limit를 확인한 뒤 앞의 조립 절차로 이어갑니다.
 
-finger_joint의 참고 drive 값은 stiffness=37.51957, damping=0.00125, max force=1000입니다. 다른 5개 관절은 mimic으로 연동합니다. USD 편집기의 degree 값과 Python articulation API의 radian 값을 혼동하지 않습니다.
+### 실행 결과 확인하기
 
-## 3. 수동 Fixed Joint 조립
-
-1. 준비한 `ur.usd`를 열고 Save As로 작업 사본을 만듭니다. 그리퍼 USD를 Stage의 `/ur` 아래로 끌어놓고 Prim 이름을 `ee_link`로 바꿉니다.
-2. `/ur/ee_link` Transform을 Translate=(1.18425,0.2907,0.06085), Rotate=(-90,0,-90) degree로 설정합니다. 팔 wrist_3_link 끝과 그리퍼 장착면이 겹치는지 봅니다.
-3. `/ur/ee_link/root_joint`의 Physics Articulation Root를 제거합니다. 전체 로봇에는 하나의 articulation root만 있어야 합니다.
-4. 같은 root_joint의 Body0을 `/ur/wrist_3_link`로 설정합니다. 원래 그리퍼 base를 가리키는 Body1은 유지합니다. Fixed joint가 손목과 그리퍼를 묶습니다.
-5. `/ur`의 IsaacRobotAPI에서 `isaac:physics:robotjoints`와 `isaac:physics:robotLinks`에 `/ur/ee_link`를 추가해 그리퍼의 로봇 스키마를 포함합니다.
-6. Play로 팔과 그리퍼가 하나로 붙어 있는지 확인하고 Stop 후 새 파일에 저장합니다.
-
-## 4. Robot Assembler와 variant로 조립
-
-1. 새 팔 사본에서 다시 시작해 그리퍼를 `/ur/ee_link`에 넣습니다. Tools > Robotics > Asset Editor > Robot Assembler를 엽니다.
-2. Base Robot=`/ur`, Attach Point=`wrist_3_link`; Attach Robot=`/ur/ee_link`, Attach Point=`robotiq_arg2f_base_link`를 지정합니다.
-3. Assembly Namespace=`ee_link`, Begin Assembling Process를 누릅니다. Z +90으로 그리퍼 장착 방향을 맞춥니다.
-4. Assemble and Simulate로 동작을 확인한 뒤 End Simulation And Finish를 누릅니다.
-5. `/ur`의 Variants에서 `ee_link=None`과 `ee_link=robotiq_2f_140`을 바꿔 그리퍼가 제거/추가되는지 봅니다. 결과를 새 로컬 파일에 저장합니다.
-
-variant는 다른 로봇을 매번 복사하는 대신 같은 USD의 선택 가능한 구성을 표현합니다. payload는 선택한 그리퍼 데이터를 필요할 때 로딩하는 합성 요소입니다. articulation은 joint로 연결된 강체 집합이며 로봇 조립 후 root가 두 개 남으면 한 articulation으로 제어할 수 없습니다.
-
-## 5. 이 폴더의 실제 USD 검사
+자신이 저장한 조립 파일의 절대 경로를 넣어 검사하세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py
-"$ISAAC_SIM_ROOT/python.sh" run.py --asset /절대경로/내_ur_gripper.usd --headless --frames 10
+~/isaacsim/python.sh src/40_robot_setup_import_assemble_manipulator/run.py \
+  --asset /절대경로/내_ur_gripper.usd --headless --steps 10 \
+  --output src/40_robot_setup_import_assemble_manipulator/output/my_assembly
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 1200회 한도를 사용한다. 기존 `--frames`는 `--steps` 없는 headless 실행의 한도로만 쓰며 GUI를 닫지 않는다.
+`asset`이 자신의 파일인지, root가 하나인지, 손목 고정 관절이 양쪽 강체를 가리키는지 확인합니다. 수동 조립에는 Assembler와 같은 variant가 없어도 됩니다. 검사 장면은 자동 Play하지 않으므로 실제 장착 유지 여부는 GUI에서 따로 관찰하세요.
 
-`assembly_report.json`에는 articulation root 목록과 `single_articulation`, joint의 실제 body0/body1 관계, variant 선택지 이름을 기록합니다. 손목 연결이 올바른지는 보고서를 보고 직접 대조하며, root 개수나 variant 전환 성공을 자동 합격/불합격 판정하지 않습니다. GUI 준비기는 물리를 자동 시작하지 않습니다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 직접 확인할 수 있습니다. 기본 출력은 `output/<고유번호>/`이며 `--output`은 존재하지 않는 새 경로만 허용합니다.
+## 3. 조립에서 확인할 결과 정리
 
-성공은 모델이 보이는 것뿐 아니라 root 하나, 손목–그리퍼 fixed joint와 실제 장착 유지로 판정합니다. Assembler 경로에서는 variant 전환 후 구성 변화도 확인합니다. 한 변수 실험으로 Assembler의 Z +90만 생략해 장착 방향이 어떻게 달라지는지 비교합니다. gripper가 떨어지면 root_joint의 Body0/Body1과 articulation root 수를 확인합니다. Import가 모델을 못 찾으면 작업 복사본의 mesh 경로와 ROS node 이름을 먼저 확인합니다.
-## 버전 고정 출처
+```text
+장착 transform → 처음에 어디에 놓이는가
+고정 관절      → 움직일 때도 무엇에 붙어 있는가
+articulation   → 어떤 관절들을 한 물리 구조로 다루는가
+variant        → 어떤 그리퍼 구성을 선택하는가
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — Tutorial 6: Setup a Manipulator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_import_assemble_manipulator.html)
-- [공식 Python 3.11 ROS workspace 구성](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)
-- [Universal Robots ROS 2 Description](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description)
-- [Robotiq 원본 모델](https://github.com/ros-industrial-attic/robotiq)
+보고서의 root 수 하나만으로 이 모든 조건을 확인할 수는 없습니다. 구조 보고서와 Play 관찰을 함께 읽어야 완성된 조립을 설명할 수 있습니다.
 
-한국어 절차는 새로 작성했습니다. 원문 GUI 기능과 이 폴더의 준비/검사/실행 코드를 구별해 설명합니다. 실제 runtime 검증 범위는 tutorial.json의 verification 기록을 확인합니다.
+## 4. 간단한 확인 실험
+
+Assembler 결과에서 **`ee_link` variant만 `robotiq_2f_140`에서 `None`으로** 바꿔보세요. 팔의 위치와 관절 설정은 그대로 둡니다.
+
+그리퍼 구성이 사라지는지 관찰하고 다시 원래 선택지로 되돌립니다. 변환값을 지워 숨기는 것과 달리 USD가 선택한 구성을 바꾼다는 점을 Stage에서 확인해 보세요. 이 실험은 해당 variant가 생성된 Assembler 결과에서 진행합니다.
+
+## 실행할 때 막히면
+
+- **그리퍼가 떨어집니다**: `ee_link/root_joint`의 Body0가 손목인지, Body1이 그리퍼 base인지 확인하세요.
+- **`single_articulation=false`입니다**: 그리퍼의 Articulation Root가 남았는지 조사하세요. 검사기는 이를 자동으로 고치지 않습니다.
+- **모델이나 mesh를 찾지 못합니다**: 기본 에셋 접근과 생성 URDF의 절대 경로를 확인하세요. XACRO 작업 복사본을 옮기면 참조가 끊길 수 있습니다.
+- **공식 샘플만 계속 검사합니다**: 직접 만든 파일은 `--asset`으로 지정해야 합니다. `--stage` 옵션은 이 실행기에 없습니다.
+- **출력 폴더 오류가 납니다**: `--output`에는 새 경로를 사용하세요. `inspection_scene.usda`는 검사 결과이며 원래 조립 작업 파일도 따로 보존합니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Tutorial 6: Setup a Manipulator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_import_assemble_manipulator.html)에 대응합니다. 준비 USD를 이용하는 조립 경로와 선택적인 ROS/XACRO 가져오기 경로를 제공합니다.
+
+로컬 코드는 경로 정리와 조립 구조 검사를 수행합니다. ROS 빌드, URDF import, 수동 조립, Assembler 전환의 실행 검증 상태는 `tutorial.json`에서 `not_run`입니다. 보고서 생성과 실제 기구 동작은 구분하여 확인하세요.

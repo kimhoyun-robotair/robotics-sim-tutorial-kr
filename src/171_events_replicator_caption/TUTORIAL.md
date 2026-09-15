@@ -1,85 +1,152 @@
-# 171. 3D 장면 그래프로 이미지와 문장을 연결하기
+# 171. 이미지 속 물체와 관계를 장면 그래프로 읽기
 
-권장 학습 순서 **171** · 고급 데이터 생성과 외부 시스템 통합 · 출처 ID `t070`
+## 이번에 배우는 것
 
-이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다.
+**카메라에 보이는 물체를 노드로, 물체 사이 관계를 연결선으로 저장하고 문장 생성에 필요한 입력을 이해합니다.**
 
-## 이 실습의 의도
+“컵이 탁자 위에 있습니다”라는 설명에는 물체 이름과 지지 관계가 함께 들어 있습니다. 장면 그래프는 이런 정보를 구조화한 표현입니다. 이번에는 먼저 실제 장면에서 그래프를 만들고, 관계를 줄인 그래프와 비교합니다. 문장 생성은 별도 모델을 연결한 뒤 선택적으로 수행합니다.
 
-카메라에 보이는 객체와 공간 관계를 실제 annotator로 읽어 이미지의 내용을 장면 그래프의 node와 edge로 표현합니다. full graph와 pruned graph를 함께 저장하는 이유는 같은 장면에서 관계를 얼마나 남기는지 비교하기 위해서입니다. 기본 실습은 그래프와 시각화 생성까지이며, brief/global/QA 문장 생성은 별도 NIM 모델 연결과 설정을 켠 선택 단계입니다.
+| 파일 | 역할 |
+|---|---|
+| `prepare.py`, `caption_config.json` | 장면·카메라·출력 경로를 담은 설정을 만듭니다. |
+| `generate_scene_graph.py` | 이미 실행 중인 Isaac Sim 안에서 그래프를 생성합니다. |
+| `prepare_ira.py`, `lesson.json` | 배우 시뮬레이션에 SceneGraphWriter를 연결합니다. |
+| `patch_iro.py` | 기존 IRO 설정에 caption writer를 추가합니다. |
 
-## 실행 후 확인할 것
+기본 설정은 full/pruned graph와 시각화를 저장하며 `global_caption`, `brief_caption`, `qa_caption`은 모두 false입니다. 이 상태에서는 NIM API key가 필요하지 않습니다.
 
-- **설정 준비와 실행 구분:** `prepare.py` 후에는 `output/graph_01/config.yaml`의 장면·카메라·output 경로를 확인한다. 이 단계에서 그래프나 caption이 없는 것은 정상이며, GUI에서 `run_caption_config()`를 실행해야 데이터가 생성된다.
-- **실제 그래프:** 비동기 작업 완료 후 `caption_task.result()`로 오류가 없는지 확인하고, capture 아래의 `full_scene_graph.json`, `pruned_scene_graph.json`과 관계 시각화를 연다. 파일 존재에 더해 node가 카메라에 보이는 의미 라벨 객체와, edge가 그 객체들의 관계와 맞는지 비교한다.
-- **관계 가지치기:** 같은 장면에서 `pruning_ratio`만 1.0에서 0.5로 바꿔 full/pruned 그래프의 남은 관계를 비교한다. 1.0도 최소 신장 트리(MST)를 만든 결과이므로 원래 모든 edge가 보존되는 조건은 아니다.
-- **문장이 없는 경우:** 기본 `global_caption`, `brief_caption`, `qa_caption`은 모두 false다. 그래프만 생기는 것이 의도이며, `--captions`를 켰을 때만 모델 URL·이름·키를 준비해 `scene_graph_caption.json`을 별도로 확인한다.
-- **선택 통합:** IRA에서는 `scene_graph_interval=10`에 맞는 frame id를 RGB와 대조한다. IRO는 `patch_iro.py`가 만든 YAML을 다시 로드하고 실제 생성해야 결과가 생기므로 설정 수정 완료를 데이터 생성 완료로 세지 않는다.
+## 1. 먼저 그래프만 생성하기
 
-## 준비
+Isaac Sim 5.1 GUI, RTX GPU와 `isaacsim.replicator.caption.core` 확장을 준비하세요. 기본 입력은 5.1 자산팩의 `Isaac/Samples/Replicator/Captioning/test_caption.usda`입니다. 원격 자산 또는 같은 구조의 로컬 자산팩에 접근할 수 있어야 합니다.
 
-Isaac Sim 5.1 GUI, RTX GPU, `isaacsim.replicator.caption.core` 확장을 `Window > Extensions`에서 활성화합니다. 그래프만 만들 때 API key는 필요 없습니다. 공식 Assets의 `/Isaac/Samples/Replicator/Captioning/test_caption.usda`를 사용하며 인터넷 Assets 접근 또는 해당 경로의 로컬 5.1 자산팩이 필요합니다. GUI에서 기본 샘플이 다른 URL을 표시하면 Content Browser에서 실제 샘플 경로를 복사해 `--scene`으로 지정합니다. 패키지 외 공통 모듈은 사용하지 않습니다.
+저장소 루트에서 설정을 만든 뒤 앱을 시작합니다.
 
 ```bash
-python3 prepare.py --output output/graph_01
-/home/hoyunkim/isaacsim/isaac-sim.sh
+python3 src/171_events_replicator_caption/prepare.py \
+  --output src/171_events_replicator_caption/output/graph_first
+~/isaacsim/isaac-sim.sh
 ```
 
-위 명령은 이 패키지 디렉터리에서 실행하며 설치 경로는 자신의 환경에 맞춥니다. `prepare.py`는 현재 경로를 포함한 완전한 IRC 설정을 만들고 기존 output을 덮어쓰지 않습니다.
+첫 명령은 `config.yaml`을 만들고 종료합니다. 그래프나 이미지가 아직 없는 것이 정상입니다. 이 파일은 JSON 표기로 작성한 YAML입니다.
 
-## GUI와 Script Editor 실습
-
-1. `Tools > Action and Event Data Generation > VLM Scene Captioning`에서 Caption Settings를 엽니다. 샘플 USD를 선택해 `Load Scene`을 누릅니다. Stage에서 Camera Prim을 찾아 경로를 확인합니다. `/World/Cameras/Camera`가 아니면 `--camera`로 맞춘 새 설정을 생성합니다.
-2. `Window > Script Editor`에서 `generate_scene_graph.py` 파일을 열어 실행한 후 아래를 실행합니다. 이것은 설치된 5.1 IRC의 `StageInfoManager`를 사용하는 보조 자동화이며 UI와 동일한 그래프 생성 기능을 호출합니다. 잘못된 카메라/빈 출력은 오류로 표시합니다. 새로운 장면을 여는 작업이므로 기존 작업 장면은 먼저 저장합니다.
+1. **Window > Extensions**에서 caption core 확장을 켭니다.
+2. **Tools > Action and Event Data Generation > VLM Scene Captioning**에서 기본 샘플을 Load Scene으로 열고 카메라 경로를 확인하세요. 기본 설정은 `/World/Cameras/Camera`입니다.
+3. 다른 카메라를 사용한다면 `prepare.py --camera /실제/카메라/경로`와 새 출력 경로로 설정을 다시 만듭니다. 로컬 장면은 `--scene /절대경로/scene.usda`로 지정할 수 있습니다.
+4. **Window > Script Editor**에서 `generate_scene_graph.py` 전체를 실행합니다. 이 파일은 함수를 정의하며 그 자체로 작업을 시작하지 않습니다.
+5. 아래 코드를 실행합니다. 절대 경로는 첫 명령이 출력한 경로로 바꾸세요. 함수는 설정의 장면을 새로 열므로 작업 중인 기존 장면은 먼저 저장합니다.
 
 ```python
 import asyncio
-caption_task = asyncio.ensure_future(run_caption_config('/절대경로/output/graph_01/config.yaml'))
+caption_task = asyncio.ensure_future(
+    run_caption_config('/절대경로/output/graph_first/config.yaml')
+)
 ```
 
-3. 생성이 끝나면 `caption_task.result()`를 실행해 비동기 예외를 확인합니다. Capture 아래 카메라별 Captions 폴더에서 full/pruned 그래프와 시각화 이미지를 엽니다. 각 객체 node가 이미지에 실제 존재하고 edge가 공간 관계를 나타내는지 직접 대조합니다. `caption_only=false`, `use_ai_label=false`는 별도 caption DB 없이 semantic label을 쓰도록 합니다.
-4. 다음에는 `python3 prepare.py --output output/graph_half --pruning-ratio 0.5`로 만들고 재실행합니다. full graph와 pruned graph를 비교합니다. pruning=1도 모든 원래 edge를 보존한다는 뜻이 아니라 MST를 만든 뒤 추가 삭제하지 않는다는 뜻입니다. 0.5는 MST의 일부 edge를 더 제거합니다.
+### 코드에서 볼 부분
 
-## 모델 문장 생성과 외부 서비스
+이 함수는 카메라가 실제 `UsdGeom.Camera`인지 검사한 뒤 설치된 `StageInfoManager`를 사용합니다.
 
-문장까지 만들려면 NVIDIA API Catalog의 사용할 모델 페이지에서 NIM API key를 발급받거나 직접 배포한 NVIDIA NIM endpoint를 준비합니다. 계정·API 사용량·서비스 가용성은 사용자가 관리합니다. 서비스 URL/모델명을 해당 endpoint의 현재 값으로 직접 설정하며 오래된 예시 모델이 항상 가동 중이라고 가정하지 않습니다. 키는 소스/설정 파일에 기록하지 않습니다. `NIM_API_KEY` 환경변수를 설정한 동일 터미널에서 Isaac Sim을 실행하거나 Model Settings의 API key에 입력하고 Accept합니다. 본 도구는 실제 호출을 대신 실행하지 않았습니다.
+```python
+manager.refresh_configs()
+manager.refresh_camera_path()
+graph = await manager.async_generate_camera_scene_graph_stage()
+```
+
+`await`는 그래프 생성에 필요한 렌더링과 앱 처리가 진행되는 동안 내 작업을 기다리게 합니다. 앱 안에서 이미 실행하므로 `SimulationApp`을 다시 만들지 않습니다. 설정 작성용 `prepare.py`와 실행용 Script Editor 코드가 나뉜 이유입니다.
+
+### 실행 결과 확인하기
+
+Script Editor에서 `caption_task.done()`으로 완료 여부를 확인하고, True가 되면 `caption_task.result()`를 실행하세요. 작업 내부의 오류가 있다면 여기서 확인할 수 있습니다.
+
+기본 카메라 이름이면 결과는 `output/graph_first/capture/Camera/Captions/` 아래에 저장됩니다. `full_scene_graph.json`, `pruned_scene_graph.json`과 시각화를 열어 보세요.
+
+- 노드의 물체 이름을 이미지의 물체와 대응시킵니다.
+- 연결선이 어떤 물체 사이 관계를 나타내는지 읽습니다.
+- full과 pruned에서 남은 관계를 비교합니다.
+- 문장 파일이 없어도 기본 그래프 전용 실행은 정상입니다.
+
+파일 존재만 확인하지 말고 카메라에 실제로 보이는 물체와 비교하세요. 잘못된 카메라를 선택하면 문법적으로 올바른 그래프도 원하는 이미지의 설명이 되지 않습니다.
+
+## 2. 관계를 줄이고 문장·프레임 출력에 연결하기
+
+### 설정에서 볼 부분
+
+`caption_config.json`의 다음 항목을 함께 읽어 보세요.
+
+```text
+"attach_label_to_usd": true,
+"use_ai_label": false,
+"save_full_scene_graph": true,
+"save_pruned_scene_graph": true,
+"pruning_ratio": 1.0
+```
+
+`attach_label_to_usd=true`는 기존 semantic label이 없는 prim에 이름 기반 라벨을 붙일 수 있게 합니다. 따라서 `use_ai_label=false`가 “기존 라벨 없는 물체는 무조건 제외”라는 뜻은 아닙니다. 자동 이름은 장면의 prim 이름에서 오므로 `Cube_01`처럼 의미가 약한 이름은 그래프 해석에도 영향을 줍니다. 이 동작은 [공식 caption 설정 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html#caption-configurations)을 참고하세요.
+
+Support Tree는 바닥 → 탁자 → 컵처럼 지지 관계의 층을 표현합니다. Pruned graph는 관계에서 최소 신장 트리(MST)를 만든 뒤 일부 연결을 더 줄입니다. `pruning_ratio=1.0`은 원래의 모든 연결을 남긴다는 뜻이 아니라 **MST를 만든 뒤 추가로 줄이지 않는 조건**입니다.
+
+문장까지 필요하면 NIM endpoint와 모델 이름, API key를 준비합니다. 키는 `NIM_API_KEY` 환경변수로 설정한 동일 터미널에서 앱을 실행하세요. 사용할 endpoint의 현재 모델·인증 조건은 해당 서비스에서 확인합니다.
 
 ```bash
-python3 prepare.py --output output/caption_01 --captions
+python3 src/171_events_replicator_caption/prepare.py --captions \
+  --output src/171_events_replicator_caption/output/caption_first
 ```
 
-위 새 설정으로 `run_caption_config(path, model_url='사용할 endpoint URL', model_name='사용할 model id')`를 호출합니다. GUI만 쓰려면 Brief Caption/Full Caption 선택 후 Generate Scene Graph를 누릅니다. 출력 `scene_graph_caption.json`의 문장이 영상/그래프와 맞는지 검토합니다. `qa_caption=true`는 full graph도 저장하도록 해야 합니다. 원문 서비스 예시는 meta/llama3-8b-instruct 등이며 현재 계정에 제공되는 모델로 교체할 수 있습니다.
+새 설정을 `run_caption_config(path, model_url='endpoint URL', model_name='model id')`로 실행합니다. 보조 함수는 환경변수 키와 명시적인 URL·모델 이름을 모두 요구합니다. 생성된 `scene_graph_caption.json`을 이미지와 대조해 그래프의 관계가 문장에서 유지되는지 확인하세요.
 
-## IRA 프레임별 통합을 이 패키지만으로 실행
+Script Editor 대신 UI만으로도 생성할 수 있습니다. **VLM Scene Captioning > Caption Settings**에서 장면과 Camera를 선택하고, **Model Settings**에 해당 endpoint의 URL·모델·키를 입력한 뒤 **Accept**합니다. Brief Caption 또는 Full Caption을 선택하고 **Generate Scene Graph**를 누르세요. QA 문장을 선택한다면 `qa_caption`과 full graph 저장도 함께 켭니다. UI의 모델 설정을 입력하는 방식과 환경변수를 검사하는 로컬 함수의 실행 조건은 구별하세요. 키를 저장소의 JSON이나 소스에 적지 않습니다.
 
-1. `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`와 IRC를 켭니다. `python3 prepare_ira.py --output output/ira_01 --frames 90`으로 완전한 Actor SDG 설정과 두 배우의 명령을 생성합니다. Assets는 창고 `.../Isaac/Environments/Simple_Warehouse/full_warehouse.usd`와 `/Isaac/People/Characters/`입니다.
-2. Actor SDG의 Config File Path에서 설정을 로드합니다. NavMesh가 없으면 Stage 우클릭 Create > Navigation > NavMesh Include Volume을 바닥에 맞추고 Window > Navigation > NavMesh에서 Bake 후 새 USD를 저장하여 Scene 경로를 바꿉니다. Setup → 실제 배우 이름 확인 → Save Commands → Start Data Generation을 수행합니다.
-3. SceneGraphWriter는 RGB writer와 함께 `scene_graph_interval=10`, `caption_interval=30`, `writer_interval=1`로 동작합니다. 기본 그래프 전용 설정입니다. 모델 caption을 활성화하려면 `lesson.json`의 caption_config에서 global/brief를 true로 바꾸고 NIM_API_KEY를 준비한 새 실행을 만듭니다. interval은 프레임 단위입니다. actor id와 frame id를 비교해 잘못된 시점의 이미지/문장을 묶지 않습니다.
+### IRA와 IRO로 확장하기
 
-## IRO 통합
-
-`isaacsim.replicator.object`의 UI에서 기본 object 장면을 한 번 설정하고 완전한 YAML을 Save As 합니다. IRO가 사용하는 USD 자산과 카메라를 실제로 로드해 단일 frame 생성까지 확인합니다. 그런 다음 이 패키지의 `patch_iro.py`가 기존 설정의 scene/camera를 유지하면서 caption writer를 추가합니다. Isaac Sim의 Python은 PyYAML을 제공합니다.
+배우의 행동을 프레임별로 기록하려면 IRA core/UI 확장을 준비한 뒤 다음 설정을 만듭니다.
 
 ```bash
-/home/hoyunkim/isaacsim/python.sh patch_iro.py --input /절대경로/object_config.yaml --output output/object_with_graph.yaml
+python3 src/171_events_replicator_caption/prepare_ira.py --frames 90 \
+  --output src/171_events_replicator_caption/output/ira_first
 ```
 
-생성 설정을 IRO에 다시 로드해 실행합니다. 기본 CombinedIROSceneGraphWriter는 기존 object 출력도 유지합니다. `--caption-only-writer`는 IROSceneGraphWriter로 바꿔 다른 label 출력을 억제합니다. `--captions` 사용 시 NIM 서비스를 먼저 준비합니다. 새 기본 object scene을 복제하지 않고 사용자의 완전한 native 설정을 실제 수정하는 통합 실습입니다.
+이 설정은 창고, 카메라 1대, 배우 2명을 사용합니다. Actor SDG의 Config File Path에 로드하고 Setup 후 실제 배우 이름을 확인하세요. 명령은 `Character_01 LookAround 3`, `Character_02 Idle 3`입니다. 이름을 맞춰 Save Commands한 뒤 Start Data Generation을 실행합니다. NavMesh가 필요하면 바닥에 Include Volume을 만들고 Navigation의 NavMesh 패널에서 Bake한 장면을 저장해 `--scene`으로 연결하세요.
 
-## 개념, 확인과 문제 해결
+`lesson.json`은 `scene_graph_interval=10`, `caption_interval=30`, `writer_interval=1`을 사용합니다. 기본 문장 생성 플래그는 꺼져 있으므로 30프레임 간격이 있어도 문장은 생기지 않습니다. 이미지와 그래프를 묶을 때는 실제 frame id를 확인합니다.
 
-USD Prim 주소는 객체의 장면 내 위치이고 파일 경로는 자산의 저장 위치입니다. semantic label이 있어야 annotator에 잡힌 객체를 graph node로 쓸 수 있습니다. Support Tree는 floor→table→cup 같은 지지 계층이고 graph edge는 상대 위치 관계입니다. `max_object_capacity`는 bbox 크기 순으로 포함할 물체 수를 제한합니다. 세계 좌표와 카메라 좌표를 혼동하지 않습니다. 5.1 설치 구현은 `export_world`를 false로 고정하는 경로가 있으므로 출력 좌표계를 확인한 뒤 사용합니다.
+IRO에서는 먼저 object UI에서 자산·카메라가 포함된 완전한 YAML을 저장하세요. 다음 명령은 그 설정에 writer를 추가합니다.
 
-그래프가 비면 카메라 경로/화면 안 객체/semantic label을 확인합니다. 문장만 없으면 global/brief/QA 플래그와 모델 인증을 확인합니다. UI가 느리면 Assets URL 접근을 별도로 확인합니다. 기본 설정으로 만들지 않은 caption 문장을 결과로 간주하지 않습니다. 한 변수 실험은 pruning_ratio만 1.0→0.5로 변경하는 것입니다.
+```bash
+~/isaacsim/python.sh src/171_events_replicator_caption/patch_iro.py \
+  --input /data/object_config.yaml \
+  --output src/171_events_replicator_caption/output/object_with_graph.yaml
+```
 
+기본 `CombinedIROSceneGraphWriter`는 object 출력과 그래프를 함께 사용합니다. `--caption-only-writer`는 `IROSceneGraphWriter`를 선택합니다. 새 설정을 IRO에 다시 로드하고 생성해야 데이터가 생깁니다. `patch_iro.py` 실행 자체는 설정 변경까지만 수행합니다.
 
-## 출처와 검증 범위
+## 3. 장면·그래프·문장의 관계 정리
 
-Isaac Sim **5.1.0** 공식 문서에 맞춘 독립 패키지입니다. 아래 설명과 실습은 한국어로 새로 작성했습니다. 공식 확장 기능은 설치된 Isaac Sim이 제공하며 이 패키지에 복제하지 않습니다.
+```text
+카메라와 의미 라벨 → 객체와 관계를 가진 full graph
+                                  ↓
+                            MST와 가지치기
+                                  ↓
+                    선택한 NIM 모델 → 문장 또는 질의응답
+```
 
-- [IRC 설정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html#example-isaacsim-replicator-caption-core-configuration-file)
-- [UI 생성](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html#using-the-ui-panel)
-- [IRA writer 통합](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html#use-irc-in-isaacsim-replicator-agent)
-- [IRO writer 통합](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html#use-irc-in-isaacsim-replicator-object)
+노드 이름, 지지 관계, 문장의 정확성은 각각 확인할 대상입니다. `max_object_capacity=100`은 그래프에 포함할 물체 수의 상한이며, 관계가 많은 장면을 무조건 전부 담는 것은 아닙니다. 좌표를 후속 처리에 사용한다면 설정의 `export_world`만 보고 세계 좌표라고 단정하지 마세요. 대조한 5.1 Caption core 0.0.32의 설정 로더는 이 값을 항상 false로 덮어씁니다. 또한 물체 노드의 `world_3d_bbox`는 `export_edges`, 캐릭터 노드의 같은 필드는 `export_world`에 따라 포함 여부가 달라집니다. 따라서 실제 노드 종류와 출력 필드를 확인하고 카메라 기준 정보와 세계 좌표 정보를 구별해서 읽어야 합니다.
 
-설정 생성·Python 문법 확인과 실제 GPU 시뮬레이션은 별개의 검사입니다. 이 패키지의 기본 상태는 `not_run`이며 렌더링·애니메이션·외부 서비스 결과를 실행 완료로 주장하지 않습니다.
+## 4. 간단한 확인 실험
+
+`prepare.py`에 `--pruning-ratio 0.5`만 추가해 새 설정을 만드세요. 장면·카메라·seed는 그대로 유지합니다.
+
+두 실행의 full graph를 기준으로 pruned graph의 남은 연결을 비교하세요. 0.5는 MST 연결의 일부를 더 줄이므로 일반적으로 관계가 단순해집니다. 원래 full graph 연결 수의 정확히 절반이 남는다는 뜻은 아닙니다.
+
+## 실행할 때 막히면
+
+- **`config.yaml`만 있음**: 준비 단계까지만 끝난 상태입니다. Script Editor에서 비동기 함수를 실행하세요.
+- **카메라가 없다는 오류**: 파일 경로와 prim 경로를 구분하고 Stage에서 실제 Camera 경로를 확인하세요.
+- **`result()`가 아직 준비되지 않았다는 오류**: `done()`이 True가 될 때까지 앱 처리를 기다리세요.
+- **그래프는 있는데 문장이 없음**: 기본 플래그 상태, 모델 URL·이름·키와 서비스 응답을 확인하세요.
+- **출력 폴더가 이미 있다는 오류**: 캡처 재실행에는 새로 준비한 설정과 새 출력 경로를 사용하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [VLM Scene Captioning](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html)에 대응합니다. 로컬 도구는 그래프 전용 실행을 기본으로 하고, IRC·IRA·IRO 설정을 각각 준비합니다.
+
+설정과 호출 흐름을 대조했으며 실제 GPU 그래프 생성, 배우 애니메이션과 NIM 요청은 이번 개정에서 실행하지 않았습니다. `tutorial.json`의 상태는 `not_run`입니다.

@@ -1,74 +1,138 @@
-# 111. NameOverride: USD 이름을 유지하며 ROS 이름 바꾸기
+# 111. USD 관절 이름을 유지하며 ROS 별칭 사용하기
 
-권장 학습 순서 **111** · ROS 2 연결과 기본 통신 · 출처 ID `t019`
+## 이번에 배우는 것
 
-예상 결과는 실제 USD의 `panda_joint1` 경로가 유지되고 ROS `/joint_states`에는 `shoulder_pan`이 보이는 것이다. 외부에서 별칭으로 보낸 명령은 Joint Name Resolver를 거쳐 같은 실제 관절을 움직인다. Franka 모델과 ROS 그래프를 이 폴더에서 모두 구성한다.
+**Franka의 첫 관절을 ROS에서는 `shoulder_pan`으로 부르고, 그 별칭으로 보낸 명령이 실제 관절에 적용되는 과정을 확인합니다.**
 
-## 이 실습의 의도
+로봇 파일의 관절 이름과 외부 제어 프로그램이 기대하는 이름이 다를 때가 있습니다. USD prim을 직접 바꾸면 관절 연결이나 참조 경로까지 수정해야 할 수 있습니다. `isaac:nameOverride`는 원래 장면 주소를 유지하면서 ROS에 공개할 이름을 따로 지정합니다.
 
-USD의 관절·링크 주소를 유지하면서 ROS에 공개할 이름을 별칭으로 정하는 방법을 확인한다. 첫 관절에는 `shoulder_pan`, 베이스 링크에는 `robot_base`를 지정해 JointState와 TF 양쪽의 이름 변화를 비교한다. 기본 실행은 상태·TF 발행과 별칭 명령 해석을 준비하며, 외부 `send_command.py`를 실행해야 관절 명령의 역방향 변환까지 확인할 수 있다.
+| 이름이 쓰이는 곳 | 이번 예제의 값 | 의미 |
+|---|---|---|
+| 실제 관절 | `panda_joint1` | 물리 articulation 내부의 이름 |
+| ROS 관절 별칭 | `shoulder_pan` | JointState 발행·명령에 사용할 이름 |
+| 실제 베이스 링크 | `/panda/panda_link0` | Stage의 링크 주소 |
+| ROS 링크 별칭 | `robot_base` | TF 메시지에서 사용할 frame 이름 |
 
-## 실행 후 확인할 것
+관절 이름과 링크 이름은 역할이 다릅니다. `shoulder_pan`은 관절 명령에, `robot_base`는 좌표계 관계에 사용합니다.
 
-- Stage에서 `panda_joint1`과 `/panda/panda_link0` 이름이 그대로이고 `isaac:nameOverride` 값만 각각 `shoulder_pan`, `robot_base`인지 확인한다. 콘솔의 `USD path remains`와 `actual_joint_names`는 물리 모델의 원래 이름을 보여 준다.
-- 외부 `/joint_states`의 타입은 `sensor_msgs/msg/JointState`이며 `name` 배열에 `shoulder_pan`이 있어야 한다. 배열 순서를 추측하지 말고 이 이름과 같은 인덱스의 position을 읽는다.
-- `python3 send_command.py --joint shoulder_pan --position 0.3 --seconds 10`을 실행하면 `/joint_command`의 JointState 명령이 첫 관절에 적용되어 position이 0.3 rad 쪽으로 접근하고 viewport에서도 회전해야 한다. 토픽 이름 변경만 확인한 상태와 구별한다.
-- `/JointGraph/Resolver`의 출력 이름과 Actuator 연결을 확인한다. 별칭이 실제 `panda_joint1`로 해석되고 Resolver의 execOut 뒤에 Actuator가 실행되어야 한다.
-- `/tf`의 `tf2_msgs/msg/TFMessage`에서 `robot_base` frame을 찾는다. 이는 링크 별칭 확인이며 joint 별칭 `shoulder_pan`을 TF 링크 이름으로 기대하지 않는다.
-- 상태·TF는 playback tick마다, 콘솔 위치는 120스텝마다 기록된다. 외부 송신기는 약 0.1초 대기 루프로 반복하므로 정확한 고정 Hz나 명령 즉시 위치 일치를 성공 기준으로 두지 않는다.
+## 1. 이름을 바꾼 상태와 TF 받아 보기
 
-**실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 3600스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
+Isaac Sim 5.1, 지원 GPU, 공식 Franka Panda 자산, ROS 2 Humble 또는 Jazzy가 필요합니다. 아래 명령은 저장소 루트의 Bash에서 실행합니다. 기본 환경은 Ubuntu 24.04의 Jazzy입니다. Ubuntu 22.04/Humble에서는 `jazzy` 이름과 경로를 모두 `humble`로 바꾸세요.
 
-## 이 폴더에서 시작하기
-
-다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
-
-Bash 터미널 A와 ROS 명령을 실행할 터미널 B 각각에서 같은 설정을 적용한다.
+터미널 A는 시스템 ROS를 source하지 않은 새 셸에서 준비합니다. 설치 위치가 다르면 `ISAAC_SIM`을 바꾸세요.
 
 ```bash
-source /opt/ros/humble/setup.bash
-# Ubuntu 24.04에서는 위 한 줄 대신 source /opt/ros/jazzy/setup.bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_DISTRO=jazzy
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export ISAAC_SIM="$HOME/isaacsim"
+export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/jazzy/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+"$ISAAC_SIM/python.sh" src/111_ros2_ros2_name_override/run.py
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. Standalone `run.py`는 이 확장을 직접 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+코드는 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`를 `/panda`에 불러옵니다. 5.1 asset 서버 또는 로컬 asset pack에 접근할 수 있어야 합니다. GUI는 창을 닫을 때까지 실행됩니다. `--steps 1200`을 추가하면 1200스텝 뒤 종료하고, `--headless`만 추가하면 3600스텝을 사용합니다.
 
-Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
+터미널 B에서는 시스템 ROS의 CLI와 Python을 사용합니다.
 
-## 실행
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 topic echo /joint_states --once
+ros2 topic echo /tf --once
+```
 
-필요한 asset은 Isaac 5.1의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`다. 외부 ROS Python에는 `rclpy`, `sensor_msgs`가 있어야 한다.
+### 코드에서 볼 부분
 
-1. 터미널 A: `"$ISAAC_SIM/python.sh" run.py`
-2. 터미널 B: `ros2 topic echo /joint_states --once`를 실행한다. name 배열에서 첫 관절의 ROS 이름 `shoulder_pan`을 찾는다.
-3. 터미널 B: `python3 send_command.py --joint shoulder_pan --position 0.3 --seconds 10`을 실행한다. 첫 관절이 움직이는지 확인한다.
-4. `ros2 topic echo /tf --once`에서 `robot_base` frame을 찾는다. 코드는 `/panda/panda_link0`에도 NameOverride를 부여해 TF 이름 변경을 보여 준다.
-5. Stage Tree에서 원래 `panda_joint1`, `panda_link0` prim 이름이 그대로인지 확인한다. A 콘솔은 실제 USD joint 경로와 실제 물리 관절 배열을 출력한다.
+`run.py`는 Stage를 순회해 이름이 `panda_joint1`인 실제 joint prim을 찾습니다. 정확히 하나가 아니면 잘못된 관절을 수정하지 않고 중단합니다.
 
-## GUI로 직접 적용하기
+```python
+matches[0].CreateAttribute("isaac:nameOverride", Sdf.ValueTypeNames.String).Set("shoulder_pan")
+```
 
-1. 새 Stage에서 위 Franka asset을 연다. `/panda` 대상의 ROS2 Publish Joint State(`/joint_states`), Subscribe Joint State(`/joint_command`), Articulation Controller 그래프를 만든다. Tick은 세 노드 execIn에, Read Simulation Time은 publisher.timeStamp에, Context는 두 ROS 노드 context에 연결한다. Subscriber의 네 출력 이름 배열/position/velocity/effort는 controller의 대응 입력으로 연결한다.
-2. Stage Tree의 `panda_joint1` joint prim을 선택한다. Property의 **Add > Isaac > NameOverride**를 누른 뒤 **Name Override**에 `shoulder_pan`을 쓴다. 이미 속성이 있으면 값만 바꾼다.
-3. **Isaac Joint Name Resolver** 노드를 추가한다. robotPath=`/panda`로 지정한다. Subscriber.jointNames를 Resolver.jointNames로, Resolver.jointNames를 Controller.jointNames로 연결한다.
-4. Tick을 Resolver.execIn에 연결하고 Resolver.execOut을 Controller.execIn에 연결한다. positionCommand/velocityCommand/effortCommand는 Subscriber에서 Controller로 직접 이어 둔다.
-5. TF에는 **ROS2 Publish Transform Tree**를 추가하고 targetPrims=`/panda`, topicName=`/tf`를 지정한다. Tick, Context, 시간 입력을 연결한다. `panda_link0` prim의 Name Override를 `robot_base`로 설정한다.
-6. 새 이름으로 Save 후 Play한다. 위 ROS 명령으로 이름과 실제 움직임을 확인한다. 실행 중 이름을 변경했다면 Stop/Play로 publisher/resolver를 다시 초기화한다.
+이 코드는 prim의 이름을 변경하지 않습니다. prim에 문자열 속성 하나를 추가합니다. `/panda/panda_link0`에도 같은 방식으로 `robot_base`를 지정합니다. Joint State와 Transform Tree 발행기가 그 속성을 읽어 ROS 이름을 정합니다.
 
-## USD/API/ROS 이름의 차이
+### 실행 결과 확인하기
 
-USD prim 경로는 장면 계층의 주소다. 실제 prim rename을 하면 reference, joint 관계와 그래프 target까지 영향을 받을 수 있다. `prim.CreateAttribute('isaac:nameOverride', Sdf.ValueTypeNames.String).Set(...)`는 주소를 바꾸지 않고 문자열 속성만 추가한다. ROS Joint State/TF publisher가 이 속성을 읽어 외부 이름을 정한다.
+- 콘솔의 `USD path remains`에서 원래 `panda_joint1` 경로를 확인합니다.
+- `actual_joint_names`는 물리 모델의 원래 관절 이름 배열입니다.
+- `/joint_states.name`에서는 `shoulder_pan`을 찾습니다. 같은 인덱스의 `position`이 해당 관절의 각도(rad)입니다.
+- `/tf`의 frame 이름에서는 `robot_base`를 찾습니다. `shoulder_pan`이 TF 링크 이름으로 나타나야 하는 것은 아닙니다.
 
-외부 이름을 Articulation Controller가 자동으로 실제 이름으로 이해하는 것은 아니다. `IsaacJointNameResolver`는 지정한 articulation 내부에서 alias를 찾고 **실제 joint 이름 배열**을 출력한다. 따라서 상태 발행만 바꾸고 resolver 연결을 빼면, 별칭 명령이 실제 관절에 도달하지 않는 원인을 실험할 수 있다. 이 코드의 resolver execOut 연결은 변환된 이름 준비 후 controller를 실행하기 위한 것이다.
+Stage Tree의 관절·링크 이름도 그대로인지 확인해 보세요. **장면 주소는 유지되고 외부 표현만 달라졌는지**를 세 곳에서 대조하는 단계입니다.
 
-## 한 가지 바꾸기와 문제 해결
+## 2. ROS 별칭으로 실제 관절 움직이기
 
-`shoulder_pan` 별칭 하나만 `base_rotation`으로 바꾸고 송신기의 `--joint`도 같은 값으로 맞춘다. 두 관절에 같은 별칭을 쓰지 않는다. name 배열은 바뀌었지만 명령이 안 먹으면 Resolver의 robotPath와 jointNames 연결을 확인한다. TF 이름은 대소문자를 구별하므로 RViz Fixed Frame도 출력된 실제 이름으로 맞춘다. `panda_link0`이 없다는 오류는 다른 Franka asset을 사용한 경우이므로 코드가 기대하는 5.1 asset과 Stage 구조를 확인한다.
+터미널 B에서 다음 명령을 실행합니다. `rclpy`와 `sensor_msgs`는 source한 시스템 ROS 환경에서 가져옵니다.
 
-## 출처와 검증 범위
+```bash
+python3 src/111_ros2_ros2_name_override/send_command.py --joint shoulder_pan --position 0.3 --seconds 10
+```
 
-- [공식 5.1 속성 목적](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_name_override.html#setting-up-the-nameoverride-attribute)
-- [공식 5.1 GUI 적용](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_name_override.html#adding-the-isaac-nameoverride-prim-attribute)
+송신기는 10초 동안 `/joint_command`에 JointState를 반복 발행합니다. `position=0.3`은 약 17.2°입니다. 다른 ROS 터미널에서 `/joint_states`를 계속 읽거나 Isaac Sim 콘솔과 관절 회전을 함께 관찰하세요.
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.
+### 코드에서 볼 부분
+
+```text
+외부 JointState: name=[shoulder_pan], position=[0.3]
+    → ROS2 Subscribe Joint State
+    → Isaac Joint Name Resolver: shoulder_pan → panda_joint1
+    → Articulation Controller
+    → 실제 관절 운동
+```
+
+별칭을 부여했다고 물리 제어기가 새 문자열을 바로 이해하는 것은 아닙니다. `/JointGraph/Resolver`가 `/panda` 내부에서 별칭을 찾아 원래 관절 이름으로 변환합니다.
+
+```python
+("Subscribe.outputs:jointNames", "Resolver.inputs:jointNames")
+("Resolver.outputs:jointNames", "Actuator.inputs:jointNames")
+("Resolver.outputs:execOut", "Actuator.inputs:execIn")
+```
+
+이름 배열은 Resolver를 통과하지만 `positionCommand`, `velocityCommand`, `effortCommand`는 Subscriber에서 Actuator로 직접 연결됩니다. **값과 배열 순서는 유지하면서 이름만 해석**하는 구성입니다. Resolver의 실행 출력 뒤에 Actuator를 연결해 해석된 이름을 준비한 후 제어하도록 합니다.
+
+GUI에서는 **Window > Graph Editors > Action Graph**에서 `/JointGraph`를 열어 위 연결을 확인하세요. NameOverride를 직접 적용하려면 Stop 상태에서 joint prim을 선택하고 **Property > Add > Isaac > NameOverride**를 사용합니다. 이미 속성이 있다면 값을 수정하면 됩니다.
+
+### 실행 결과 확인하기
+
+`/joint_states.name`에서 `shoulder_pan`의 인덱스를 찾고 `position`이 0.3 rad 쪽으로 접근하는지 확인합니다. 콘솔의 `joint_positions_rad`는 원래 `actual_joint_names` 순서로 출력되므로 두 배열의 순서를 각각 확인해야 합니다.
+
+명령은 목표이며 즉시 같은 각도가 되는 보장은 없습니다. 물리 drive가 목표에 접근하는 모습을 관찰하세요. 송신기 종료도 원위치 복귀를 뜻하지 않습니다. 복귀시키려면 다음 목표를 보냅니다.
+
+```bash
+python3 src/111_ros2_ros2_name_override/send_command.py --joint shoulder_pan --position 0.0 --seconds 5
+```
+
+## 3. 발행과 명령의 이름 변환 정리
+
+| 방향 | 변환 | 담당 |
+|---|---|---|
+| 상태를 밖으로 보냄 | 실제 관절 → ROS 별칭 | Joint State Publisher |
+| 명령을 안으로 받음 | ROS 별칭 → 실제 관절 | Joint Name Resolver |
+| 좌표계를 밖으로 보냄 | 실제 링크 → ROS frame 별칭 | Transform Tree Publisher |
+
+상태 메시지에 새 이름이 나타났다는 사실은 발행 방향만 확인한 것입니다. 별칭 명령으로 관절이 움직여야 반대 방향도 연결된 것입니다. 두 관절에 같은 별칭을 부여하면 명령 대상이 모호해지므로 별칭은 구별되게 정하세요.
+
+## 4. 간단한 확인 실험
+
+앱을 종료하고 `run.py`에서 **베이스 링크의 별칭 `robot_base`만 `bench_base`로 바꿔 보세요.** 해당 줄은 다음과 같습니다.
+
+```python
+link.CreateAttribute("isaac:nameOverride", Sdf.ValueTypeNames.String).Set("bench_base")
+```
+
+다시 실행해 `/tf`의 베이스 frame 이름이 바뀌는지 확인합니다. Stage 주소 `/panda/panda_link0`과 관절 별칭 `shoulder_pan`은 유지되어야 합니다. 앞에서 사용한 `--joint shoulder_pan` 명령도 같은 첫 관절에 적용되어야 합니다. 링크 좌표계의 이름과 관절 명령 이름을 따로 관리한다는 점을 확인하는 실험입니다.
+
+## 실행할 때 막히면
+
+- **상태에 별칭은 보이지만 명령이 적용되지 않음**: Resolver의 `robotPath=/panda`, 이름 배열 연결, Resolver → Actuator 실행 연결을 확인하세요.
+- **`Expected one panda_joint1` 오류**: 기대한 Franka 5.1 자산인지 확인하세요. 찾은 첫 prim을 임의로 선택하도록 코드를 바꾸지 않습니다.
+- **TF에서는 원하는 이름을 못 찾음**: 관절 별칭과 링크 별칭을 구분하세요. `robot_base`는 `panda_link0`에 적용됩니다.
+- **이름을 수정해도 이전 이름이 보임**: Stop/Play로 발행기와 Resolver를 다시 초기화하세요. 다른 실행의 publisher가 남아 있는지도 확인합니다.
+- **ROS 명령을 보낼 때 앱이 이미 종료됨**: 관찰에는 `--steps` 없는 GUI 실행이 편리합니다. 짧은 headless 실행은 DDS 발견이 끝나기 전에 종료될 수 있습니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [NameOverride Attribute](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_name_override.html)에 대응합니다. 터미널 환경은 [ROS 2 Installation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)을 따릅니다.
+
+Franka 로딩, 관절·링크 별칭, Resolver와 외부 송신기를 하나의 실습으로 구성했습니다. `tutorial.json`의 `verification`은 `not_run`입니다. 설명한 상태·명령 결과는 실제 GUI·ROS 통신에서 확인할 기준이며 이 개정에서 물리 운동을 실측하지 않았습니다.

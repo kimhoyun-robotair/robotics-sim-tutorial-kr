@@ -1,74 +1,182 @@
-# 30. t111 · URDF를 USD articulation으로 가져오기
+# 30. URDF의 링크와 관절을 움직이는 USD 로봇으로 바꾸기
 
-권장 학습 순서 **30** · 로봇 자산 가져오기와 제작 · 출처 ID `t111`
+## 이번에 배우는 것
 
-Isaac Sim **5.1.0**에서 URDF XML을 읽고 실제 USD 로봇으로 변환한다. 기본 `arm.urdf`는 이 패키지에 작성한 2-link/1-joint 예제로 mesh 다운로드가 필요 없다. `--franka`는 설치된 공식 Panda URDF를 가져와 RMPflow target-following까지 실행한다. 다른 로컬 패키지를 먼저 공부할 필요가 없다.
+**작은 팔의 URDF를 가져와 관절에 위치 목표를 보내고, 파일 변환과 실제 물리 응답을 나눠 확인합니다.**
 
-## 이 실습의 의도
+URDF는 로봇의 링크와 관절을 XML로 설명하는 형식입니다. 같은 링크 안에도 화면에 보일 형상, 충돌에 사용할 형상, 질량과 관성이 따로 들어갑니다. 이번에는 외부 mesh가 없는 `arm.urdf`로 각 항목을 읽고, 가져온 USD에서 어떤 역할을 하는지 살펴봅니다.
 
-같은 URDF 안의 표시 형상, 충돌 형상, 질량·관성, 관절 연결이 USD로 어떻게 옮겨지는지 작은 팔 하나로 구분한다. 기본 실행은 `base`를 고정하고 `shoulder` 관절에 0.5 rad 위치 명령을 계속 보내므로, 파일 변환뿐 아니라 가져온 articulation이 실제 제어 명령에 반응하는지도 살펴볼 수 있다. `--franka`를 선택하면 공식 Panda와 RMPflow 목표 추종을 사용하며, 기본 1축 팔 실험과 관찰 대상이 달라진다.
+| URDF 요소 | 담고 있는 정보 | 이 실습의 예 |
+|---|---|---|
+| `visual` | 화면에 표시할 모양 | 바닥의 상자와 가느다란 팔 |
+| `collision` | 접촉을 계산할 모양 | 표시 형상과 같은 크기의 box |
+| `inertial` | 질량·질량 중심·관성 | base 1 kg, arm 0.3 kg |
+| `joint` | 링크 연결과 허용 운동 | Y축으로 회전하는 `shoulder` |
 
-## 실행 후 확인할 것
+모양이 화면에 보이는 것만으로 관절이 제어 가능한 상태라고 판단할 수는 없습니다. 변환 후 관절 이름을 조회하고 실제 위치도 읽어 봅니다.
 
-- **가져온 구조:** 기본 입력에서 Stage의 `/tutorial_arm` 아래 `base`, `arm`, `shoulder`를 찾고 joint의 parent/child 및 Y축을 `arm.urdf`와 대조한다. 화면에 팔 모양만 보이는 것보다 강체·충돌·joint 속성이 함께 생성되었는지가 중요하다.
-- **물리 추종:** 기본 실행에서 베이스는 고정되고 팔이 Y축으로 회전해야 한다. 실행 종료 후 `report.json`의 `joint_names`가 `shoulder`를 포함하고 `joint_positions`가 목표 0.5 rad 부근으로 접근했는지 본다. 짧은 실행의 초기 오차나 정착 중 진동을 정확히 0.5가 아니라는 이유만으로 변환 실패로 판정하지 않는다.
-- **표시와 충돌의 차이:** collider 표시를 켜 두 링크의 충돌 윤곽을 확인한다. 복사한 URDF의 `visual` 크기만 바꾸면 외관만 달라지고 `collision` 크기는 유지되는 것이 비교 실험의 기대 결과다.
-- **파일의 의미:** `imported.usda`는 제어 루프 이전에 저장한 변환 장면이고 `report.json`은 실행을 마칠 때의 관절 상태다. 저장된 USD가 있다는 사실만으로 마지막 자세나 모터 추종 성공까지 확인한 것은 아니다.
-- **선택 실습:** `--franka`에서는 target을 움직였을 때 손끝이 따라오는지 직접 본다. 기본 1축 팔용 0.5 rad 기준은 적용하지 않으며, 기본 팔의 기존 실행 기록이 Franka·ROS 2 import까지 검증하지는 않는다.
+## 1. 기본 팔 가져오기와 위치 제어
 
-## 준비와 실행
+Isaac Sim 5.1과 지원 RTX GPU가 필요합니다. 실행기는 `isaacsim.asset.importer.urdf` 확장을 활성화합니다. 기본 팔은 이 폴더의 파일만 사용하며 ROS 설치가 필요하지 않습니다.
 
-Isaac Sim 5.1, RTX GPU/드라이버, `isaacsim.asset.importer.urdf`가 필요하다. Franka 선택 실습에는 설치 extension의 URDF/mesh 및 manipulator controller가 필요하다. 일반 Python은 도움말만 실행한다.
+저장소 루트에서 실행하세요. `~/isaacsim`은 실제 설치 경로로 바꾸세요.
 
 ```bash
-export ISAAC_SIM=/home/hoyunkim/isaacsim
-cd src/30_importers_import_urdf
-"$ISAAC_SIM/python.sh" run.py
-"$ISAAC_SIM/python.sh" run.py --franka --output output/franka
+~/isaacsim/python.sh src/30_importers_import_urdf/run.py --steps 360 --output src/30_importers_import_urdf/output/arm_a
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 360회 한도를 사용한다. 실행 중에도 물리·제어가 계속 진행되며, 결과 요약은 실행을 마칠 때 기록한다.
+새 출력 폴더를 사용해야 합니다. `arm_a`가 있으면 다른 이름을 지정하세요. 기본 `--output`은 이 튜토리얼의 `output/` 자체이므로, 반복 실습에는 위처럼 실행별 경로를 지정하는 편이 구분하기 쉽습니다.
 
-출력 폴더는 새 경로여야 한다. `imported.usda`는 변환된 stage, `report.json`은 실제 joint 이름/위치다. 1축 예제의 목표는 0.5 rad이며 360 step 후 실제 값이 접근했는지 확인한다. 단순히 USD가 생성되었다는 사실과 안정적인 모터 추종은 구분한다.
+가져온 base는 고정되고 shoulder에는 0.5 rad 위치 목표를 계속 보냅니다. 360단계 후 결과를 기록하고 종료합니다. `--steps`를 생략하거나 GUI에서 0으로 지정하면 창을 닫을 때까지 제어를 계속합니다. Headless는 생략 시 360단계이며 0단계는 허용하지 않습니다.
 
-`--urdf` 비교 실험은 기본 팔처럼 움직이는 관절이 하나인 구조를 유지한다. Franka 외 경로의 제어 루프는 위치 배열 `[0.5]`를 보내므로, 여러 자유도를 가진 임의의 URDF를 가져와 제어하려면 관절 수·순서에 맞춰 제어 코드를 조정해야 한다.
+### 코드에서 볼 부분
 
-## 작은 URDF를 읽으며 실습
+`arm.urdf`의 관절은 아래와 같습니다. 자식 팔은 베이스 기준 z=0.12 m에 붙고 Y축을 중심으로 회전합니다.
 
-1. `arm.urdf`의 `base`, `arm` link를 찾는다. 각 link의 `visual`은 표시용, `collision`은 접촉 판정용이며 같은 box 형상을 사용했다. `inertial`에는 질량과 관성 tensor가 있다.
-2. `shoulder` joint의 parent/child와 `origin xyz="0 0 0.12"`, Y axis를 읽는다. 위치 단위는 m, revolute limit는 rad다. USD joint 속성 화면의 각도 표시(degree)와 혼동하지 않는다.
-3. 기본 실행 후 Stage에서 import된 로봇의 링크와 articulation root를 확인한다. **Viewport eye > Show by type > Physics > Colliders > All**로 collider를 켠다.
-4. 로컬 URDF를 복사하고 link의 visual box 폭만 바꾼다. `--urdf /absolute/copy.urdf --output output/visual_change`로 가져와 collider가 그대로인지 본다. collision도 바꾸어야 접촉 형상이 달라진다.
+```xml
+<joint name="shoulder" type="revolute">
+  <parent link="base"/><child link="arm"/><origin xyz="0 0 0.12"/><axis xyz="0 1 0"/>
+  <limit lower="-1.2" upper="1.2" effort="20" velocity="2"/><dynamics damping="0.1" friction="0"/>
+</joint>
+```
 
-## 공식 Franka를 GUI로 가져오기
+URDF의 revolute 관절 범위는 rad입니다. 0.5 rad 목표는 약 28.6도로 이 범위 안에 있습니다. USD Property의 각도 표시와 숫자가 다르게 보이면 먼저 단위를 확인하세요.
 
-1. **Window > Extensions**에서 `isaacsim.asset.importer.urdf`를 찾고 AUTOLOAD 옆 폴더 아이콘으로 설치 위치를 연다. `data/urdf/robots/franka_description/robots/panda_arm_hand.urdf`를 찾는다.
-2. **File > Import**에서 해당 URDF를 선택한다. **USD Output**은 이 패키지 `output/gui_franka/` 아래로 지정한다. extension 설치 폴더를 출력으로 쓰지 않는다.
-3. **Static Base**, Default Density 비움, **Allow Self-Collision**을 선택한다. joint 설정의 natural frequency를 조금 올려 진동 변화를 시험한다. import 후 원치 않는 collider 중첩도 확인한다.
-4. mobile robot은 **Moveable Base**로 바꾸고 wheel은 Velocity drive, steering은 Position drive를 선택한다. Velocity의 stiffness는 0, damping이 속도 추종을 만든다. torque 정책용 quadruped는 leg drive **None**, stiffness/damping=0으로 두고 외부 effort controller를 사용한다.
-5. **Robotics Examples > Import Robots**의 Nova Carter/Franka/Kaya/UR10 각각에서 **Load Robot → Configure Drives → Play → Move to Pose**를 수행한다. **Open Source Code**에서 모델별 설정 차이를 확인한다. material 로딩이 완료된 뒤 관찰한다.
+`run.py`는 `URDFParseFile`로 구조를 읽은 뒤 parsed joint의 drive strength=20, damping=1을 지정하고 `URDFImportRobot`으로 현재 Stage에 가져옵니다. `fix_base=True`는 바닥 링크를 고정하며, `distance_scale=1.0`은 m 단위 입력을 유지합니다. 자체 충돌은 꺼 두고 입력에 질량·관성 정보가 있는 작은 모델을 사용합니다.
 
-## Python import와 task 연결
+그 뒤 `SingleArticulation`으로 로봇에 접근해 다음 위치 목표를 보냅니다.
 
-`URDFParseFile`은 XML을 `_urdf.UrdfRobot`으로 파싱한다. 실행기는 parsed joint의 drive strength/damping을 설정하고 `URDFImportRobot`으로 현재 stage에 가져온다. `fix_base=True`는 베이스 고정, `distance_scale=1`은 m 입력, `density=0`은 제공된 inertia/mass를 우선하는 설정이다. 이 실습의 self-collision은 단순 실험을 위해 꺼져 있으며 GUI 공식 실습의 설정과 차이를 명시한다.
+```python
+robot.apply_action(ArticulationAction(joint_positions=np.array([0.5])))
+```
 
-`--franka`는 `FollowTarget` task를 등록한 뒤 `World.reset()`으로 scene을 구성하고 `RMPFlowController.forward()`가 만든 `ArticulationAction`을 실제 로봇에 적용한다. target prim을 움직여 손끝 추종을 관찰한다. task의 observation은 target 위치/방향이며 화면 mesh를 직접 이동시키는 방식이 아니다. `--steps`를 생략하면 창을 닫을 때까지 손끝 추종을 계속한다.
+배열 원소가 하나인 이유는 기본 팔의 움직이는 관절이 shoulder 하나이기 때문입니다.
 
-## ROS 2 node import 선택 실습
+### 실행 결과 확인하기
 
-Linux, ROS 2 Humble workspace, Universal Robots `ur_description`과 의존성이 필요하다. 각 터미널에서 같은 ROS 환경을 source한다.
+| 출력 | 생성 시점과 읽는 방법 |
+|---|---|
+| `imported.usda` | 제어 루프 전에 저장한 변환 장면, 링크·관절·물리 속성 검사 |
+| `report.json`의 `prim_path` | 실제 가져온 로봇 루트, 기본 입력은 `/tutorial_arm` |
+| `joint_names` | 제어 가능한 관절 이름, 기본은 `shoulder` |
+| `joint_positions` | 실행이 끝날 때 측정한 관절 위치, rad |
 
-1. 터미널 1: `ros2 launch ur_description view_ur.launch.py ur_type:=ur10e`를 실행한다.
-2. 터미널 2: `ros2 node list`에서 `/robot_state_publisher` 이름을 확인한다.
-3. 터미널 3: 같은 ROS 환경에서 Isaac Sim을 열고 `isaacsim.ros2.urdf`를 활성화한다. **File > Import from ROS 2 URDF Node**에서 실제 node 이름과 새 output 폴더를 넣어 Import한다.
-4. publisher를 종료한 후 `ur_type:=ur3`으로 다시 실행하고 importer에서 **Refresh**, 다른 output 폴더, Import를 수행한다. XACRO의 ROS-side 확장 결과를 받아오는 방식이다.
+마지막 위치가 0.5 rad 근처로 접근했는지 확인하세요. 유한한 drive와 중력 때문에 정확히 0.5라는 숫자가 나와야만 성공인 것은 아닙니다. 저장된 USD는 마지막 관절 자세를 저장한 파일이 아니라 **변환한 구조**를 검사하는 자료입니다.
 
-ROS 2는 이 패키지가 자동 설치하거나 대신 실행하지 않는다. node 검색 실패는 ROS_DOMAIN_ID와 양쪽 환경을, mesh 누락은 package resource 경로를 확인한다. URDF import 오류는 XML/상대 mesh 경로·출력 쓰기 권한부터 확인한다. 기본 팔의 headless 120 step import·drive 실행 기록은 아래 `RUNTIME_CHECK.md`에 있으며, Franka/RMPflow와 ROS import·GUI 조작은 그 기록의 확인 범위에 포함되지 않는다.
+## 2. Python·GUI·ROS로 가져오는 방식 비교하기
 
-## 출처
+기본 팔을 오래 살펴보려면 새 출력 경로로 단계 수 없이 실행하세요. Stage의 `/tutorial_arm` 아래에서 base·arm·shoulder를 찾아 Property를 확인합니다. Viewport의 **Show by type > Physics > Colliders > All** 표시를 켜면 보이는 표면과 충돌 형상을 비교할 수 있습니다.
 
-[Isaac Sim 5.1 Import URDF](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/import_urdf.html), [Python](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/import_urdf.html#python-script), [ROS 2 node](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/import_urdf.html#import-from-ros-2-node). API signature는 설치된 5.1 importer의 `impl/commands.py`와 대조했다.
+arm의 visual·collision 중심은 링크 기준 z=0.2 m이고 길이는 0.4 m입니다. 따라서 관절 원점에서 위로 뻗는 모양이 됩니다. 링크 원점, 형상의 중심, 질량 중심을 같은 위치라고 가정하지 않고 각각의 `origin`을 읽어 보세요.
 
-## 실제 실행 기록
+### 코드에서 볼 부분
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+설치된 Franka URDF도 같은 importer로 가져올 수 있습니다.
+
+```bash
+~/isaacsim/python.sh src/30_importers_import_urdf/run.py --franka --output src/30_importers_import_urdf/output/franka_a
+```
+
+이 모드는 importer 확장의 `data/urdf/robots/franka_description/robots/panda_arm_hand.urdf`를 사용합니다. 내장 mesh와 manipulator·RMPflow 확장도 필요합니다. 가져온 로봇 경로를 `FollowTarget`에 전달하고, `RMPFlowController`가 목표 위치·자세를 관절 명령으로 바꿉니다. 기본 팔의 `[0.5]` 명령을 Franka에 그대로 보내지 않습니다.
+
+### 실행 결과 확인하기
+
+Franka GUI의 목표 물체를 움직여 손끝의 반응을 관찰하세요. 실행을 마친 뒤 `report.json`에서 source와 관절 이름이 Franka로 바뀌었는지 확인합니다. 여기에는 손끝 추종 오차나 성공 boolean이 저장되지 않으므로, 보고서가 생긴 것만으로 목표 추종 정확도를 판정하지 마세요.
+
+### Franka URDF를 GUI에서 직접 가져오기
+
+자동 import와 같은 파일을 수동으로 선택해 볼 수 있습니다. 앞 실행을 종료하고 `~/isaacsim/isaac-sim.sh`로 새 창을 여세요.
+
+1. **Window > Extensions**에서 `isaacsim.asset.importer.urdf`를 켜고 AUTOLOAD 옆 폴더 아이콘으로 설치 위치를 엽니다.
+2. `data/urdf/robots/franka_description/robots/panda_arm_hand.urdf`를 찾아 **File > Import**에서 선택합니다.
+3. USD Output은 자신의 새 `output/gui_franka` 폴더로 지정합니다. 설치 확장 폴더에 결과를 쓰지 마세요.
+4. **Static Base**를 선택하고 Default Density는 비워 둡니다. Colliders의 **Allow Self-Collision**을 켜고 Import합니다. 이 자체 충돌 설정은 `run.py`의 `self_collision=False`와 다릅니다.
+5. Stage에서 링크·관절·Collider를 확인합니다. Joint 설정의 Natural Frequency를 조정할 때는 같은 목표와 재생 조건에서 진동을 비교하세요.
+
+모델별 drive 구성은 **Window > Examples > Robotics Examples > Import Robots**의 Franka·Nova Carter·Kaya·UR10 예제에서도 볼 수 있습니다. 예제를 하나씩 열어 **Load Robot → Configure Drives → Play → Move to Pose**를 실행하고 Open Source Code로 설정을 확인하세요. 이동 로봇의 base는 Moveable, 구동 바퀴는 Velocity, 조향 관절은 Position 방식이 필요할 수 있습니다. 직접 토크 정책으로 제어하는 다리 관절은 drive를 None으로 두고 gain을 0으로 만드는 등 제어 방식에 맞는 설정이 필요합니다. 한 로봇의 gain을 다른 로봇에 그대로 적용하지 않습니다.
+
+### ROS 2 노드의 로봇 설명 가져오기
+
+이 선택 경로는 **Ubuntu 24.04와 ROS 2 Jazzy의 Bash 터미널**을 기준으로 합니다. ROS 노드가 XACRO를 확장해 `robot_description`을 제공하고 Isaac Sim이 그 설명을 받아 가져옵니다. 기본 한 축 팔 실습에는 ROS가 필요하지 않습니다.
+
+Jazzy와 ROS 패키지 저장소가 준비된 환경에서 터미널 1에 다음을 실행하세요. `ur_description`을 이미 별도 workspace에 빌드했다면 설치 명령 대신 해당 workspace의 `install/setup.bash`를 source합니다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+sudo apt install ros-jazzy-ur-description
+export ROS_DOMAIN_ID=0
+UR_DESCRIPTION_SHARE="$(ros2 pkg prefix --share ur_description)"
+if [ -f "$UR_DESCRIPTION_SHARE/launch/view_ur.launch.py" ]; then
+  UR_VIEW_LAUNCH=view_ur.launch.py
+else
+  UR_VIEW_LAUNCH=view_ur.launch.xml
+fi
+ros2 launch ur_description "$UR_VIEW_LAUNCH" ur_type:=ur10e
+```
+
+설치한 `ur_description` 버전에 따라 launch 파일이 `.py` 또는 `.xml`일 수 있어 실제 파일을 확인합니다. 실행한 터미널은 publisher를 계속 유지합니다. 터미널 2에서는 같은 ROS 환경에서 노드를 확인하세요.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=0
+ros2 node list
+```
+
+`/robot_state_publisher`를 확인한 뒤 **시스템 ROS를 source하지 않은 새 터미널 3**에서 Isaac Sim을 시작합니다.
+
+```bash
+export ROS_DOMAIN_ID=0
+export AMENT_PREFIX_PATH="/opt/ros/jazzy${AMENT_PREFIX_PATH:+:$AMENT_PREFIX_PATH}"
+~/isaacsim/isaac-sim.sh
+```
+
+Ubuntu 24.04에서 다른 ROS 라이브러리를 source하지 않으면 Isaac Sim은 내부 Jazzy 라이브러리를 사용합니다. Isaac Python 3.11과 시스템 ROS의 Python 모듈을 섞지 않기 위한 구분입니다. `AMENT_PREFIX_PATH`는 importer가 `package://ur_description/...`의 mesh를 찾을 경로이며 Python 모듈을 추가하는 `PYTHONPATH`와 다릅니다. 별도 workspace의 모델을 사용하면 그 workspace의 install prefix도 여기에 포함해야 합니다. 환경 설정의 근거는 [Isaac Sim 5.1 ROS 2 Installation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)입니다.
+
+1. Isaac Sim의 Extensions에서 `isaacsim.ros2.bridge`, `isaacsim.ros2.urdf`를 켭니다.
+2. **File > Import from ROS2 URDF Node**를 엽니다. 공식 문서에서는 ROS 2를 띄어 표기하기도 합니다.
+3. 터미널 2에서 확인한 node 이름을 넣고 Refresh한 뒤 새 USD 출력 폴더를 지정해 Import합니다.
+4. 생성된 UR10e의 링크와 joint를 확인합니다. 노드가 발견되었다는 사실과 mesh까지 읽었다는 사실을 나누어 보세요.
+5. 다른 모델을 비교하려면 터미널 1에서 Ctrl+C로 publisher를 끝내고 같은 명령의 `ur_type`만 `ur3`으로 바꿉니다. importer에서 Refresh하고 다른 출력 폴더에 가져옵니다.
+
+노드가 없으면 양쪽 `ROS_DOMAIN_ID`와 bridge 상태를 확인하고, `package` 경로 오류라면 Isaac 실행 환경에서 `ur_description`의 share 디렉터리를 찾을 수 있는지 확인하세요. `.bashrc`가 시스템 ROS를 자동 source한다면 Isaac용 터미널에는 그 설정이 적용되지 않도록 준비해야 합니다.
+
+## 3. URDF에서 물리 응답까지 정리
+
+```text
+URDF: 모양 + 접촉 형상 + 질량·관성 + 관절
+    → 파싱한 모델의 drive 설정
+    → USD 링크·관절 생성
+    → World 초기화와 Articulation 연결
+    → 관절 목표 적용 → 물리 진행 → 실제 위치 조회
+```
+
+변환은 로봇 설명을 USD 구조로 옮깁니다. 제어는 그 구조에 명령을 적용합니다. 두 과정을 이어서 확인해야 “파일이 열렸다”와 “로봇이 의도한 방식으로 반응한다”를 구분할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`arm.urdf`를 복사한 뒤 arm 링크의 **visual box x 크기만** 0.04에서 0.08 m로 바꿔 보세요. collision과 inertial은 그대로 둡니다.
+
+```bash
+cp src/30_importers_import_urdf/arm.urdf /tmp/tutorial30_visual_wide.urdf
+```
+
+편집기에서 `/tmp/tutorial30_visual_wide.urdf`의 arm 아래 visual geometry를 바꾼 뒤 실행하세요.
+
+```bash
+~/isaacsim/python.sh src/30_importers_import_urdf/run.py --urdf /tmp/tutorial30_visual_wide.urdf --steps 360 --output src/30_importers_import_urdf/output/visual_wide
+```
+
+팔이 두꺼워 보이지만 collider 윤곽은 원래 폭이어야 합니다. 외관만 바뀐 것이므로 질량·관성도 자동으로 두 배가 되지 않습니다. 화면의 표면과 충돌 표시를 함께 보며 어떤 입력을 바꿨는지 확인하세요.
+
+## 실행할 때 막히면
+
+- **출력 폴더가 이미 있다는 오류**: 기본 출력은 고정 경로입니다. 새 `--output`을 지정하세요.
+- **다른 URDF에서 관절 명령 크기 오류**: 일반 `--urdf` 경로의 루프는 움직이는 관절 하나를 전제로 `[0.5]`를 보냅니다. 여러 관절 로봇용 범용 제어기는 아닙니다.
+- **mesh나 재질을 못 찾음**: URDF 기준 상대경로와 참조된 파일을 함께 준비하세요. XML 파일만 복사하면 종속 자산이 빠질 수 있습니다.
+- **팔은 보이지만 움직이지 않음**: 가져온 joint, articulation 초기화, 물리 재생을 확인하세요. GUI에서 Pause했다면 Play를 재개하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Tutorial: Import URDF](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/import_urdf.html)에 대응합니다. 기본 한 축 팔의 변환·제어와 선택적 Franka 목표 추종은 실행기로 수행합니다. GUI 가져오기, 로봇별 예제와 ROS 2 node import는 별도의 선택 절차이며 자동 실행기에 포함되지 않습니다.
+
+[RUNTIME_CHECK.md](RUNTIME_CHECK.md)에는 2026-09-14의 기본 headless 120단계에서 shoulder와 실제 위치 약 0.51539 rad를 확인한 기록이 있습니다. 과거 기록의 source 경로는 폴더 번호 정리 전 경로입니다. 수치는 당시 조건의 참고값이며 Franka·GUI·ROS import나 현재 코드의 재검증 결과는 아닙니다.

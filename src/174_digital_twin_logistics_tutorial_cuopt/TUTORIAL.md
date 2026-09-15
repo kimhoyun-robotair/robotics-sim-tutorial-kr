@@ -1,65 +1,125 @@
-# 174. t080 · cuOpt 네트워크부터 창고 운송까지
+# 174. 창고 그림을 운송 경로 문제로 바꾸기
 
-권장 학습 순서 **174** · 고급 데이터 생성과 외부 시스템 통합 · 출처 ID `t080`
+## 이번에 배우는 것
 
-원문에 있는 **네 가지 GUI workflow**를 모두 수행하는 패키지다. `lab_cases.json`에 네트워크 꼭짓점·연결과 작은 capacity 비교 조건을 담았다. 파일은 관찰 실험 명세이며 cuOpt HTTP 요청을 흉내 낸 결과가 아니다. 실제 최적화는 사용자가 준비한 NVIDIA cuOpt service가 계산해야 한다.
+**통로·주문·차량 용량을 cuOpt 입력으로 구성하고, 서비스가 반환한 경로를 장면과 대조합니다.**
 
-이 패키지는 이미 실행한 Isaac Sim GUI에서 실습합니다. 로컬 검사·설정 도구가 GUI 수명을 제한하지 않으며, 사용자가 창을 직접 닫을 때까지 유지됩니다.
+창고에 선반과 차량을 배치했다고 최적화할 문제가 완성되지는 않습니다. 차량이 어디로 이동할 수 있는지, 어느 위치에 물건을 얼마나 배달할지, 한 대에 얼마나 실을지를 따로 표현해야 합니다. 이번에는 작은 네트워크에서 시작해 창고 운송까지 네 가지 GUI 예제를 연결합니다.
 
-## 이 실습의 의도
+| 실습 | 새로 표현하는 정보 | 확인할 결과 |
+|---|---|---|
+| Create Network | 통행 지점과 연결 | 저장된 node·edge |
+| Simple Cost Matrix | 방문지 사이 이동 비용과 차량 용량 | 방문 순서와 차량별 경로 |
+| Simple Waypoint Graph | 실제로 연결된 통로 | graph edge를 따르는 경로 |
+| Intra-warehouse Transport | 창고 장면과 비용 구역 | 구역 변경 후 경로·비용 |
 
-물류 문제를 장면의 시각적 배치, 통행 가능한 graph, 주문 수요, 차량 용량으로 나누어 표현하고 실제 cuOpt 서비스가 돌려준 경로를 해석한다. 사각형 network부터 cost matrix·waypoint graph·창고 운송으로 확장하면서 직선 거리와 통로 연결, semantic zone의 비용 효과를 비교한다. `lab_cases.json`은 수동 입력할 실험 명세이며 자동 실행기나 서비스 응답이 아니다. 서버 없이도 network 구성과 입력 보정은 살펴볼 수 있지만 SOLVE 결과는 실제 서비스 연결이 필요하다.
+`lab_cases.json`은 GUI에 입력할 작은 실험 조건입니다. 서비스 요청 파일이나 계산된 정답 경로가 아니며, 자동으로 읽는 실행기도 없습니다.
 
-## 실행 후 확인할 것
+## 1. 네트워크를 만들고 작은 운송 문제 풀기
 
-- **Network 구조:** 네 꼭짓점을 `(0,0)`, `(4,0)`, `(4,4)`, `(0,4)`에 놓고 0–1–2–3–0의 닫힌 연결을 확인한다. `output/network.usd`를 다시 열어 node와 edge가 유지되는지 본다.
-- **기본 수요·용량:** Simple Cost Matrix에서 차량 2대, capacity 4, 방문지 6을 설정한 뒤 depot cone과 방문 sphere 6개를 확인한다. 실제 SOLVE 응답에서는 모든 방문지 포함 여부와 차량별 수요 합이 4 이하인지 텍스트 route와 화면을 대조한다.
-- **용량 부족 시 GUI 보정:** capacity만 2로 낮추고 SETUP PROBLEM을 누르면 설치된 5.1 UI는 `NOTE : AUTOMATIC VALUE CHANGE`를 표시하고 방문지를 6개에서 4개로 줄인다. 이는 고정된 6개 수요의 infeasible 응답이 아니므로, SOLVE 전에 바뀐 입력과 sphere 수를 확인한다.
-- **Waypoint 경로:** Orders·Vehicles를 로드한 뒤 반환 경로가 graph edge를 따라가는지 확인한다. 녹색 주문 지점과 Node_0 시작점을 연결해 읽으며 차량 mesh가 없어도 graph 기반 실습은 진행할 수 있다.
-- **Semantic zone:** 창고 통로의 한 edge에 zone을 놓고 UPDATE → SOLVE한 결과를 zone 이동 후 결과와 비교한다. zone은 비용 페널티이므로 경로가 반드시 바뀌거나 완전히 통행 금지되는 것은 아니며 반환 cost와 함께 판단한다.
+Isaac Sim 5.1 GUI와 지원 RTX GPU·드라이버가 필요합니다. 저장소 루트에서 앱을 실행하세요.
 
-## 추가 준비
+```bash
+~/isaacsim/isaac-sim.sh
+```
 
-[cuOpt server quickstart](https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-server/quick-start.html)에 따라 실제 endpoint를 준비한다. Isaac Sim 5.1의 `omni.cuopt.service`와 호환되는 서버 API/인증 설정이 필요하다. 외부 `latest` 문서는 5.1에 고정되지 않으므로 사용하는 server 버전을 기록한다. 자격 증명은 UI에 입력하며 이 저장소에 저장하지 않는다. 작성 과정에서 서버 설치나 요청을 수행하지 않았다.
+**Window > Extensions**에서 `omni.cuopt.examples`를 켭니다. 서비스·시각화 확장도 함께 활성화되는지 확인하세요. **SOLVE를 실행하려면 실제 호환 cuOpt endpoint가 필요합니다.** [cuOpt 서버 안내](https://docs.nvidia.com/cuopt/user-guide/latest/cuopt-server/quick-start.html)를 참고해 준비하되, 현재 서버 API와 5.1의 `omni.cuopt.service`가 맞는지 확인하고 버전을 기록합니다. 네트워크 편집은 서비스 연결 전에 살펴볼 수 있습니다.
 
-`Window > Extensions`에서 `omni.cuopt.examples`를 켠다. `omni.cuopt.service`, `omni.cuopt.visualization`도 함께 활성화된다. 이후 cuOpt 메뉴가 나타난다.
+### 설정에서 볼 부분
 
-## 1. Create Network
+먼저 **File > New**로 새 장면을 만들고 **cuOpt > Create Network**를 엽니다.
 
-1. Ctrl+N으로 새 stage를 만들고 `cuOpt > Create Network`를 연다.
-2. CREATE NODE로 네 node를 만든다. Move 도구/Property Transform에서 `lab_cases.json`의 `(0,0,0)`, `(4,0,0)`, `(4,4,0)`, `(0,4,0)`에 둔다.
-3. 두 node씩 선택하여 CREATE EDGE로 0-1, 1-2, 2-3, 3-0을 연결한다. node/edge visualization이 닫힌 순환 graph를 이루는지 확인한다.
-4. `output/network.usd`에 Save As한다. 이후 LOAD SCENE 입력으로 재사용할 수 있다. Open Source Code로 scene node를 graph 데이터로 읽는 구현을 확인한다.
+1. CREATE NODE로 지점 4개를 만듭니다.
+2. Property의 Transform에서 위치를 차례로 `(0,0,0)`, `(4,0,0)`, `(4,4,0)`, `(0,4,0)`에 놓습니다.
+3. 두 지점씩 선택하고 CREATE EDGE로 `0–1`, `1–2`, `2–3`, `3–0`을 연결합니다.
+4. 이 튜토리얼의 새 `output/network.usd` 경로에 Save As합니다. 다시 열어 네 지점과 닫힌 연결이 유지되는지 확인하세요.
 
-## 2. Simple Cost Matrix
+이제 새 장면에서 **cuOpt > Simple Cost Matrix**를 엽니다. 실제 서비스 연결·인증 정보를 UI에 설정하고 다음 값을 넣으세요.
 
-1. 새 stage에서 `cuOpt > Simple Cost Matrix`를 연다. 실제 service credentials/endpoint를 UI에서 설정한다.
-2. Fleet Size=2, Vehicle Capacity=4, Number of Locations=6, Solver Time Limit=5초를 넣고 SETUP PROBLEM을 누른다. cone은 depot, sphere는 demand 1의 방문지다.
-3. SOLVE를 누른 뒤 텍스트 route와 viewport route를 비교한다. 모든 방문지가 포함되고 차량별 방문 수가 capacity를 넘지 않는지 수작업으로 센다. fleet size는 최대 수이므로 반드시 두 대를 써야 하는 것은 아니다.
-4. Capacity만 2로 바꾸고 SETUP PROBLEM을 누른다. 설치된 5.1 UI의 `problem_setup_validation()`은 총 capacity 4보다 많은 방문지를 4개로 자동 줄이고 `NOTE : AUTOMATIC VALUE CHANGE`를 표시한다. Number of Locations와 실제 sphere 수를 확인한 뒤 SOLVE한다. `lab_cases.json`의 `expected_feasibility`는 **6개 수요를 고정했을 때** 불가능하다는 수학적 설명이며, 이 GUI가 그대로 infeasible 문제를 서비스에 보낸다는 뜻은 아니다.
+| 입력 | 값 | 의미 |
+|---|---|---|
+| Fleet Size | 2 | 사용할 수 있는 차량 수 |
+| Vehicle Capacity | 4 | 차량 한 대가 담당할 수 있는 수요 |
+| Number of Locations | 6 | 수요가 1인 방문지 수 |
+| Solver Time Limit | 5초 | 최적화에 배정한 시간 |
 
-## 3. Simple Waypoint Graph
+SETUP PROBLEM을 누르면 depot를 표시하는 cone과 방문 sphere가 생성됩니다. 여기서는 총 수요 6을 총 용량 `2 × 4 = 8`로 나눌 수 있습니다. 다만 용량 조건을 만족한다는 사실만으로 경로 비용까지 결정되는 것은 아닙니다.
 
-1. 새 stage에서 해당 메뉴를 연다. LOAD JSON 또는 앞서 저장한 network USD를 Stage로 가져와 LOAD SCENE을 누른다. 처음에는 제공 sample graph로 전체 흐름을 익힌다.
-2. Waypoint Graph → Orders → Vehicles 순서로 LOAD한다. order 지점은 녹색, vehicle은 Node_0에서 시작하지만 별도 차량 mesh가 보이지 않을 수 있다.
-3. SOLVE하고 returned routes가 graph edge를 따라가는지 확인한다. 직선 거리 cost matrix와 달리 graph는 벽·통로 연결을 표현한다.
-4. Open Source Code로 `wpgraph/extension_data/waypoint_graph.json`, `orders_data.json`, `vehicle_data.json`을 확인한다. 5.1 설치본은 **orders_data.json**이며 본문의 일부 단수 `order_data.json` 표기와 다르다. `node_locations`와 `graph` adjacency, `task_locations`/`demand`, `vehicle_locations`/`capacities` 스키마를 읽는다. LOAD JSON은 설치본 sample 경로를 사용하므로 `lab_cases.json`을 임의로 해당 버튼에 넣는 기능은 없다.
+### 실행 결과 확인하기
 
-## 4. Intra-warehouse Transport
+SOLVE를 누른 뒤 응답의 텍스트 route와 viewport 경로를 함께 보세요.
 
-1. 새 stage에서 `cuOpt > Intra-warehouse Transport Demo`를 연다. Sample Warehouse → Waypoint Graph → Orders → Vehicles 순서로 LOAD한다.
-2. warehouse building/conveyors/shelves JSON이 scene을 구성하고 waypoint graph가 통행 network를 따로 정의한다. 시각적으로 빈 공간이라고 자동으로 통행 edge가 생기지는 않는다.
-3. Semantic Zone을 Generate하여 한 통로 edge를 덮도록 옮긴다. UPDATE를 눌러 현재 위치에 따른 edge cost를 반영한 다음 SOLVE한다.
-4. zone을 옆으로 옮기고 UPDATE → SOLVE를 반복한다. route 또는 cost가 달라지는지 비교한다. Generate를 다시 누르면 기존 zone 이동이 아니라 **새 zone 추가**이므로 처음 실험은 하나만 유지한다.
+- 방문지 6개가 경로에 포함되는지 확인합니다.
+- 각 차량이 맡은 방문지의 수요 합이 4 이하인지 셉니다.
+- depot 번호를 주문 위치로 잘못 세지 않았는지 확인합니다.
+- 반환된 비용과 사용된 차량 수를 기록합니다.
 
-`omni.cuopt.service`는 scene 문제를 요청으로 변환하고 service와 통신한다. `omni.cuopt.visualization`은 graph/warehouse/semantic zone을 표시하며 zone 주변 edge 비용을 조정한다. semantic zone은 비용 페널티이며 물리 collider나 절대 통행금지와 같은 뜻이 아니다. scene USD와 route 최적화 입력을 별도로 이해해야 한다.
+Fleet Size는 사용할 수 있는 차량의 수입니다. 일반적으로 모든 차량을 반드시 쓰는 조건과는 다르지만, 이번 기본 문제에서는 수요 6이 한 대의 용량 4보다 커서 한 대만으로 모두 처리할 수 없습니다. 그림에 선이 생겼다는 사실만으로 최적성을 판단하지 말고 서비스 응답의 상태와 비용도 읽으세요.
 
-해결 실패 시 endpoint/API 호환, credentials, graph 연결, demand/capacity를 구분해서 확인한다. render된 선이 있다고 최적해라고 가정하지 않는다. 제한시간을 늘릴 때는 동일 문제와 objective 값을 비교한다. 실제 서버 없이는 Create Network 실습까지는 가능하지만 SOLVE 결과 검증은 미실행이다.
+## 2. 통로와 창고의 비용 구역으로 확장하기
 
-## 독립 실행과 출처
+### 설정에서 볼 부분
 
-이 폴더만 복사해 사용할 수 있다. Isaac Sim **5.1.0**, 지원 NVIDIA RTX GPU/드라이버와 GUI 세션이 필요하다. NVIDIA asset browser를 사용하는 단계는 5.1 자산 또는 해당 Digital Twin dataset에 접근할 수 있어야 한다. 명시한 extension이 검색되지 않으면 설치/registry 연결 상태부터 확인한다. 이 패키지는 다른 로컬 튜토리얼이나 공통 모듈을 요구하지 않는다.
+새 장면에서 **cuOpt > Simple Waypoint Graph**를 열고 **Waypoint Graph → Orders → Vehicles** 순서로 LOAD합니다. 처음에는 설치된 sample JSON으로 전체 흐름을 확인하세요. 앞서 저장한 network USD를 사용할 때는 장면에 연 뒤 LOAD SCENE을 사용합니다.
 
-앱 실행은 `"$HOME/isaacsim/isaac-sim.sh"`로 하고 설치 위치가 다르면 경로를 바꾼다. USD Stage는 전체 장면이고 prim은 장면 트리의 객체다. reference는 외부 USD를 합성하며 transform은 parent 기준의 위치·회전·스케일이다. 저장은 패키지의 새 `output/` 경로에 Save As하고 원본/기존 결과를 덮어쓰지 않는다.
+각 데이터의 역할은 다음과 같습니다.
 
-[Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/logistics_tutorial_cuopt.html)의 하위 workflow를 위 순서에 모았다. 이 문서는 한국어 독립 실습이며 공식 GUI를 실행하는 방식과 로컬 보조 artifact를 구분해 설명한다. 작성 시 로컬 파일/문법만 확인했고 실제 GPU·GUI 상호작용 및 외부 service는 실행하지 않았다. `tutorial.json`의 검증 상태는 `not_run`이다.
+| 데이터 | 주요 항목 | 장면과 연결되는 의미 |
+|---|---|---|
+| waypoint graph | `node_locations`, `graph` | 지점 좌표와 연결 가능한 이웃 |
+| orders | `task_locations`, `demand` | 방문할 지점과 처리량 |
+| vehicles | `vehicle_locations`, `capacities` | 출발 지점과 적재 한도 |
+
+Open Source Code에서 설치본의 `waypoint_graph.json`, `orders_data.json`, `vehicle_data.json`을 확인할 수 있습니다. 설치본 파일명은 복수형 `orders_data.json`입니다. `lab_cases.json`은 이 데이터 스키마가 아니므로 LOAD JSON 버튼에 넣는 파일로 사용하지 않습니다.
+
+SOLVE 후 경로가 graph edge를 따라가는지 확인하세요. 녹색 주문 지점과 Node_0 출발점을 연결해 읽습니다. 차량의 별도 mesh가 보이지 않아도 경로 계산 입력은 존재할 수 있습니다. Cost Matrix와 달리 waypoint graph는 어떤 통로가 연결되어 있는지 직접 표현합니다.
+
+창고 장면은 다음 순서로 진행합니다.
+
+1. 새 장면에서 **cuOpt > Intra-warehouse Transport Demo**를 엽니다.
+2. **Sample Warehouse → Waypoint Graph → Orders → Vehicles** 순서로 LOAD합니다.
+3. 한 번 SOLVE해 기본 경로와 비용을 기록합니다.
+4. Semantic Zone을 Generate하고 특정 통로 edge를 덮도록 옮깁니다.
+5. UPDATE로 변경된 구역을 비용에 반영한 뒤 SOLVE합니다.
+6. 같은 zone을 옆으로 이동하고 UPDATE → SOLVE를 반복합니다.
+
+Generate를 다시 누르면 기존 zone을 이동하는 대신 새 zone이 추가됩니다. 한 구역의 효과를 비교할 때는 동일한 zone 하나를 움직이세요.
+
+### 실행 결과 확인하기
+
+구역이 덮는 edge와 반환 경로·비용을 비교합니다. Semantic Zone은 이동 비용에 주는 페널티입니다. 물리 collider나 절대 통행금지와 같은 뜻은 아닙니다. 우회로가 더 비싸다면 경로가 그대로일 수 있고, 경로는 같아도 비용이 달라질 수 있습니다.
+
+창고 건물·컨베이어·선반을 만드는 데이터와 통행 graph는 별도입니다. 화면에 빈 공간이 있다고 그 사이에 이동 edge가 자동으로 생기지는 않습니다. 경로가 예상과 다르면 시각적 배치뿐 아니라 graph 연결도 확인하세요.
+
+## 3. 장면과 최적화 입력의 관계 정리
+
+```text
+창고 USD → 사람이 이해하는 공간 배치
+통행 graph + 주문 수요 + 차량 용량 + 구역 비용
+    → cuOpt 서비스의 실제 계산
+    → 응답 경로·비용 → 장면 시각화와 대조
+```
+
+문제가 풀리지 않을 때는 서비스 연결 문제와 수학적으로 불가능한 입력을 나누어 확인합니다. 서버 인증 실패는 수요를 줄여 해결할 문제가 아니고, 끊긴 graph는 렌더링 품질을 높여 해결할 문제가 아닙니다.
+
+## 4. 간단한 확인 실험
+
+Simple Cost Matrix의 **Vehicle Capacity만 4 → 2**로 바꾸고 SETUP PROBLEM을 누르세요. Fleet Size 2와 입력한 방문지 6은 그대로 둡니다.
+
+고정된 수요 6은 총 용량 `2 × 2 = 4`로 처리할 수 없습니다. 하지만 설치된 5.1 UI는 이 상황에서 `NOTE : AUTOMATIC VALUE CHANGE`를 표시하고 **방문지 수를 4개로 줄입니다.** SOLVE 전에 Number of Locations와 sphere 수가 바뀌었는지 확인하세요.
+
+따라서 여기서 얻은 응답은 “6개 주문이 불가능하다는 서버 응답”과 다릅니다. `lab_cases.json`의 `expected_feasibility` 문장은 6개 수요를 고정한 수학적 조건이며, 실제 GUI의 보정 이후 입력과 구분해서 읽어야 합니다. 이 실험은 최적화 결과 전에 **실제로 전송된 문제가 무엇인지 확인하는 이유**를 보여 줍니다.
+
+## 실행할 때 막히면
+
+- **cuOpt 메뉴가 없음**: `omni.cuopt.examples`와 의존 확장의 로딩 로그·registry 접근을 확인하세요.
+- **SOLVE에서 연결·인증 오류**: endpoint, 서비스 API 버전과 credentials를 확인하세요. Create Network가 동작해도 서비스가 연결된 것은 아닙니다.
+- **방문지 수가 입력한 값과 다름**: SETUP PROBLEM의 자동 보정 메시지를 확인하세요.
+- **경로가 통로와 맞지 않음**: USD 그림과 waypoint graph를 구분하고 실제 edge 연결을 살펴보세요.
+- **zone을 옮겨도 결과가 같음**: UPDATE 수행 여부, 해당 edge를 사용하는지, 우회 비용을 함께 확인하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [NVIDIA cuOpt](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/logistics_tutorial_cuopt.html)의 네 GUI workflow에 대응합니다. `lab_cases.json`의 입력 조건과 설치본 `costmat/extension.py`의 자동 보정 흐름을 대조했습니다.
+
+이번 개정에서 GPU GUI 조작과 외부 서비스 요청은 실행하지 않았습니다. `tutorial.json`은 `not_run`이며, 경로·비용은 실제 서비스 실행 뒤 직접 확인할 결과입니다.

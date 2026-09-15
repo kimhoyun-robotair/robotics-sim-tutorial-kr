@@ -1,81 +1,148 @@
-# 164. t144 · 공식 강화학습 정책 예제를 실행하고 비교하기
+# 164. 속도 명령을 받은 Spot과 H1의 움직임 읽기
 
-권장 학습 순서 **164** · 병렬 환경과 학습 정책 활용 · 출처 ID `t144`
+## 이번에 배우는 것
 
-공식 5.1 예제 모음에는 H1 보행, Spot 보행, Franka 서랍 열기, ANYmal standalone 예제가 있다. 이 패키지의 `run.py`는 설치된 H1/Spot 정책을 직접 실행하고 시간에 따른 이동 기록을 남긴다. Franka와 ANYmal은 아래의 공식 native workflow로 실습한다. 어떤 경우에도 가짜 추론값으로 성공을 표시하지 않는다.
+**설치된 보행 정책에 전진·회전·정지 명령을 보내고, 목표 속도와 실제 몸통 위치를 나란히 기록합니다.**
 
-## 이 실습의 의도
+정책은 로봇 상태와 원하는 속도를 받아 관절 목표를 계산하는 학습된 함수입니다. 속도 명령을 줬다고 로봇이 즉시 그 속도로 움직이는 것은 아닙니다. 관절 제어와 지면 접촉을 거친 실제 결과를 확인해야 합니다. 이번에는 정해진 6초 명령 순서를 사용해 입력과 이동을 비교합니다.
 
-설치된 Spot/H1의 학습 완료 정책에 속도 명령을 전달하고, 그 명령과 실제 몸통 이동을 나란히 기록하여 정책 추론과 로봇 물리 상태를 구분합니다. 기본 `run.py`는 Spot 한 대를 평면 바닥에 놓고 전진·전진하면서 회전·정지 명령을 2초씩 반복하며, 여러 대를 요청하면 각 로봇의 정책 상태와 articulation을 따로 만듭니다. 새 정책을 학습하는 예제가 아니고 Franka·ANYmal은 아래 별도 native 경로에서 실행하며, 실제 로봇 USD와 정책 자산이 있어야 추론을 확인할 수 있습니다.
+| 항목 | Spot | H1 |
+|---|---|---|
+| 선택 옵션 | `--robot spot` | `--robot h1` |
+| 물리 간격 | 0.002초, 500 Hz | 0.005초, 200 Hz |
+| 한 명령 주기 | 6초 | 6초 |
+| 한 주기 관찰 단계 수 | 3000회 | 1200회 |
+| 사용 클래스 | `SpotFlatTerrainPolicy` | `H1FlatTerrainPolicy` |
 
-## 실행 후 확인할 것
+이 코드는 새 정책을 학습하지 않습니다. 실제 로봇 USD와 학습된 정책 자산을 불러와 추론합니다.
 
-- **대상과 초기화:** Stage에서 `/World/Robot_0` 등 요청한 로봇 수를 확인합니다. 여러 대는 Y 방향 2 m 간격으로 시작하고 첫 물리 callback은 정책 초기화에 사용되므로 첫 프레임의 정지 상태만으로 보행 실패를 판정하지 않습니다.
-- **명령과 측정값:** 출력 CSV의 `robot`, `time_s`, `vx_command`, `vy_command`, `yaw_command`를 실제 `x,y,z`와 비교합니다. 대략 0.1초마다 위치를 기록하며 명령값은 측정 속도가 아닙니다. 전진 구간의 위치 변화, 회전 구간의 경로 변화, 정지 명령 뒤의 움직임 감소를 관찰하되 즉시 정확한 목표 속도·완전 정지를 요구하지 않습니다.
-- **전체 주기의 관찰 시간:** 명령은 시뮬레이션 시간 0..2초 전진, 2..4초 전진+회전, 4..6초 정지입니다. headless 기본 2000스텝은 Spot에서 4초이므로 정지 구간을 포함하지 않습니다. Spot은 `--steps 3000` 이상, H1은 `--steps 1200` 이상으로 한 주기를 비교하거나 GUI를 6초 이상 진행합니다.
-- **보행과 붕괴 구분:** CSV의 z와 화면에서 몸통이 지지된 채 이동하는지 확인합니다. 로봇이 넘어져 미끄러지는 위치 변화는 정상 보행이 아닙니다. 프로그램이 정상 루프를 마치고 앱이 실행 중인 경우 콘솔의 `final world pose`도 비교할 수 있으며, GUI 창을 직접 닫으면 이 최종 출력은 생략될 수 있습니다.
-- **별도 예제의 완료 기준:** Franka는 GUI에서 실제 손잡이 접근·서랍 열기와 RESET 반복을, ANYmal은 원본 standalone의 지형 위 이동을 직접 확인합니다. Spot/H1 CSV만으로 다른 로봇·과제의 실행까지 완료했다고 판단하지 않습니다.
+## 1. Spot의 6초 명령 순서 실행하기
 
-## 준비와 실행
-
-Isaac Sim **5.1.0**, RTX GPU와 호환 드라이버, 5.1 자산 팩/서버가 필요하다. 정책 extension의 실제 설치 이름은 `isaacsim.robot.policy.examples`다. UI에서 예제가 보이지 않으면 Window > Extensions에서 해당 이름을 활성화한다. 각 패키지는 독립적이며 별도 공통 코드가 없다.
+Isaac Sim 5.1, RTX GPU, 5.1 로봇·정책 자산 접근이 필요합니다. 설치된 확장 이름은 `isaacsim.robot.policy.examples`입니다. 저장소 루트에서 실행하세요.
 
 ```bash
-export ISAAC_SIM=/home/hoyunkim/isaacsim
-cd src/164_motion_robot_policy_example
-"$ISAAC_SIM/python.sh" run.py --robot spot
-"$ISAAC_SIM/python.sh" run.py --robot h1 --robots 3 --output output/h1.csv
+~/isaacsim/python.sh src/164_motion_robot_policy_example/run.py --robot spot --steps 3000 --output src/164_motion_robot_policy_example/output/spot_01.csv
 ```
 
-1. Spot은 500 Hz, H1은 200 Hz 물리로 실행한다. 2초마다 전진 `(0.4,0,0)` → 전진+회전 `(0.3,0,0.4)` → 정지 `(0,0,0)`를 반복한다.
-2. `trajectory.csv`에서 명령과 실제 몸통 위치를 비교한다. `vx_command`, `vy_command`는 로봇 몸체 좌표의 목표 속도(m/s), `yaw_command`는 목표 회전 속도(rad/s)다. 실제 측정값은 월드 위치 `x,y,z`다. 회전 후 +X 명령의 월드 방향이 달라짐을 관찰한다.
-3. 로봇 간 간격은 2 m다. `--robots 1`과 `3`만 바꿔 각 로봇이 별도 prim, articulation, 정책 내부 상태를 갖는지 확인한다. 이는 성능 벤치마크가 아니다.
-4. 지정된 스텝을 마칠 때 앱이 실행 중이면 실제 최종 world pose가 출력된다. GUI 창을 닫아 끝내는 경우에는 이 출력이 생략될 수 있으므로 CSV도 확인한다. z가 지면에 가깝게 붕괴했으면 정상 보행으로 판정하지 않는다. 파일이 있으면 다른 `--output`을 쓴다.
+3000번의 물리 진행 후 종료합니다. GUI에서도 물리는 `world.step(render=False)`로 한 단계씩 진행하고, 약 0.02초 간격의 별도 `world.render()`는 물리 진행을 잠시 끈 상태에서 화면만 갱신합니다. 따라서 이 실행기의 3000스텝은 Spot의 6초 물리 구간과 대응합니다. `--steps`를 빼면 창을 닫을 때까지 같은 명령 순서를 반복합니다. `--headless`를 추가하면 창 없이 실행합니다. Headless의 생략 기본값은 2000스텝이므로 Spot에서는 4초만 진행되어 정지 구간을 관찰하기 부족합니다.
 
-`--steps`를 생략하면 GUI에서 사용자가 창을 닫을 때까지 시뮬레이션을 계속합니다. `--steps 2000`처럼 횟수를 지정하면 자동 종료합니다. `--headless` 실행에서 생략하면 2000회로 제한됩니다.
+CSV는 실행 중 작성하며 기존 파일은 덮어쓰지 않습니다. 재실행할 때는 새 `--output` 파일을 지정하세요.
 
+### 코드에서 볼 부분
 
-## H1·Spot·Franka GUI 실습
+```python
+phase = int(step * dt / 2) % 3
+command[:] = [(0.4, 0, 0), (0.3, 0, 0.4), (0, 0, 0)][phase]
+world.step(render=False)
+```
 
-새 stage를 만들고 **Window(s) > Examples > Robotics Examples > POLICY**를 연다.
+`step * dt`로 계산한 시뮬레이션 시간마다 명령을 고릅니다. 세 값은 몸체 좌표계의 전진 속도, 측면 속도, 회전 속도입니다.
 
-1. **Humanoid > LOAD**로 H1을 불러온다. 위 화살표/NUM 8로 전진, 좌·우 화살표/NUM 4·6으로 회전한다. 키를 놓았을 때와 계속 누를 때를 비교한다.
-2. 새 stage에서 **Quadruped > LOAD**로 Spot을 불러온다. 위/아래는 전후, 좌/우는 측면 이동, `N`/`M`은 좌우 회전이다. H1의 좌우키 의미와 다르다.
-3. 새 stage에서 **Franka > LOAD**를 누른다. 팔이 손잡이에 접근하고 서랍을 연 뒤 유지하는지 관찰한다. RESET 후 같은 동작이 반복되는지 확인한다. 팔의 임의 초기 위치를 바꾸면 훈련 분포 밖이 될 수 있다.
-4. 동일한 예제를 다시 실행할 때는 RESET 또는 새 stage를 사용한다. GUI 재생/정지와 정책 초기화를 임의로 섞으면 articulation handle이 무효화될 수 있다.
+| 구간 | 명령 `(vx, vy, yaw)` | 관찰할 변화 |
+|---|---|---|
+| 0~2초 | `(0.4, 0, 0)` | 몸체 전방 이동 |
+| 2~4초 | `(0.3, 0, 0.4)` | 전진하면서 방향 전환 |
+| 4~6초 | `(0, 0, 0)` | 이동 감소·정지 자세 |
 
-## ANYmal 및 원본 standalone 실습
+선속도는 m/s, 회전 속도는 rad/s입니다. 몸체가 회전한 뒤 전진하면 월드 +X만 따라가지 않을 수 있습니다. 명령의 기준 좌표계와 기록 위치의 기준 좌표계가 다르기 때문입니다.
 
-아래 명령은 **Isaac Sim 설치 폴더에서** 실행한다. 파일은 이 저장소가 복사한 코드가 아니라 5.1에 제공되는 native 예제다. 창을 닫으면 종료된다.
+### 실행 결과 확인하기
+
+CSV는 약 0.1초 간격으로 로봇마다 한 행을 씁니다.
+
+| 열 | 의미 |
+|---|---|
+| `time_s` | 반복문 인덱스에서 계산한 명령 시각 |
+| `robot` | 로봇 번호 |
+| `vx_command`, `vy_command`, `yaw_command` | 정책에 전달한 목표 속도 |
+| `x`, `y`, `z` | 물리 진행 후 읽은 월드 위치(m) |
+
+`time_s`는 물리 진행 전 `step * dt`이고 위치는 해당 단계 후 읽습니다. 매우 짧은 구간을 분석할 때는 이 한 단계 차이도 고려하세요. 일반적인 이동 비교에서는 연속 행의 위치 변화와 명령 구간을 함께 봅니다.
+
+몸통의 Z와 화면도 확인하세요. 넘어져 미끄러지는 로봇도 X가 변할 수 있으므로 이동 거리만으로 정상 보행을 판단하지 않습니다. 정지 명령 뒤에도 관성이나 자세 보정 때문에 즉시 완전히 정지하지 않을 수 있습니다.
+
+## 2. H1과 여러 로봇의 정책 상태 비교하기
+
+H1의 한 주기도 실행해 보세요.
 
 ```bash
-cd "$ISAAC_SIM"
-./python.sh standalone_examples/api/isaacsim.robot.policy.examples/h1_standalone.py --num-robots 5 --env-url /Isaac/Environments/Grid/default_environment.usd
-./python.sh standalone_examples/api/isaacsim.robot.policy.examples/spot_standalone.py
+~/isaacsim/python.sh src/164_motion_robot_policy_example/run.py --robot h1 --steps 1200 --output src/164_motion_robot_policy_example/output/h1_01.csv
+```
+
+### 코드에서 볼 부분
+
+첫 물리 콜백에서는 초기화만 수행하고 다음 콜백부터 정책을 진행합니다.
+
+```python
+if not initialized:
+    for robot in robots:
+        robot.initialize()
+    initialized = True
+else:
+    for robot in robots:
+        robot.forward(step_size, command)
+```
+
+`initialize()`는 물리가 준비된 뒤 관절 제어를 초기화합니다. `forward()`는 물리 콜백마다 관절 목표를 적용하지만 신경망 추론은 정책의 `decimation` 간격에 수행하고 그 사이에는 이전 행동을 유지합니다. 설치된 Spot은 48개 관측에서 12개 행동을, H1은 69개 관측에서 19개 행동을 계산합니다. 두 클래스 모두 기준 관절 위치에 행동을 더한 위치 목표를 사용하며 행동 배율은 Spot 0.2, H1 0.5입니다. 로봇 종류만 바꾸는 것은 같은 신경망에 다른 모양을 씌우는 일이 아닙니다. `world.step()`이 이 콜백을 실행시키므로 콜백 등록만으로 로봇이 계속 움직이는 것은 아닙니다.
+
+`--robots 3`을 주면 `/World/Robot_0`부터 세 로봇을 Y 방향 2 m 간격으로 만듭니다. 각 로봇에 별도의 정책 객체와 articulation이 생깁니다. 같은 속도 명령을 받지만 이전 행동 등 정책 내부 상태는 각 객체에 보관됩니다.
+
+### GUI 예제로 넓혀 보기
+
+새 Isaac Sim 창에서 **Window > Examples > Robotics Examples > POLICY**를 열면 관련 공식 예제도 비교할 수 있습니다.
+
+- **Humanoid > LOAD**: H1의 위 화살표는 전진, 좌우 화살표는 회전입니다.
+- **Quadruped > LOAD**: Spot의 좌우 화살표는 측면 이동이며 회전은 `N`, `M`입니다.
+- **Franka > LOAD**: 손잡이 접근과 서랍 열기를 관찰하고 RESET 후 다시 확인합니다.
+
+서로 다른 예제로 바꿀 때는 새 Stage를 사용하세요. 이 폴더의 CSV 실행기는 Spot/H1만 지원합니다. Franka의 팔 과제와 ANYmal의 지형 보행은 별도 설치본 예제입니다. ANYmal은 설치 디렉터리에서 다음과 같이 실행합니다.
+
+```bash
+cd ~/isaacsim
 ./python.sh standalone_examples/api/isaacsim.robot.policy.examples/anymal_standalone.py
 ```
 
-ANYmal 예제는 거친 지형 정책이며 상태·속도 명령·주변 지형을 입력으로 사용한다. 키는 Spot과 같은 전후/좌우 및 `N`/`M` 회전이다. 정책 파일 표의 ANYmal **flat** 정책과 rough terrain standalone을 동일하게 간주하지 않는다. 원본 H1에서 `--num-robots`만 1→5로 바꾸고 prim 수를 확인한다.
+같은 설치 폴더에는 H1과 Spot 원본 standalone도 있습니다. 각각 종료한 뒤 다음 예제를 실행하세요.
 
-## API, 자산, 정책 파일
+```bash
+./python.sh standalone_examples/api/isaacsim.robot.policy.examples/h1_standalone.py --num-robots 5 --env-url /Isaac/Environments/Grid/default_environment.usd
+./python.sh standalone_examples/api/isaacsim.robot.policy.examples/spot_standalone.py
+```
 
-`World`는 물리 step과 지면을 관리한다. `H1FlatTerrainPolicy`/`SpotFlatTerrainPolicy` 생성자가 로봇 USD를 reference하고 신경망을 불러온다. `initialize()`는 첫 물리 callback에서 호출하며 `forward(dt, command)`가 관측→추론→관절 목표 적용을 수행한다. 각 로봇의 `_previous_action`은 자기 이전 출력을 저장하므로 서로 공유하지 않는다. `robot.get_world_pose()`는 월드 기준의 실제 위치와 WXYZ quaternion이다.
+원본 H1의 `--num-robots`와 이 폴더 실행기의 `--robots`는 서로 다른 옵션입니다. 원본 예제는 키보드 조작을, 로컬 실행기는 6초 시간표와 CSV 기록을 비교하는 데 사용합니다. 원본 standalone은 창을 닫아 종료합니다. 이 거친 지형 예제를 정책 파일 표의 ANYmal flat 정책과 같은 실험으로 취급하지 않습니다.
 
-USD는 화면 mesh 외에 관절과 collider를 포함한다. `/World/Robot_0` 등의 **prim 경로**는 로봇을 식별하며 정책 파일 경로와 다르다. 정책은 USD 자체가 아니라 학습된 함수다. 정책의 관측 layout, 관절 이름 순서, default position, gain, physics dt가 로봇과 일치해야 한다.
+## 3. 명령·정책·실제 상태 정리
 
-5.1 자산 루트 기준 파일은 다음과 같다. Content Browser에서 각 파일을 우클릭 > Download로 저장할 수 있다.
+```text
+시간표의 속도 명령
+    → 현재 로봇 상태와 함께 정책 입력
+    → 관절 목표 계산·적용
+    → 물리 계산과 지면 접촉
+    → 실제 몸통 위치 기록
+```
 
-| 로봇/과제 | 정책 디렉터리와 파일 |
-|---|---|
-| H1 flat | `/Isaac/Samples/Policies/H1_Policies/`: `h1_policy.pt`, `h1_env.yaml`, `agent.yaml` |
-| Spot flat | `/Isaac/Samples/Policies/Spot_Policies/`: `spot_policy.pt`, `spot_env.yaml`, `agent.yaml` |
-| ANYmal C flat | `/Isaac/Samples/Policies/Anymal_Policies/`: `anymal_policy.pt`, `sea_net_jit2.pt`, `anymal_env.yaml`, `agent.yaml` |
-| Franka drawer | `/Isaac/Samples/Policies/Franka_Policies/Open_Drawer_Policy/`: `policy.pt`, `env.yaml` |
+CSV의 명령은 입력이고 위치는 결과입니다. 예를 들어 전진 명령 0.4 m/s를 2초 주었더라도 위치 차이가 정확히 0.8 m여야 하는 것은 아닙니다. 시작 자세와 추종 오차를 포함한 실제 반응을 읽는 것이 목적입니다.
 
-## 막힐 때와 검증 범위
+정책 자산은 5.1 Assets의 `/Isaac/Samples/Policies/Spot_Policies/`, `/Isaac/Samples/Policies/H1_Policies/`에 있습니다. 정책과 환경 YAML, 로봇의 관절 구성·제어 주기가 함께 맞아야 합니다.
 
-정책 다운로드 실패는 자산 루트/네트워크 문제부터 확인한다. 넘어지면 500/200 Hz 차이와 joint 순서/gain을 확인한다. 화면이 보이지 않으면 `--headless`를 제거한다. CLI 파싱과 문법은 확인했지만 이 패키지의 보행·서랍·ANYmal GPU 실행은 아직 검증하지 않았다.
+## 4. 간단한 확인 실험
 
-## 출처
+저장소 루트로 돌아와 H1 명령에서 `--robots 1`만 `--robots 3`으로 바꾸고 새 CSV에 기록해 보세요. 물리 단계 수와 로봇 종류는 유지합니다.
 
-[Isaac Sim 5.1 Reinforcement Learning Policies Examples](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/ext_isaacsim_robot_policy_example.html), [정책 파일 표](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/ext_isaacsim_robot_policy_example.html#policies-files), [standalone 실행](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/ext_isaacsim_robot_policy_example.html#standalone-examples). API 경로는 설치된 `exts/isaacsim.robot.policy.examples`와 대조했다.
+- 같은 `time_s`에 robot 0, 1, 2의 행이 있는지 확인합니다.
+- 초기 Y가 약 2 m 간격인지 보고, 각 로봇의 위치 변화는 자기 초기 위치를 기준으로 비교합니다.
+- 관절 상태가 독립인 세 로봇이 같은 입력에 어떻게 반응하는지 관찰합니다. 이 결과를 속도나 메모리 벤치마크로 해석하지 않습니다.
+
+## 실행할 때 막히면
+
+- **정책·로봇 로딩 실패**: 5.1 자산 루트와 위 정책 폴더에 접근할 수 있는지 확인하세요.
+- **첫 화면에서 움직이지 않음**: 첫 콜백은 초기화입니다. 이후 물리 진행과 실제 CSV 행을 확인하세요.
+- **Spot의 정지 구간이 없음**: 2000스텝은 4초입니다. `--steps 3000`으로 한 주기를 관찰하세요.
+- **최종 pose 콘솔 출력이 없음**: GUI를 직접 닫으면 생략될 수 있습니다. 실행 중 기록한 CSV를 확인하세요.
+- **넘어진 채 이동함**: 몸통 높이와 자세를 확인하고 로봇 종류에 맞는 물리 간격·관절 구성·정책 자산을 사용했는지 봅니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Reinforcement Learning Policies Examples in Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/ext_isaacsim_robot_policy_example.html)에 대응합니다. 로컬 실행기는 설치본 Spot/H1 정책에 시간표를 전달하고 이동을 기록합니다. Franka와 ANYmal은 별도의 공식 실행 경로로 소개했습니다.
+
+`tutorial.json`은 `not_run`입니다. 실제 보행, 서랍 열기, 지형 이동은 아직 이 패키지의 실행 검증으로 기록되지 않았습니다.

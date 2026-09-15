@@ -1,88 +1,163 @@
-# 176. SceneBlox로 규칙에 맞는 미로 생성하기
+# 176. 이웃 규칙을 지키면서 미로를 생성하기
 
-권장 학습 순서 **176** · 사용 중단 문서와 레거시 참고 · 출처 ID `t052`
+## 이번에 배우는 것
 
-공식 **Scene Generation with SceneBlox**를 로컬 구성 파일과 실제 SceneBlox API로 구현했다. 원본은 **DEPRECATED**로 표시되며 이 수업은 Isaac Sim **5.1.0**을 대상으로 한다. 다른 패키지의 공통 코드가 필요 없다.
+**타일의 인접 규칙과 경계 제약으로 7×7 미로를 만들고, 통로 구조와 소품 확률을 나누어 해석합니다.**
 
-## 이 실습의 의도
+무작위로 통로 타일을 놓으면 옆 칸과 길이 맞지 않을 수 있습니다. SceneBlox는 각 칸에 가능한 타일 후보를 두고, 선택한 타일과 연결될 수 없는 이웃 후보를 제거하며 장면을 만듭니다. 이 과정을 WFC(Wave Function Collapse) 방식으로 살펴봅니다.
 
-교차로·직선·모서리·막다른 길 tile을 인접 규칙과 경계 제약에 맞게 선택하여 7×7 미로 USD를 생성한다. 통로 구조를 결정하는 규칙과 콘·장애물 더미를 추가하는 확률 설정을 분리해, 같은 생성 과정에서 구조와 소품이 각각 어떻게 바뀌는지 관찰한다. 기본은 미로 한 장면의 생성·저장까지이며, 출발점에서 도착점까지의 연결성이나 로봇 주행은 따로 검사해야 한다. 공식 사용 중단 예제를 보존한 Isaac Sim 5.1 실습이다.
+| 파일 | 결정하는 내용 |
+|---|---|
+| `config/rules.yaml` | 타일 종류·회전 후보와 이웃 관계 |
+| `config/constraints.yaml` | 모서리 고정, 막다른 길 개수, 경계 제한 |
+| `config/generation.yaml` | 선택한 타일을 어떤 USD로 표현할지 |
+| `hazards_corridors.yaml` | 통로에 놓을 콘의 개수·확률·배치 |
+| `run.py` | 격자를 풀고 USD와 생성 기록을 저장하는 과정 |
 
-## 실행 후 확인할 것
+이 공식 튜토리얼은 사용 중단된 예제입니다. 여기서는 **Isaac Sim 5.1**에 남아 있는 SceneBlox API를 사용하며 후속 버전의 호환을 전제하지 않습니다.
 
-- **저장 결과:** `generation.json`에 기본 variant 0의 `rows=7`, `cols=7`, `attempts`, `usd`가 기록되고 해당 `generated_0.usd`가 열리는지 확인한다. 파일 존재에 더해 tile 자산의 실제 형상까지 보여야 한다.
-- **고정 칸:** Stage에서 `/World/tile_0_0`과 `/World/tile_6_6`을 선택해 corridor 회전 0인지 확인한다. 다른 격자 크기에서는 마지막 행·열에 맞춰 경로를 바꿔 확인한다.
-- **미로 제약:** 이웃 통로가 맞물리고, 전체 dead_end가 4개 이하이며 border에 cross·dead_end가 없는지 본다. 개별 인접 규칙을 통과해도 두 지정 모서리를 잇는 전체 경로는 보장되지 않는다.
-- **소품 확률:** corridor·cross의 콘은 3개 후보 각각 `spawn_proba=0.33`으로 뽑으므로 tile마다 3개가 있어야 하는 것이 아니다. corner에는 0.7 가중치로 장애물 더미가 생기지 않을 수 있다.
-- **생성 후 상태:** 창을 유지하는 동안 미로가 계속 재생성되지 않는 것이 정상이다. `--variants`가 생성 장면 수를 정하고 GUI에는 마지막 장면을 남기므로 여러 결과는 저장된 USD별로 비교한다.
+## 1. 먼저 7×7 미로 하나 만들기
 
-## GUI 실행과 종료
+Isaac Sim 5.1과 RTX GPU, `isaacsim.replicator.scene_blox` 확장을 준비하세요. 자산 루트의 `Isaac/Samples/Scene_Blox/Tutorial/`, 창고 소품과 `NVIDIA/Assets/Skies/Dynamic/CumulusHeavy.usd`를 읽을 수 있어야 합니다. YAML은 포함되어 있지만 타일 USD와 소품 자산은 별도입니다.
 
-GUI에서 `--steps`를 생략하면 정해진 장면 생성과 저장을 마친 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 양수 `--steps N`은 **생성 완료 후 GUI를 관찰하는 app update 횟수**입니다. 생성 작업 자체나 데이터 프레임 수를 제한하는 값은 아니며, `--variants`로 요청한 장면 수가 무한히 늘어나지 않습니다. `--headless`는 관찰 대기 없이 기존 유한 작업을 마치면 종료합니다.
-
-이 패키지 폴더에서 다음과 같이 실행합니다. 설치 경로는 자신의 환경에 맞추고, 이미 사용한 출력 폴더는 새 경로로 바꿉니다.
+저장소 루트에서 실행합니다.
 
 ```bash
-~/isaacsim/python.sh run.py --output output/gui
+~/isaacsim/python.sh src/176_replicator_replicator_sceneblox/run.py \
+  --rows 7 --cols 7 --seed 42 \
+  --output src/176_replicator_replicator_sceneblox/output/seed42
 ```
 
-## 준비
+풀이와 저장 후 마지막 장면이 창에 남습니다. 직접 닫거나 `--steps 120`으로 저장 후 GUI 업데이트를 제한할 수 있습니다. `--headless`는 장면 생성·저장을 마친 뒤 종료합니다. `--display`는 별도 matplotlib 풀이 화면을 보여 주므로 `--headless`와 함께 사용할 수 없습니다.
 
-Linux와 RTX GPU, Isaac Sim 5.1 전체 설치, `isaacsim.replicator.scene_blox` 확장이 필요하다. 설치본 assets root에서 `/Isaac/Samples/Scene_Blox/Tutorial/`, `/Isaac/Environments/Simple_Warehouse/Props/`, `/NVIDIA/Assets/Skies/Dynamic/CumulusHeavy.usd`를 읽을 수 있어야 한다. 기본 tile 크기는 5 m이고 생성 stage 단위는 1 m다.
+출력 폴더는 새 경로를 사용하세요. `--variants`가 생성할 장면 수이고 `--steps`는 관찰 시간입니다. 창을 오래 열어 두어도 미로가 계속 재생성되는 것은 아닙니다.
 
-```bash
-cd src/176_replicator_replicator_sceneblox
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --rows 7 --cols 7 --seed 42 --output output/seed42
-# GUI에서 matplotlib의 격자 풀이도 보고 싶을 때:
-"$ISAAC_SIM_PATH/python.sh" run.py --display --rows 7 --cols 7 --seed 43 --output output/seed43
+### 코드에서 볼 부분
+
+```python
+tiles, weights = tile_loader(str(cfg / "rules.yaml"))
+superposition = TileSuperposition(tiles, weights)
+constraints = GridConstraints.from_yaml(str(cfg / "constraints.yaml"), args.rows, args.cols)
+grid = Grid(args.rows, args.cols, superposition)
 ```
 
-GUI 실행은 마지막으로 생성한 장면을 그대로 열어 두므로 바로 관찰할 수 있다. Headless 결과는 Isaac Sim의 **File → Open**에서 `output/seed42/generated_0.usd`를 선택해 확인한다. generator는 유한 회수의 시도로 장면 생성을 마치고 성공한 장면 경로와 시도 횟수를 `generation.json`에 기록한다. 기존 결과를 보존하도록 새 `--output` 경로만 허용한다.
+`superposition`은 아직 선택되지 않은 후보 집합입니다. `Grid.solve()`가 가능한 후보 중 하나를 선택하고 그 선택을 이웃에 전파합니다. 모순이 생겨 한 칸에 후보가 남지 않으면 다른 선택을 시도합니다. 실행기는 기본 최대 20회까지 풀이를 시도하고, 성공해야 USD 생성 단계로 넘어갑니다.
 
-## 단계별 실습
+격자를 푸는 것과 USD를 만드는 것도 다른 단계입니다. `SceneGenerator.generate_scene()`이 최종 격자에 타일 reference와 소품을 배치합니다. 기본 `World(stage_units_in_meters=1.0)`과 `tile_size: 5.0`이므로 타일 한 변은 5 m 기준입니다.
 
-1. `config/generation.yaml`의 `tile_size: 5.0`과 네 tile의 USD 경로를 읽는다. `/World/tile_행_열`은 tile의 Xform이고 base USD를 reference한다. 원본 tile 파일을 복사해 붙이는 대신 USD reference로 장면을 조합한다.
-2. `config/rules.yaml`에서 `adjacencies` 한 항목을 고른다. 이 규칙은 **현재 tile 오른쪽의 이웃**을 기준으로 정의한다. `self_rotation`과 `neighbor_rotation`은 0/1/2/3, 즉 반시계 90도 단위다. 쌍 전체를 돌려 다른 방향 이웃도 검사한다. `tiles[].weights`는 각 회전 선택의 상대 확률이다.
-3. `config/constraints.yaml`의 첫 규칙은 `(0,0)`을 corridor 회전 0으로, 다음 규칙은 마지막 칸 `(-1,-1)`도 같은 종류로 제한한다. row/col 구간 양 끝은 포함한다. `-1`은 마지막 행/열이다. `restrict_count`는 전체 dead_end를 4개 이하로 제한한다.
-4. 첫 생성물을 열고 Stage에서 `/World/tile_0_0`과 마지막 tile을 선택한다. 직선 방향과 경계 바깥으로 나가는 통로가 허용된 두 모서리에 한정되는지 확인한다. 다른 border에는 cross/dead_end가 없어야 한다.
-5. `hazards_corridors.yaml`에서 `spawn_count: 3`, `spawn_proba: 0.33`을 확인한다. 각 콘마다 독립적으로 생성 여부를 뽑는다. `normal` position noise와 `uniform` orientation noise는 부모 tile의 local 좌표에 적용된다. `scale: 0.01`은 asset의 단위를 장면에 맞춘다.
-6. `generation.yaml`의 `corner`는 `None`과 `obstacle_pile_2.yaml` 중 0.7/0.3 가중치로 **하나를 선택**한다. 목록으로 나열한 여러 generation 항목은 순서대로 적용되지만, 한 항목의 config 배열은 상호 배타적 선택이다. pile의 `apply_children: true`는 부모 Xform 대신 하위 Mesh에 collision을 적용한다.
-7. 같은 seed에서 `spawn_proba`만 0.33→0.66으로 바꿔 새 output으로 만든다. 여러 tile의 콘 개수와 겹침을 비교한다. 한 번의 무작위 결과만으로 정확히 두 배라고 결론 내리지 않는다.
+### 실행 결과 확인하기
 
-## API와 알고리즘
+`output/seed42/generation.json`을 열고 다음을 확인하세요.
 
-`tile_loader`가 tile 종류·회전·확률·인접 규칙을 읽는다. `TileSuperposition`은 각 칸이 선택할 수 있는 후보 집합이다. `GridConstraints.from_yaml`로 초기 후보를 제한한다. `Grid.solve`는 entropy가 작은 칸을 골라 하나로 **collapse**하고, 이웃 후보 중 불가능한 것을 제거하며 전파한다. 모순이 생기면 되돌아가 다른 선택을 시도한다. 확률 seed는 `config.GlobalRNG().rng`로 설정한다.
+| 항목 | 기본 실행에서 의미 |
+|---|---|
+| `variant` | 첫 장면은 0입니다. |
+| `rows`, `cols` | 각각 7입니다. |
+| `attempts` | 일관된 격자를 얻기까지 시도한 횟수입니다. |
+| `usd` | 실제 저장된 `generated_0.usd` 경로입니다. |
 
-`SceneGenerator.generate_scene`은 완성된 격자에 USD reference·랜덤 소품·물리 장면을 작성한다. `World(stage_units_in_meters=1.0)`이 중력 등 물리 단위를 맞춘다. 기본 충돌 검사는 rigid body 소품을 추가할 때 이미 존재하는 물체와 겹치는지 검사한다. 뒤늦게 추가되는 비동적 물체까지 모든 교차를 보장하지 않으므로 저장된 장면에서 실제 접촉도 점검한다. `--no-collisions`는 비교 실험용이다.
+GUI에서는 `/World/tile_0_0`과 `/World/tile_6_6`을 선택하세요. 두 칸은 corridor 회전 0으로 제한되어 있습니다. 전체 dead_end가 4개 이하이고 경계에 cross·dead_end가 없는지 살펴봅니다. 저장 파일이 열려도 자산 reference가 실패하면 빈 타일처럼 보일 수 있으므로 실제 형상까지 확인해야 합니다.
 
-## 직접 규칙 만들기와 warehouse 확장
+## 2. 타일 규칙과 소품 확률 읽기
 
-새 타일은 한 변이 같은 길이여야 한다. GUI에서 예제 tile들을 인접한 쌍으로 배치한 stage를 만든다. tile 이름은 종류 판별에 사용되므로 임의로 바꾸지 않는다. 설치본의 `tools/scene_blox/src/scene_blox/rules_builder.py`는 `stage save_path tile_size`를 받아 USD 예시에서 규칙을 추출한다. `rules_combiner.py`는 여러 결과를 합친다.
+### 설정에서 볼 부분
 
-```bash
-"$ISAAC_SIM_PATH/python.sh" "$ISAAC_SIM_PATH/tools/scene_blox/src/scene_blox/rules_builder.py" \
-  /absolute/path/to/example_pairs.usd /absolute/path/to/rules_part.yaml 5.0
-"$ISAAC_SIM_PATH/python.sh" "$ISAAC_SIM_PATH/tools/scene_blox/src/scene_blox/rules_combiner.py" \
-  /absolute/path/to/combined_rules.yaml --config_files /absolute/path/to/rules_part.yaml
+`constraints.yaml`의 첫 두 규칙은 한 칸의 종류와 회전을 따로 제한합니다.
+
+```yaml
+- type: restrict_type
+  identifiers: ["corridor"]
+  area:
+    rows: [[0, 0]]
+    cols: [[0, 0]]
+- type: restrict_rotation
+  identifier: ["corridor"]
+  rotations: [0]
+  area:
+    rows: [[0, 0]]
+    cols: [[0, 0]]
 ```
 
-공식 warehouse 예시는 아래 명령으로 실행한다. grid의 **15 columns × 11 rows**는 건물 폭과 end/middle piece 배치 제약에 연결되어 있으므로 숫자만 바꾸지 않는다. local 미로와 별개로 공식 warehouse 구성을 그대로 사용하는 native 확장 실습이다.
+구간 양 끝을 포함하므로 `[0,0]`은 첫 번째 칸 하나입니다. `[-1,-1]`은 마지막 칸을 뜻합니다. 회전 값 0/1/2/3은 반시계 90도 단위입니다. 인접 규칙은 기본적으로 현재 타일 오른쪽 이웃을 기준으로 정의하고 그 쌍을 회전시켜 다른 방향에도 적용합니다.
+
+이웃 규칙이 맞는다고 미로 전체가 출발점에서 도착점까지 연결된다는 보장은 없습니다. **국소적인 연결 조건과 전체 경로 존재는 별도 속성**이므로 실제 통로를 따라가며 확인해야 합니다.
+
+소품 설정은 이미 선택된 타일에 적용됩니다. `hazards_corridors.yaml`을 보세요.
+
+```yaml
+spawn_proba: 0.33
+spawn_count: 3
+```
+
+콘 후보 세 개 각각의 생성 여부를 확률 0.33으로 정합니다. 그래서 통로마다 콘이 반드시 세 개 생기는 것이 아닙니다. 후보 선택의 기대 개수는 `3 × 0.33 = 0.99`개이지만, 실제 장면은 무작위 선택과 배치·충돌 처리의 영향을 받습니다.
+
+`position.noise`의 정규분포는 타일 안의 위치를 흔들고 `orientation.noise`는 회전을 바꿉니다. 이 값은 부모 타일의 로컬 좌표에 적용됩니다. 타일이 회전하면 같은 로컬 배치도 세계 방향은 달라집니다.
+
+corner 설정은 다음처럼 둘 중 하나를 선택합니다.
+
+```yaml
+config: ["None", "obstacle_pile_2.yaml"]
+weights: [0.7, 0.3]
+```
+
+가중치 0.7로 장애물 더미를 추가하지 않고, 0.3으로 지정 더미를 사용합니다. 이는 배열의 두 설정을 모두 실행한다는 뜻이 아닙니다. 더미 설정의 `apply_children: true`는 부모 Xform 아래의 mesh들에 충돌 설정을 적용하는 데 쓰입니다.
+
+### 자신의 타일과 창고로 확장하려면
+
+타일은 한 변 길이와 연결 위치를 맞춰 제작합니다. 새 Stage의 `/World` 바로 아래에 예시 타일 Xform을 놓고, 붙일 수 있는 타일 쌍을 5 m 간격으로 배치하세요. 이름은 `corridor_0`, `corner_1`처럼 종류를 구분할 수 있게 유지합니다. 규칙 추출기는 숫자 접미사를 제거한 이름 또는 `tile_name` custom data로 종류를 식별합니다. 완성한 예시를 새 `example_pairs.usd`로 저장합니다.
+
+다음 명령은 저장소 루트에서 실행하며 입력 USD 경로를 실제 파일로 바꿉니다. 출력 파일도 기존 결과와 겹치지 않게 선택하세요.
 
 ```bash
-"$ISAAC_SIM_PATH/python.sh" "$ISAAC_SIM_PATH/tools/scene_blox/src/scene_blox/generate_scene.py" \
-  "$PWD/output/warehouse" \
-  --grid_config "$ISAAC_SIM_PATH/tools/scene_blox/parameters/warehouse/tile_config.yaml" \
-  --generation_config "$ISAAC_SIM_PATH/tools/scene_blox/parameters/warehouse/tile_generation.yaml" \
-  --constraints_config "$ISAAC_SIM_PATH/tools/scene_blox/parameters/warehouse/constraints.yaml" \
+~/isaacsim/python.sh ~/isaacsim/tools/scene_blox/src/scene_blox/rules_builder.py \
+  /절대경로/example_pairs.usd /절대경로/rules_part.yaml 5.0
+~/isaacsim/python.sh ~/isaacsim/tools/scene_blox/src/scene_blox/rules_combiner.py \
+  /절대경로/combined_rules.yaml --config_files /절대경로/rules_part.yaml
+```
+
+첫 도구는 예시의 위치·회전에서 인접 관계를 추출하고, 둘째 도구는 `--config_files`로 나열한 여러 규칙 파일을 합칩니다. 새 규칙의 타일 식별자에 대응하는 USD를 `generation.yaml`에도 등록해야 장면으로 만들 수 있습니다. 규칙 추출만으로 경계 제약이나 전체 경로가 생기지는 않습니다.
+
+공식 창고 예제는 미로와 별도의 타일·생성·제약 파일을 사용합니다. 다음은 설치본의 세 설정을 그대로 연결하는 명령입니다.
+
+```bash
+~/isaacsim/python.sh ~/isaacsim/tools/scene_blox/src/scene_blox/generate_scene.py \
+  "$PWD/src/176_replicator_replicator_sceneblox/output/warehouse_first" \
+  --grid_config "$HOME/isaacsim/tools/scene_blox/parameters/warehouse/tile_config.yaml" \
+  --generation_config "$HOME/isaacsim/tools/scene_blox/parameters/warehouse/tile_generation.yaml" \
+  --constraints_config "$HOME/isaacsim/tools/scene_blox/parameters/warehouse/constraints.yaml" \
   --cols 15 --rows 11 --variants 1 --units_in_meters 1.0 --collisions --no-window
 ```
 
-`Could not solve`면 seed를 바꾸거나 상충하는 경계·개수 제한을 확인한다. 규칙을 모두 제거하면 결과를 만들 수 있어도 의도한 미로가 아니다. 확장 로딩 실패면 5.1 설치 및 확장 존재를 확인한다. USD가 비어 있으면 원격 asset 경로 접근 로그를 확인한다. 검증 범위는 문법·CLI이며 실제 WFC/RTX/USD 생성은 별도 실행이 필요하다.
+15 columns × 11 rows는 건물의 end/middle piece 배치 제약과 연결됩니다. 저장한 USD를 **File > Open**으로 열어 건물과 통로 연결을 확인하세요. 이 명령은 설치본을 직접 실행하므로 로컬 `run.py`의 `generation.json` 기록이나 생성 후 GUI 유지 기능을 제공하지 않습니다. [공식 Warehouse 예제](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html#warehouse-generation-example)와 결과를 비교하되 미로의 행·열 수만 바꾸는 실행과 구분합니다.
 
-## 출처
+## 3. 구조 생성과 소품 생성의 차이 정리
 
-- [Isaac Sim 5.1 SceneBlox](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html)
-- [Constraints](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html#constraints), [Tile randomization](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html#tile-randomization), [Warehouse](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html#warehouse-generation-example)
-- API 호출 근거는 5.1 설치본 `tools/scene_blox/src/scene_blox/generate_scene.py`. `config/`는 공식 labyrinth YAML이며 원본 copyright 헤더와 동봉 Apache-2.0 라이선스를 유지했다.
+```text
+타일 후보 + 이웃 규칙 + 경계 제약
+    → 일관된 격자 풀이
+    → 타일 USD reference 배치
+    → 각 타일의 소품 확률·위치 적용
+    → USD와 생성 시도 기록 저장
+```
+
+격자를 풀지 못하면 규칙·제약을 살펴보고, 격자는 생겼지만 소품이 예상과 다르면 확률과 물리 배치를 살펴봅니다. 기본 충돌 검사는 소품 배치의 겹침을 줄이는 데 쓰이지만 모든 후속 배치의 교차나 로봇 주행 가능성을 보장하지는 않습니다.
+
+## 4. 간단한 확인 실험
+
+`config/`를 새 폴더에 복사하고 `hazards_corridors.yaml`의 `spawn_proba`만 **0.33 → 0.66**으로 바꾸세요. 새 폴더를 `--config`로 전달하고 같은 seed·행·열 수로 새 출력에 실행합니다.
+
+타일별 콘 개수와 가림·겹침을 비교하세요. 후보 선택의 기대 개수는 늘지만 한 장면에서 정확히 두 배의 콘이 생겨야 하는 것은 아닙니다. 이후 난수 소비도 달라질 수 있으므로 동일 seed가 모든 소품 위치까지 완전히 같게 유지한다는 뜻도 아닙니다.
+
+## 실행할 때 막히면
+
+- **일관된 격자를 찾지 못함**: 서로 충돌하는 경계·회전·개수 제한을 확인하고 seed를 바꿔 비교하세요. 규칙을 모두 없애는 것은 같은 실험이 아닙니다.
+- **확장이 로드되지 않음**: 사용 중단 기능이 남아 있는 5.1 설치인지 확인하세요.
+- **USD는 있는데 타일이 비어 보임**: 타일·하늘·소품의 자산 루트와 reference 오류를 확인하세요.
+- **`--display` 조합 오류**: 풀이 창을 보려면 GUI 실행에서 사용하세요.
+- **시작점과 도착점이 연결되지 않음**: 국소 인접 규칙과 전체 길찾기 조건을 구분하고 별도 연결성 검사를 수행하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Scene Generation with SceneBlox](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html)에 대응합니다. 공식 labyrinth YAML의 저작권 헤더와 `LICENSE-NVIDIA-EXAMPLES.txt`를 보존하고 로컬 실행기에 seed·시도 횟수·출력 기록을 연결했습니다.
+
+설정과 실행기를 대조했습니다. 실제 WFC 풀이·RTX 렌더링·USD 생성은 이번 개정에서 실행하지 않았으며 `tutorial.json`은 `not_run`입니다. 공식 페이지의 사용 중단 범위도 유지합니다.

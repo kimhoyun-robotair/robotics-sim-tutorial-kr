@@ -1,72 +1,148 @@
-# 52. 세 가지 Mobile Robot Controller
+# 52. 차체 속도를 바퀴 명령으로 바꾸기
 
-권장 학습 순서 **52** · 로봇 제어와 동작 계획 · 출처 ID `t134`
+## 이번에 배우는 것
 
-Jetbot의 차동 구동, Kaya의 전방향 구동, Leatherback의 Ackermann 조향을 실제 robot USD에 적용합니다. 각 controller의 출력 바퀴 속도와 로봇의 측정 포즈를 저장합니다.
+**같은 전진·회전 요구가 차동 구동, 전방향 구동, 자동차식 조향에서 어떻게 다른 관절 명령이 되는지 비교합니다.**
 
-## 이 실습의 의도
+로봇에게 “앞으로 0.3 m/s로 가세요”라고 말하려면 바퀴 반지름과 배치를 알아야 합니다. 작은 바퀴는 같은 거리를 가는 동안 더 많이 돌아야 하고, 선회할 때는 안쪽과 바깥쪽 바퀴의 움직임도 달라집니다. 이번에는 controller가 계산한 명령과 실제 차체 위치를 함께 확인합니다.
 
-차체에 원하는 속도·회전을 주었을 때 구동 구조에 따라 바퀴 명령이 어떻게 달라지는지 비교합니다. 기본 실행은 Jetbot 한 대의 차동 controller에 전진 0.3 m/s와 yaw 0.3 rad/s를 주며, Kaya와 Leatherback은 `--robot`으로 선택해 따로 실행합니다. 각 controller가 계산한 고정 명령을 물리 로봇에 적용하고 최종 pose를 측정하므로 바퀴 명령 계산과 실제 주행을 구분할 수 있습니다.
+| 선택값 `--robot` | 로봇 | 입력의 의미 | 출력 |
+|---|---|---|---|
+| `differential` | Jetbot | 전진 m/s, yaw rad/s | 좌우 바퀴 각속도 |
+| `holonomic` | Kaya | 전진·측면 m/s, yaw rad/s | 세 바퀴 각속도 |
+| `ackermann` | Leatherback | 조향각 rad, 차체 속도 m/s 등 | 앞바퀴 조향각 2개, 구동 속도 4개 |
 
-## 실행 후 확인할 것
+**`--turn`은 앞의 두 모드에서는 회전 속도, Ackermann에서는 조향각**입니다. 숫자가 같아도 같은 선회 조건을 뜻하지 않습니다.
 
-- Jetbot에서 `drive.json`의 `wheel_velocity_targets_rad_s`를 왼쪽·오른쪽 순서로 읽습니다. 양수 전진과 양수 yaw 명령에서는 오른쪽 목표가 더 크고, `--turn 0`이면 두 목표가 같아야 합니다.
-- Kaya를 `--speed 0 --lateral 0.3 --turn 0`으로 실행해 세 바퀴 목표와 측면 이동을 함께 관찰합니다. `--lateral`은 Kaya에만 전달되므로 Jetbot/Leatherback에서 바꾸어도 명령이 달라지지 않습니다.
-- Leatherback의 `steering_targets_rad` 두 개와 wheel target 네 개를 확인합니다. 조향 관절은 위치, 구동 관절은 속도로 제어되며 `--turn`은 다른 모드의 yaw 속도와 달리 차체 조향각 rad입니다.
-- `initial_position_m`, `final_position_m`, `orientation_wxyz`와 GUI의 움직임을 함께 확인합니다. 제자리 회전에서는 위치 변화가 작을 수 있고, 선회 후 시작점 근처로 돌아올 수 있으므로 변위만으로 주행 여부를 판단하지 않습니다.
-- 같은 실행 길이에서 `--turn` 부호만 바꾸어 회전 방향을 비교합니다. `drive.json`은 계산된 바퀴 목표와 최종 pose를 기록하며 실제 바퀴 속도나 전체 이동 경로를 기록하지 않으므로 정확한 속도 추종·이동 거리까지 증명하지는 않습니다.
+## 1. 먼저 Jetbot의 좌우 바퀴를 비교하기
 
-## 준비와 실행
+Isaac Sim 5.1과 선택한 로봇의 5.1 Assets가 필요합니다. 로봇별 경로는 `Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`, `Kaya/kaya.usd`, `Leatherback/leatherback.usd`입니다. 뒤의 두 경로도 `Isaac/Robots/NVIDIA/` 아래에 있습니다.
 
-이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
-
-5.1 Assets의 `Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`, `Isaac/Robots/NVIDIA/Kaya/kaya.usd`, `Isaac/Robots/NVIDIA/Leatherback/leatherback.usd`를 해당 모드별로 읽습니다. `get_assets_root_path()`가 가리키는 서버/로컬 팩에 선택한 USD와 종속 mesh/재질이 있어야 합니다.
-
-터미널에서 이 패키지 폴더(`52_motion_mobile_robot_controllers`)로 이동한 뒤 아래를 실행합니다. 설치 위치가 다르면 첫 줄만 바꿉니다. Windows에서는 설치 폴더의 `python.bat`에 동일한 인수를 전달합니다.
+아래 명령은 **저장소 루트** 기준입니다. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --robot differential --speed 0.3 --turn 1
-"$ISAAC_SIM_ROOT/python.sh" run.py --robot holonomic --speed 0.3 --lateral 0.2
-"$ISAAC_SIM_ROOT/python.sh" run.py --robot ackermann --speed 1.1 --turn 0.1
+~/isaacsim/python.sh src/52_motion_mobile_robot_controllers/run.py \
+  --robot differential --speed 0.3 --turn 0.3 --steps 600
 ```
 
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 물리·제어 루프가 계속 실행됩니다. `--steps 600`처럼 양수를 지정하면 그 물리 스텝 수까지 실행하고 종료합니다. GUI의 `--steps 0`도 무제한이며, `--headless`에서 생략하면 기존 기본값인 600스텝을 실행합니다. headless의 0과 음수는 허용하지 않습니다. 창을 닫거나 지정한 스텝에 도달하면 실행 결과가 이 폴더의 새 `output/run_*` 디렉터리에 저장됩니다. `--output /절대경로/새폴더`를 지정할 수도 있지만 기존 폴더를 덮어쓰지 않습니다. 코드는 `SimulationApp`을 만든 뒤 Isaac/Omni/USD 모듈을 가져오고 마지막에 `close()`로 종료합니다.
+바닥 위 Jetbot에 일정한 주행 명령을 600단계 적용하고 종료합니다. 결과는 이 폴더의 새 `output/run_*/drive.json`입니다. `--headless`로 창 없이 실행할 수 있으며, GUI에서 `--steps`를 생략하면 창을 닫을 때까지 계속 주행합니다.
 
-## 단계별 실습
+### 코드에서 볼 부분
 
-1. `--robot differential`로 시작합니다. 반지름 0.03 m, 양 바퀴 간격 0.1125 m인 Jetbot의 왼쪽/오른쪽 wheel target을 `drive.json`에서 확인합니다. 전진 0.3 m/s, yaw 1 rad/s면 오른쪽 바퀴가 더 빨라야 합니다.
-2. `--turn 0`으로 바꾸어 양 바퀴 목표 속도가 같은지 확인합니다. 차동 로봇은 옆으로 직접 이동할 수 없으며 제자리 회전은 좌우 바퀴 속도 차이로 만듭니다.
-3. Kaya를 실행합니다. `HolonomicController`에 바퀴별 반지름, 중심 위치, quaternion 방향, roller 각도를 제공하고 `[vx, vy, yaw_rate]`를 전달합니다. `--speed 0 --lateral 0.3 --turn 0`을 사용하면 측면 이동 명령을 관찰할 수 있습니다.
-4. Leatherback을 실행합니다. `AckermannController`는 wheelbase=1.65 m, track=1.25 m, wheel radius=0.25 m로 좌우 조향각과 네 바퀴 속도를 계산합니다. 안쪽/바깥쪽 바퀴가 서로 다른 원을 따라가므로 각도가 다릅니다.
-5. Leatherback의 두 steering 관절에는 position command, 네 wheel 관절에는 velocity command를 **별도의 인덱스 집합**으로 적용합니다. 관절 이름은 코드의 목록과 `get_dof_index()`로 확인합니다.
+```python
+controller = DifferentialController(
+    'differential', wheel_radius=0.03, wheel_base=0.1125)
+command = [args.speed, args.turn]
+action = controller.forward(command)
+```
 
-## 입력을 해석하는 법
+반지름 `r=0.03 m`, 양 바퀴 간격 `L=0.1125 m`로 차체 전진 속도 `v`와 회전 속도 `ω`를 바퀴 각속도로 바꿉니다.
 
-차동 구동에서 `ω_R=(2V+ωL)/(2r)`, `ω_L=(2V−ωL)/(2r)`입니다. V는 m/s, yaw ω는 rad/s, 결과는 바퀴 rad/s입니다. linear speed를 그대로 바퀴 회전 속도로 넣으면 반지름이 누락됩니다.
+```text
+왼쪽 바퀴: (v − ωL/2) / r
+오른쪽 바퀴: (v + ωL/2) / r
+```
 
-Kaya는 3개의 바퀴가 만드는 평면 속도를 제약식으로 두고 quadratic program을 풀어 필요한 회전 속도를 구합니다. 실제 5.1 `HolonomicController`의 `mecanum_angles`는 내부 degree 기반 회전 함수에 전달되며 공식 Kaya 예제는 90을 사용합니다. 문서의 일부 표에 radian이라고 적힌 것과 다르므로 임의로 π/2로 바꾸지 않습니다. quaternion은 w,x,y,z입니다. USD wheel joint에 `isaacmecanumwheel:radius`와 `isaacmecanumwheel:angle` 속성을 추가하여 형상을 설명하는 native workflow도 있습니다.
+위 명령의 계산값은 왼쪽 **9.4375 rad/s**, 오른쪽 **10.5625 rad/s**입니다. 양수 yaw를 만들기 위해 오른쪽 바퀴 목표가 더 큽니다. 이는 기구학 계산으로 얻은 **명령 기대값**이며, 물리에서 측정한 실제 바퀴 속도는 아닙니다.
 
-Ackermann 입력 순서는 `[steering_angle, steering_velocity, speed, acceleration, dt]`입니다. 이 실습은 steering_velocity/acceleration/dt를 0으로 두어 바로 원하는 속도/각도를 계산합니다. `--speed`는 **차체 m/s**이며 공식 코드의 `1.1 # rad/s` 주석을 그대로 해석하면 안 됩니다. `--turn`의 의미가 차동/Kaya에서는 yaw rad/s, Ackermann에서는 steering rad라는 차이를 옵션 설명에도 표시했습니다.
+계산은 반복문 밖에서 한 번 수행합니다. 반복문에서는 `apply_wheel_actions(action)`으로 동일 명령을 계속 전달하고 물리를 진행합니다. GUI에서 차체가 밀려도 목표 경로로 복귀시키는 위치 제어는 하지 않습니다.
 
-## OmniGraph로 재현하기
+### 실행 결과 확인하기
 
-새 Action Graph에 On Playback Tick → 해당 **Differential Controller**, **Holonomic Controller**, **Ackermann Controller**의 exec 연결을 구성하고 출력 wheel velocity를 **Isaac Articulation Controller**의 velocityCommand로 연결합니다. robotPath와 관절 이름 배열을 코드와 동일하게 설정합니다. Ackermann은 steering angle 출력을 steering 관절용 Articulation Controller의 positionCommand로 보내며 wheel 제어용 노드와 분리합니다. Holonomic 노드에는 반지름/위치/방향/roller angle 배열을 바퀴 순서와 동일하게 연결합니다. Python과 그래프를 동시에 실행하지 않습니다.
+| `drive.json` 항목 | 확인할 내용 |
+|---|---|
+| `controller`, `command` | 어떤 구동 방식과 입력을 사용했는지 |
+| `wheel_velocity_targets_rad_s` | controller가 계산한 바퀴 목표 |
+| `steering_targets_rad` | Ackermann의 조향 목표, 다른 모드는 `null` |
+| `initial_position_m`, `final_position_m` | 실제 차체 시작·마지막 위치 |
+| `orientation_wxyz` | 마지막 방향 quaternion |
 
-## 관찰 기준과 한 변수 실험
+Jetbot의 바퀴 목표를 위 계산값과 비교하고, 차체가 선회했는지는 위치와 방향을 함께 보세요. 원을 돌아 시작점 근처에 올 수 있으므로 변위가 작다고 움직이지 않았다고 판단하면 안 됩니다. 이 파일에는 이동 경로 전체나 실제 바퀴 속도는 저장되지 않습니다.
 
-`drive.json`에 wheel target, 초기/최종 위치, quaternion이 저장됩니다. 목표 바퀴 속도가 합리적이고 로봇 위치가 변하는지 함께 확인합니다. `--turn`의 부호만 바꾸어 회전 방향이 바뀌는지 확인합니다. wheel slip, 마찰, 접촉 안정화 때문에 기구학 계산만으로 정확한 이동 거리를 보장하지 않습니다.
+## 2. 옆으로 가는 Kaya와 조향하는 Leatherback
 
-## 문제 해결
+다음 두 명령은 각각 새 실행으로 진행하세요.
 
-로봇이 움직이지 않으면 wheel joint 이름과 velocity 모드, 바닥 접촉을 확인합니다. Kaya가 이상한 방향으로 움직이면 바퀴 순서/좌표계와 quaternion을 확인합니다. Leatherback에서 모든 관절에 같은 position/velocity 배열을 보내면 조향과 구동이 간섭할 수 있으므로 코드의 관절별 action을 유지합니다.
+```bash
+~/isaacsim/python.sh src/52_motion_mobile_robot_controllers/run.py \
+  --robot holonomic --speed 0 --lateral 0.3 --turn 0 --steps 600
 
-## 검증 범위
+~/isaacsim/python.sh src/52_motion_mobile_robot_controllers/run.py \
+  --robot ackermann --speed 1.1 --turn 0.1 --steps 600
+```
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 아래 관찰 기준으로 직접 결과를 확인합니다.
+Kaya는 차체가 바라보는 방향을 바꾸지 않고 옆으로 가도록 요구합니다. `HolonomicController`는 세 바퀴의 위치·방향·반지름과 roller 각도를 사용해 `[vx, vy, yaw_rate]`를 각 바퀴 속도로 바꿉니다. 코드의 바퀴 순서와 `axle_0_joint`~`axle_2_joint`의 순서가 맞아야 원하는 방향으로 움직입니다.
 
-## 출처
+### 코드에서 볼 부분
 
-- [NVIDIA Isaac Sim 5.1.0 — Mobile Robot Controllers](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/mobile_robot_controllers.html)
-- 원문의 학습 목적과 API를 유지하면서 한국어 설명, 명령행 옵션, 실행 길이 선택과 실제 상태 기록을 추가한 독립 예제입니다. 원문 전체를 복제한 문서가 아닙니다.
+Leatherback에서는 관절의 역할이 둘로 나뉩니다.
+
+```python
+robot.apply_action(ArticulationAction(
+    joint_positions=action.joint_positions, joint_indices=steering))
+robot.apply_action(ArticulationAction(
+    joint_velocities=action.joint_velocities, joint_indices=wheels))
+```
+
+앞바퀴의 **방향을 꺾는 두 관절에는 위치**, 바퀴를 **굴리는 네 관절에는 속도**를 보냅니다. 코드도 steering 관절은 position 모드, wheel 관절은 velocity 모드로 설정합니다. 서로 다른 관절 인덱스 집합으로 보내므로 두 명령이 역할을 나눕니다.
+
+Ackermann 입력은 `[steering_angle, steering_velocity, speed, acceleration, dt]` 순서입니다. 이 실습은 `[args.turn, 0, args.speed, 0, 0]`을 사용합니다. 차축 간격은 1.65 m, 좌우 바퀴 간격은 1.25 m, 바퀴 반지름은 0.25 m입니다. 선회 원의 안쪽과 바깥쪽 바퀴는 다른 궤적을 따라야 하므로 좌우 조향각을 따로 계산합니다.
+
+### 실행 결과 확인하기
+
+Kaya에서는 속도 목표가 3개인지, 실제로 측면 이동하는지 확인하세요. `--lateral`은 Kaya 분기에서만 읽으므로 Jetbot에 넣어도 측면 이동 기능이 생기지 않습니다.
+
+Leatherback에서는 조향 목표 2개와 바퀴 속도 4개를 확인하세요. `--speed 1.1`의 단위는 **차체 m/s**이며 바퀴 rad/s가 아닙니다. Kaya의 `mecanum_angles=[90, 90, 90]`은 설치된 5.1 controller에서 degree 기반 회전에 사용합니다. 이를 `π/2`로 바꾸지 마세요. 관련 구동 방식과 입력은 [공식 Mobile Robot Controllers](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/mobile_robot_controllers.html)와 함께 볼 수 있습니다.
+
+### 같은 바퀴 명령을 OmniGraph로 연결하기
+
+Python 실행을 종료하고 `~/isaacsim/isaac-sim.sh`로 새 창을 여세요. 먼저 Jetbot으로 데이터 연결을 익힙니다.
+
+1. 빈 stage에 Content Browser의 위 Jetbot USD를 reference로 추가합니다. 로봇 prim을 `/World/Jetbot`으로 맞추고 z=0.1 m에 두세요. **Create > Physics > Physics Scene**과 **Ground Plane**으로 물리 장면과 바닥을 준비합니다.
+2. **Window > Graph Editors > Action Graph**에서 새 그래프를 만들고 **On Playback Tick**, **Differential Controller**, **Articulation Controller**를 추가하세요. 마지막 노드의 타입은 `IsaacArticulationController`입니다.
+3. Tick의 실행 출력을 두 controller의 `execIn`에 각각 연결합니다. Differential Controller에는 다음 실행 출력이 없으므로 그 뒤에 실행 선을 직렬로 연결하지 않습니다.
+4. Differential Controller의 `wheelRadius=0.03`, `wheelDistance=0.1125`, `linearVelocity=0.3`, `angularVelocity=0.3`으로 지정하세요. 출력 `velocityCommand`를 Articulation Controller의 같은 이름 입력에 연결합니다.
+5. Articulation Controller의 `robotPath=/World/Jetbot`, `jointNames=[left_wheel_joint, right_wheel_joint]`로 맞춥니다. 이름 배열에는 Construct Array를 사용할 수 있습니다. `jointIndices`, 위치·effort 명령은 비우세요.
+6. Play하고 선회 방향을 확인한 뒤 `angularVelocity`만 0으로 바꿔 직진 명령을 비교하세요. 이 수동 그래프는 `drive.json`을 자동 저장하지 않습니다.
+
+다른 로봇도 **구동 변환 노드의 데이터 출력과 관절 명령 종류**를 맞추는 원리는 같습니다.
+
+| 구동 노드 | 입력과 데이터 연결 | 관절 선택 |
+|---|---|---|
+| Holonomic Controller | 코드의 바퀴 반지름·위치·방향·roller 각 배열을 각각 `wheelRadius`, `wheelPositions`, `wheelOrientations`, `mecanumAngles` 포트에 넣고 `inputVelocity=[0,0.3,0]`으로 설정; `jointVelocityCommand`를 velocityCommand로 연결 | `axle_0_joint`, `axle_1_joint`, `axle_2_joint` 순서 |
+| Ackermann Controller | `wheelBase=1.65`, `trackWidth=1.25`, `frontWheelRadius=0.25`, `backWheelRadius=0.25`, `speed=1.1`, `steeringAngle=0.1`; `wheelAngles`는 positionCommand로, `wheelRotationVelocity`는 velocityCommand로 연결 | 조향용과 구동용 Articulation Controller를 따로 두고 2절 코드의 두 인덱스 집합에 해당하는 관절 이름 지정 |
+
+Kaya는 Tick 실행을 Holonomic과 Articulation Controller 양쪽에 연결합니다. Ackermann은 Tick에서 Ackermann의 `execIn`으로, 해당 노드의 `execOut`에서 두 Articulation Controller로 연결할 수 있습니다. 각 그래프의 `robotPath`는 선택한 로봇의 실제 prim 경로로 바꾸세요.
+
+## 3. 기구학 명령과 실제 주행의 관계 정리
+
+```text
+차체에 원하는 움직임
+    → 바퀴 배치와 크기로 변환
+    → 관절 위치·속도 목표
+    → drive, 바닥 마찰, 접촉을 거친 실제 차체 pose
+```
+
+controller의 출력이 맞는지는 배열과 계산으로 확인합니다. 실제 주행은 차체 pose와 화면에서 확인합니다. 바퀴가 미끄러지거나 바닥 접촉이 안정되지 않으면 둘 사이에 차이가 생깁니다.
+
+또한 이 프로그램은 고정 명령을 계속 보내는 실습입니다. 목적지에 가까워지면 감속하거나 오차를 되돌리는 내비게이션 기능은 없습니다. `--steps`가 길어지면 같은 입력으로 더 오래 주행합니다.
+
+## 4. 간단한 확인 실험
+
+1절의 Jetbot 명령에서 **`--turn`만 0.3에서 0으로** 바꿔 실행하세요.
+
+이번에는 좌우 바퀴 목표가 모두 `0.3 / 0.03 = 10 rad/s`여야 합니다. 먼저 JSON에서 같은 값인지 확인하고 화면에서는 선회 대신 직진에 가까운 움직임을 관찰하세요. 명령이 같아도 접촉 조건 때문에 실제 경로가 완벽한 직선이 아닐 수 있습니다.
+
+## 실행할 때 막히면
+
+- **로봇이 보이지 않음**: 선택한 모드의 5.1 USD와 종속 mesh 경로가 접근 가능한지 확인하세요.
+- **구동 controller 노드를 찾을 수 없음**: Extension Manager에서 `isaacsim.robot.wheeled_robots`를 활성화한 뒤 Action Graph 검색을 다시 확인하세요.
+- **Kaya가 엉뚱한 방향으로 이동함**: 바퀴 이름 순서, 위치·quaternion 배열, roller 각도를 함께 확인하세요. quaternion 순서는 w, x, y, z입니다.
+- **Leatherback이 꺾이기만 하거나 구동이 안 됨**: steering과 wheel 인덱스를 구분하고 각각의 position/velocity 모드를 유지하세요.
+- **최종 위치가 시작점과 비슷함**: 회전 후 돌아왔을 수 있습니다. 방향과 실제 주행 화면을 함께 확인하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Mobile Robot Controllers](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/mobile_robot_controllers.html)에 대응합니다. 세 구동 구조의 고정 입력을 실제 자산에 전달하고 명령 배열과 차체 pose를 저장합니다.
+
+`tutorial.json`은 `not_run` 상태입니다. 위 바퀴 수치는 공식 차동 구동 관계와 코드 입력으로 계산한 기대값입니다. 이번 개정에서 세 로봇의 실제 주행·속도 추종을 새로 측정하지 않았습니다.

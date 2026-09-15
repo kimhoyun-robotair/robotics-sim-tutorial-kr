@@ -1,113 +1,165 @@
-# 128. ROS 2 Service for Manipulating Prims Attributes
+# 128. ROS에서 USD 속성을 읽고 바꾼 값 다시 확인하기
 
-권장 학습 순서 **128** · ROS 2 응용과 사용자 인터페이스 · 출처 ID `t029`
+## 이번에 배우는 것
 
-**목표:** ROS 서비스로 USD prim과 attribute를 탐색하고 Cube의 위치를 실제로 읽기→쓰기→다시 읽기로 확인합니다. `setup_stage.py`는 원문의 ROS2 Service Prim 그래프를 만들고, `attribute_client.py`는 별도 ROS 프로세스에서 왕복 검증합니다.
+**ROS 서비스로 큐브의 USD 속성을 탐색하고 위치를 바꾼 다음, 다시 조회한 값으로 변경을 확인합니다.**
 
-## 이 실습의 의도
+USD 장면의 물체는 prim 경로로 찾고, 물체의 값은 attribute 이름으로 찾습니다. 이번에는 `/World/Cube`라는 대상과 `xformOp:translate`라는 속성을 ROS 요청에 넣어 큐브를 옮깁니다.
 
-ROS에서 USD 객체 경로와 속성 이름을 지정해 장면 값을 탐색·수정하고, 다시 읽어 반영 여부를 확인하는 실습입니다. 파란 Cube는 변환 속성만 가진 도형이므로 이동은 중력이나 힘의 결과가 아니라 `xformOp:translate`를 쓴 결과입니다. `setup_stage.py`는 Kit 안에 서비스 그래프를 준비하고, 외부 ROS 환경의 `attribute_client.py`가 위치 읽기→쓰기→읽기를 수행합니다. 위치는 USD의 로컬 변환이며 기본 `/World`에 추가 변환이 없어 이 장면에서는 world 위치와도 일치합니다.
+| 구성 | 실행 장소 | 역할 |
+|---|---|---|
+| `setup_stage.py` | Isaac Sim Script Editor | 파란 큐브와 `/PrimServices` 생성 |
+| `ROS2ServicePrim` | Play 중 Action Graph | prim·속성 조회 및 기존 값 변경 |
+| `attribute_client.py` | 시스템 ROS Python | 위치 읽기 → 쓰기 → 재조회 |
+| `isaac_ros2_messages` | 양쪽 ROS 환경 | 같은 서비스 요청·응답 타입 정의 |
 
-## 실행 후 확인할 것
+큐브에는 강체가 없습니다. 바뀌는 것은 USD 변환 속성이며, 힘이나 속도를 적용하여 움직이는 실습은 아닙니다.
 
-- **초기 객체와 속성:** Stage의 `/World/Cube`가 크기 0.5 m의 파란 상자이고 Translate `(0,0,0.25)`인지 확인합니다. `/get_prim_attributes`에서 `xformOp:translate`와 `xformOp:orient`를 찾습니다.
-- **실제 조회:** Play 후 `/get_prims`로 Cube 경로를 찾고 `/get_prim_attribute`로 현재 translation을 읽습니다. 그래프가 생성되었거나 서비스 이름이 보이는 것만으로 요청 처리까지 확인한 것은 아닙니다.
-- **쓰기 형식과 화면:** `/set_prim_attribute`의 `value`에 JSON 문자열 `"[1, 2, 3]"`을 전달한 뒤 Cube가 그 위치로 옮겨지는지 봅니다. 공중에서 그대로 유지되는 것은 강체 없는 이 장면의 정상 동작입니다.
-- **클라이언트 read-back:** 기본 `attribute_client.py`는 `[1,2,3]`, 본문 예제 `--position 0 0 1`은 `[0,0,1]`을 기대합니다. 터미널의 `before:`와 `verified translation:`을 비교하고 후자는 서비스 재조회 결과임을 확인합니다.
-- **오류 해석:** 없는 prim·attribute는 응답의 `success: false`와 `message`로 확인합니다. Stop 상태에서는 Tick 기반 서비스 처리가 완료되지 않을 수 있으므로 시간 초과를 위치 값의 오류와 구분합니다.
+## 1. 서비스 그래프와 메시지 패키지 준비하기
 
-## 실행 환경: 이 폴더만으로 시작하기
+**Ubuntu 24.04, ROS 2 Jazzy, Isaac Sim 5.1.0**과 지원 GPU가 필요합니다. 먼저 저장소 루트의 ROS용 Bash에서 외부 서비스 정의를 빌드합니다. `rosdep`, `colcon`은 설치·초기화된 상태여야 합니다.
 
-Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Linux, ROS 2 Humble(이 문서의 명령 기준)이 필요합니다. ROS를 통해 다른 프로세스와 통신하므로 시뮬레이터와 ROS 터미널을 구분합니다. `ISAAC_SIM`은 실제 설치 디렉터리로 바꾸세요.
-
-**터미널 A — Isaac Sim**: ROS 시스템 환경을 source하지 않은 새 Bash에서 내부 Python 3.11용 브리지를 사용합니다. `.bashrc`가 `/opt/ros`를 자동 source한다면 해당 줄을 적용하지 않은 깨끗한 셸을 사용하세요.
-
-```bash
-export ISAAC_SIM="$HOME/isaacsim"
-export ROS_DISTRO=humble
-export ROS_DOMAIN_ID=0
-export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/humble/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge
-```
-
-**터미널 B — ROS CLI**: 별도 Bash에서 시스템 ROS를 사용합니다.
+ROS desktop 설치는 [Jazzy 공식 설치 안내](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)를 따르세요. 아래 개발 도구가 없는 환경에서는 먼저 준비합니다. rosdep을 처음 쓰는 컴퓨터에서만 `sudo rosdep init`을 한 번 실행하고, 이후에는 `rosdep update`로 목록을 갱신하세요.
 
 ```bash
-source /opt/ros/humble/setup.bash
-export ROS_DOMAIN_ID=0
-export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-ros2 topic list
+sudo apt install python3-rosdep python3-colcon-common-extensions build-essential git
+rosdep update
 ```
-
-Humble의 기본 Python 3.10 모듈을 Isaac Sim의 Python 3.11에 넣으면 ABI 오류가 납니다. Jazzy를 사용한다면 두 터미널의 배포판 이름과 내부 라이브러리 경로를 모두 `jazzy`로 바꿉니다. 같은 컴퓨터에서 먼저 실습하세요. 여러 컴퓨터는 DDS 네트워크/방화벽 설정도 일치해야 합니다. 다른 로컬 튜토리얼이나 공통 모듈은 필요하지 않습니다.
-
-### 로컬 Script Editor 파일 실행
-
-새 Stage에서 시작하고 Play를 정지합니다. **Window > Script Editor**에서 이 폴더의 `setup_stage.py`를 열어 Run을 누릅니다. 파일 열기 대신 아래 코드의 경로를 이 폴더의 절대 경로로 바꿔 실행해도 됩니다.
-
-```python
-from pathlib import Path
-lesson = Path("/absolute/path/to/this/package")
-exec(compile((lesson / "setup_stage.py").read_text(), str(lesson / "setup_stage.py"), "exec"))
-```
-
-이 코드는 이미 실행 중인 Kit 안에서 쓰는 코드입니다. 시스템 `python3 setup_stage.py`로 실행하지 않습니다. 재실행할 때는 **File > New**로 새 Stage를 열어 기존 실습 Stage와 구분하세요. 결과를 보존하려면 이 폴더 아래 새 이름의 USD로 **File > Save As**합니다.
-
-
-## 준비할 메시지 패키지
-
-시뮬레이터 내부 브리지는 `isaac_ros2_messages` 서비스를 이미 포함합니다. 터미널 B에는 동일한 정의가 필요합니다. [NVIDIA IsaacSim-ros_workspaces](https://github.com/isaac-sim/IsaacSim-ros_workspaces)의 `5.1.0` 버전을 별도 디렉터리에 준비합니다.
 
 ```bash
-# 터미널 B; 기존 작업공간이 있으면 새로 clone하지 않고 해당 5.1.0 checkout을 사용
+export LESSON_DIR="$PWD/src/128_ros2_ros2_prim_service"
+source /opt/ros/jazzy/setup.bash
 export ROS_WS_REPO="$HOME/IsaacSim-ros_workspaces-5.1.0"
-git clone --branch IsaacSim-5.1.0 https://github.com/isaac-sim/IsaacSim-ros_workspaces.git "$ROS_WS_REPO"
-cd "$ROS_WS_REPO/humble_ws"
-rosdep install --from-paths src --ignore-src -r -y
-colcon build --symlink-install --packages-select isaac_ros2_messages
+git clone --branch IsaacSim-5.1.0 --recurse-submodules https://github.com/isaac-sim/IsaacSim-ros_workspaces.git "$ROS_WS_REPO"
+cd "$ROS_WS_REPO/jazzy_ws"
+rosdep install --from-paths src/isaac_ros2_messages --ignore-src --rosdistro jazzy -y
+colcon build --packages-select isaac_ros2_messages
 source install/local_setup.bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 ros2 interface show isaac_ros2_messages/srv/SetPrimAttribute
 ```
 
-이것은 외부 메시지 정의의 빌드입니다. 이 패키지의 로컬 코드는 `attribute_client.py`이며 외부 workspace 구현을 포함했다고 주장하지 않습니다. 시스템 ROS용 빌드를 시뮬레이터 터미널 A에 source하지 않습니다.
+같은 5.1.0 워크스페이스를 이미 준비했다면 clone과 빌드를 반복하지 않습니다. 시뮬레이터 내부 브리지는 이 서비스 타입을 포함하지만, 외부 CLI/Python에도 같은 정의가 있어야 요청을 만들 수 있습니다.
 
-## 실습 순서
+**시스템 ROS를 source하지 않은 새 Bash**에서 내부 Python 3.11용 브리지로 앱을 시작합니다. 앞에서 빌드한 시스템 ROS용 Python 환경을 이쪽에 섞지 않습니다.
 
-1. `setup_stage.py` 실행 후 `/World/Cube`를 선택하고 F로 프레이밍합니다. **Window > Graph Editors > Action Graph**에서 `/PrimServices`를 엽니다. Tick→Prims `execIn`, Context→Prims `context` 연결을 확인하고 Play합니다.
-2. 터미널 B에서 네 가지 인터페이스를 탐색합니다.
+```bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_DISTRO=jazzy
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/jazzy/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge
+```
 
-   ```bash
-   ros2 service list
-   ros2 service call /get_prims isaac_ros2_messages/srv/GetPrims '{path: /World}'
-   ros2 service call /get_prim_attributes isaac_ros2_messages/srv/GetPrimAttributes '{path: /World/Cube}'
-   ros2 service call /get_prim_attribute isaac_ros2_messages/srv/GetPrimAttribute '{path: /World/Cube, attribute: "xformOp:translate"}'
-   ```
+1. **File > New**로 새 Stage를 열고 Stop 상태로 둡니다.
+2. **Window > Script Editor**에서 이 폴더의 `setup_stage.py` 전체를 실행합니다.
+3. `/World/Cube`를 선택하고 **F**로 프레이밍한 뒤 Play합니다.
 
-3. 위치 쓰기의 `value`는 **JSON을 담는 문자열**입니다. CLI YAML이 숫자 배열로 해석하지 않도록 내부 따옴표를 유지합니다.
+### 실행 결과 확인하기
 
-   ```bash
-   ros2 service call /set_prim_attribute isaac_ros2_messages/srv/SetPrimAttribute '{path: /World/Cube, attribute: "xformOp:translate", value: "[1, 2, 3]"}'
-   ```
+초기 Cube는 한 변이 0.5 m이고 중심 위치는 `(0,0,0.25)` m입니다. ROS용 터미널에서 대상을 탐색하세요.
 
-4. 이 패키지 폴더로 돌아와 `python3 attribute_client.py --position 0 0 1`을 실행합니다. 실제 응답의 `success`를 확인하고 다시 읽은 값이 `[0,0,1]`인지 검증합니다. 화면에서도 Cube가 이동합니다.
-5. 방향도 같은 방법으로 `xformOp:orient`를 조회합니다. USD quaternion의 직렬화 순서는 `[w,x,y,z]`입니다. 항등 방향을 쓰려면 `value: "[1,0,0,0]"`를 사용합니다.
+```bash
+ros2 service call /get_prims isaac_ros2_messages/srv/GetPrims '{path: /World}'
+ros2 service call /get_prim_attributes isaac_ros2_messages/srv/GetPrimAttributes '{path: /World/Cube}'
+ros2 service call /get_prim_attribute isaac_ros2_messages/srv/GetPrimAttribute '{path: /World/Cube, attribute: "xformOp:translate"}'
+```
 
-## API와 USD 이해
+첫 조회에서는 대상 경로, 다음 조회에서는 속성 이름, 마지막 조회에서는 위치값을 확인합니다. 응답의 `success`와 `message`도 읽으세요. 서비스 이름이 목록에 있는 것만으로 조회 성공을 판단하지 않습니다.
 
-Prim은 Stage의 객체(`/World/Cube`)이고 attribute는 그 객체의 값(`xformOp:translate`)입니다. `GetPrims`는 자식 경로와 타입, `GetPrimAttributes`는 attribute 이름과 타입, `GetPrimAttribute`는 값과 타입을 반환합니다. `SetPrimAttribute`는 **이미 존재하는 attribute의 값**을 바꿉니다. 사용자에게 보이는 Display Name 대신 실제 USD attribute 이름을 사용합니다.
+## 2. 위치를 쓰고 Python으로 재조회하기
 
-`UsdGeom.Cube`는 형상 스키마, `AddTranslateOp`/`AddOrientOp`는 변환 스택을 만듭니다. 원문의 GUI Cube가 Euler 회전만 가진 경우 `xformOp:orient`가 없을 수 있어 로컬 코드는 이를 명시적으로 생성합니다. Stage의 meter 단위와 ROS 위치 단위를 맞춥니다. 이 실습은 동적 강체 제어가 아닌 USD 변환 값 편집입니다.
+다음 요청의 `value`는 **JSON 배열을 담은 문자열**입니다.
 
-`rclpy.create_client`는 원격 서비스 연결, `call_async`는 요청 발송, `spin_until_future_complete`는 응답 처리를 담당합니다. 그래프 서비스는 Play 중 Tick을 받아야 처리되므로 Stop 상태에서는 서비스가 보이더라도 요청이 완료되지 않을 수 있습니다.
+```bash
+ros2 service call /set_prim_attribute isaac_ros2_messages/srv/SetPrimAttribute '{path: /World/Cube, attribute: "xformOp:translate", value: "[1, 2, 3]"}'
+```
 
-## 한 가지 변수 실험과 문제 해결
+안쪽 따옴표를 없애면 ROS CLI가 문자열 대신 YAML 배열로 해석할 수 있습니다. 요청 뒤 큐브가 이동했는지 보고 `/get_prim_attribute`를 다시 호출하세요.
 
-`--position`의 Z만 1에서 2로 바꿔 새 read-back과 화면을 비교하세요. 다른 Cube 이름을 사용했다면 클라이언트 경로도 일치해야 합니다. `ModuleNotFoundError: isaac_ros2_messages`는 터미널 B workspace source 누락, 서비스 대기 시간 초과는 Play/Domain ID/브리지 상태를 먼저 확인합니다. `success: false`의 `message`를 버리지 말고 없는 prim/attribute인지 읽어 보세요.
+같은 확인을 자동으로 수행하는 로컬 클라이언트도 실행해 봅니다. `LESSON_DIR`를 설정한 ROS 터미널을 사용하세요.
 
-## 출처와 검증 범위
+```bash
+python3 "$LESSON_DIR/attribute_client.py" --position 0 0 1
+```
 
-- [NVIDIA Isaac Sim 5.1.0 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_prim_service.html)
-- [5.1.0 ROS 설치와 Python 3.11 환경](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)
+### 코드에서 볼 부분
 
-공식 원문의 실습을 이 폴더 안에 다시 구성하고 한국어 설명을 작성했습니다. Isaac Sim/ROS를 실제로 실행한 결과는 아직 검증하지 않았습니다(`verification: not_run`). 구문 검사나 `--help` 성공은 DDS 통신, 렌더링, GPU 동작의 검증이 아닙니다.
+클라이언트는 입력 숫자를 직접 이어 붙이지 않고 `json.dumps`로 직렬화합니다.
+
+```python
+SetPrimAttribute.Request(
+    path='/World/Cube', attribute='xformOp:translate',
+    value=json.dumps(args.position))
+```
+
+응답을 기다리는 동안 `rclpy.spin_until_future_complete`가 ROS 콜백을 처리합니다. 쓰기 응답이 성공하면 같은 속성을 다시 읽고 문자열을 숫자 배열로 복원합니다.
+
+```python
+actual = json.loads(after.value)
+if len(actual) != 3 or any(abs(a-b)>1e-6 for a,b in zip(actual,args.position)):
+    raise RuntimeError(f'Read-back differs: wanted {args.position}, received {actual}')
+```
+
+따라서 `verified translation:`은 보낸 인자를 그대로 출력한 문구가 아니라 **서비스에서 다시 읽은 값의 비교 결과**입니다.
+
+장면 코드는 `AddTranslateOp()`와 `AddOrientOp()`로 속성을 실제 생성합니다. 서비스는 기존 속성을 바꾸므로 없는 이름을 임의로 써서 새 transform 연산을 만들 수는 없습니다. 방향을 다룰 때 `xformOp:orient`의 USD quaternion 순서는 `[w,x,y,z]`이며, ROS Pose 필드 나열 순서와 구분해야 합니다.
+
+### 실행 결과 확인하기
+
+터미널의 `before:`에는 직전에 읽은 위치가, `verified translation:`에는 `[0.0, 0.0, 1.0]`이 나타나야 합니다. 기본 옵션 없이 실행하면 목표는 `[1,2,3]`입니다. Cube는 지정한 위치에서 그대로 유지됩니다. 별도 CSV를 만들지 않고 클라이언트만 종료하며 앱과 Cube는 남습니다.
+
+
+### 방향 속성도 읽고 쓰기
+
+로컬 setup은 `xformOp:orient`도 만들어 둡니다. ROS 터미널에서 먼저 현재 값을 읽고 항등 회전을 써보세요.
+
+```bash
+ros2 service call /get_prim_attribute isaac_ros2_messages/srv/GetPrimAttribute \
+  '{path: /World/Cube, attribute: "xformOp:orient"}'
+ros2 service call /set_prim_attribute isaac_ros2_messages/srv/SetPrimAttribute \
+  '{path: /World/Cube, attribute: "xformOp:orient", value: "[1, 0, 0, 0]"}'
+ros2 service call /get_prim_attribute isaac_ros2_messages/srv/GetPrimAttribute \
+  '{path: /World/Cube, attribute: "xformOp:orient"}'
+```
+
+이 서비스는 원시 USD quaternion을 JSON 문자열로 전달하므로 **실수부가 먼저인 `[w,x,y,z]`**입니다. `geometry_msgs/Pose`의 필드 이름을 그대로 배열 순서로 사용하지 마세요. 이미 항등 회전이었다면 화면이 그대로일 수 있으며 반환값과 Property의 orient를 확인합니다. GUI로 별도 만든 Cube에 이 속성이 없다면 해당 조회는 실패할 수 있습니다. `SetPrimAttribute`는 새 회전 연산을 추가하는 서비스가 아닙니다.
+
+## 3. prim 경로·속성 이름·좌표계 정리
+
+```text
+/World/Cube                 → 어떤 물체인가?
+xformOp:translate           → 그 물체의 어떤 값인가?
+"[0, 0, 1]"                 → 어떤 문자열 형식으로 보낼 것인가?
+GetPrimAttribute 재조회     → 실제 적용된 값은 무엇인가?
+```
+
+`xformOp:translate`는 **로컬 변환**입니다. 이번에는 부모 `/World`에 추가 변환이 없어 world 위치와도 일치합니다. 부모를 움직이면 같은 `[0,0,1]`을 써도 world 위치는 달라질 수 있습니다. 121번의 world pose 서비스와 원시 USD 속성 편집이 만나는 경계입니다.
+
+## 4. 간단한 확인 실험
+
+앞의 명령에서 **Z만 1에서 2**로 바꾸어 실행해 보세요.
+
+```bash
+python3 "$LESSON_DIR/attribute_client.py" --position 0 0 2
+```
+
+`before:`는 이전 위치를, `verified translation:`은 `[0.0,0.0,2.0]`을 보여야 합니다. Cube가 1 m 높아지는지 확인하세요. 속도나 이동 시간은 설정하지 않았으므로 이 값은 위치 변경량입니다.
+
+## 실행할 때 막히면
+
+- **`No module named isaac_ros2_messages`**: 클라이언트 터미널에 메시지 워크스페이스의 설치 결과를 source하세요.
+- **서비스 대기 또는 응답 시간 초과**: Play 상태를 확인하세요. `/PrimServices`는 Tick으로 처리되며, Pause 중에도 응답하는 sim_control 확장과 동작 조건이 다릅니다.
+- **`success: false`**: `message`에서 없는 prim인지 없는 속성인지 확인하세요. Display Name 대신 실제 USD 이름을 사용합니다.
+- **`value` 타입 오류**: 숫자 배열을 JSON 문자열로 감싼 따옴표를 확인하세요.
+- **setup 재실행 오류**: `/PrimServices`나 `/World/Cube`가 이미 있으면 새 Stage에서 시작하세요.
+
+Ubuntu 22.04/Humble에서는 양쪽 배포판과 워크스페이스 경로를 `humble`로 변경합니다. 마치면 Isaac Sim 창을 닫습니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [ROS 2 Service for Manipulating Prims Attributes](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_prim_service.html)에 대응합니다. [ROS 설치](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)와 [공식 ROS 워크스페이스](https://github.com/isaac-sim/IsaacSim-ros_workspaces/tree/50de00358f220d790d17050c6368cfe9a9cb9f51)를 참고하세요.
+
+로컬 파일은 서비스용 장면과 위치 재조회 클라이언트를 제공합니다. 외부 메시지 패키지는 별도 빌드하며, 실제 ROS 왕복과 GUI 이동은 이 개정에서 실행하지 않았습니다. `tutorial.json`은 `verification: not_run`입니다.

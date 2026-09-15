@@ -1,89 +1,143 @@
-# 167. MobilityGen으로 이동 궤적을 기록하고 센서 영상을 재생성하기
+# 167. 한 번 기록한 주행에서 여러 센서 데이터를 만들기
 
-권장 학습 순서 **167** · 병렬 환경과 학습 정책 활용 · 출처 ID `t076`
+## 이번에 배우는 것
 
-## 이 실습의 의도
+**실제 로봇 궤적을 기록하고, 저장한 상태를 다시 불러 RGB·segmentation·depth를 생성합니다.**
 
-H1 로봇을 키보드로 이동시켜 실제 궤적을 기록하고 같은 기록을 RGB·segmentation·depth로 다시 렌더링합니다. Occupancy Map은 평면에서 막힌 칸/이동 가능한 칸을 표현하며 이동 경로 선택과 충돌 종료에 쓰입니다. 궤적 기록과 센서 렌더링은 두 단계로 분리되어, 같은 움직임을 유지한 채 저장할 센서 종류와 표본 간격을 바꿀 수 있습니다. 기본 흐름은 GUI에서 실제 지도와 recording을 만든 다음 `replay.py`로 그 기록을 재생하는 것입니다.
+주행과 렌더링을 분리하면 같은 움직임을 유지한 채 센서 종류나 영상 간격을 바꿀 수 있습니다. 먼저 창고의 이동 영역 지도를 만들고 H1을 움직여 기록합니다. 그 기록을 재생해 같은 자세의 여러 센서 결과를 비교합니다.
 
-## 실행 후 확인할 것
+| 파일·단계 | 입력 | 결과 |
+|---|---|---|
+| Occupancy Map GUI | 실제 창고 Stage | 지도 PNG와 YAML |
+| `prepare_map.py` | GUI에서 내보낸 두 파일 | `map.png`, `map.yaml` |
+| MobilityGen 기록 | 지도·장면·로봇·조작 | 상태가 담긴 recording 폴더 |
+| `inspect_recording.py` | 단일 recording | 상태 수와 step 범위 |
+| `replay.py` | 같은 recording | 센서 파일과 `summary.json` |
 
-- **지도와 장면의 대응:** Occupancy Map에서 창고 통로와 막힌 영역이 실제 장면과 맞는지 보고, `prepare_map.py` 결과 `map.yaml`의 `image: map.png`, `origin`, `resolution`을 원본 export와 대조한다. `map_recipe.json`만으로 지도가 생성되는 것은 아니다.
-- **실제 기록:** Start/Stop recording 후 단일 기록 폴더의 `config.json`, `stage.usd`, `occupancy_map/`, `state/common/*.npy`를 확인한다. `inspect_recording.py`의 `state_count`, `first_step`, `last_step`과 함께 로봇이 실제로 이동한 화면을 확인한다.
-- **재생 표본:** `summary.json`의 `rendered_samples`와 `source_step_ids`를 읽는다. `--frames 30 --render-interval 40`은 기록 인덱스 40개마다 최대 30표본을 뽑는 조건이며, 짧은 원 기록에서는 30보다 적게 나오는 것이 정상이다.
-- **센서 결과:** `sensor_file_counts`에서 선택한 RGB·segmentation·depth 출력이 모두 존재하는지 확인하고 같은 원본 step 번호의 영상을 서로 대조한다. depth PNG는 inverse-depth 인코딩이므로 픽셀 정수를 미터 거리로 읽지 않는다.
-- **마지막 장면 유지:** 재생 완료 후 GUI의 마지막 자세가 멈춰 있어도 정상이다. 기록 상태를 복원해 렌더링하는 실습이므로 창을 오래 열어 둔다고 새 주행 궤적이나 추가 샘플이 생기지 않는다.
+`map_recipe.json`은 지도 생성에 사용할 설정을 적어 둔 파일입니다. 지도나 주행 기록 자체를 포함하지 않습니다.
 
-## 준비
+## 1. 지도를 만들고 H1 주행 기록하기
 
-Isaac Sim 5.1 GUI, RTX GPU, `isaacsim.replicator.mobility_gen`, `isaacsim.replicator.mobility_gen.examples`, `isaacsim.replicator.mobility_gen.ui`가 필요합니다. H1/Spot은 설치된 `isaacsim.robot.policy.examples`의 보행 policy와 robot Assets에 접근할 수 있어야 합니다. 창고는 다음 5.1 Assets 파일입니다.
+Isaac Sim 5.1, RTX GPU, `isaacsim.replicator.mobility_gen`, `.examples`, `.ui` 확장과 5.1 창고·H1 정책 자산이 필요합니다. ROS 프로세스는 사용하지 않습니다. “ROS map YAML”은 여기서 파일 형식의 이름입니다.
 
-`https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Environments/Simple_Warehouse/warehouse_multiple_shelves.usd`
+저장소 루트에서 `~/isaacsim/isaac-sim.sh`를 실행하고 필요한 확장을 활성화하세요. Content Browser에서 다음 창고를 엽니다.
 
-별도 ROS 프로세스는 필요 없습니다. ROS map YAML은 파일 형식 이름입니다. 클라우드 LLM도 사용하지 않습니다. 샘플 map이나 recording을 가짜 데이터로 대체하지 않으므로 첫 GUI 기록 작업은 반드시 수행합니다. 아래 명령은 이 패키지 디렉터리에서 실행하고 설치 경로를 맞춥니다.
-
-## Occupancy Map을 실제 장면에서 생성
-
-1. `./isaac-sim.sh`로 GUI를 실행하고 `Window > Browsers > Content`에서 창고 USD를 엽니다. `Tools > Robotics > Occupancy Map`을 엽니다.
-2. Origin=(2,0,0), Upper Bound=(10,20,2), Lower Bound=(-14,-18,0.1)을 입력합니다. ctrl+왼쪽 클릭으로 숫자 입력 모드를 활성화합니다. 0.1 m 이하의 바닥 주변 형상과 2 m보다 높은 구조물을 지도 범위에서 제외하는 선택입니다. 이를 로봇의 실제 통과 가능 높이/턱 넘기 능력으로 검증해야 합니다. 원문은 lower bound 0.1을 주면서 5 cm 예를 들므로 두 값을 동일시하지 않습니다.
-3. Calculate → Visualize Image를 누릅니다. Rotate Image=180, Coordinate Type=`ROS Occupancy Map Parameters File YAML`, Regenerate Image로 설정합니다. `map_recipe.json`은 이 값을 모아둔 실습 기록이며 생성된 지도 자체가 아닙니다.
-4. 표시된 YAML을 `output/exported_map.yaml`로 저장하고 Save Image로 `output/exported_map.png`를 저장합니다. 픽셀 데이터를 직접 생성하거나 임의 origin/resolution을 넣지 않습니다. 아래 명령은 실제 export를 검사하고 image 이름만 map.png로 맞춥니다.
-
-```bash
-/home/hoyunkim/isaacsim/python.sh prepare_map.py --yaml output/exported_map.yaml --image output/exported_map.png --output output/maps/warehouse
+```text
+https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Environments/Simple_Warehouse/warehouse_multiple_shelves.usd
 ```
 
-PyYAML은 Isaac Sim Python에 포함되어 있습니다. 표준 Python에서는 설치 환경에 따라 별도 설치가 필요할 수 있으므로 위 실행기를 사용합니다. `output/maps/warehouse/map.yaml`과 `map.png`가 생겨야 합니다. origin은 이미지의 지리적 시작 위치(x,y,yaw), resolution은 m/pixel이며 장면의 USD 좌표와 맞아야 합니다.
-
-## 키보드로 기록하기
-
-1. Window > Extensions에서 MobilityGen UI를 켭니다. MobilityGen 창과 지도 창이 겹쳐 있으면 분리합니다.
-2. Stage에 위 창고 URL, Occupancy Map에 생성한 map.yaml의 **절대 경로**를 넣습니다. Robot=H1Robot, Scenario=KeyboardTeleoperationScenario를 선택하고 Build합니다.
-3. W=전진, A=좌회전, S=후진, D=우회전을 시험합니다. H1이 바닥 위에 서 있고 occupancy map의 위치가 맞는지 확인합니다. 정책/자산이 로드되지 않으면 정상 보행으로 간주하지 않습니다.
-4. Start recording을 누르고 10초 정도 다른 위치로 이동한 뒤 Stop recording합니다. 기본 저장소는 `~/MobilityGenData/recordings`입니다. 앱 실행 전 `MOBILITY_GEN_DATA`를 이 패키지 `output/data` 절대 경로로 설정하면 기록을 패키지 안에 모을 수 있습니다.
-5. 실제 생긴 단일 기록 폴더를 아래 inspector로 확인합니다. config.json, stage.usd, occupancy_map, state/common이 있어야 합니다. state 파일 수가 늘었다는 검사와 실제 로봇 이동 관찰을 함께 수행합니다.
+1. **Tools > Robotics > Occupancy Map**에서 Origin=`(2,0,0)`, Upper Bound=`(10,20,2)`, Lower Bound=`(-14,-18,0.1)`을 넣습니다. 숫자 칸은 Ctrl+왼쪽 클릭으로 직접 입력할 수 있습니다.
+2. **Calculate → Visualize Image**를 누릅니다. Rotate Image=`180`, Coordinate Type=`ROS Occupancy Map Parameters File YAML`로 선택하고 **Regenerate Image**를 누릅니다.
+3. 표시된 YAML과 **Save Image**의 PNG를 이 폴더의 `output/exported_map.yaml`, `output/exported_map.png`로 저장합니다. 없는 출력 폴더는 먼저 만드세요.
+4. 저장소 루트 터미널에서 실제 export를 묶습니다.
 
 ```bash
-python3 inspect_recording.py /절대경로/MobilityGenData/recordings/기록폴더
+~/isaacsim/python.sh src/167_sdg_extra_replicator_mobility_gen/prepare_map.py --yaml src/167_sdg_extra_replicator_mobility_gen/output/exported_map.yaml --image src/167_sdg_extra_replicator_mobility_gen/output/exported_map.png --output src/167_sdg_extra_replicator_mobility_gen/output/maps/warehouse
 ```
 
-## 같은 궤적에서 센서를 재생성
+### 설정에서 볼 부분
+
+`prepare_map.py`는 지도 계산기가 아닙니다. YAML의 양수 `resolution`, 세 값의 `origin`, PNG 파일 서명을 검사하고 이미지 이름을 `map.png`로 맞춥니다.
+
+- `resolution`: 지도 한 픽셀이 나타내는 거리(m/pixel)
+- `origin`: 지도 기준 위치 X·Y와 회전 yaw
+- Z 범위 0.1~2 m: 지도 계산에 포함할 높이 구간
+
+0.1 m 아래를 제외했다는 사실만으로 로봇이 그 높이의 턱을 넘을 수 있다고 보장하지는 않습니다. 지도와 실제 통과 가능성은 장면에서 함께 확인해야 합니다.
+
+이제 MobilityGen UI에서 Stage에 위 창고 URL, Occupancy Map에 생성된 `map.yaml`의 **절대 경로**를 넣습니다. Robot=`H1Robot`, Scenario=`KeyboardTeleoperationScenario`를 선택하고 **Build**하세요. W로 전진하고 A·D로 회전하며 지도의 통로와 로봇 위치가 맞는지 봅니다.
+
+**Start recording**을 누르고 약 10초 이동한 뒤 **Stop recording**합니다. 기본 위치는 `~/MobilityGenData/recordings`입니다. 앱 실행 전에 `MOBILITY_GEN_DATA`를 설정하면 저장 루트를 바꿀 수 있습니다.
+
+### 실행 결과 확인하기
+
+실제 생성된 **단일 기록 폴더**를 확인합니다. 상위 `recordings` 폴더를 넣지 마세요.
 
 ```bash
-/home/hoyunkim/isaacsim/python.sh replay.py --input /절대경로/MobilityGenData/recordings/기록폴더 --output output/replay_01 --headless --frames 30 --render-interval 40 --segmentation --depth
+python3 src/167_sdg_extra_replicator_mobility_gen/inspect_recording.py /절대경로/MobilityGenData/recordings/기록폴더
 ```
 
-이 스크립트는 공식 `standalone_examples/replicator/mobility_gen/replay_directory.py`의 실제 MobilityGen API 흐름을 한 recording으로 한정해 구현합니다. `load_scenario()`가 저장된 stage/map/robot 설정을 복원하고 `MobilityGenReader.read_state_dict()`가 당시 상태를 읽습니다. `scenario.load_state_dict()`와 `write_replay_data()` 후 `rep.orchestrator.step(delta_time=0)`으로 시간을 추가 진행하지 않고 해당 자세를 렌더합니다. `MobilityGenWriter`는 common state와 센서별 파일을 저장합니다. 외부 공통 튜토리얼 코드는 사용하지 않습니다.
+`state_count`, `first_step`, `last_step`을 읽고 `config.json`, `stage.usd`, `occupancy_map/`, `state/common/*.npy`가 있는지 확인하세요. 검사기는 config 필드와 상태 파일을 조사하지만 실제 로봇이 이동했는지까지 판정하지 않습니다. GUI에서 이동을 관찰한 기록과 함께 판단합니다.
 
-`--steps`를 생략한 GUI 실행은 정해진 재생·저장이 끝난 뒤에도 마지막 장면을 유지하며, 사용자가 창을 닫으면 종료합니다. `--steps 120`은 저장 후 GUI 업데이트 120회 뒤 종료하며 생성 샘플 수를 늘리지 않습니다. `--headless`는 저장이 끝나면 종료합니다.
+## 2. 같은 기록을 센서 데이터로 재생하기
 
-`--frames`는 저장할 최대 sample 수, `--render-interval`은 기록 인덱스 간격, `--subframes`는 한 이미지의 렌더 보정 횟수입니다. 40개 물리 기록마다 한 영상을 저장하면 파일 수를 줄일 수 있습니다. 이 구현은 원 기록의 실제 step id를 출력 파일 이름에 보존합니다. `--normals`를 추가하면 표면 법선도 저장합니다. `--no-rgb`는 RGB를 끄며 하나 이상의 센서 형식은 켜야 합니다.
+기록 저장을 마치고 GUI를 닫은 뒤 다음 명령을 저장소 루트에서 실행합니다. 재생 명령은 별도의 Isaac Sim 앱을 시작합니다.
 
-완료 후 `summary.json`의 rendered_samples/source_step_ids/실제 sensor_file_counts와 해당 RGB/segmentation/depth를 확인합니다. 이 버전 MobilityGen의 depth는 거리 자체 float 배열이 아니라 inverse-depth 16-bit PNG로 저장됩니다. 읽을 때 설치된 MobilityGenReader가 수행하는 변환을 사용합니다. 선택 modality가 파일을 하나도 만들지 못하면 스크립트는 성공으로 끝내지 않습니다.
+```bash
+~/isaacsim/python.sh src/167_sdg_extra_replicator_mobility_gen/replay.py --input /절대경로/MobilityGenData/recordings/기록폴더 --output src/167_sdg_extra_replicator_mobility_gen/output/replay_01 --headless --frames 30 --render-interval 40 --segmentation --depth
+```
 
-## 절차적 데이터와 자신의 로봇
+RGB는 기본으로 켜져 있습니다. 위 명령은 RGB·segmentation·depth를 모두 저장합니다. Headless에서는 저장이 끝나면 종료합니다. GUI 실행은 저장 후 마지막 장면을 유지하며, `--steps 120`을 추가하면 **저장 이후 앱 업데이트 120회** 뒤 종료합니다. 이 옵션은 촬영 표본 수를 늘리지 않습니다.
 
-Scenario를 `RandomPathFollowingScenario`로 바꾸고 Build한 뒤 **Start recording**을 눌러야 자동 주행도 디스크에 남습니다. episode가 리셋되면 새 recording이 생깁니다. `RandomAccelerationScenario`는 선속도/각속도 변화량을 무작위로 적용합니다. 매 episode마다 지도 안의 시작 위치/경로/종료 상태를 확인하고 같은 replay 명령을 사용합니다.
+### 코드에서 볼 부분
 
-`custom_robot.py`는 설치된 JetbotRobot을 상속해 선속도 gain과 경로 속도를 0.12 m/s로 낮춘 **실제 등록 가능한 TutorialSlowJetbot**입니다. GUI에서 MobilityGen Examples 활성화 후 Script Editor로 파일을 실행하고 UI를 다시 열어 robot 목록을 갱신합니다. NVIDIA Jetbot USD도 5.1 Assets에서 로드됩니다. 이 로봇으로 기록한 데이터를 재생할 때 `--custom-robot`을 주어 같은 이름을 등록합니다. 원 설치의 robots.py를 수정할 필요 없이 이 패키지 파일을 유지할 수 있습니다.
+표본 선택은 다음 한 줄에서 결정합니다.
 
-완전히 새로운 로봇은 MobilityGenRobot의 build()에서 Stage/센서를 만들고 write_action()에서 선속도·각속도를 actuator 명령으로 변환해야 합니다. wheel radius/base, physics_dt, occupancy_map_radius, front_camera_base_path/rotation/translation을 실제 모델에 맞춥니다. chase camera offset은 관찰용 뷰, occupancy collision radius는 종료 조건에 영향을 줍니다. 등록 API의 실제 5.1 이름은 `ROBOTS.register()`입니다(원문 일부의 ROBOT 단수 표기와 다름).
+```python
+indices = list(range(0, len(reader), args.render_interval))[:args.frames]
+```
 
-## 실험과 문제 해결
+`--render-interval 40`은 기록 **인덱스** 0, 40, 80, …을 고릅니다. 40초 간격도 아니고 원본 step ID가 반드시 40씩 차이 난다는 뜻도 아닙니다. 원본 기록이 짧으면 최대 개수 `--frames 30`을 채우지 못할 수 있습니다.
 
-한 변수 실험은 동일 recording에 render interval만 40→20으로 바꿔 영상 수와 보행 자세 간격을 비교하는 것입니다. 원 recording을 다시 생성하면 로봇 동작도 달라져 비교 조건이 바뀝니다. 새로운 output 경로를 사용합니다.
+각 표본에서는 저장한 상태를 불러오고 로봇·센서에 적용합니다.
 
-지도가 회전/이동하면 UI export 회전 180과 origin/resolution을 점검합니다. map.png만 복사하고 YAML을 이전 것으로 유지하지 않습니다. H1이 넘어지면 policy 로딩·physics_dt·충돌 상태를 확인합니다. 입력 폴더는 recordings 상위가 아니라 config.json이 직접 들어 있는 단일 기록입니다. state가 0개면 Start/Stop recording을 실제로 수행했는지 확인합니다. 원문 GitHub reader/Gradio 시각화는 선택 도구이며 본 실습을 위해 별도 저장소를 먼저 공부할 필요 없습니다.
+```python
+original = reader.read_state_dict(index=index)
+scenario.load_state_dict(original)
+scenario.write_replay_data()
+```
 
+그 뒤 `rep.orchestrator.step(..., delta_time=0.0, ...)`으로 지정한 자세를 렌더링합니다. writer에 전달하는 번호는 `reader.steps[index]`이므로 출력 이름에는 원본의 실제 step ID를 보존합니다. 재생 영상과 원래 상태를 연결할 수 있는 이유입니다.
 
-## 출처와 검증 범위
+### 실행 결과 확인하기
 
-Isaac Sim **5.1.0** 공식 문서에 맞춘 독립 패키지입니다. 아래 설명과 실습은 한국어로 새로 작성했습니다. 공식 확장 기능은 설치된 Isaac Sim이 제공하며 이 패키지에 복제하지 않습니다.
+| `summary.json` 필드 | 의미 |
+|---|---|
+| `recorded_steps` | 읽을 수 있는 원본 상태 개수 |
+| `rendered_samples` | 이번에 선택해 렌더링한 표본 개수 |
+| `source_step_ids` | 출력과 대응하는 원본 step ID |
+| `sensor_file_counts` | 선택한 센서 형식별 실제 파일 수 |
 
-- [지도 생성](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html#build-an-occupancy-map)
-- [실제 궤적 기록](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html#record-a-trajectory)
-- [replay와 render](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html#replay-and-render)
-- [절차적 데이터](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html#generate-procedural-data)
-- [로봇 추가](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html#add-a-custom-robot)
+같은 step ID의 RGB·segmentation·depth를 열어 같은 자세와 장면인지 비교하세요. 카메라가 여러 대면 센서 파일 수가 표본 수보다 많을 수 있습니다. 선택한 형식에서 파일이 하나도 생기지 않으면 스크립트는 오류를 냅니다. 양수 파일 수만으로 모든 이미지 내용이 올바르다고 보증하지는 않습니다.
 
-설정 생성·Python 문법 확인과 실제 GPU 시뮬레이션은 별개의 검사입니다. 이 패키지의 기본 상태는 `not_run`이며 렌더링·애니메이션·외부 서비스 결과를 실행 완료로 주장하지 않습니다.
+depth는 16-bit PNG의 역깊이 표현입니다. 설치본 writer는 대략 `65535 / (1 + depth)`를 저장하므로 픽셀 정수를 미터 거리로 읽으면 안 됩니다. 설치본 `MobilityGenReader.read_depth()`의 역변환을 사용하세요. RGB는 JPG, segmentation·depth는 PNG, `--normals`로 추가한 법선은 NPY로 기록합니다.
+
+### 자동 주행과 사용자 로봇으로 확장하기
+
+UI에서 `RandomPathFollowingScenario`를 선택해 Build해도 **Start recording**을 눌러야 데이터가 남습니다. episode가 바뀌면 새 기록이 생길 수 있으므로 재생할 단일 기록을 확인하세요. `RandomAccelerationScenario`는 선속도·각속도의 변화량을 무작위로 적용하는 다른 자동 주행 방식입니다. 같은 지도에서 이 Scenario를 선택해 Build하고 Start/Stop recording한 뒤, 지도 안의 시작 위치·충돌·종료 시점과 기록 폴더를 확인합니다. 경로 추종과 무작위 가속 기록을 같은 주행으로 섞지 말고 단일 recording씩 재생하세요.
+
+`custom_robot.py`는 JetbotRobot을 상속한 `TutorialSlowJetbot`을 등록합니다. keyboard·gamepad 선속도 gain과 경로 속도를 0.12로 설정합니다. MobilityGen Examples 활성화 후 Script Editor에서 실행하고 UI 목록을 갱신하세요. 이 로봇의 recording을 재생할 때는 `--custom-robot`으로 같은 클래스를 등록합니다. Jetbot USD는 외부 5.1 자산입니다.
+
+완전히 새로운 로봇을 연결한다면 `MobilityGenRobot`의 `build()`에서 로봇·센서를 구성하고 `write_action()`에서 선속도·각속도를 실제 actuator 명령으로 변환해야 합니다. 바퀴 반지름·축간 거리, `physics_dt`, `occupancy_map_radius`, 전방 카메라의 위치·회전을 모델과 대조하세요. 관찰용 chase camera와 지도 충돌 반경은 역할이 다릅니다. 등록은 실제 API인 `ROBOTS.register()`로 수행하며, 이름만 등록한다고 이런 물리·센서 연결이 자동 작성되지는 않습니다.
+
+## 3. 기록 간격과 렌더링 간격 정리
+
+```text
+실제 지도 + 주행 → 매 시점의 상태 기록
+같은 recording → 일부 인덱스 선택 → 상태 복원 → 센서 렌더링
+```
+
+기록을 새로 만들면 로봇 궤적도 바뀔 수 있습니다. 렌더링 설정만 비교하려면 원본 recording을 유지해야 합니다. `--subframes`는 한 표본의 렌더링 품질을 위한 갱신 횟수이며 궤적 표본 간격과 별개입니다.
+
+## 4. 간단한 확인 실험
+
+**같은 recording**에서 `--render-interval 40`만 `20`으로 바꾸고 새 출력으로 재생하세요. 최대 표본 수는 30으로 유지합니다.
+
+- `source_step_ids`와 영상에서 연속 표본 사이 자세 변화가 더 촘촘해지는지 봅니다.
+- 기록이 충분히 길면 두 실행 모두 30표본일 수 있습니다. 이때는 수보다 포함한 궤적 범위가 달라집니다.
+- 기록이 짧다면 간격 20에서 표본 수가 늘 수 있습니다. `rendered_samples`로 실제 선택 결과를 확인하세요.
+
+## 실행할 때 막히면
+
+- **지도 위치나 방향이 틀림**: export 회전 180과 YAML의 origin·resolution을 확인하세요. PNG만 교체하고 이전 YAML을 사용하지 않습니다.
+- **기록 상태가 0개**: Build 후 Start/Stop recording을 실제로 수행했는지 확인하세요.
+- **`Recording lacks ...`**: `config.json`이 바로 들어 있는 단일 기록을 입력했는지 확인하세요. 지도·Stage도 함께 보존해야 합니다.
+- **30표본보다 적게 생성됨**: 원본 길이와 인덱스 간격을 확인하세요. `--frames`는 최소 개수가 아니라 최대 개수입니다.
+- **사용자 로봇을 찾지 못함**: `TutorialSlowJetbot` 기록에는 재생 시 `--custom-robot`을 추가하세요.
+- **재생 후 화면이 멈춤**: 저장 완료 뒤 마지막 자세를 유지하는 정상 동작일 수 있습니다. GUI를 오래 열어도 새 주행이나 센서 표본이 추가되지는 않습니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Data Generation with MobilityGen](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html)에 대응합니다. 로컬 도구는 실제 지도 export를 정리하고 단일 recording을 검사·재생합니다. depth 해석은 설치본 reader·writer와 대조했습니다.
+
+`tutorial.json`은 `not_run`입니다. 실제 지도와 recording을 이 폴더에 제공하지 않으므로 GUI 생성·주행·센서 재생을 별도로 수행해야 합니다. 파일 검사나 코드 읽기를 그 실행 성공으로 대신하지 않습니다.

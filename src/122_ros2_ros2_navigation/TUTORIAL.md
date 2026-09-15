@@ -1,190 +1,236 @@
-# 122. ROS 2 Navigation — 지도를 만들고 Nova Carter를 목적지로 이동시키기
+# 122. 창고 지도를 만들고 Nova Carter를 목적지로 보내기
 
-권장 학습 순서 **122** · ROS 2 응용과 사용자 인터페이스 · 출처 ID `t023`
+## 이번에 배우는 것
 
-공식 GUI 예제를 실제로 조작하는 실습이다. 이 폴더는 창고/로봇 USD와 Nav2 자체를 재배포하지 않으며, 공식 장면의 지도 생성·ROS 데이터 흐름·여러 제어 방식을 독립적으로 설명한다. 결과는 RViz의 경로와 Isaac Sim 로봇의 실제 이동이 함께 나타나는 것이다.
+**창고의 점유 지도를 생성하고, LiDAR 관측과 지도 좌표를 맞춘 뒤 Nav2로 로봇을 주행시킵니다.**
 
-## 이 실습의 의도
+로봇에게 목적지를 주려면 먼저 “어디가 비어 있는가”와 “지금 어디에 있는가”를 알아야 합니다. 점유 지도는 첫 번째 질문에, 센서와 위치추정은 두 번째 질문에 답합니다. Nav2는 이 정보를 사용하여 경로와 속도 명령을 계산합니다.
 
-창고의 충돌 형상으로 만든 2D 점유 지도를 실제 센서·좌표계·주행 명령과 연결하는 실습이다. 지도 생성 때 로봇을 지우는 이유는 움직일 로봇을 지도 속 고정 장애물로 기록하지 않기 위해서다. 이 폴더에는 자동 실행기가 없으며, 사용자가 Isaac Sim 장면 로드와 지도 저장, 외부 Nav2/RViz launch, 목표 전송을 차례로 수행한다. 기본 Carter 도착을 확인한 뒤 TF 발행 방식, iw.hub, 자동 목표와 Waypoint Follower를 확장 실험으로 비교한다.
+| 구성 | 담고 있는 정보 | 이번에 확인할 결과 |
+|---|---|---|
+| 창고 USD 장면 | 로봇·환경·충돌 형상·센서 | 실제 로봇과 장애물 배치 |
+| 지도 PNG와 YAML | 장애물 픽셀과 픽셀의 좌표·크기 | 같은 장소를 표현하는 2D 지도 |
+| `/scan`, `/odom`, `/tf` | 거리 관측·이동 추정·좌표계 연결 | 지도와 센서의 정렬 |
+| 외부 Nav2와 RViz | 위치추정·경로 계획·목표 입력 | 경로를 따라 이동하고 정지하는 로봇 |
 
-## 실행 후 확인할 것
+이 폴더에는 자동 실행기가 없습니다. Isaac Sim에 포함된 GUI 예제와 별도로 빌드한 공식 ROS 패키지를 사용합니다.
 
-- **지도 파일:** 저장한 `carter_warehouse_navigation.yaml`의 `image`가 함께 저장한 PNG를 가리키고 `resolution`·`origin`이 생성 설정과 맞는지 확인한다. PNG의 통로·벽은 Top View와 대응하고, 삭제한 로봇의 윤곽은 고정 장애물로 남지 않아야 한다.
-- **장면 복원과 데이터:** 지도 생성 후 Nova Carter 예제를 다시 로드하고 Play한다. ROS 터미널에서 `/clock`, `/odom`, `/scan`이 실제로 들어오는지 확인한다. 지도 생성 때 로봇을 삭제한 장면 그대로는 주행할 수 없다.
-- **위치추정:** RViz에서 LiDAR scan이 지도 벽과 겹치고 `map → odom → base_link` 변환이 이어지는지 본다. 경로를 요청하기 전에 필요시 2D Pose Estimate로 현재 위치·방향을 맞춘다.
-- **실제 도착:** 빈 통로에 목표를 보낸 후 RViz 경로 생성, Isaac Sim 로봇 이동, 목표 근처 정지와 RViz 위치 갱신을 함께 확인한다. 경로 그림만 생기는 상태는 계획 단계까지만 확인한 것이다.
-- **추가 제어 방식:** 자동 goal generator를 사용했다면 종료 로그와 실제 도착을 따로 확인한다. 카메라 영상은 기본 비활성일 수 있으며, 기본 주행 판정은 지도·scan·TF·로봇 이동을 기준으로 한다.
+## 1. 환경을 준비하고 점유 지도 만들기
 
-## 설치와 터미널 준비
+아래 명령은 **Ubuntu 24.04와 ROS 2 Jazzy**, Bash 기준입니다. Isaac Sim 5.1.0, 지원 GPU, 5.1 자산에 대한 접근이 필요합니다. ROS desktop과 `rosdep`, `colcon`을 먼저 설치·초기화하세요.
 
-이 폴더만 복사해도 실습할 수 있다. 다른 로컬 튜토리얼이나 공통 Python 모듈은 필요 없다. 외부 프로그램인 Isaac Sim 5.1.0, 공식 5.1 자산, ROS 2와 아래 공식 ROS 워크스페이스는 필요하다. 아래 명령은 **Ubuntu 22.04 + Humble**, bash 터미널 기준이다. Ubuntu 24.04에서는 `humble`을 `jazzy`로 바꾼다. Windows는 원문에서도 부분 지원이며 이 실습의 검증 대상으로 삼지 않는다.
+저장소 루트의 ROS용 터미널에서 공식 패키지를 준비합니다. 같은 버전을 이미 빌드했다면 기존 설치 결과를 source하면 됩니다.
 
-ROS 2 desktop이 없으면 [Humble 설치](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html) 또는 [Jazzy 설치](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debians.html)를 먼저 수행한다. 다음 명령은 사용자 환경에 의존성을 설치하고 새 워크스페이스를 만드는 준비 절차이며 이 패키지가 자동 실행하지 않는다.
+ROS desktop 설치는 [Jazzy 공식 설치 안내](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)를 따르세요. 아래 개발 도구가 없는 환경에서는 먼저 준비합니다. rosdep을 처음 쓰는 컴퓨터에서만 `sudo rosdep init`을 한 번 실행하고, 이후에는 `rosdep update`로 목록을 갱신하세요.
 
 ```bash
 sudo apt install python3-rosdep python3-colcon-common-extensions build-essential git
-source /opt/ros/humble/setup.bash
-# rosdep을 처음 설치한 컴퓨터에서만 sudo rosdep init 실행
 rosdep update
-git clone --branch IsaacSim-5.1.0 --recurse-submodules https://github.com/isaac-sim/IsaacSim-ros_workspaces.git "$HOME/IsaacSim-ros_workspaces-5.1"
-cd "$HOME/IsaacSim-ros_workspaces-5.1/humble_ws"
-rosdep install --from-paths src --ignore-src --rosdistro humble -y
+```
+
+```bash
+export LESSON_DIR="$PWD/src/122_ros2_ros2_navigation"
+source /opt/ros/jazzy/setup.bash
+export ROS_WS_REPO="$HOME/IsaacSim-ros_workspaces-5.1.0"
+git clone --branch IsaacSim-5.1.0 --recurse-submodules https://github.com/isaac-sim/IsaacSim-ros_workspaces.git "$ROS_WS_REPO"
+cd "$ROS_WS_REPO/jazzy_ws"
+rosdep install --from-paths src --ignore-src --rosdistro jazzy -y
+sudo apt install ros-jazzy-navigation2 ros-jazzy-nav2-bringup ros-jazzy-pointcloud-to-laserscan
 colcon build
 source install/local_setup.bash
-```
-
-태그의 확인된 커밋은 `50de00358f220d790d17050c6368cfe9a9cb9f51`이다. 이미 같은 폴더가 있다면 clone을 반복하지 말고 그 폴더의 버전과 빌드 결과를 확인한다. Jazzy에서 `topic_based_ros2_control` rosdep 키가 없으면 공식 설치 문서에 따라 `sudo apt install ros-jazzy-topic-based-ros2-control` 후 재시도한다.
-
-**터미널 A — Isaac Sim:** 일반 `/opt/ros` Python 환경을 source하지 않은 새 터미널에서 실행한다. Isaac Sim은 Python 3.11, Ubuntu의 ROS Python은 3.10/3.12이므로 기본 메시지를 DDS로 교환하는 이 실습은 내부 ROS 라이브러리를 사용한다. 같은 배포판을 A/B 양쪽에서 선택한다.
-
-```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-export ROS_DISTRO=humble
-export ROS_DOMAIN_ID=0
-export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-# 새 터미널에서 한 번만 추가한다.
-export LD_LIBRARY_PATH="$ISAAC_SIM_PATH/exts/isaacsim.ros2.bridge/$ROS_DISTRO/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-"$ISAAC_SIM_PATH/isaac-sim.sh"
-```
-
-`Window > Extensions`에서 `isaacsim.ros2.bridge`를 검색하여 Enabled를 켠다. 5.1 자산 서버에 접근할 수 있어야 기본 장면을 불러올 수 있다. 로컬 자산팩을 쓰는 경우 Content 창에서 그 팩의 `Isaac` 폴더를 사용한다.
-
-**터미널 B 및 이후 모든 ROS 터미널:** 매번 아래를 실행한 뒤 본문 ROS 명령을 실행한다.
-
-```bash
-source /opt/ros/humble/setup.bash
-source "$HOME/IsaacSim-ros_workspaces-5.1/humble_ws/install/local_setup.bash"
-export ROS_DOMAIN_ID=0
-export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-```
-
-같은 컴퓨터에서는 Fast DDS 기본 설정을 쓴다. 다른 컴퓨터/컨테이너라면 위 워크스페이스의 `fastdds.xml` 절대 경로를 `FASTRTPS_DEFAULT_PROFILES_FILE`로 **A와 B 모두** 지정하고 통신 가능한 네트워크를 사용한다. 배포판/Domain ID가 다르면 노드가 발견되지 않는다.
-
-## Nav2 준비와 핵심 개념
-
-```bash
-sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-pointcloud-to-laserscan
 ros2 pkg prefix carter_navigation
-ros2 pkg prefix iw_hub_navigation
-ros2 pkg prefix isaac_ros_navigation_goal
+mkdir -p "$LESSON_DIR/output"
 ```
 
-- **USD Stage**는 로봇, 환경, 센서, 그래프를 합성한 장면이다. **Prim**은 `/World/Nova_Carter_ROS` 같은 경로로 식별되는 장면 요소다. USD reference는 원본 자산을 재사용하고 현재 장면에 수정값을 저장한다.
-- **Occupancy map**은 픽셀별 장애물/빈 공간/미관측 영역이다. `resolution`은 m/pixel, `origin`은 지도 좌하단의 위치·회전이다. PNG만 옮기면 이 좌표 정보가 사라지므로 YAML과 한 쌍으로 관리한다.
-- **Nav2**는 지도를 불러오고 AMCL로 위치를 추정한 뒤 경로와 속도를 만든다. 시뮬레이터가 Nav2 알고리즘을 대신 실행하지 않는다.
-- `/clock`은 시뮬레이션 시간, `/odom`은 이동 추정, `/tf`는 좌표계 관계다. 5.1 Carter launch는 `/front_3d_lidar/lidar_points`를 `pointcloud_to_laserscan`에 연결해 `/scan`을 만든다. 원문 개념표의 `/point_cloud` 이름과 실제 5.1 launch의 토픽명이 다르므로 `ros2 topic list -t`로 실제 이름을 확인한다.
-
-## 1. 창고 점유 지도 생성
-
-1. `Window > Examples > Robotics Examples > ROS2 > Navigation > Nova Carter`에서 **Load Sample Scene**을 누른다. 해당 공식 자산은 자산 루트 아래 `Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd`다.
-2. Viewport의 Camera/Perspective 드롭다운을 **Top**으로 바꾼다. `Tools > Robotics > Occupancy Map`을 연다. 메뉴가 없으면 `isaacsim.asset.gen.omap` 확장을 켠다.
-3. Origin을 `(0,0,0)`으로, Lower Bound의 Z를 `0.1`, Upper Bound의 Z를 `0.62`로 설정한다. 0.62 m는 Carter LiDAR 높이에 맞춘 값이다. Cell Size는 `0.05` m로 설정한다.
-4. Stage의 `warehouse_with_forklifts` prim을 선택하고 **BOUND SELECTION**을 눌러 X/Y 경계를 잡는다. 선택 후 Z 값이 바뀌었다면 다시 `0.1/0.62`로 맞춘다. Origin이 벽이나 물체 안이면 빈 바닥 위치로 옮긴다.
-5. 로봇이 지도에 고정 장애물로 찍히지 않게 `Nova_Carter_ROS` prim을 현재 실습 장면에서 삭제한다. **CALCULATE → VISUALIZE IMAGE**를 누른다.
-6. Rotate Image = **180 degrees**, Coordinate Type = **ROS Occupancy Map Parameters File (YAML)**를 선택하고 **RE-GENERATE IMAGE**를 누른다.
-7. 이 패키지에 `output/` 디렉터리를 만들고 YAML 전체를 `output/carter_warehouse_navigation.yaml`에, **Save Image**로 PNG를 `output/carter_warehouse_navigation.png`에 저장한다. YAML의 `image:`가 같은 PNG 파일명인지 확인한다. 기존 결과는 다른 이름으로 저장한다.
-8. 흰 공간이 통로, 검은 영역이 선반/벽인지 Top View와 비교한다. 로봇 모양의 고정 장애물이 남으면 로봇 삭제 후 다시 계산한다. 맵 생성에 쓰이는 것은 충돌 형상이므로 보이는 물체가 지도에 없으면 Collider를 확인한다.
-
-## 2. Nav2와 RViz 실행
-
-1. **Nova Carter** 예제를 다시 불러와 삭제한 로봇을 복원하고 **Play**를 누른다.
-2. ROS 터미널에서 아래를 실행한다. 처음에는 공식 기본 지도, 다음에는 직접 생성한 지도 순으로 진행한다. 두 launch를 동시에 켜지 않는다.
+**새 시뮬레이터용 터미널**에서는 시스템 ROS 환경을 source하지 않고 내부 Python 3.11용 라이브러리로 실행합니다.
 
 ```bash
-ros2 launch carter_navigation carter_navigation.launch.py use_sim_time:=true
-# 첫 launch를 Ctrl+C로 끝내고, 생성한 YAML 절대 경로로 실행
-ros2 launch carter_navigation carter_navigation.launch.py map:=/absolute/path/to/this-package/output/carter_warehouse_navigation.yaml use_sim_time:=true
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_DISTRO=jazzy
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/jazzy/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge
 ```
 
-3. RViz에서 지도와 LiDAR 점들이 벽에 겹치는지 확인한다. 어긋나면 **2D Pose Estimate**를 선택하고 로봇 위치에서 방향 쪽으로 드래그한다. **Navigation2 Goal** 또는 **2D Goal Pose**를 선택해 빈 통로에 목표와 방향을 지정한다.
-4. 전역 경로 표시만으로 성공을 판단하지 않는다. Isaac Sim 로봇이 이동하고 도착 후 멈추며 RViz 로봇 위치가 같은 목표에 도달하는지 확인한다.
+1. **Window > Examples > Robotics Examples > ROS2 > Navigation > Nova Carter**를 열고 **Load Sample Scene**을 누릅니다. 공식 자산은 `Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation.usd`입니다.
+2. 타임라인을 Stop하고 Viewport를 **Top**으로 바꿉니다. **Tools > Robotics > Occupancy Map**을 엽니다.
+3. Origin `(0,0,0)`, Lower Bound Z `0.1`, Upper Bound Z `0.62`, Cell Size `0.05`를 설정합니다. 높이 단위와 셀 크기 단위는 m입니다.
+4. Stage에서 `warehouse_with_forklifts`를 선택하고 **BOUND SELECTION**으로 X/Y 범위를 잡습니다. Z 경계가 달라졌다면 다시 맞추세요. Origin은 장애물 안이 아닌 빈 바닥에 있어야 합니다.
+5. 현재 장면의 `Nova_Carter_ROS`를 삭제하고 **CALCULATE → VISUALIZE IMAGE**를 누릅니다. 로봇을 남겨 두면 움직일 로봇 자체가 지도 속 고정 장애물로 기록될 수 있습니다.
+6. Rotate Image **180 degrees**, Coordinate Type **ROS Occupancy Map Parameters File (YAML)**를 선택하고 **RE-GENERATE IMAGE**를 누릅니다.
+7. YAML과 **Save Image**의 PNG를 이 튜토리얼의 `output/carter_warehouse_navigation.yaml`, `output/carter_warehouse_navigation.png`로 저장합니다. YAML의 `image:`가 저장한 PNG 파일명을 가리키게 하세요.
+
+### 설정에서 볼 부분
+
+PNG는 픽셀의 색을 담지만, 그 픽셀이 몇 m이며 세계의 어느 위치인지까지 담지는 않습니다. YAML이 이 정보를 보완합니다.
+
+```yaml
+image: carter_warehouse_navigation.png
+resolution: 0.05
+```
+
+`resolution: 0.05`이면 픽셀 20칸이 1 m입니다. `origin: [x, y, yaw]`는 지도 좌하단의 위치와 방향이며 실제 생성된 값을 그대로 사용하세요. PNG만 복사하거나 다른 지도의 origin을 붙이면 통로 모양이 같아도 좌표가 어긋납니다.
+
+### 실행 결과 확인하기
+
+PNG의 벽과 통로를 Top View와 비교해 보세요. 지도는 렌더링 색이 아니라 지정한 높이 범위의 **충돌 형상**에서 만들어집니다. 눈에 보이는 선반이 지도에 없다면 Collider와 높이 범위를 확인합니다. 저장 파일 두 개는 이 단계의 결과이며, 아직 로봇의 주행을 확인한 것은 아닙니다.
+
+## 2. Nav2를 연결하고 목표 보내기
+
+먼저 **Nova Carter 예제를 다시 로드**하여 삭제했던 로봇을 복원하고 Play를 누르세요. 지도 생성용으로 로봇을 지운 장면에서는 주행할 수 없습니다.
+
+ROS용 터미널에서 다음을 실행합니다. 다른 ROS 터미널을 추가할 때도 시스템 ROS와 같은 워크스페이스 설치 결과를 source하세요.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source "$HOME/IsaacSim-ros_workspaces-5.1.0/jazzy_ws/install/local_setup.bash"
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 launch carter_navigation carter_navigation.launch.py use_sim_time:=true
+```
+
+처음에는 제공된 지도로 실행하여 통신과 기본 주행을 확인합니다. RViz의 **2D Pose Estimate**에서 실제 시작 위치와 방향을 지정하고, LiDAR 점이 벽에 겹치는지 보세요. 이어서 **Navigation2 Goal / 2D Goal Pose**로 가까운 빈 통로에 목표와 방향을 지정합니다.
+
+직접 만든 지도와 비교할 때는 첫 launch를 Ctrl+C로 끝내고 다음을 실행합니다. `LESSON_DIR`는 1절에서 설정한 ROS 터미널의 변수입니다.
+
+```bash
+ros2 launch carter_navigation carter_navigation.launch.py map:="$LESSON_DIR/output/carter_warehouse_navigation.yaml" use_sim_time:=true
+```
+
+### 설정에서 볼 부분
+
+공식 5.1 `carter_navigation.launch.py`는 LiDAR 점군을 `pointcloud_to_laserscan`에 연결합니다.
+
+```text
+/front_3d_lidar/lidar_points → 높이·각도 범위로 추출 → /scan
+/scan + 지도 + odometry → 위치추정 → 경로 계획 → 주행 명령
+```
+
+따라서 `/scan`이 안 보이면 먼저 원본 점군이 들어오는지 살펴볼 수 있습니다. `map → odom → base_link`의 TF 연결은 센서와 로봇을 같은 지도 위에 놓는 데 필요합니다. `/clock`은 이 계산에 사용할 시뮬레이션 시간을 공급합니다.
+
+### 실행 결과 확인하기
+
+별도의 ROS 터미널에서 다음을 관찰합니다.
 
 ```bash
 ros2 topic echo /clock --once
 ros2 topic echo /odom --once
 ros2 topic hz /scan
-ros2 action list -t
 ros2 run tf2_ros tf2_echo map base_link
 ```
 
-`ros2 topic hz`와 `tf2_echo`는 관측 후 Ctrl+C로 종료한다. `map → odom → base_link`가 이어져야 센서 관측을 지도에 놓을 수 있다.
+`hz`와 `tf2_echo`는 계속 실행되므로 각각 관찰 후 Ctrl+C로 종료하세요. RViz에서는 **지도와 scan 정렬 → 경로 생성 → 로봇 위치 갱신**을 확인합니다. Isaac Sim에서는 같은 로봇이 실제로 움직이고 목표 근처에서 정지하는지 봅니다. 경로 그림만 생겼다면 계획 단계까지만 확인한 상태입니다.
 
-## 3. 로봇 모델과 TF를 게시하는 두 방식
+### 다른 로봇과 자동 목표로 이어 보기
 
-기본 장면은 Isaac Sim의 TF publisher들이 로봇 좌표계를 직접 보낸다. RViz에 메시 형상을 표시하려면 Linux/Humble에서 `nova_carter_description`이 추가로 필요하다. 공식 5.1 문서가 지정한 NVIDIA ROS release-3 저장소를 등록한 환경에서 다음을 실행한다. 저장소가 미등록이면 아래 출처의 **Installing the Nova Carter Description Package** 절에 있는 locale, NVIDIA GPG key, Ubuntu 코드명별 repository 등록을 먼저 수행한다.
+기본 Carter가 도착했다면 앞의 launch를 종료하고 **ROS2 > Navigation > iw_hub**를 불러올 수 있습니다. Play 후 아래 launch로 실행하세요. 로봇에 맞는 지도·센서·제어 설정을 함께 바꾸는 비교입니다.
 
 ```bash
-# Linux/Ubuntu 22.04 + Humble의 NVIDIA release-3 repository가 없는 경우 먼저 준비
-sudo apt install locales gnupg wget software-properties-common
-sudo locale-gen en_US.UTF-8
-sudo add-apt-repository universe
-wget -qO /tmp/isaac-ros-repos.key https://isaac.download.nvidia.com/isaac-ros/repos.key
-sudo apt-key add /tmp/isaac-ros-repos.key
-# 아래 repository 행은 최초 등록 시 한 번만 실행
-printf 'deb https://isaac.download.nvidia.com/isaac-ros/release-3 %s release-3.0\n' "$(lsb_release -cs)" | sudo tee /etc/apt/sources.list.d/isaac-ros-release3.list
-sudo apt update
-sudo apt install ros-humble-nova-carter-description
-ros2 launch carter_navigation nova_carter_description_isaac_sim.launch.py
+ros2 launch iw_hub_navigation iw_hub_navigation.launch.py
 ```
 
-설명 패키지 없이 기본 주행은 가능하다. TF 방식을 비교하는 확장 실습에서는 기본 Nav2/description launch를 종료하고 다음 순서를 수행한다.
-
-1. `ROS2 > Navigation > Nova Carter Joint States`를 불러온다. 자산은 `Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation_joint_states.usd`다.
-2. **Play**, 위 description launch, 별도 터미널에서 `ros2 launch carter_navigation carter_navigation.launch.py` 순으로 시작한다.
-3. 로봇 아래 `joint_states` Action Graph와 `odometry` Action Graph를 연다. 관절 위치는 `/joint_states`로 나가고 `robot_state_publisher`가 URDF의 고정 연결과 관절값으로 TF를 만든다. `odom → base_link`는 여전히 시뮬레이터가 보낸다.
-4. Hawk 카메라의 mount→left/right 정적 변환은 기기별 보정값이라 카메라 그래프가 따로 보낸다는 점을 확인한다. 두 장면을 동시에 실행하면 같은 TF에 게시자가 중복되므로 한 장면씩 실행한다.
-
-## 4. iw.hub와 동적 장애물
-
-1. 앞의 launch를 종료하고 `ROS2 > Navigation > iw_hub` 예제를 불러온다. 자산은 `Isaac/Samples/ROS2/Scenario/iw_hub_warehouse_navigation.usd`다.
-2. **Play** 후 `ros2 launch iw_hub_navigation iw_hub_navigation.launch.py`를 실행한다.
-3. 2D Pose Estimate로 필요시 보정하고 Navigation2 Goal을 지정한다. 지도에 포함되지 않은 팔레트를 로봇이 센서로 발견하여 우회하는지 관찰한다. 창고용 Carter 지도/파라미터를 iw.hub에 그대로 쓰지 않는다.
-
-## 5. 프로그램과 Action Graph로 목표 보내기
-
-### 공식 goal generator
-
-Nova Carter 창고 장면과 Nav2를 실행한 뒤 다음을 실행한다.
+다시 Carter 창고 장면과 Carter Nav2를 실행한 상태에서는 별도의 ROS 터미널에서 공식 목표 생성기를 사용할 수 있습니다.
 
 ```bash
 ros2 launch isaac_ros_navigation_goal isaac_ros_navigation_goal.launch.py
 ```
 
-워크스페이스의 `src/navigation/isaac_ros_navigation_goal/launch/isaac_ros_navigation_goal.launch.py`는 실제 `SetNavigationGoal` 노드를 시작한다. 다음 중 한 변수만 바꾸고 `colcon build --packages-select isaac_ros_navigation_goal` 및 `source install/local_setup.bash` 후 다시 실행한다.
+공식 `src/navigation/isaac_ros_navigation_goal/launch/isaac_ros_navigation_goal.launch.py`의 `iteration_count`는 3이고 `goal_generator_type`은 `RandomGoalGenerator`입니다. 이 생성기는 지도 빈 공간에서 목표를 고릅니다. 한 목표만 비교하려면 실습 checkout에서 `iteration_count`만 1로 바꾸고 해당 패키지를 다시 빌드·source한 뒤 실행하세요. 지도와 `initial_pose`는 실제 Carter 장면과 일치해야 합니다. 생성기가 끝났다는 사실만으로 도착을 판단하지 말고 action 결과와 로봇 위치를 확인합니다.
 
-| 파라미터 | 의미와 실습 |
-|---|---|
-| `goal_generator_type` | `RandomGoalGenerator`는 지도 빈 공간에서 추출, `GoalReader`는 파일 순서대로 실행 |
-| `iteration_count` | 먼저 `1`로 바꿔 목표 한 개만 실행 |
-| `map_yaml_path` | 생성한 지도 YAML의 절대 경로 |
-| `obstacle_search_distance_in_meters` | 목표 주변 장애물 제외 반경, 기본 `0.2` m |
-| `action_server_name` | `navigate_to_pose`: 비동기 목표/진행/결과를 교환하는 action |
-| `goal_text_file_path` | GoalReader 입력. 각 줄은 `x y qx qy qz qw`; RViz에서 확인한 빈 위치 사용 |
-| `initial_pose` | `[x,y,z,qx,qy,qz,qw]`; 임의 0 대신 실제 시작 위치를 사용 |
+정해진 순서를 쓰려면 `GoalReader`와 목표 파일을 선택합니다. 파일의 각 줄은 `x y qx qy qz qw`이며, RViz에서 확인한 빈 위치를 적으세요. `iteration_count`는 파일의 목표 수 이하로 설정합니다.
 
-목표 수 소진, goal 파일 끝, 서버 거절 또는 무작위 목표 생성 실패 시 종료한다. 종료 자체가 모든 목표 도착의 증거는 아니므로 RViz/로봇 위치도 본다.
+### 장면 안에서 Waypoint Follower 사용하기
 
-### Waypoint Follower Action Graph
+이 방식은 Isaac Sim 프로세스 안에서 Nav2 Python 메시지를 사용합니다. 1절의 내부 기본 라이브러리만으로는 준비가 끝나지 않습니다. 공식 ROS 설치 안내의 사용자 패키지 절차로 `./build_ros.sh -d jazzy -v 24.04`를 수행하고, 필요한 Nav2 패키지가 Python 3.11 빌드에 포함되었는지 확인하세요.
 
-이 부분은 **Nav2 Python 메시지/API를 Isaac Sim 프로세스 안에서 사용**하므로 내부 최소 라이브러리만으로는 실행되지 않는다. 공식 워크스페이스에서 `./build_ros.sh -d humble -v 22.04`로 Python 3.11 ROS 빌드를 만들고, 그 빌드의 `build_ws/humble/humble_ws/install/local_setup.bash`와 `build_ws/humble/isaac_sim_ros_ws/install/local_setup.bash`를 새 A 터미널에 source한 뒤 Isaac Sim을 시작한다. 필요한 Nav2 패키지도 같은 Python 3.11 환경에 포함되어야 한다. 외부 Nav2는 기존 B 터미널을 사용한다.
+새 시뮬레이터 터미널에서는 다음처럼 두 Python 3.11 overlay만 source하고 앱을 시작합니다. 앞의 Isaac Sim 창은 먼저 닫으세요. 외부 Nav2 터미널은 시스템 ROS 환경을 유지합니다.
 
-1. Nova Carter 창고 장면을 로드하고 `ROS2 > Navigation > Add Waypoint Follower`를 선택한다.
-2. Graph Path = `/World/ROS_Nav2_Waypoint_Follower`, Frame ID = `map`, Navigation Mode = **Waypoint**로 하고 **Load Waypoint Follower ActionGraph**를 누른다.
-3. Play와 Nav2 launch 후 `/World/Waypoints/waypoint_1`을 빈 통로의 XY 위치로 옮긴다. 그래프의 **OnImpulseEvent → Send Impulse**를 눌러 한 번 전송하고 도착을 확인한다.
-4. 다음 실험은 **Patrolling**, Waypoint Count = `2`로 새 장면에서 만든다. `waypoint_1`, `waypoint_2`를 서로 다른 통로로 옮겨 Send Impulse를 누른다. AMCL 기반 위치추정에서 두 지점을 반복 방문한다.
+```bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_WS_REPO="$HOME/IsaacSim-ros_workspaces-5.1.0"
+export ROS_DISTRO=jazzy
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+source "$ROS_WS_REPO/build_ws/jazzy/jazzy_ws/install/local_setup.bash"
+source "$ROS_WS_REPO/build_ws/jazzy/isaac_sim_ros_ws/install/local_setup.bash"
+"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge
+```
 
-## 관찰과 문제 해결
+`build_ros.sh`는 기존 `build_ws/jazzy`를 다시 만듭니다. 이 폴더에 사용자 변경이 있다면 먼저 보존하거나 새 실습 checkout에서 빌드하세요. Docker 실행과 Python 3.11 패키지 빌드 준비는 [공식 ROS 설치 절차](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)를 따릅니다.
 
-성공 기준은 지도/scan 정렬, TF 연결, 경로 생성, 실제 도착, `/clock` 증가다. 영상은 기본 비활성일 수 있다. 로봇의 `_hawk` 그래프에서 `_camera_render_product` 노드를 Enabled로 하고 RViz Image의 `Topic > Reliability Policy`를 **Best Effort**로 설정한다. 빈 창고에서 위치추정이 흔들리면 먼저 `/scan` 주기와 시뮬레이션 성능을 확인한다. 메시에 보이지만 충돌 형상이 없는 물체는 점유 지도에 나타나지 않는다. 로봇이 멈춰 있으면 Play, `/clock`, `/scan`, launch 에러, Domain ID 순으로 확인한다.
+1. Carter 창고 장면에서 **ROS2 > Navigation > Add Waypoint Follower**를 선택합니다.
+2. Graph Path `/World/ROS_Nav2_Waypoint_Follower`, Frame ID `map`, Navigation Mode **Waypoint**로 그래프를 만듭니다.
+3. Play와 Carter Nav2 launch를 시작한 뒤 `/World/Waypoints/waypoint_1`을 빈 통로로 옮깁니다.
+4. 그래프의 **OnImpulseEvent > Send Impulse**로 목표를 전송하고 실제 도착을 확인합니다.
 
-한 변수 실험: 다른 값은 고정하고 Cell Size만 `0.05 → 0.10` m로 바꿔 지도를 다시 만든다. 좁은 통로 표현과 픽셀 수가 어떻게 바뀌는지 비교한다.
+Patrolling 모드에 waypoint 두 개를 만들면 두 위치의 반복 방문을 살펴볼 수 있습니다. RViz 클릭, 외부 목표 생성기, 장면의 waypoint는 입력 방식이 다르며 모두 현재 위치와 지도 좌표가 맞아야 사용할 수 있습니다.
 
-## 출처와 검증 범위
 
-- [Isaac Sim 5.1 ROS 2 Navigation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_navigation.html): 지도, Carter 세 방식, iw.hub, 자동 목표, Waypoint/Patrolling.
-- [5.1 ROS 설치와 Python 3.11 환경](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html#configuring-options-and-enabling-internal-ros-libraries).
-- [5.1 Mapping](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/ext_isaacsim_asset_generator_occupancy_map.html).
-- [공식 ROS 워크스페이스 고정 버전](https://github.com/isaac-sim/IsaacSim-ros_workspaces/tree/50de00358f220d790d17050c6368cfe9a9cb9f51).
+### 로봇 모델과 TF 발행 방식을 비교하기
 
-공식 문서와 설치된 5.1 sample/launch 소스에 대조했다. GPU 시뮬레이션·DDS·Nav2 도착은 이 작성 환경에서 실행하지 않았으며 `verification: not_run`이다.
+기본 Carter 장면은 Isaac Sim에서 로봇 TF를 직접 발행합니다. 원문에는 `Joint States → robot_state_publisher → TF`로 만드는 대안도 있습니다. 이 비교에 사용하는 NVIDIA `nova_carter_description` 설치 절차는 **Ubuntu 22.04/Humble용**입니다. 기본 Jazzy 주행 실습은 그대로 사용할 수 있으며, 아래 Humble 패키지와 저장소를 Ubuntu 24.04에 추가하지 않습니다.
+
+Humble 환경의 별도 ROS 터미널에서 1절과 같은 공식 workspace의 `humble_ws`를 빌드·source한 뒤 description 패키지를 준비하세요. NVIDIA release-3 저장소가 없다면 다음과 같이 등록합니다. 이미 등록했다면 같은 항목을 중복 작성하지 마세요.
+
+```bash
+sudo apt install curl gnupg
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://isaac.download.nvidia.com/isaac-ros/repos.key \
+  | gpg --dearmor | sudo tee /etc/apt/keyrings/isaac-ros.gpg >/dev/null
+printf '%s\n' 'deb [signed-by=/etc/apt/keyrings/isaac-ros.gpg] https://isaac.download.nvidia.com/isaac-ros/release-3 jammy release-3.0' \
+  | sudo tee /etc/apt/sources.list.d/isaac-ros-release3.list
+sudo apt update
+sudo apt install ros-humble-nova-carter-description
+source /opt/ros/humble/setup.bash
+source "$HOME/IsaacSim-ros_workspaces-5.1.0/humble_ws/install/local_setup.bash"
+ros2 pkg prefix nova_carter_description
+ros2 launch carter_navigation nova_carter_description_isaac_sim.launch.py
+```
+
+기존 TF 방식의 로봇 메시가 RViz에 표시되는지 먼저 확인합니다. description launch는 URDF 기반 모델을 제공합니다. 그다음 기존 Nav2/description launch를 종료하고 다음을 비교하세요.
+
+1. Humble 내부 브리지로 실행한 Isaac Sim에서 **ROS2 > Navigation > Nova Carter Joint States**를 로드합니다. 자산은 `Isaac/Samples/ROS2/Scenario/carter_warehouse_navigation_joint_states.usd`입니다.
+2. Play한 뒤 위 description launch를 실행하고, 다른 Humble ROS 터미널에서 `ros2 launch carter_navigation carter_navigation.launch.py`를 시작합니다.
+3. 로봇의 `joint_states` 그래프가 관절 위치를 발행하고 `robot_state_publisher`가 URDF와 관절값으로 내부 TF를 만드는지 봅니다. `odom → base_link`는 시뮬레이터의 odometry 그래프가 계속 맡습니다.
+4. `ros2 topic echo /joint_states --once`와 `ros2 run tf2_ros tf2_echo map base_link`로 메시지와 좌표 연결을 확인하고 가까운 목표로 다시 주행합니다.
+
+Hawk 카메라의 기기별 보정 TF는 별도 카메라 그래프가 맡을 수 있습니다. 같은 변환을 두 장면에서 동시에 발행하지 않도록 한 장면씩 비교하세요. Jazzy에서 이 대안을 확장하려면 사용하는 description 패키지와 launch 의존성이 Jazzy에서도 제공되는지 먼저 확인해야 합니다.
+
+## 3. 지도에서 주행까지의 연결 정리
+
+```text
+환경의 충돌 형상 → PNG의 장애물/빈 공간
+PNG + resolution + origin → 좌표가 있는 지도
+지도 + 실제 LiDAR 관측 → 현재 위치 추정
+현재 위치 + 목표 → 경로와 속도 → Isaac Sim의 로봇 이동
+```
+
+한 줄이 어긋나면 다음 줄도 영향을 받습니다. 예를 들어 해상도를 잘못 읽으면 벽 사이의 거리부터 달라져, 초기 위치를 여러 번 지정해도 scan 전체를 맞출 수 없습니다.
+
+## 4. 간단한 확인 실험
+
+지도의 **Cell Size만 0.05에서 0.10 m**로 바꾸어 같은 경계를 다시 계산하고 별도 PNG/YAML로 저장해 보세요.
+
+- 지도 가로·세로 픽셀 수는 각각 대략 절반이 됩니다.
+- 같은 통로가 더 적은 픽셀로 표현되어 좁은 틈이나 모서리가 거칠어질 수 있습니다.
+- 지도상의 실제 거리 단위는 유지됩니다. 픽셀 수 감소를 창고 크기 감소로 읽지 않습니다.
+
+각 지도는 자기 YAML과 짝지어 Nav2에 전달하고, 같은 시작점과 목표에서 통로 표현과 계획 경로를 비교하세요.
+
+## 실행할 때 막히면
+
+- **Jazzy 빌드 준비에서 `topic_based_ros2_control` rosdep 오류**: 공식 설치 안내에 따라 `sudo apt install ros-jazzy-topic-based-ros2-control`을 실행한 뒤 rosdep 명령을 다시 수행하세요.
+- **Occupancy Map 메뉴가 없음**: `isaacsim.asset.gen.omap` 확장을 켜세요.
+- **지도에 로봇 자국이 남음**: 로봇을 삭제한 뒤 다시 계산하고 주행 전에 원본 예제를 다시 불러오세요.
+- **map은 보이는데 scan이 없음**: Play 상태와 `/front_3d_lidar/lidar_points`, 변환 노드의 로그를 확인하세요.
+- **벽이 일정 비율로 어긋남**: PNG와 YAML의 짝, `resolution`, `origin`을 확인하세요. 초기 pose만 반복해서 바꾸지 않습니다.
+- **경로는 생기지만 움직이지 않음**: 시계 증가, Nav2 오류, 실제 속도 토픽 연결을 확인하세요. 토픽 이름은 `ros2 topic list -t`로 확인합니다.
+
+Ubuntu 22.04/Humble을 사용한다면 위 명령의 `jazzy`를 `humble`로 맞추세요. 시뮬레이터와 외부 ROS의 배포판을 함께 변경합니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [ROS 2 Navigation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_navigation.html)에 대응합니다. [ROS 설치](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html), [Mapping](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/ext_isaacsim_asset_generator_occupancy_map.html), [고정 버전 Carter launch](https://github.com/isaac-sim/IsaacSim-ros_workspaces/blob/50de00358f220d790d17050c6368cfe9a9cb9f51/jazzy_ws/src/navigation/carter_navigation/launch/carter_navigation.launch.py)를 함께 참고하세요.
+
+이 폴더는 장면 자산과 Nav2 소스를 재배포하지 않습니다. 공식 GUI·launch 설정에 대조한 실행 안내이며 지도 생성, DDS 수신, 실제 도착을 이 개정에서 실행하지 않았습니다. `tutorial.json`의 검증 상태는 `not_run`입니다.

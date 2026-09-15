@@ -1,67 +1,173 @@
-# 90. Custom C++ Nodes
+# 90. C++ 계산 노드를 빌드하고 그래프에서 평가하기
 
-권장 학습 순서 **90** · OmniGraph와 확장 개발 · 출처 ID `t108`
+## 이번에 배우는 것
 
-Python과 같은 `.ogn` 선언을 C++ compute에 연결하는 native build 실습이다. 제공 두 파일은 외부 template의 ExampleNode를 작고 읽기 쉬운 비교 노드로 바꾼다. 전체 Kit 빌드 시스템을 이 폴더에 위장 구현하지 않는다.
+**양수 판정 노드를 C++로 빌드하고, 노드 선언에서 생성된 접근 함수가 그래프의 실제 입출력으로 이어지는지 확인합니다.**
 
-## 이 실습의 의도
+계산은 `value > 0`으로 단순하지만, C++에서는 `.ogn` 선언을 읽어 만든 Database 헤더와 native plugin이 추가로 필요합니다. 소스 파일을 확장 폴더에 두는 단계만으로 실행 준비가 끝나지 않습니다.
 
-입력 숫자가 양수인지 판단하는 최소 계산으로 `.ogn`의 타입 선언, 생성된 Database header, C++ `compute()`와 노드 등록이 연결되는 과정을 배운다. 비교 연산을 단순하게 둔 이유는 계산 알고리즘보다 native 노드의 빌드·등록·평가 경로를 확인하기 위해서다. 이 폴더에는 노드 소스 두 개만 있으므로 외부 template에서 빌드한 뒤 Kit 앱과 Isaac Sim에 직접 로드해야 한다.
+| 구성 | 역할 | 이 실습의 이름 |
+|---|---|---|
+| `OgnExampleNode.ogn` | 입력·출력 타입과 노드 선언 | `ExampleNode` |
+| `OgnExampleNode.cpp` | 비교 계산 구현 | `compute` |
+| 생성 헤더 | 선언한 포트의 C++ 접근 함수 제공 | `OgnExampleNodeDatabase.h` |
+| template 확장 | 빌드 결과 로드와 등록 | `omni.example.cpp.omnigraph_node` |
+| 그래프 출력 | 비교 결과 확인 | `positive` |
 
-## 실행 후 확인할 것
+이 노드에는 `execIn` 포트가 없습니다. 이번에는 **Push Graph를 명시적으로 평가**하여 계산이 실행된 다음 결과를 읽습니다.
 
-- **생성·빌드:** template 빌드가 `OgnExampleNodeDatabase.h`와 plugin을 생성하는지 확인한다. 제공 `.cpp`를 단독 실행하거나 소스 파일을 복사한 것만으로 노드가 등록되지는 않는다.
-- **등록:** extension을 켠 앱의 Action Graph에서 `Korean Positive Cpp`를 찾고 `value` 입력이 double, `positive` 출력이 bool인지 본다.
-- **비교 결과:** 아래 Script Editor 평가 예제 또는 consumer가 연결된 graph에서 `value=-1, 0, 2`를 각각 평가하면 `positive=false, false, true`여야 한다. 노드만 배치하고 평가하지 않은 출력은 비교 근거가 아니다.
-- **false의 의미:** 입력 0의 `positive=false`는 의도된 경계 결과다. `compute()`의 `return true`는 계산 완료를 뜻하므로 출력 false와 모순되지 않는다.
-- **호스트 통합:** template 앱 확인 뒤 Isaac Sim 5.1에서도 같은 노드를 로드하고 비교 결과를 확인한다. template 빌드 성공과 Isaac Sim에서의 binary 로드 성공은 각각 확인한다.
+## 1. 노드 소스를 template에 적용하기
 
-## 고정한 외부 build 환경
-
-원문이 연결하는 C++ template 저장소는 현재 최신 Kit로 바뀔 수 있다. 여기서는 **Kit 107.3.0 업데이트 커밋 `e8b660c96183f4a35f12f5ff75e37756ae6aee3b`**를 고정한다. Linux x86_64에서 Git, C++ build 도구, template dependency 다운로드를 위한 인터넷과 디스크 공간이 필요하다. Windows는 대응 `build.bat`와 Visual Studio C++ toolchain을 사용한다. C++ binary의 Isaac Sim 5.1 호환성은 실제 로드로 최종 확인해야 한다.
+Linux x86_64의 C++ 도구, Git과 SDK 의존성 다운로드 환경이 필요합니다. Isaac Sim에 불러오려면 지원 GPU와 5.1 GUI도 준비하세요. 아래는 저장소 루트에서 시작하는 명령입니다.
 
 ```bash
-git clone https://github.com/NVIDIA-Omniverse/kit-extension-template-cpp.git /absolute/path/to/this-package/output/cpp-template
-cd /absolute/path/to/this-package/output/cpp-template
+lesson_dir="$PWD/src/90_tools_omnigraph_custom_cpp_nodes"
+mkdir -p "$lesson_dir/output"
+git clone https://github.com/NVIDIA-Omniverse/kit-extension-template-cpp.git \
+  "$lesson_dir/output/cpp-template"
+cd "$lesson_dir/output/cpp-template"
 git checkout e8b660c96183f4a35f12f5ff75e37756ae6aee3b
 ./build.sh package
 ```
 
-이 명령은 사용자가 실습 때 수행하며 본 패키지는 의존성을 자동 설치하지 않는다. `_build/linux-x86_64/release/omni.app.example.extension_browser.sh`는 template의 Kit 앱을 연다. Viewport가 필요하면 `omni.app.example.viewport.sh`를 사용한다. `Window > Extensions`에서 `omni.example.cpp`를 검색해 예제를 켠다.
+[고정 template](https://github.com/NVIDIA-Omniverse/kit-extension-template-cpp/tree/e8b660c96183f4a35f12f5ff75e37756ae6aee3b)의 초기 빌드가 끝나면 제공된 두 파일을 적용합니다. 같은 터미널에서 이어서 실행하세요.
 
-- [고정 template source](https://github.com/NVIDIA-Omniverse/kit-extension-template-cpp/tree/e8b660c96183f4a35f12f5ff75e37756ae6aee3b).
-- [원문이 연결하는 C++ template 설명](https://docs.omniverse.nvidia.com/kit/docs/kit-extension-template-cpp/latest/index.html). 최신 문서의 SDK 숫자는 고정한 source와 다를 수 있다.
+```bash
+nodes_dir="source/extensions/omni.example.cpp.omnigraph_node/plugins/nodes"
+mkdir -p "$lesson_dir/output/original_nodes"
+cp "$nodes_dir/OgnExampleNode.cpp" "$nodes_dir/OgnExampleNode.ogn" \
+  "$lesson_dir/output/original_nodes/"
+cp "$lesson_dir/OgnExampleNode.cpp" "$lesson_dir/OgnExampleNode.ogn" "$nodes_dir/"
+./build.sh
+./_build/linux-x86_64/release/omni.app.example.viewport.sh
+```
 
-## 파일 적용과 빌드
+새 출력 폴더에서 시작하고, 반복할 때에는 원본 백업을 보존하세요. Windows에서는 대응 `build.bat`와 `_build/windows-x86_64` 경로를 사용합니다.
 
-1. 위 template의 `source/extensions/omni.example.cpp.omnigraph_node/plugins/nodes/`에 있는 원본 `OgnExampleNode.cpp/.ogn`를 output 아래 별도 backup 폴더에 보관한다.
-2. 이 패키지의 같은 이름 파일 두 개를 해당 nodes 디렉터리에 복사한다. 기존 extension.toml/premake5.lua/플러그인 등록 구조를 사용하므로 이름을 임의로 바꾸지 않는다.
-3. template 루트에서 `./build.sh`를 다시 실행한다. 빌드가 `.ogn`으로 `OgnExampleNodeDatabase.h`를 생성하고 C++ plugin을 컴파일한다. 생성 header를 수동 작성하지 않는다.
-4. template Viewport 앱을 열고 `omni.example.cpp.omnigraph_node`를 Enabled로 한다. Action Graph를 만들어 **Korean Positive Cpp**를 추가한다. 노드 입력 `value`를 -1, 0, 2로 바꾸며 evaluation 후 `positive`가 false,false,true인지 확인한다. 이 노드는 데이터 계산 노드라 consumer 연결/graph 평가가 있어야 계산된다.
-5. Python으로 명시적 평가할 때는 Script Editor에서 아래를 실행한다.
+### 코드에서 볼 부분
+
+선언의 입력은 `double`, 출력은 `bool`입니다.
+
+```json
+"inputs": {
+  "value": {
+    "type": "double",
+    "default": 0.0,
+    "description": "Number to compare"
+  }
+}
+```
+
+출력 이름 `positive`는 다음 C++ 계산에 그대로 연결됩니다.
+
+```cpp
+static bool compute(OgnExampleNodeDatabase& db) {
+    db.outputs.positive() = db.inputs.value() > 0.0;
+    return true;
+}
+```
+
+Python의 속성 접근과 달리 C++에서는 `value()`와 `positive()` 같은 **생성된 접근 함수**를 사용합니다. `.ogn`을 바꾸면 이 함수가 들어 있는 헤더도 달라지므로 다시 빌드해야 합니다. `OgnExampleNodeDatabase.h`를 손으로 작성하거나 수정하지 마세요.
+
+### 설정에서 볼 부분
+
+template의 `premake5.lua`는 OGN 생성 작업을 C++ 컴파일보다 앞에 둡니다. `project_ext_ogn(...)`이 노드 선언을 처리하고, plugin target에 `plugins/nodes`와 OGN 의존성을 연결합니다. `REGISTER_OGN_NODE()`는 빌드한 노드 타입의 등록·해제 정보를 제공합니다.
+
+빌드 로그에서 OGN 처리와 C++ 컴파일·링크를 구분해 보세요. 헤더가 없다는 오류가 나면 C++ 문법보다 먼저 `.ogn` 처리 단계가 성공했는지 확인해야 합니다.
+
+## 2. 입력을 바꾸고 평가한 다음 출력 읽기
+
+template 앱의 **Window > Extensions**에서 `omni.example.cpp.omnigraph_node`를 켭니다. Graph 편집기에서는 **Korean Positive Cpp**라는 표시 이름으로 찾을 수 있습니다. 아래 절차는 **Window > Script Editor**에서 실행합니다. 최소 template 앱에 이 메뉴가 없다면 확장 관리자에서 `omni.kit.window.script_editor`를 켜세요. Graph 편집기 없이도 아래 코드로 그래프를 만들고 평가할 수 있습니다.
+
+새 Stage를 준비한 뒤 다음 코드로 Push Graph와 노드 하나를 만듭니다.
 
 ```python
 import omni.graph.core as og
+
 graph, _, _, _ = og.Controller.edit(
     {"graph_path": "/CppCheck", "evaluator_name": "push"},
-    {og.Controller.Keys.CREATE_NODES: [("positive", "omni.example.cpp.omnigraph_node.ExampleNode")],
-     og.Controller.Keys.SET_VALUES: [("positive.inputs:value", 2.0)]})
-og.Controller.evaluate_sync(graph)
-print(og.Controller.attribute("/CppCheck/positive.outputs:positive").get())
+    {
+        og.Controller.Keys.CREATE_NODES: [
+            ("positive", "omni.example.cpp.omnigraph_node.ExampleNode")
+        ],
+        og.Controller.Keys.SET_VALUES: [
+            ("positive.inputs:value", 2.0)
+        ],
+    },
+)
 ```
 
-6. template 앱을 종료한 뒤 Isaac Sim 5.1을 `--ext-folder /absolute/path/to/this-package/output/cpp-template/_build/linux-x86_64/release/exts --enable omni.example.cpp.omnigraph_node`로 시작하여 같은 노드 등록을 확인한다. binary ABI/extension dependency 오류가 나면 성공으로 처리하지 않는다.
+표시 이름과 타입 이름은 다릅니다. 생성할 때 쓰는 전체 타입 이름은 확장 경로와 선언의 `ExampleNode`를 연결한 문자열입니다.
 
-## C++/USD 개념
+### 코드에서 볼 부분
 
-`db.inputs.value()`와 `db.outputs.positive()`는 생성 Database의 typed accessors다. `compute` 반환 true는 계산 완료, 출력 false는 비교 결과다. `REGISTER_OGN_NODE()`는 컴파일된 node type 등록/해제 정보를 연결한다. `.ogn`의 타입을 바꾸면 generated header가 달라지므로 다시 빌드해야 한다. C++ 노드는 USD prim 자체를 만드는 코드가 아니라 graph 평가에 참여하는 계산 코드다.
+생성한 그래프에서 값을 바꾸고 평가한 다음 읽습니다.
 
-한 변수 실험: 비교식만 `> 0.0`에서 `>= 0.0`으로 바꾸고 재빌드하여 경계 입력 0을 검사한다. graph에 노드가 없으면 extension Enabled/빌드 target/Console을 확인한다. 이 패키지는 C++ build와 GPU 로드를 실행하지 않았다.
+```python
+input_attr = og.Controller.attribute("/CppCheck/positive.inputs:value")
+output_attr = og.Controller.attribute("/CppCheck/positive.outputs:positive")
 
-## 검증 범위
+for value in (-1.0, 0.0, 2.0):
+    og.Controller.set(input_attr, value)
+    og.Controller.evaluate_sync(graph)
+    print(value, output_attr.get())
+```
 
-제공 `.ogn`과 C++ 비교 구현을 대조했다. 외부 template 빌드와 Kit/Isaac Sim에서의 실제 로드는 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 기준을 실제 실행 후 확인해야 한다.
+`evaluate_sync` 다음에 출력을 읽는 순서를 확인하세요. 노드가 존재한다는 사실과 이번 입력으로 계산했다는 사실을 구분하기 위한 코드입니다. 같은 Stage에서 첫 그래프 생성 코드를 반복하지 말고 두 번째 값 변경 코드만 실행하세요.
 
-## 출처
+### 실행 결과 확인하기
 
-- [Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_custom_cpp_nodes.html).
+```text
+-1.0 False
+0.0 False
+2.0 True
+```
+
+0은 양수가 아니므로 False입니다. 이때 C++ `compute`는 `true`를 반환합니다. 출력 `positive`는 수학적 판정이고 함수 반환값은 계산 성공 여부이므로 모순되지 않습니다.
+
+template 앱을 닫은 다음 같은 터미널에서 Isaac Sim을 실행합니다.
+
+```bash
+~/isaacsim/isaac-sim.sh \
+  --ext-folder "$lesson_dir/output/cpp-template/_build/linux-x86_64/release/exts" \
+  --enable omni.example.cpp.omnigraph_node
+```
+
+새 Stage에서 위 생성·평가 코드를 다시 실행하여 세 결과를 확인하세요. template 빌드와 Isaac Sim host의 native 로드는 각각 확인해야 합니다. Script Editor의 관찰이 끝나면 앱을 닫습니다.
+
+## 3. 선언·빌드·평가의 연결 정리
+
+```text
+.ogn 포트 선언 → Database 헤더 생성 ─┐
+                                    ├→ plugin 빌드 → 확장 로드
+.cpp의 compute + REGISTER_OGN_NODE ─┘                 ↓
+값 설정 → graph 평가 → compute 실행 → positive 출력 읽기
+```
+
+**입력과 출력의 이름은 선언에서 시작해 생성 헤더와 그래프 속성까지 이어집니다.** 이 이름을 일관되게 유지해야 C++ 계산이 기대한 포트를 읽고 쓸 수 있습니다.
+
+이번 노드는 숫자만 계산합니다. 로봇이나 USD 도형을 만드는 기능은 없으므로 장면의 움직임 대신 출력 세 값이 확인 기준입니다.
+
+## 4. 간단한 확인 실험
+
+template에 복사한 `OgnExampleNode.cpp`의 **`> 0.0`을 `>= 0.0`으로** 바꾸세요. 앱을 종료하고 재빌드한 뒤 새 앱에서 세 입력을 평가합니다.
+
+- -1: 계속 False
+- 0: **True로 변경**
+- 2: 계속 True
+
+연산자 하나가 바뀌었는지 확인하는 데에는 0이 가장 유용한 입력입니다. 실험 후 원래 비교식으로 되돌리세요. 새 의미를 유지하려면 `.ogn`의 설명도 음이 아닌 수의 판정에 맞춰 변경해야 합니다.
+
+## 실행할 때 막히면
+
+- **`OgnExampleNodeDatabase.h`를 찾지 못함:** 두 파일을 같은 nodes 경로에 복사했는지와 OGN 생성 단계 오류를 확인하세요.
+- **노드 타입을 찾지 못함:** 확장 Enabled 상태와 plugin 로드 로그를 확인하세요. 검색 표시 이름과 생성 코드의 전체 타입 이름도 구분합니다.
+- **입력만 바꿨는데 결과가 그대로임:** `evaluate_sync(graph)`를 실행한 뒤 출력 속성을 읽으세요.
+- **Isaac Sim에서만 plugin 로드 실패:** SDK·ABI·확장 의존성 오류를 확인하세요. template 앱의 성공으로 host 통합까지 확인된 것은 아닙니다.
+- **기존 `/CppCheck` 관련 오류:** 새 Stage에서 생성 코드부터 시작하거나 이미 만든 그래프에는 값 변경 코드만 실행하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Custom C++ Nodes](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_custom_cpp_nodes.html)에 대응합니다. 빌드 연결은 [고정 template의 OmniGraph premake 파일](https://github.com/NVIDIA-Omniverse/kit-extension-template-cpp/blob/e8b660c96183f4a35f12f5ff75e37756ae6aee3b/source/extensions/omni.example.cpp.omnigraph_node/premake5.lua)과 대조했습니다.
+
+제공 파일은 원래 예제 노드를 작은 양수 판정으로 바꿉니다. 이번 개정에서는 선언·계산식·빌드 경로를 검토했으며 외부 빌드와 두 host에서의 그래프 실행은 하지 않았습니다. `tutorial.json`의 검증 상태는 `not_run`입니다.

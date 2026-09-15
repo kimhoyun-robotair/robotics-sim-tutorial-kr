@@ -1,67 +1,117 @@
-# 69. 사용자 패턴을 보내는 PhysX 거리 센서
+# 69. 직접 만든 광선 패턴으로 벽을 스캔하기
 
-권장 학습 순서 **69** · 센서와 측정 데이터 · 출처 ID `t156`
+## 이번에 배우는 것
 
-로컬 벽에 지그재그 광선을 보내고 마지막 깊이 버퍼와 실제 입력 패턴을 저장합니다. 원문의 배치 전송을 작은 샘플로 구현했습니다.
+**PhysX Generic Sensor에 광선 방향 배열을 공급하고, 보낸 패턴 전체와 마지막에 읽은 거리 버퍼를 구별합니다.**
 
-## 이 실습의 의도
+일반적인 회전 센서는 정해진 각도 순서대로 스캔합니다. Generic Sensor에서는 사용자가 광선 하나하나의 방향을 배열로 만들어 보낼 수 있습니다. 이번에는 넓은 벽 앞에서 가로로 왕복하고 세로로 움직이는 패턴을 만들어, 방향 입력이 측정으로 이어지는 과정을 살펴봅니다.
 
-PhysX Generic Sensor에 직접 만든 광선 방향 배열을 공급하여, 거리 측정이 센서 생성만으로 끝나지 않고 배치 요청과 패턴 전송을 필요로 함을 익힌다. x=5 m의 넓은 벽과 고정 센서를 사용해 입력 각도 변화가 벽 위의 스캔 자국과 거리로 나타나게 했다. 기본 실행은 요청이 있을 때 12,000개 패턴을 다시 공급하고, 입력 패턴 전체와 마지막 깊이 버퍼를 저장한다.
+| 구성 | 이 실습의 값 |
+|---|---|
+| 센서 위치 | `(0,0,1)` m |
+| 벽 | 중심 x=5 m, 두께 0.2 m, 너비 8 m, 높이 4 m |
+| 정면 벽 표면 | 센서 앞 x=4.9 m |
+| 패턴 배치 | 광선 12,000개의 방향 |
+| 처리율 | 초당 2,400광선 |
+| 물리·렌더 간격 | 1/60초 |
 
-## 실행 후 확인할 것
+여기서 **배치(batch)**는 한 번에 전달하는 여러 광선의 묶음입니다. 배치를 보냈다는 사실과 그 모든 광선의 결과를 저장했다는 사실은 다릅니다.
 
-- **실제로 보낸 입력**: `pattern_and_depth.npz`의 `angles_rad`는 `[2,12000]`, `origin_offsets_m`는 `[12000,3]`이며 기본 offset은 0이다. 첫 행은 azimuth, 둘째 행은 이 구현에서 수평을 0으로 쓰는 elevation 형태의 각도이며 단위는 rad다.
-- **벽까지의 거리**: `depth_m`이 비어 있지 않고 벽에 맞은 광선에 20 m 미만의 실제 거리가 있는지 본다. 벽 앞면 x=4.9 m는 정면 기준이며, 기울어진 광선의 사선 거리는 그보다 길 수 있다.
-- **배치와 프레임을 구별**: `measurements.json`의 `batches_sent`, `rays_in_batch`, `last_depth_count`를 비교한다. 2,400 rays/s를 60 Hz로 처리하므로 프레임당 약 40개가 기준이고, 마지막 `depth_m`을 12,000개 입력 전체의 일대일 측정 결과로 연결하지 않는다.
-- **패턴 변경**: GUI의 `/World/Wall` 위 점과 `angles_rad`를 함께 보며 `zigzag`와 `two-band`의 세로 방향 분포를 비교한다. `--steps 600`에서는 `send_next_batch` 요청에 따라 계속 공급되는지 보고 배치 요청 횟수 자체를 고정하지 않는다.
-- **저장 시점과 유효성**: 기본 240스텝 후 잠시 pause하여 마지막 버퍼를 저장하고 GUI에서는 재생을 재개한다. 이후 패턴은 계속 공급하지만 NPZ는 추가되지 않으며, 최대거리 20 m의 값은 벽 검출의 증거로 세지 않는다.
+## 1. 기본 지그재그 패턴 실행하기
 
-## 이 패키지만으로 준비하기
-
-Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.
-
-```bash
-export ISAAC_SIM_PATH=/path/to/isaacsim
-cd src/69_sensors_sensors_physx_generic
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/run-01
-```
-
-출력 폴더는 **존재하지 않는 새 경로**를 지정합니다. 이미 있으면 오류로 멈추어 이전 결과를 보호합니다. `--output`을 생략하면 이 패키지의 `output/날짜_시간/`에 저장합니다.
-
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 물리·렌더링·센서 갱신 및 패턴 공급이 계속됩니다. 처음 240스텝 뒤 입력 패턴과 마지막 깊이 버퍼를 한 번 저장하며, 이후 관찰 중에는 파일을 추가하거나 바꾸지 않습니다. `--steps N`에 양수를 주면 N스텝 뒤 스냅샷을 저장하고 종료합니다. `--headless`만 사용하면 기존과 같이 240스텝 후 종료합니다. `--interactive`는 기존 명령 호환용이며 이제 필요하지 않습니다. 명시한 `--steps`의 종료 조건을 해제하지 않고, `--headless`와 함께 사용할 수 없습니다.
-
-run.py는 standalone 실행용이므로 Script Editor에 전체를 붙이지 않습니다. 처음 240스텝을 마치기 전에 창을 닫으면 결과 파일은 완성되지 않을 수 있습니다.
-
-창 없이 유한 실행으로 결과만 만들 때는 별도의 새 출력 경로를 사용합니다.
+Isaac Sim 5.1과 지원 NVIDIA GPU 환경에서 저장소 루트 기준으로 실행하세요.
 
 ```bash
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --steps 240 --output output/batch-01
+~/isaacsim/python.sh src/69_sensors_sensors_physx_generic/run.py --steps 240 --output src/69_sensors_sensors_physx_generic/output/zigzag
 ```
 
-## 실습 순서와 관찰
+설치 위치가 다르면 `~/isaacsim`을 바꿉니다. 240단계 후 입력 패턴과 마지막 거리 버퍼를 저장하고 종료합니다. 출력 폴더는 새 경로여야 합니다. 생략하면 이 튜토리얼의 `output/날짜_시간/`에 저장합니다.
 
-1. 기본 실행 후 `pattern_and_depth.npz`의 angles_rad, origin_offsets_m, depth_m를 확인합니다. 벽 중심은 x=5 m이고 앞면은 4.9 m이므로 정면 광선은 그 부근을 읽습니다.
-2. `measurements.json`의 batches_sent와 rays_in_batch를 봅니다. batch=12,000, sampling_rate=2,400이면 약 5초 분량이며 60 fps에서 40개 광선/프레임을 공급할 수 있습니다.
-3. `--steps 600 --output output/long`으로 여러 배치 요청을 관찰합니다. send_next_batch가 true일 때만 새 배열을 보냅니다.
-4. `--pattern two-band --output output/two-band`로 패턴 형태만 바꿔 연속 세로 스윕과 두 높이 띠를 비교합니다. 로컬 코드는 두 패턴 모두 필요할 때 같은 배치를 다시 공급합니다. 확장 내부의 별도 반복 모드를 설정했다고 주장하지 않습니다.
-5. GUI 실행에서 벽에 맞는 점 모양을 봅니다. 원래 UI 실습은 **Window > Examples > Robotics Examples > Sensors > Custom Pattern Range Sensor > Load Sensor > Load Scene > Set Sensor Pattern > Play** 순서입니다. **Save Pattern Image**로 지그재그 자국 이미지를 저장할 수 있습니다.
+GUI를 계속 보려면 `--steps 240`을 빼세요. 처음 기록을 저장한 뒤 재생을 재개하고 요청에 따라 광선 패턴을 계속 공급합니다. 벽에 그려지는 점을 관찰할 수 있지만 저장 NPZ에는 이후 측정이 추가되지 않습니다. `--headless`를 추가하면 창 없이 결과를 만듭니다.
 
-## API와 USD 개념
+### 실행 결과 확인하기
 
-Generic sensor는 PhysX raycast로 collider까지 기하학적 깊이를 측정합니다. `RangeSensorCreateGeneric`가 sensor prim을 생성하고 `_range_sensor.acquire_generic_sensor_interface()`가 batching과 읽기를 제공합니다.
+`pattern_and_depth.npz`에는 세 배열이 있습니다.
 
-문서의 입력 CSV 설명은 N×2 [azimuth,zenith]이고 실제 binding에 보내는 배열은 **2×N, radians, 연속 메모리**입니다. 따라서 CSV degrees는 `np.deg2rad(np.loadtxt(path,delimiter=',')).T.copy()`로 변환합니다. origin_offsets는 N×3입니다. 설치 5.1 테스트에서는 두 번째 각 0이 수평 광선이므로 본 코드도 수평 기준 elevation 형태의 숫자를 사용합니다. 원문의 'z축 기준 zenith' 설명만 믿고 π/2를 더하지 마세요.
+| 배열 | 기본 형태 | 의미 |
+|---|---|---|
+| `angles_rad` | `[2,12000]` | 첫 행은 수평각, 둘째 행은 수직 방향 각도 |
+| `origin_offsets_m` | `[12000,3]` | 각 광선의 원점 이동량; 이 실습에서는 모두 0 |
+| `depth_m` | 마지막 거리 버퍼의 형태 | 마지막 측정 묶음의 거리(m) |
 
-batch가 프레임당 필요한 광선보다 작으면 원하는 sampling_rate를 유지하지 못합니다. streaming은 소비 전에 다음 배치를 공급하는 방식입니다. 원문 GUI 예제에는 한번 보낸 패턴을 반복하는 모드도 있으며 Open Source Code의 `_streaming=False` 변형으로 비교할 수 있습니다.
+`measurements.json`에서는 `batches_sent`, `rays_in_batch`, `last_depth_count`, `min_depth_m`을 비교하세요. 입력은 12,000개인데 마지막 거리는 약 40개일 수 있습니다. 2,400광선/초를 60 Hz로 처리하면 **한 프레임 분량은 약 40광선**이기 때문입니다.
 
-## 확장 실습·성공 기준·문제 해결
+벽에 맞은 거리는 정면 기준 4.9 m 부근이지만 기울어진 광선은 사선으로 더 멀리 이동합니다. 최대거리 20 m의 값만 있는지, 실제 벽까지의 반환이 있는지 구분하세요. 코드의 자동 검사는 깊이 버퍼가 비었는지만 확인합니다.
 
-광선 원점 offset을 모두 z=0.2 m로 변경하는 추가 실험은 패턴을 유지한 채 맞는 위치만 옮깁니다. 본 패키지에는 원점 0 배열을 저장하므로 재현하기 쉽습니다. depth가 비어 있으면 timeline Play, send_next_batch 응답, collision 설정과 단위를 확인합니다. max_range=20에 도달한 값은 벽 표면 거리로 세지 마세요. 이 PhysX 모델은 RTX의 재질 투과·반사 모델이 아닙니다.
+## 2. 방향 배열과 다음 배치 요청 따라가기
 
-## 출처와 검증 범위
+### 코드에서 볼 부분
 
-- [NVIDIA Isaac Sim 5.1.0 — PhysX SDK Generic Sensor](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physx_generic.html)
-- 구현 API는 설치된 5.1 `exts/`와 해당 `standalone_examples/` 원본을 함께 확인했습니다. 원문과 다른 작은 장면·GUI 관찰 루프·측정 스냅샷 저장은 이 패키지에서 추가했습니다.
+```python
+phase = np.linspace(0,1,12000,endpoint=False)
+azimuth = .5*(2/np.pi)*np.arcsin(np.sin(2*np.pi*10*phase))
+elevation = .2*np.sin(2*np.pi*phase)
+pattern = np.stack((azimuth,elevation)).copy()
+offsets = np.zeros((pattern.shape[1],3))
+```
 
-현재 확인한 실행 조건과 실제 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에 기록했습니다. `tutorial.json`의 `partial_runtime_verified`는 그 조건에 한정된 검증이며, 다른 모드와 GUI·외부 통합 전체의 검증을 뜻하지 않습니다.
+`phase`는 패턴 처음부터 끝까지의 진행 비율입니다. 수평각은 약 -0.5~0.5 rad 범위를 열 번 왕복하고 수직각은 약 -0.2~0.2 rad 범위를 천천히 오르내립니다. 빠른 가로 왕복에 느린 세로 이동이 겹쳐져 지그재그가 됩니다.
+
+배열을 `np.stack`하면 두 행에 각도를 담는 `[2,N]` 형태가 됩니다. 원문에서 패턴을 `[N,2]`로 설명하는 부분과 실제 binding 입력 형태를 혼동하지 마세요. 로컬 코드와 설치 5.1 테스트는 `[2,N]`을 사용합니다. 각도는 rad이고, 이 구현에서 두 번째 각도 0은 수평 광선입니다.
+
+```python
+if interface.send_next_batch(path):
+    interface.set_next_batch_rays(path, pattern)
+    interface.set_next_batch_offsets(path, offsets)
+    batches += 1
+```
+
+`send_next_batch()`는 다음 데이터를 보낼 시점인지 확인하는 요청입니다. 참일 때 방향과 원점 배열을 함께 전달합니다. 센서를 만들기만 하고 방향을 공급하지 않으면 의도한 광선이 생기지 않습니다. 같은 패턴을 반복해 보내더라도 매 프레임 무조건 덮어쓰는 방식은 아닙니다.
+
+### 입력과 출력의 대응에서 볼 부분
+
+12,000개를 초당 2,400개씩 소비하면 한 배치는 명목상 5초 분량입니다. 기본 240단계는 약 4초이므로 패턴 전체를 한 번 모두 관찰하는 시간보다 짧습니다. GUI를 계속 열어 두면 더 긴 스캔을 볼 수 있습니다.
+
+스크립트는 마지막에 `world.pause()`와 앱 업데이트를 거친 뒤 깊이를 읽습니다. **NPZ의 첫 번째 입력 광선과 첫 번째 저장 깊이가 같은 광선이라고 대응시키면 안 됩니다.** 파일에는 전체 입력과 마지막 출력만 있으며, 전 구간의 광선별 시간·인덱스를 누적하지 않습니다.
+
+### GUI의 패턴 예제와 비교하기
+
+현재 실행을 닫고 새 Isaac Sim 창에서 **Window > Examples > Robotics Examples > Sensors > Custom Pattern Range Sensor**를 여세요. **Load Sensor → Load Scene → Set Sensor Pattern → Play** 순서로 진행합니다. 센서와 장면만 불러온 뒤 패턴을 공급하지 않으면 원하는 스캔이 시작되지 않는다는 점을 UI에서도 확인할 수 있습니다.
+
+벽에 나타나는 스캔 자국을 살펴보고 **Save Pattern Image**로 이미지를 저장해 보세요. **Open Source Code**에서는 패턴의 방향 배열과 반복 공급 부분을 찾아 로컬 `send_next_batch()` 흐름과 비교합니다. 공식 GUI 예제에는 자체 반복 모드도 있지만 로컬 실행은 요청이 올 때 동일 배치를 다시 보내는 방식입니다. GUI 이미지와 로컬 NPZ는 서로 다른 결과 파일입니다. [공식 Generic Sensor GUI 절차](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physx_generic.html#physx-sdk-generic-sensor-example)를 참고하세요.
+
+## 3. 패턴 공급과 센서 측정의 흐름 정리
+
+```text
+수평·수직 각도로 12,000개 광선 준비
+    → 센서의 다음 배치 요청 확인
+    → 방향 배열과 원점 배열 전달
+    → 프레임마다 일부 광선의 collider 거리 계산
+    → 마지막 깊이 버퍼 저장
+```
+
+입력 배열은 센서가 어디를 보게 할지 정하고, 처리율은 그 입력을 얼마나 빠르게 사용할지 정합니다. 벽의 collider는 실제로 맞는 표면을 정합니다. 출력 개수만 보고 입력 누락으로 판단하기 전에 **한 배치·한 프레임·저장 범위**를 구분해 보세요.
+
+## 4. 간단한 확인 실험
+
+패턴만 두 개의 높이 띠로 바꿔 보세요.
+
+```bash
+~/isaacsim/python.sh src/69_sensors_sensors_physx_generic/run.py --steps 240 --pattern two-band --output src/69_sensors_sensors_physx_generic/output/two-band
+```
+
+이 모드의 수직각은 배치 앞 절반에서 -0.2 rad, 뒤 절반에서 +0.2 rad입니다. `angles_rad`의 두 번째 행이 연속적으로 변하던 기본 패턴과 비교하세요. 수평 왕복과 광선 수, 처리율은 그대로입니다. GUI에서는 연속적인 세로 스윕 대신 두 높이로 점이 모이는지 관찰합니다. 마지막 깊이 버퍼 하나에 두 띠의 모든 결과가 들어 있을 것을 요구하지 마세요.
+
+## 실행할 때 막히면
+
+- **`No generic sensor depth`**: timeline이 진행했는지, 다음 배치 요청에 방향 배열을 보냈는지 확인하세요. 너무 짧은 실행은 초기 공급 후 측정 시간을 확보하지 못할 수 있습니다.
+- **방향이 엉뚱함**: `[2,N]` 형태, rad 단위, 두 번째 각도의 수평 기준을 대조하세요.
+- **거리 배열이 12,000개보다 작음**: 마지막 프레임 버퍼이므로 가능한 결과입니다. `last_depth_count`와 초당 광선 수를 비교하세요.
+- **깊이가 모두 최대거리임**: 벽 collider와 광선 방향을 확인하세요. 버퍼 존재만으로 벽 검출이 확인되지는 않습니다.
+- **배치 전송 횟수가 예상과 다름**: 요청은 내부 버퍼 공급 상태에 따라 발생합니다. 정확히 몇 번이라는 숫자보다 요청에 응답하고 실제 깊이가 나오는지 확인하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [PhysX SDK Generic Sensor](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physx_generic.html)에 대응합니다. 공식 패턴 공급 개념을 작은 배치와 로컬 벽으로 구성했습니다. 입력 형태와 수평 기준 각도는 설치된 `test_generic.py`를 대조했습니다.
+
+기존 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)는 기본 패턴의 headless 30단계에서 배치 전송 2회, 마지막 깊이 40개, 최소 거리 약 4.975 m를 확인한 과거 기록입니다. 현재 파일의 재실행이나 두 띠·GUI 패턴 시험까지 확인한 결과는 아닙니다. 이번 문서 작업에서는 실제 센서를 새로 실행하지 않았으며, 전체 스캔 누적도 이 실습의 구현 범위에 포함되지 않습니다.

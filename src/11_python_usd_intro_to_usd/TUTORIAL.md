@@ -1,55 +1,155 @@
-# 11. USD 저장과 참조: 로봇만 재사용하는 defaultPrim
+# 11. 로봇 USD를 참조할 때 환경까지 따라오지 않게 만들기
 
-권장 학습 순서 **11** · Python 실행 환경과 USD 기초 · 출처 ID `t174`
+## 이번에 배우는 것
 
-## 이 실습의 의도
+**로봇을 대표하는 defaultPrim을 정하고, 같은 USD를 두 번 배치하면서 한쪽만 수정하는 방법을 배웁니다.**
 
-Cube 몸체와 Cylinder 바퀴 두 개로 만든 시각적 모형을 사용해, USD 자산에서 재사용할 루트를 `defaultPrim`으로 지정하는 이유를 익힌다. 환경은 로봇과 나란한 `/World`에 두고 `/mock_robot`만 두 번 참조하여, 로봇을 가져올 때 조명·물리 설정이 함께 중복되는 일을 피한다. 기본 실행은 `robot.usda`, 두 배치와 색 override를 담은 `assembly.usda`, 합성 결과인 `flattened.usda`, 구조 보고서 `composition.json`을 만든다. 관절·강체 제어를 만들지 않으므로 이 모형은 주행하지 않는다.
+로봇 자산을 다른 장면으로 가져올 때 원본의 조명과 물리 환경까지 따라오면 관리하기 어렵습니다. 이번에는 큐브 몸체와 원통 바퀴 두 개로 작은 시각적 모형을 만들고, 재사용할 로봇 루트와 환경 루트를 나눕니다.
 
-## 실행 후 확인할 것
+| 파일 | 담는 내용 | 확인할 차이 |
+|---|---|---|
+| `robot.usda` | 로봇 모형과 별도 환경 루트입니다. | defaultPrim은 `/mock_robot`입니다. |
+| `assembly.usda` | 원본 로봇을 두 곳에 참조합니다. | RobotB 몸체에만 파란색을 덮어씁니다. |
+| `flattened.usda` | 참조를 합성한 결과를 내보냅니다. | 두 로봇의 Prim 구조가 유지됩니다. |
+| `composition.json` | 각 Stage의 Prim 목록입니다. | 가져온 범위와 평탄화 결과를 비교합니다. |
 
-- `robot.usda`와 `composition.json`의 `asset_default_prim`을 확인한다. 기본 Prim은 `/mock_robot`이며 그 아래 `body`, `wheel_left`, `wheel_right`가 있고, 환경의 `/World/PhysicsScene`과 `/World/Light`는 별도 루트 아래에 있어야 한다.
-- `assembly.usda`를 열어 `/World/RobotA`, `/World/RobotB` 아래에 각각 같은 몸체와 바퀴가 생겼는지 본다. 두 루트의 X 위치는 −1과 +1이며 각 로봇 아래에 원본의 `/World` 환경 계층이 따라오지 않아야 한다.
-- `/World/RobotB/body`만 파란색인지 확인하고 원본 `robot.usda`를 따로 열어 비교한다. 파란 `displayColor` 의견은 assembly에 작성되므로 RobotA와 원본 body까지 같은 색으로 바뀌는 것이 목표가 아니다.
-- `composition.json`의 `assembly_prims`와 `flattened_prims`를 비교한다. 평탄화한 파일에서도 두 로봇과 각 body/wheel Prim 구조가 유지되어야 한다. Flatten은 참조 합성 결과를 저장하며 여러 도형을 하나의 메시로 병합하지 않는다.
-- 화면에서 모형이 움직이지 않아도 정상이다. 기본 실행은 장면 작성·재개방 후 `app.update()`로 표시를 유지하며, `--steps`를 늘린다고 주행 제어가 추가되지 않는다.
+**defaultPrim은 USD 파일에서 대표로 사용할 루트 Prim입니다.** 참조 대상의 세부 Prim 경로를 생략하면 이 루트가 선택됩니다. 이 모형에는 관절·강체·주행 제어를 추가하지 않습니다.
 
-## 독립 패키지 준비와 실행 규칙
+## 1. 로봇 자산과 두 배치 만들기
 
-이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
+Isaac Sim 5.1과 지원 GPU·드라이버를 준비하세요. 기본 도형만 사용하므로 외부 로봇·텍스처가 필요하지 않습니다. 저장소 루트에서 실행합니다.
 
-이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
+```bash
+~/isaacsim/python.sh src/11_python_usd_intro_to_usd/run.py --steps 120
+```
 
-## 순서대로 실습
+설치 위치가 다르면 `~/isaacsim`을 바꿉니다. 파일을 만든 뒤 앱을 120번 업데이트하고 종료합니다. 이 횟수는 물리 단계가 아니라 화면을 유지하는 앱 업데이트 수입니다. `--steps`를 생략하면 GUI를 계속 열어 두며, Headless 실행은 `--headless`를 추가합니다. Headless에서 생략한 횟수는 120입니다.
 
-1. `~/isaacsim/python.sh run.py`를 실행한다. `robot.usda`의 루트에는 `/mock_robot`과 `/World`가 있으며 `/World`에는 PhysicsScene/Light가 있다.
-2. `/mock_robot` 아래 `body`, `wheel_left`, `wheel_right`를 찾는다. defaultPrim은 `/mock_robot`이다. 자산 내부를 본인에게 의미 있는 이름으로 정리하는 것이 재사용의 시작이다.
-3. `assembly.usda`를 연다. `/World/RobotA`와 `/World/RobotB`가 같은 `robot.usda`를 reference하면서 다른 위치에 놓인다. 환경 PhysicsScene이 각 로봇 밑에 복제되지 않는지 확인한다.
-4. RobotB의 body에는 현재 assembly layer에서 파란색 override를 작성한다. 원본 robot 파일을 편집하지 않아도 참조 위에 더 강한 의견을 쓸 수 있다. `robot.usda`를 따로 열어 원본에 파란색이 저장되지 않았음을 확인한다.
-5. `flattened.usda`와 assembly의 Prim 목록을 `composition.json`에서 비교한다. Flatten은 참조/레이어의 합성 결과를 평탄화한다. **메시들을 하나의 메시로 병합하는 기능은 아니다.** 원문 설명의 표현과 구분해야 한다.
-6. 파일을 옮길 때는 `assembly.usda`와 참조 `robot.usda`를 함께 옮긴다. 이 패키지는 외부 텍스처가 없지만 실제 자산에서는 texture/MDL 종속성도 남을 수 있다.
+### 코드에서 볼 부분
 
-## GUI로 동일한 구조 만들기
+원본은 다음 계층으로 구성합니다.
 
-1. 새 GUI에서 **File > New**를 선택한다. **Create > Xform**으로 `mock_robot`을 만들고 Cube와 Cylinder 두 개를 그 아래로 드래그한다. 각각 `body`, `wheel_left`, `wheel_right`로 바꾼다.
-2. Property에서 body 한 변 0.6 m, 중심 Z=0.4 m, 바퀴 반지름 0.2 m·높이 0.1 m·축 Y·위치 Y=±0.4 m, Z=0.2 m로 맞춘다. 필요하면 Cube의 Size와 Scale을 함께 확인한다.
-3. 지면/조명/PhysicsScene은 `/World` 아래에 둔다. 로봇이 World의 자식이면 로봇을 선택하고 **Edit > Unparent**로 루트 수준으로 옮긴다.
-4. `mock_robot`을 우클릭해 **Set as a Default Prim**을 지정한다. **File > Save As**로 새 `.usda` 파일에 저장한다.
-5. **File > New**, **File > Add Reference**로 방금 저장한 파일을 넣는다. 또는 Content에서 파일을 viewport로 드래그한다. 로봇만 들어오고 환경은 들어오지 않는지 확인한다.
-6. defaultPrim을 World로 바꾼 원본 복사본을 만들어 참조 결과를 비교한다. 어떤 루트가 선택되는지 직접 확인한 후 원래 파일은 유지한다.
-7. 실제 자산을 모으려면 저장한 USD를 Content에서 우클릭하고 **Collect Asset**을 사용한다. 폴더만 이동하기 전에 수집 경로와 결과 자산을 다시 열어 참조가 해결되는지 검사한다.
+```text
+robot.usda
+├─ /mock_robot                 ← defaultPrim
+│  ├─ body                     ← Cube
+│  ├─ wheel_left               ← Cylinder
+│  └─ wheel_right              ← Cylinder
+└─ /World
+   ├─ PhysicsScene
+   └─ Light
+```
 
-## 저장과 로딩 선택
+몸체는 한 변 0.6 m, 중심 Z=0.4 m입니다. 두 바퀴는 반지름 0.2 m, 높이 0.1 m이고 원통 축은 Y입니다. 중심은 Y=±0.4 m, Z=0.2 m로 놓아 몸체 양옆에 배치합니다.
 
-`Open`은 Stage 자체를 편집한다. `Add Reference`는 현재 장면에 외부 자산을 합성하며 root layer의 override로 모습을 바꿀 수 있다. 참조 원본의 Prim을 현재 레이어에서 곧바로 삭제하는 것과 비활성화 의견을 쓰는 것은 다르다. `Save`는 해당 레이어를 저장하고, `Save As`는 새 이름을 사용한다. `Save Flattened As`는 합성된 장면을 저장하지만 텍스처 파일을 자동으로 전부 내장하지 않는다.
+```python
+asset.SetDefaultPrim(robot.GetPrim())
+asset.GetRootLayer().Save()
+```
 
-## 한 가지 변수 실험과 문제 해결
+`robot`은 `/mock_robot`을 가리킵니다. 이 줄은 환경을 삭제하는 것이 아니라, 다른 장면에서 기본적으로 참조할 루트를 지정합니다. 따라서 `robot.usda` 자체를 열면 `/World`도 보입니다.
 
-RobotB의 위치 X만 1.0에서 2.0으로 바꾸고 두 인스턴스가 독립 배치되는지 본다. 장면이 비어 보이면 자산 경로와 defaultPrim 존재를 확인한다. 로봇마다 빛/중력이 중복되면 환경이 defaultPrim의 자식인지 확인한다. 원본이 읽기 전용이어도 현재 작업 레이어에 override를 쓸 수 있다.
+조립 장면에서는 같은 파일을 두 경로에 참조합니다.
 
-## 출처와 검증 범위
+```python
+for name, x in (("RobotA", -1.0), ("RobotB", 1.0)):
+    prim = UsdGeom.Xform.Define(assembly, "/World/" + name)
+    prim.GetPrim().GetReferences().AddReference("robot.usda")
+    prim.AddTranslateOp().Set(Gf.Vec3d(x, 0, 0))
+```
 
-- NVIDIA Isaac Sim **5.1.0**, [Working with USD](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/intro_to_usd.html): 이 패키지가 대응하는 공식 페이지. 문장과 실행 코드는 초심자용으로 재구성했다.
-- 구현 API는 로컬 Isaac Sim 5.1 설치의 해당 `isaacsim`/Kit/USD 소스와 대조했다. 원문의 외부 최신 버전 링크는 5.1 설치와 UI/API가 다를 수 있다.
+참조에 `/mock_robot` 경로를 직접 쓰지 않았습니다. 원본의 defaultPrim이 선택되므로 그 하위 몸체·바퀴만 각 배치 아래 합성됩니다. 조립 장면의 조명과 PhysicsScene은 `/World` 아래에 한 번 따로 만듭니다.
 
-현재 확인한 실행 조건과 실제 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에 기록했습니다. `tutorial.json`의 `partial_runtime_verified`는 그 조건에 한정된 검증이며, 다른 모드와 GUI·외부 통합 전체의 검증을 뜻하지 않습니다.
+### 실행 결과 확인하기
+
+결과는 이 폴더의 `output/날짜-시간/`에 생깁니다. GUI에 열린 `assembly.usda`에서 다음 구조를 확인하세요.
+
+```text
+/World
+├─ Light
+├─ PhysicsScene
+├─ RobotA                     ← X=-1 m
+│  ├─ body
+│  ├─ wheel_left
+│  └─ wheel_right
+└─ RobotB                     ← X=+1 m
+   ├─ body
+   ├─ wheel_left
+   └─ wheel_right
+```
+
+각 로봇 아래에 원본의 `/World` 환경이 따라오지 않아야 합니다. `composition.json`의 `asset_default_prim`은 `/mock_robot`이고, `assembly_prims`에는 위의 11개 Prim이 있어야 합니다. 모형이 주행하지 않는 것도 예상된 동작입니다.
+
+## 2. 한쪽 색만 바꾸고 저장 방식 비교하기
+
+### 코드에서 볼 부분
+
+```python
+UsdGeom.Cube.Get(assembly, "/World/RobotB/body").CreateDisplayColorAttr(
+    [Gf.Vec3f(0.2, 0.5, 1.0)]
+)
+assembly.GetRootLayer().Save()
+assembly.Export(str(output / "flattened.usda"))
+```
+
+원본 자산이 아니라 `assembly` Stage의 RobotB 몸체에 색을 작성합니다. 이 변경은 조립 레이어의 **override**, 즉 참조한 값 위에 덮어쓰는 의견입니다. 같은 원본을 참조하는 RobotA의 색까지 바뀌지는 않습니다.
+
+`GetRootLayer().Save()`는 참조 구조와 조립 레이어의 변경을 저장합니다. `assembly.Export()`는 합성된 Stage를 평탄화해서 새 파일로 내보냅니다. **평탄화는 여러 도형을 하나의 메시로 합치는 작업이 아닙니다.** 몸체와 두 바퀴는 별도 Prim으로 남습니다. 이 동작은 [OpenUSD의 UsdStage Export·Flatten 설명](https://openusd.org/release/api/class_usd_stage.html)에서도 확인할 수 있습니다.
+
+### 실행 결과 확인하기
+
+1. `assembly.usda`에서 RobotB의 body만 파란색인지 확인합니다.
+2. `robot.usda`를 따로 열어 원본 body에 같은 파란색 변경이 저장되지 않았는지 확인합니다.
+3. `composition.json`의 `assembly_prims`와 `flattened_prims`를 비교합니다. 두 로봇과 각 하위 Prim이 유지되어야 합니다.
+4. `assembly.usda`를 텍스트로 열면 `robot.usda` 참조와 RobotB의 색 의견을 확인할 수 있습니다.
+
+실제 자산에는 외부 텍스처·MDL 의존성이 남을 수 있습니다. 평탄화했다고 그런 파일까지 모두 USD 안에 내장된다고 가정하지 마세요.
+
+### GUI 설정에서 볼 부분
+
+같은 자산 구조를 손으로 만들며 저장·참조 차이를 확인할 수도 있습니다.
+
+1. 새 GUI의 **File > New**에서 **Create > Xform**으로 루트 `mock_robot`을 만듭니다.
+2. Cube와 Cylinder 두 개를 그 아래 두고 `body`, `wheel_left`, `wheel_right`로 이름을 바꿉니다. 앞의 크기·위치를 Property에 맞추세요. Cube는 Size와 Scale, Cylinder는 반지름·높이·축을 함께 확인합니다.
+3. 환경 조명과 PhysicsScene은 별도 `/World` 아래 둡니다. 로봇이 그 자식으로 들어갔다면 **Edit > Unparent**로 루트 수준으로 옮깁니다.
+4. `mock_robot`을 우클릭해 **Set as a Default Prim**을 선택하고 **File > Save As**로 새 `.usda` 파일을 저장합니다.
+5. 다시 **File > New**를 선택하고 **File > Add Reference** 또는 Content에서 파일을 Viewport로 드래그해 추가합니다. 로봇의 몸체·바퀴만 들어오는지 확인하세요.
+6. 원본 장면을 별도 이름으로 복사해 그 복사본의 defaultPrim만 `/World`로 바꾼 뒤 새 장면에 참조해 보세요. 이번에는 몸체·바퀴 대신 환경의 Light와 PhysicsScene이 들어옵니다. 같은 파일의 데이터가 없어지는 것이 아니라 참조에서 선택하는 루트가 달라지는 것입니다. 로봇 재사용용 원본은 `/mock_robot`을 유지합니다.
+7. 재사용 자산을 옮길 때는 Content에서 저장 USD를 우클릭해 **Collect Asset**을 사용할 수 있습니다. 수집한 위치에서 다시 열어 참조가 해결되는지 확인합니다.
+
+이 절차의 메뉴와 자산 저장 개념은 [공식 Working with USD](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/intro_to_usd.html)를 참고하세요. GUI로 만든 파일은 `run.py`의 출력과 별도로 저장합니다.
+
+## 3. Open·Reference·Flatten 차이 정리
+
+| 선택 | 무엇을 다루는가 | 이번 파일에서 보이는 결과 |
+|---|---|---|
+| Open | 파일을 Stage로 엽니다. | `robot.usda`의 로봇과 환경 루트를 모두 봅니다. |
+| Add Reference | 현재 장면에 자산의 선택 루트를 합성합니다. | defaultPrim인 로봇을 두 곳에 배치합니다. |
+| Override | 현재 레이어에서 특정 속성을 덮어씁니다. | RobotB만 파란색이 됩니다. |
+| Flatten/Stage Export | 합성 결과를 한 레이어로 내보냅니다. | 두 로봇의 Prim 계층은 유지됩니다. |
+
+`assembly.usda`와 `robot.usda`는 상대 참조로 연결되므로 함께 보관해야 합니다. 원본을 변경하지 않고 배치마다 값을 다르게 만들 수 있는 이유는 조립 레이어의 의견이 각 참조 경로에 따로 작성되기 때문입니다.
+
+## 4. 간단한 확인 실험
+
+`run.py`의 배치 목록에서 **RobotB의 x 값만** 바꿉니다.
+
+```python
+for name, x in (("RobotA", -1.0), ("RobotB", 2.0)):
+```
+
+같은 명령으로 실행하면 RobotA는 X=−1 m, RobotB는 X=2 m에 배치됩니다. 두 로봇 중심 간 거리가 2 m에서 3 m로 바뀌고, RobotB의 파란색과 원본 모양은 유지되는지 확인하세요. `composition.json`은 Prim 이름을 기록하므로 위치 변화는 GUI Property나 `assembly.usda`의 Translate 값에서 확인해야 합니다.
+
+## 실행할 때 막히면
+
+- **참조했는데 로봇이 비어 있음**: `robot.usda` 경로와 `/mock_robot` defaultPrim이 존재하는지 확인하세요.
+- **환경까지 로봇 아래로 따라옴**: 원본 defaultPrim의 하위에 환경을 넣었는지 확인합니다. 원본 파일을 여는 것과 참조로 추가하는 것도 구분하세요.
+- **RobotA도 파란색이 됨**: 원본 body를 수정했는지 확인하세요. 이 실습의 색 의견은 `/World/RobotB/body`에 작성합니다.
+- **평탄화했는데 몸체·바퀴가 따로 있음**: Prim 구조가 유지되는 예상 결과입니다. 메시 병합 작업과 다릅니다.
+- **파일 이동 후 참조 오류**: `assembly.usda`와 `robot.usda`를 같은 폴더에 유지하고 실제 자산의 종속 파일도 확인합니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Working with USD](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/intro_to_usd.html)에 대응합니다. 원문의 계층·defaultPrim·참조·저장 개념을 외부 자산이 없는 시각적 모형으로 구성했습니다. 로봇 articulation이나 주행 제어 실습은 포함하지 않습니다.
+
+[RUNTIME_CHECK.md](RUNTIME_CHECK.md)는 이전 코드에서 Headless 2회 앱 업데이트로 defaultPrim·두 참조·조립 Prim 11개를 확인한 기록입니다. 현재 파일의 결과는 위 계층과 대조해 다시 확인하세요. `tutorial.json`의 부분 실행 검증은 GUI 재구성과 위치 변경 실험까지 포함하지 않습니다.

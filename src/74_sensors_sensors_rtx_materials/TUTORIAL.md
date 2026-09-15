@@ -1,67 +1,104 @@
-# 74. 센서가 읽는 비가시 재질
+# 74. 같은 색의 물체도 센서 재질은 다를 수 있습니다
 
-권장 학습 순서 **74** · 센서와 측정 데이터 · 출처 ID `t148`
+## 이번에 배우는 것
 
-RGB 색은 같은 세 상자에 서로 다른 비가시 재질을 적용하고 USD 속성과 material ID debug view를 비교합니다. 5.1의 USD 속성 기반 경로를 직접 구현했습니다.
+**같은 RGB 색을 가진 세 상자에 서로 다른 비가시 재질을 연결하고, 화면의 색과 센서용 재질 속성을 나누어 확인합니다.**
 
-## 이 실습의 의도
+사람이 보는 색만으로 Lidar나 Radar에 대한 물체의 반응을 모두 설명할 수는 없습니다. Isaac Sim의 비가시 재질은 센서가 다루는 파장 영역의 재질 정보를 USD에 적는 방법입니다. 이번에는 센서 측정 전에 필요한 **재질 작성과 바인딩**을 연습합니다.
 
-같은 RGB 색의 세 상자에 다른 비가시 재질을 바인딩하여, 화면에서 비슷하게 보이는 물체도 센서용 재질 설정은 다를 수 있음을 익힌다. 기본 실행은 aluminum+paint, steel+clearcoat, concrete+paint 조합과 공통 `emissive` 속성을 작성하고 JSON과 USD로 저장한다. 이 장면에는 Lidar/Radar를 만들지 않으며, 재질 적용의 시각적 확인은 사용자가 GUI의 Non-Visual Material ID debug view를 선택해야 한다.
+| 상자와 재질 | 기본 재료 `base` | 코팅 `coating` | 공통 추가 속성 |
+|---|---|---|---|
+| `Box0` → `Material0` | `aluminum` | `paint` | `emissive` |
+| `Box1` → `Material1` | `steel` | `clearcoat` | `emissive` |
+| `Box2` → `Material2` | `concrete` | `paint` | `emissive` |
 
-## 실행 후 확인할 것
+세 상자의 RGB 색은 모두 `(0.3, 0.6, 0.8)`입니다. 위치는 Y 방향으로 2 m씩 떨어져 있어 서로 비교하기 쉽습니다. `emissive`는 여기서 센서용 속성 이름이며 RGB 화면에서 세 상자가 밝게 빛나게 하는 지시로 읽지 않습니다.
 
-- **같은 외형과 위치**: GUI에서 `/World/Box0`~`Box2`가 같은 RGB 재질 색으로 보이는지 확인한다. 상자는 `VisualCuboid`이므로 z=1 m에 그대로 있는 것이 정상이며, 낙하나 물리 접촉을 관찰하는 장면이 아니다.
-- **조합별 바인딩**: Stage에서 각 상자가 `/World/Looks/Material0`~`Material2`에 각각 연결되었는지 확인한다. `material_attributes.json`의 세 행에서 base/coating 조합과 공통 `behavior=emissive`가 코드의 설정과 맞아야 한다.
-- **실제 USD 속성**: JSON의 `authored_attributes`와 `materials.usda`에 `omni:simready:nonvisual:base`, `:coating`, `:attributes`가 작성되었는지 확인한다. base/coating 이름이 JSON의 설명 필드에만 적혀 있는 것으로 재질 적용을 판정하지 않는다.
-- **수동 debug view 확인**: **RTX - Real-Time > Debug View > Non-Visual Material ID**로 바꾸어 세 조합이 구분되는지 본다. 색은 material ID 표시이며 RGB 색, 물체 ID, Lidar 반사 강도의 수치가 아니다. headless 파일 생성만으로 이 GUI 확인이 끝난 것은 아니다.
-- **저장과 측정의 범위**: 기본 240스텝 후 저장되는 것은 재질 설정과 장면이며, 센서 반환 파일은 없다. GUI에서 coating을 바꿔 비교한 결과를 보존하려면 별도로 저장해야 하며 기존 JSON/USD는 자동 갱신되지 않는다.
+## 1. 재질을 작성한 장면 열기
 
-## 이 패키지만으로 준비하기
-
-Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.
+Isaac Sim 5.1.0과 RTX를 지원하는 NVIDIA GPU 환경에서 실행하세요. 다음 명령은 저장소 루트 기준입니다.
 
 ```bash
-export ISAAC_SIM_PATH=/path/to/isaacsim
-cd src/74_sensors_sensors_rtx_materials
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/run-01
+~/isaacsim/python.sh src/74_sensors_sensors_rtx_materials/run.py
 ```
 
-출력 폴더는 **존재하지 않는 새 경로**를 지정합니다. 이미 있으면 오류로 멈추어 이전 결과를 보호합니다. `--output`을 생략하면 이 패키지의 `output/날짜_시간/`에 저장합니다.
+설치 위치가 다르면 `~/isaacsim`을 바꿉니다. 처음 240단계 뒤 재질 파일을 저장하고 GUI는 계속 열어 둡니다. 터미널의 `Output:` 경로가 나타나면 저장이 끝난 것입니다. 관찰을 마친 뒤 창을 닫으세요.
 
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 렌더링이 계속됩니다. 처음 240스텝 뒤 작성된 재질 속성과 장면을 한 번 저장하며, 이후 관찰 중에는 파일을 추가하거나 바꾸지 않습니다. 이 실행은 센서를 생성하거나 측정값을 수집하지 않습니다. `--steps N`에 양수를 주면 N스텝 뒤 파일을 저장하고 종료합니다. `--headless`만 사용하면 기존과 같이 240스텝 후 종료합니다. `--interactive`는 기존 명령 호환용이며 이제 필요하지 않습니다. 명시한 `--steps`의 종료 조건을 해제하지 않고, `--headless`와 함께 사용할 수 없습니다.
+파일 생성만 유한하게 실행하려면 `--headless --steps 240`을 추가합니다. 출력은 이 폴더의 `output/날짜_시간/`에 생깁니다. 직접 `--output`을 지정할 때는 존재하지 않는 새 폴더를 사용합니다.
 
-run.py는 standalone 실행용이므로 Script Editor에 전체를 붙이지 않습니다. 처음 240스텝을 마치기 전에 창을 닫으면 결과 파일은 완성되지 않을 수 있습니다.
+### 실행 결과 확인하기
 
-창 없이 유한 실행으로 결과만 만들 때는 별도의 새 출력 경로를 사용합니다.
+Stage에서 `/World/Box0`부터 `Box2`까지 선택해 보세요. 세 상자는 `VisualCuboid`로 만들었으므로 높이 1 m에 그대로 남습니다. 이 장면은 떨어지는 강체나 센서 점군을 만들지 않습니다.
 
-```bash
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --steps 240 --output output/batch-01
+저장 파일은 다음 두 개입니다.
+
+- `materials.usda`: 상자, 가시 재질, 비가시 속성과 바인딩을 담은 장면
+- `material_attributes.json`: 재료 조합과 실제 작성된 속성을 읽어 기록한 보고서
+
+JSON의 `base`와 `coating`만 보지 말고 `authored_attributes`도 확인하세요. 앞의 두 값은 코드가 의도한 조합이고, 뒤의 값은 Material prim에서 실제로 읽은 속성입니다.
+
+## 2. 재질 속성과 연결을 따라가기
+
+### 코드에서 볼 부분
+
+`run.py`의 반복문은 상자마다 별도의 `OmniPBR` 재질을 만든 뒤 두 번의 적용을 수행합니다.
+
+```python
+apply_nonvisual_material(mat.prim, base, coating, behavior)
+cube.apply_visual_material(mat)
 ```
 
-## 실습 순서와 관찰
+첫 줄은 **Material prim에 센서용 속성을 작성**합니다. 두 번째 줄은 **상자가 그 재질을 사용하도록 연결**합니다. 재질 파일에 값이 있어도 geometry가 그 재질에 연결되지 않았다면, 의도한 상자에 적용된 것을 확인한 셈이 아닙니다. 이 연결을 material binding이라고 부릅니다.
 
-1. `--headless`와 `--steps` 없이 실행해 Stage에서 `/World/Looks/Material0`, `Material1`, `Material2`를 찾습니다. RGB 색이 같아도 aluminum+paint, steel+clearcoat, concrete+paint 조합이 다릅니다.
-2. viewport의 **RTX - Real-Time > Debug View > Non-Visual Material ID**를 선택합니다. 다른 재질 조합이 서로 다른 ID 색으로 나타나는지 봅니다. ID 색은 RGB 재질 색이나 반사 강도 값이 아닙니다.
-3. `material_attributes.json`과 `materials.usda`를 열어 authoring된 센서 재질 속성을 확인합니다. `apply_nonvisual_material`은 Material prim에 적용하고 `apply_visual_material`로 상자에 바인딩합니다.
-4. Material prim 우클릭 **Add > Attribute**로 사용자 속성 입력 창을 확인합니다. API가 만든 속성 이름·타입과 일치시켜야 렌더러가 읽습니다. 이름만 비슷한 임의 속성을 만들지 마세요.
-5. 코드에서 두 번째 재질의 coating만 `clearcoat`에서 `paint`로 바꿔 새 폴더에 실행하고 debug ID를 비교합니다. RGB 색과 geometry는 유지합니다.
+Stage에서 `/World/Looks/Material0`을 선택해 다음 속성을 찾아보세요.
 
-## API와 USD 개념
+| USD 속성 | 첫 번째 재질의 값 | 역할 |
+|---|---|---|
+| `omni:simready:nonvisual:base` | `aluminum` | 기본 재료 |
+| `omni:simready:nonvisual:coating` | `paint` | 표면 코팅 |
+| `omni:simready:nonvisual:attributes` | `emissive` | 센서용 추가 특성 |
 
-USD material binding은 geometry가 어떤 Material prim을 사용할지 연결합니다. 가시 재질은 화면 색·조명 반응을, 비가시 재질은 센서 파장대의 반응을 지정합니다. `apply_nonvisual_material(prim, base, coating, attribute)`가 유효 이름을 검사하고 USD 속성을 작성하며 renderer가 조합으로 material ID를 계산합니다. 물체 ID, semantic class ID, material ID는 서로 다릅니다.
+이 API는 세 속성을 USD의 `String` 타입으로 작성합니다. JSON에도 속성값이 문자열로 변환되어 저장되지만, JSON만으로 USD 속성 타입까지 확인할 수는 없습니다. 타입과 실제 바인딩은 `materials.usda` 또는 Property에서 함께 살펴보세요.
 
-이 예제의 USD 속성 검사와 debug view는 재질 적용을 확인합니다. Lidar 강도나 Radar 반사율을 수치로 측정했다고 주장하지 않습니다. 그 측정에는 센서와 annotator를 붙여 실제 반환값을 수집해야 합니다.
+### 실행 결과 확인하기
 
-## 확장 실습·성공 기준·문제 해결
+뷰포트의 **RTX - Real-Time > Debug View > Non-Visual Material ID**를 선택합니다. RGB 화면에서 비슷했던 세 상자가 센서 재질 ID 표시에서도 어떻게 나타나는지 비교하세요.
 
-5.1에서 CSV 시각 재질 이름 매핑은 deprecated입니다. 기존 프로젝트를 읽을 때 `kit/rendering-data/runtime/RtxSensorMaterialMap.csv`, `/rtx/materialDb/rtSensorNameToIdMap`, `/rtx/materialDb/rtSensorMaterialLogs`를 볼 수 있습니다. 기존 CSV의 키는 `/Looks/` 뒤 첫 재질 이름 토큰을 소문자로 쓴 값이며 시작 시 읽힙니다. 설치 파일을 변경하는 실습은 이 패키지에서 하지 않습니다. 새 USD에는 위 API 속성을 쓰세요.
+이 화면의 색은 재질 조합을 구분하기 위한 **ID 표시색**입니다. 빨간색이 파란색보다 강한 반사를 뜻하는 식으로 읽지 않습니다. 또한 물체마다 부여하는 object ID나 의미 분류용 class ID와도 다른 값입니다. 화면이 예상과 다르면 먼저 각 상자의 재질 연결과 세 비가시 속성이 맞는지 확인하세요.
 
-ID 색이 같다면 실제 재질이 해당 mesh에 바인딩됐는지, 이름 조합이 유효한지 확인합니다. 서로 다른 RGB 재질도 같은 비가시 조합이면 동일 ID일 수 있습니다. 본 실습은 RTX GPU와 UI로 debug view를 관찰해야 완료됩니다.
+## 3. 외형·재질·측정의 관계 정리
 
-## 출처와 검증 범위
+```text
+상자 geometry ── material binding ── Material prim
+                                     ├─ OmniPBR 색 → RGB 화면
+                                     └─ 비가시 속성 조합 → 센서 재질 ID
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — RTX Sensor Non-Visual Materials](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx_materials.html)
-- 구현 API는 설치된 5.1 `exts/`와 해당 `standalone_examples/` 원본을 함께 확인했습니다. 원문과 다른 작은 장면·GUI 관찰 루프·측정 스냅샷 저장은 이 패키지에서 추가했습니다.
+이번 결과는 “재질이 작성되고 연결되었다”를 확인하는 자료입니다. `materials.usda`와 ID 화면만으로 Lidar 반사 강도나 Radar 반사율을 수치로 측정한 것은 아닙니다. 그런 비교에서는 동일한 센서와 입사 조건을 두고 실제 반환값을 수집해야 합니다.
 
-Python 문법·도움말과 파일 구성을 검사했으며, RTX 영상/점군과 PhysX 런타임·GUI 상호작용은 작성 작업에서 실행하지 않았습니다. 실제 성공 여부는 위 단계의 **측정 파일과 화면 결과**로 확인합니다. `tutorial.json`의 verification은 그 이유로 `not_run`입니다.
+이 구분을 익히면 색을 바꿨는데 센서 재질 ID가 같거나, 색이 같은데 센서 재질 ID가 다른 상황도 자연스럽게 이해할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`run.py`의 `materials` 목록에서 **두 번째 조합의 코팅만** `clearcoat`에서 `paint`로 바꿔 실행해 보세요.
+
+```python
+('steel', 'paint', 'emissive')
+```
+
+상자 색, 위치와 다른 재료 조합은 유지합니다. 새 출력의 `Material1`에 해당하는 `authored_attributes`가 바뀌었는지 확인하고, GUI의 비가시 재질 ID를 비교하세요. 예상하는 직접적인 변화는 코팅 속성입니다. ID 표시의 변화 여부는 렌더러 결과로 관찰합니다.
+
+GUI에서만 속성을 편집하면 최초에 저장한 JSON은 다시 기록되지 않습니다. 비교 결과를 파일로 남기려면 코드를 바꾸어 새로 실행하거나 수정한 Stage를 별도 이름으로 저장하세요.
+
+## 실행할 때 막히면
+
+- **상자가 떨어지지 않음**: `VisualCuboid`를 사용하는 이 실습의 정상 동작입니다. 물리 접촉 실험과 구분하세요.
+- **재질 ID가 예상과 다름**: `Box1`이 실제로 `Material1`을 사용하는지 먼저 보고, 그 Material의 속성값을 확인하세요.
+- **속성 이름을 직접 추가했는데 반영되지 않음**: 렌더러는 정해진 이름과 타입을 읽습니다. 임의로 비슷한 이름을 만들기보다 제공 API가 작성한 속성을 기준으로 비교하세요.
+- **센서 출력 파일이 없음**: 이 코드는 센서와 annotator를 생성하지 않습니다. 확인할 파일은 `materials.usda`와 `material_attributes.json`입니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [RTX Sensor Non-Visual Materials](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx_materials.html)에 대응합니다. 공식 USD 속성 작성 방식을 같은 색의 세 상자에 적용한 실습이며, 예전 CSV 이름 매핑이나 설치 내부 재질 데이터의 수정은 다루지 않습니다.
+
+문서 개정에서는 코드와 5.1 재질 API를 대조했습니다. GPU 렌더링과 ID debug view는 이번에 실행하지 않았고, `tutorial.json`의 상태는 `not_run`입니다.

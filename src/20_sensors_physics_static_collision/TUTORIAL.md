@@ -1,56 +1,117 @@
-# 20. Physics API Editor로 static collider 일괄 편집
+# 20. 보이는 물체만 골라 충돌체 붙이기
 
-권장 학습 순서 **20** · 물리 기초와 Core API 확장 · 출처 ID `t161`
+## 이번에 배우는 것
 
-보이는 상자와 숨긴 상자를 포함한 로컬 subtree를 만들고 static collision의 적용 범위를 직접 비교합니다. 도구 이름은 Physics API Editor입니다.
+**Physics API Editor로 하위 물체에 충돌 속성을 적용하고, 선택 범위와 가시성 필터의 차이를 확인합니다.**
 
-## 이 실습의 의도
+창고의 벽이나 바닥처럼 움직이지 않는 환경에도 로봇과 부딪힐 충돌체가 필요합니다. 많은 물체를 편집할 때는 하나씩 선택하는 대신 부모 아래를 한꺼번에 처리할 수 있습니다. 이때 숨겨 놓은 물체까지 적용할지는 별도 조건입니다.
 
-`/World/StaticSet` 아래의 보이는 Box0과 숨긴 Box1을 비교해, Physics API Editor가 **선택한 하위 prim과 visibility 조건에 따라** 충돌 속성을 어디에 적용하는지 확인합니다. 기본 스크립트는 충돌이 없는 두 시각 상자를 만들고 타임라인을 정지시킨 채 편집할 장면을 제공합니다. Apply/Remove 조작은 GUI에서 직접 수행하며, 움직이는 강체의 낙하나 접촉을 자동 검사하는 실행은 아닙니다.
+이번 장면은 비교가 쉬운 상자 두 개만 사용합니다.
 
-## 실행 후 확인할 것
+| Prim | 화면 표시 | 초기 CollisionAPI |
+|---|---|---|
+| `/World/StaticSet` | 두 상자를 묶는 부모 Xform | 없음 |
+| `/World/StaticSet/Box0` | 보임 | 없음 |
+| `/World/StaticSet/Box1` | 숨김 | 없음 |
 
-- Stage에는 `/World/StaticSet/Box0`과 `Box1`이 모두 존재하지만 viewport에는 Box0만 보여야 합니다. 처음에는 둘 다 VisualCuboid이므로 CollisionAPI가 없어야 하며, Box1이 안 보이는 것은 의도된 visibility 설정입니다.
-- `/World/StaticSet`을 선택하고 **Apply to children=On, Visible only=On**으로 Apply Static한 뒤, Raw USD Properties에서 Box0에만 CollisionAPI가 추가됐는지 확인합니다. 상자가 움직이는지보다 어느 prim에 속성이 생겼는지가 기준입니다.
-- 같은 선택에서 **Visible only=Off**로 다시 적용하면 숨긴 Box1도 CollisionAPI를 갖는지 봅니다. 충돌 시각화를 켜거나 Box1의 visibility를 복구해 적용 범위를 비교합니다.
-- Remove Collision API 후에는 두 상자의 해당 API가 제거되었는지 확인합니다. `static_scene.usda`는 GUI 조작 전 출력이므로 편집 결과를 다시 확인하려면 **File > Save As**로 별도 저장해야 합니다. headless 실행으로 파일이 생긴 것만으로 이 수동 편집 단계를 완료한 것은 아닙니다.
+`Box1`도 Stage 안에 존재합니다. **안 보이는 것과 장면에 없는 것은 다르다**는 점을 충돌 API의 적용 결과로 확인합니다.
 
-## 이 패키지만으로 준비하기
+## 1. 먼저 편집할 장면 열기
 
-Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.
+Isaac Sim 5.1 GUI와 지원 NVIDIA GPU가 필요합니다. 저장소 루트에서 다음 명령을 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-export ISAAC_SIM_PATH=/path/to/isaacsim
-cd src/20_sensors_physics_static_collision
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/run-01
+~/isaacsim/python.sh src/20_sensors_physics_static_collision/run.py
 ```
 
-출력 폴더는 **존재하지 않는 새 경로**를 지정합니다. 이미 있으면 오류로 멈추어 이전 결과를 보호합니다. `--output`을 생략하면 이 패키지의 `output/날짜_시간/`에 저장합니다. GUI 실행에서 `--steps`를 생략하면 사용자가 창을 닫을 때까지 창을 유지합니다. 장면을 만든 뒤 타임라인은 정지하고, 화면과 도구를 위한 `app.update()`만 반복합니다. `--steps N`을 지정하면 이 앱 업데이트를 최대 N번 수행한 뒤 종료하며 N은 양수여야 합니다. `--headless`는 창 없이 실행하고, `--steps` 생략 시 240번 업데이트 후 종료합니다. 이전 명령과 호환되는 `--interactive`는 더 이상 필요하지 않으며 명시한 `--steps`의 종료 조건을 바꾸지 않습니다. `--headless`와 `--interactive`는 함께 쓰지 않습니다. run.py는 standalone 실행용이므로 Script Editor에 전체를 붙이지 않습니다.
+이 스크립트는 장면을 초기화한 뒤 타임라인을 **Stop**하고 창을 유지합니다. 상자가 떨어지기를 기다릴 필요는 없습니다. 이번 실행의 목적은 GUI로 편집할 초기 장면을 준비하는 것입니다.
 
-## 실습 순서와 관찰
+출력은 이 폴더의 `output/날짜_시간/static_scene.usda`입니다. `--output`을 지정한다면 새 폴더를 사용하세요. `--steps N`을 추가하면 앱 업데이트 N회 후 종료하므로 수동 편집할 때는 생략합니다. Headless에서는 단계 수 생략 시 240회 업데이트 후 종료하지만, GUI 편집은 수행할 수 없습니다.
 
-1. 위 GUI 명령으로 실행해 `/World/StaticSet/Box0`, `Box1`을 확인합니다. Box1은 hidden이고 두 물체 모두 처음에는 visual geometry입니다.
-2. **Window > Extensions**에서 `isaacsim.util.physics` 또는 설치 UI에서 표시되는 Physics API Editor 확장을 확인합니다. 5.1 문서에는 `isaacsim.utils.physics` 검색 이름이 쓰여 있으므로 목록의 실제 이름을 확인하세요.
-3. **Tools > Physics API Editor**를 엽니다. `/World/StaticSet`을 선택하고 **Apply to children=On**, **Visible only=On**, Collision Type을 **Convex Hull**로 설정한 뒤 **Apply Static**을 누릅니다.
-4. Box0의 CollisionAPI가 생기고 hidden Box1은 제외됐는지 Raw USD Properties에서 확인합니다. viewport 눈 아이콘 **Show By Type > Physics Mesh > All**로 collision geometry를 표시합니다. 설치 UI에서 Colliders로 보이면 해당 항목을 선택합니다.
-5. 시각화를 끄고 동일 subtree에서 **Visible only=Off**로 Apply Static을 반복합니다. Box1을 보이게 했을 때도 collision이 적용됐는지 확인합니다.
-6. 선택 subtree에서 **Remove Collision API**를 수행하고 두 상자의 collision 속성을 검사합니다. 이 실습 장면에서만 **Remove All Physics APIs**와의 차이를 비교합니다. 사용자 작업 장면에는 적용하지 않습니다.
-7. **File > Save As**로 새 경로에 결과를 저장합니다. 코드가 내보낸 static_scene.usda는 GUI 수정 전 장면입니다.
+### 코드에서 볼 부분
 
-## API와 USD 개념
+두 상자는 `VisualCuboid`로 만들고 두 번째만 숨깁니다.
 
-Static collider는 움직이지 않는 환경의 충돌 형상입니다. VisualCuboid는 화면 geometry이고 Apply Static은 선택 범위에 CollisionAPI를 추가합니다. RigidBodyAPI를 붙여 동적으로 만드는 도구와 다르며 원문은 dynamic object를 지원하지 않는다고 명시합니다.
+```python
+cube = VisualCuboid(
+    f'/World/StaticSet/Box{i}',
+    name=f'box{i}',
+    position=np.array([i*2, 0., 1.]),
+    size=1,
+)
+if i == 1:
+    UsdGeom.Imageable(cube.prim).MakeInvisible()
+```
 
-Apply to children은 USD subtree 탐색, Visible only는 prim의 visibility를 고려하는 필터입니다. 부모 Xform 자체는 geometry가 아닐 수 있으므로 children 옵션을 끄면 기대한 mesh에 API가 적용되지 않을 수 있습니다. Collision Type은 실제 mesh와 다른 근사 충돌 형상을 선택합니다.
+두 상자의 중심은 각각 `(0, 0, 1)`, `(2, 0, 1)` m이고 한 변은 1 m입니다. `VisualCuboid`는 여기서 충돌·강체 운동을 추가하지 않습니다. `MakeInvisible()`도 충돌 설정을 바꾸는 호출이 아니라 렌더링에서 숨기는 호출입니다.
 
-## 확장 실습·성공 기준·문제 해결
+장면 준비 뒤의 반복문은 `world.step()` 대신 `app.update()`를 사용합니다. 타임라인은 정지한 채 메뉴·화면·편집 도구가 응답하도록 앱을 갱신합니다.
 
-숨긴 물체에 collision이 없으면 Visible only 설정을 먼저 확인합니다. Apply/Remove 중 실시간 collision 시각화를 켜면 subtree 순회와 함께 비용이 커질 수 있어 **적용 후** 켭니다. 한 변수 실험은 Visible only의 On/Off 비교이며 geometry·selection을 유지합니다. 성공 기준은 API가 붙은 prim의 실제 차이를 확인하는 것입니다. 파일 export만으로 GUI 도구를 검증한 것은 아닙니다.
+### 실행 결과 확인하기
 
-## 출처와 검증 범위
+Stage에서 `/World/StaticSet`을 펼쳐 Box0과 Box1이 모두 있는지 확인하세요. 화면에는 Box0만 보여야 합니다. 각 Prim의 Property에서 아직 CollisionAPI가 없는지도 살펴봅니다.
 
-- [NVIDIA Isaac Sim 5.1.0 — Physics Static Collision Extension](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/physics_static_collision.html)
-- 구현 API는 설치된 5.1 `exts/`와 해당 `standalone_examples/` 원본을 함께 확인했습니다. 원문과 다른 작은 장면·프레임 수 옵션·출력 저장은 이 패키지에서 추가했습니다.
+두 상자는 공중에 있지만 강체 운동을 켜지 않았으므로 떨어지지 않습니다. 움직임 대신 **API가 어디에 붙는지**를 확인하는 실습입니다.
 
-Python 문법·도움말과 파일 구성을 검사했으며, RTX 영상/점군과 PhysX 런타임·GUI 상호작용은 작성 작업에서 실행하지 않았습니다. 실제 성공 여부는 위 단계의 **측정 파일과 화면 결과**로 확인합니다. `tutorial.json`의 verification은 그 이유로 `not_run`입니다.
+## 2. Physics API Editor로 보이는 자식에 적용하기
+
+1. **Window > Extensions**에서 `isaacsim.util.physics`를 활성화하고 **Tools > Physics > Physics API Editor**를 엽니다.
+2. Stage에서 부모 `/World/StaticSet`만 선택합니다.
+3. **Apply to children**과 **Visible only**를 켭니다.
+4. Collision Type을 **Convex Hull**로 두고 **Apply Static**을 누릅니다.
+5. 도구의 처리가 끝날 때까지 기다린 뒤 Box0과 Box1을 각각 선택해 Property의 Collision 관련 속성을 확인합니다. API 적용은 앱 업데이트에 걸쳐 비동기로 진행됩니다.
+
+### 설정에서 볼 부분
+
+| 설정 | 이번 선택에서의 역할 |
+|---|---|
+| Apply to children | 부모 아래 Box0·Box1까지 탐색 |
+| Visible only | 탐색한 대상 중 숨긴 Box1 제외 |
+| Collision Type | 메시의 충돌 형상을 만들 때 사용할 근사 방식 |
+| Apply Static | 선택 범위의 정적 충돌 속성 적용 |
+
+부모 Xform은 큐브 형상 자체가 아닙니다. 자식 적용을 끄고 부모만 처리하면 실제 Box에 충돌체가 붙지 않을 수 있습니다. 가시성은 이렇게 찾아낸 대상에 추가로 적용하는 조건입니다.
+
+현재 상자는 단순 Cube 형상이므로 복잡한 메시 근사 간 차이를 관찰하기 위한 장면은 아닙니다. 여기서는 Collision Type보다 **어떤 Prim이 적용 대상이 되는지**에 집중합니다.
+
+### 실행 결과 확인하기
+
+Box0에는 CollisionAPI가 생기고, 숨긴 Box1에는 아직 없어야 합니다. 상자가 움직이지 않는 것은 정상입니다. Static 적용은 강체를 만들어 중력 낙하를 켜는 동작이 아닙니다.
+
+적용 후 뷰포트의 눈 아이콘에서 **Show By Type > Physics Mesh > All**을 켜 충돌 형상을 확인합니다. 설치 UI에서 Colliders로 표시된다면 그 항목을 사용하세요. 대상을 탐색하며 API를 붙이거나 제거하는 동안에는 시각화를 끄고, 작업 후 다시 켜는 순서가 좋습니다.
+
+결과를 보존하려면 **File > Save As**로 새 USD를 저장합니다. 코드가 만든 `static_scene.usda`는 GUI 편집 전 파일이므로 자동으로 바뀌지 않습니다.
+
+## 3. 선택 범위와 필터 정리
+
+```text
+선택한 /World/StaticSet
+    → 자식 탐색 켜짐 → Box0, Box1
+    → 보이는 대상만 → Box0
+    → Apply Static  → Box0에 CollisionAPI
+```
+
+이 흐름을 이해하면 “Apply를 눌렀는데 원하는 물체에 충돌이 없다”는 상황을 두 단계로 나눠 볼 수 있습니다. 먼저 선택·자식 탐색 범위를 확인하고, 다음으로 숨김 상태와 Visible only 조건을 확인합니다.
+
+**Remove Collision API**는 충돌 관련 API를 지우는 작업이고, **Remove All Physics APIs**는 더 넓은 물리 설정을 제거합니다. 이번처럼 작은 연습 장면에서 결과를 비교하되, 기존 로봇 장면의 설정을 정리할 때 두 작업을 같은 것으로 취급하지 마세요.
+
+## 4. 간단한 확인 실험
+
+Stage에서 `/World/StaticSet`을 다시 선택하세요. Box1의 숨김 상태와 Apply to children을 유지하고 **Visible only만 Off**로 바꿔 다시 Apply Static을 누릅니다.
+
+이번에는 Box1에도 CollisionAPI가 생기는지 확인하세요. Box1을 보이게 바꿀 필요 없이 Stage에서 선택해 속성을 읽을 수 있습니다. 이 관찰은 “숨긴 물체도 충돌할 수 있다”는 점을 확인합니다.
+
+비교를 마친 뒤 `/World/StaticSet`을 다시 선택해 **Remove Collision API**를 실행합니다. 처리 완료 후 두 상자의 해당 API가 제거되는지 확인하세요. 삭제 결과를 남기려면 다시 새 이름으로 저장합니다.
+
+## 실행할 때 막히면
+
+- **Physics API Editor 메뉴가 없음**: **Window > Extensions**에서 `isaacsim.util.physics`를 켜고 Tools의 Physics 하위 메뉴를 확인하세요. 공식 페이지에는 확장 검색 이름이 `isaacsim.utils.physics`로 표기되어 있어 설치 목록의 실제 ID와 구분해야 합니다.
+- **부모를 선택했는데 상자에 적용되지 않음**: Apply to children이 켜졌는지 확인하세요.
+- **Box1만 적용되지 않음**: 숨김 상태와 Visible only를 확인하세요. On이면 의도적으로 제외합니다.
+- **저장 파일에 편집 내용이 없음**: 기본 `static_scene.usda` 대신 GUI에서 Save As한 파일을 열었는지 확인하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Physics Static Collision Extension](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/physics_static_collision.html)에 대응합니다. 선택·자식 탐색·가시성 조건을 상자 두 개로 비교합니다. 공식 도구는 정적 물체용이며 이 실습은 동적 물체의 접촉 반응을 측정하지 않습니다.
+
+현재 `tutorial.json`은 `not_run`입니다. 이번 개정에서는 공식 메뉴와 설정 의미, 로컬 장면 준비 코드를 대조했습니다. 파일 생성과 GUI Apply·Remove 동작을 새로 실행해 검증하지 않았습니다.

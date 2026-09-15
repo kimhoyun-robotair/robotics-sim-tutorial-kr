@@ -1,106 +1,142 @@
-# 113. 두 카메라의 RGB·깊이·인식 결과를 ROS 2로 보내기
+# 113. 같은 장면을 두 카메라의 RGB와 깊이로 보기
 
-권장 학습 순서 **113** · ROS 2 연결과 기본 통신 · 출처 ID `t011`
+## 이번에 배우는 것
 
-이 패키지는 Isaac Sim 5.1의 **ROS 2 Cameras**를 독립 실행 가능한 작은 실험실로 재구성했다. 두 카메라와 색이 다른 물체를 직접 만들고, 각각 RGB, 깊이, 깊이 기반 점군, CameraInfo를 발행한다. 원문은 TurtleBot이 있는 장면에서 GUI로 진행한다. 여기서는 로봇 모델과 창고 다운로드 없이 같은 카메라 그래프를 관찰할 수 있다. 아래 GUI 실습은 원문의 카메라 배치, 그래프 작성, 단축 메뉴까지 다룬다.
+**두 카메라의 렌더 결과를 ROS 2로 보내고, RGB·깊이·점군·CameraInfo가 같은 장면을 어떻게 다르게 표현하는지 비교합니다.**
 
-## 이 실습의 의도
+카메라 prim은 “어디에서 어떤 렌즈로 볼지”를 정합니다. **Render Product**는 그 카메라와 출력 해상도를 묶고, ROS Helper는 결과를 메시지로 보냅니다. 카메라를 Stage에 놓는 것만으로 ROS 영상이 생기지는 않습니다.
 
-카메라 prim, Render Product, ROS Helper의 역할을 나누어 RGB·깊이·점군·내부 파라미터가 하나의 카메라에서 함께 만들어지는 과정을 확인한다. 빨간·파란 물체와 x축으로 1 m 떨어진 두 카메라는 시점 차이를 비교하기 위한 구성이다. 기본 실행은 두 카메라의 네 가지 출력을 발행하고, 의미 분할·경계 상자는 `--perception`을 선택했을 때 추가한다.
+| 카메라당 출력 | ROS 타입 | 읽을 내용 |
+|---|---|---|
+| `rgb` | `sensor_msgs/msg/Image` | 물체의 색과 영상상 위치 |
+| `depth` | `sensor_msgs/msg/Image` | 영상 평면 기준 깊이(m) |
+| `depth_pcl` | `sensor_msgs/msg/PointCloud2` | 깊이를 3차원으로 복원한 표면 |
+| `camera_info` | `sensor_msgs/msg/CameraInfo` | 해상도·초점거리·영상 중심 |
 
-## 실행 후 확인할 것
+`run.py`는 색이 다른 두 물체와 벽·바닥을 직접 만듭니다. 두 카메라는 x축으로 1 m 떨어져 있어 같은 물체를 서로 다른 위치에서 봅니다.
 
-- Stage의 `/World/Camera_1`, `/World/Camera_2`와 각각의 `/World/CameraGraph_1`, `/World/CameraGraph_2`를 확인한다. RViz Image에서 `/camera_1/rgb`, `/camera_2/rgb`를 실제 수신하면 같은 빨간·파란 물체의 영상상 위치가 서로 달라야 한다.
-- `ros2 topic list -t`에서 각 카메라의 `rgb`·`depth`는 `sensor_msgs/msg/Image`, `depth_pcl`은 `sensor_msgs/msg/PointCloud2`, `camera_info`는 `sensor_msgs/msg/CameraInfo`인지 확인한다. 이름만 나타나는 것과 데이터가 도착하는 것은 별개다.
-- `/camera_1/camera_info`의 해상도는 640×480, frame은 `camera_1`이어야 하며 K는 9개 원소를 갖는다. 두 번째 카메라의 frame은 `camera_2`다. 아래의 카메라 설정으로 계산한 fx·fy 약 549.75 pixel과 중심점 (320,240)을 대조한다.
-- RViz PointCloud2를 `/camera_1/depth_pcl`, Fixed Frame=`camera_1`로 설정해 물체 표면을 확인한다. 이 코드는 TF를 발행하지 않으므로 `world`나 다른 카메라 frame으로 변환하려 할 때의 오류는 별도 TF 구성 없이는 예상되는 결과다.
-- 깊이 영상에서 물체·바닥의 유한한 거리를 확인한다. 배경의 무한대 때문에 대비가 몰릴 수 있으며, 정지된 장면이라 영상 내용이 반복되는 것은 정상이다. 1/60초 렌더 간격을 설정했어도 실제 수신 Hz는 실행 성능과 DDS 상태에 따라 달라진다.
-- 기본 `--perception none`에서는 인식 결과와 labels 토픽이 없다. `semantic_segmentation`이나 `bbox_3d`로 새로 실행했을 때 선택한 결과와 `/camera_1/labels`를 받아 `red`·`blue` 라벨 연결을 확인한다.
+## 1. 두 카메라 실행하고 영상 받기
 
-**실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 시뮬레이션 스텝과 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 지정하면 해당 횟수 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 1800회를 사용합니다. 이전 `--frames` 옵션은 `--steps` 없는 headless 실행의 횟수만 정하며, GUI 종료에는 영향을 주지 않습니다. `--steps`를 지정하면 `--frames`보다 우선하며 0과 음수는 허용하지 않습니다.
+Isaac Sim 5.1, RTX GPU, ROS 2 Humble 또는 Jazzy, RViz2 또는 `rqt_image_view`가 필요합니다. 아래 명령은 저장소 루트의 Bash 기준입니다. 기본 환경은 Ubuntu 24.04의 Jazzy입니다. Ubuntu 22.04/Humble에서는 `jazzy` 값과 경로를 `humble`로 바꾸세요.
 
-## 준비와 실행
-
-- NVIDIA RTX GPU와 Isaac Sim **5.1.0**이 필요하다. 일반 Python은 `--help`만 실행할 수 있다.
-- Ubuntu 22.04라면 ROS 2 Humble, Ubuntu 24.04라면 Jazzy를 사용한다. 두 배포판을 같은 셸에서 source하지 않는다. ROS 2의 `sensor_msgs`, `rviz2`, `rqt_image_view`가 필요하다. 경계 상자에는 `vision_msgs`도 필요하다.
-- 토픽은 이름이 있는 통신 통로다. Isaac Sim은 publisher, `ros2 topic echo`와 RViz는 subscriber다. 서로 같은 `ROS_DOMAIN_ID`를 사용해야 DDS가 상대를 발견한다.
-- 이 폴더만 복사해도 실행된다. 다른 로컬 튜토리얼을 읽거나 가져올 필요가 없다.
-
-시뮬레이터 터미널에서 설치 위치와 ROS 배포판을 자기 환경에 맞춘다.
+터미널 A는 시스템 ROS를 source하지 않은 새 셸에서 내부 브리지를 사용합니다. `ISAAC_SIM`은 실제 설치 위치에 맞춥니다.
 
 ```bash
-source /opt/ros/humble/setup.bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_DISTRO=jazzy
 export ROS_DOMAIN_ID=0
-export ISAAC_SIM=/home/hoyunkim/isaacsim
-"$ISAAC_SIM/python.sh" run.py
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/jazzy/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+"$ISAAC_SIM/python.sh" src/113_ros2_ros2_camera/run.py
 ```
 
-다른 터미널도 같은 ROS 환경을 source한 뒤 실행한다.
+기본 GUI 실행은 창을 닫을 때까지 유지됩니다. `--steps 1800`을 추가하면 1800스텝 후 종료합니다. `--headless`는 창 없이 렌더링하며, 단계 수를 생략하면 1800회를 사용합니다. 기존 `--frames`는 headless 기본 한도만 정하고 GUI 종료는 제어하지 않습니다.
+
+터미널 B는 시스템 ROS 환경입니다.
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 export ROS_DOMAIN_ID=0
-ros2 topic list
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 topic list -t
 ros2 topic echo /camera_1/camera_info --once
-ros2 topic hz /camera_1/rgb
-ros2 run rqt_image_view rqt_image_view /camera_1/depth
+rviz2
 ```
 
-GUI에서는 창을 직접 닫을 때까지 렌더링과 토픽 발행이 계속된다. `--steps 1800`은 1800번의 시뮬레이션 스텝 뒤 종료한다. 화면 없는 실험은 `--headless`를 사용하며 소요 벽시계 시간은 GPU 성능에 따라 달라진다.
+RViz에서 **Add > Image**를 두 개 만들고 토픽을 `/camera_1/rgb`, `/camera_2/rgb`로 지정합니다. 두 영상에서 빨간·파란 물체의 위치가 어떻게 다른지 확인하세요. 깊이는 별도 Image 도구에서 `/camera_1/depth`를 선택합니다.
 
-## 단계별 관찰
+### 실행 결과 확인하기
 
-1. Play 상태에서 `/World/Camera_1`, `/World/Camera_2`를 Stage에서 찾는다. 두 번째 카메라는 x축으로 1 m 이동했으므로 같은 큐브를 다른 위치에서 본다.
-2. **Window > Viewports > Viewport 2**를 연다. 각 Viewport의 왼쪽 위 Camera 메뉴에서 Camera_1과 Camera_2를 각각 선택한다. 기본 Perspective는 사용자가 장면을 탐색하는 카메라이며, 센서 Camera prim과 다르다.
-3. **Window > Graph Editors > Action Graph**에서 `/World/CameraGraph_1`을 선택한다. Tick → Once → Render → 각 Helper의 실행 연결과 Render → Helper의 renderProductPath 데이터 연결을 구별한다.
-4. `rviz2`를 실행하고 **Add > Image**의 Topic을 `/camera_1/rgb`로 지정한다. 다른 Image를 추가하고 `/camera_2/rgb`로 지정한다. 두 영상에서 큐브가 차지하는 위치가 달라야 한다.
-5. **PointCloud2** 표시를 추가하고 토픽을 `/camera_1/depth_pcl`, Fixed Frame을 `camera_1`로 설정한다. 이 작은 실험은 TF를 발행하지 않으므로 다른 좌표계를 Fixed Frame으로 고르면 변환 오류가 정상이다.
-6. CameraInfo의 `width=640`, `height=480`과 9개 K 행렬 원소를 확인한다. 중심점은 `(320,240)`이고, `fx=width*focalLength/horizontalAperture`, `fy=height*focalLength/verticalAperture`다. 코드의 조리개와 초점거리로 fx와 fy는 약 549.75 pixel이다.
+카메라 1의 CameraInfo에서 `width=640`, `height=480`, `header.frame_id=camera_1`을 확인합니다. 카메라 2는 `camera_2`를 사용합니다. RGB가 보인 다음 RViz에 **PointCloud2**를 추가하고 `/camera_1/depth_pcl`을 선택하세요. **Fixed Frame은 `camera_1`**로 둡니다.
 
-## 직접 같은 그래프 만들기
+이 코드는 TF를 발행하지 않습니다. 따라서 첫 카메라의 점군을 `world`나 `camera_2`로 변환하려 하면 필요한 좌표계 연결을 찾지 못합니다. 센서 좌표계에서 표면을 먼저 확인하는 실습입니다.
 
-1. 실행 중인 시뮬레이션을 Stop하고 `/World/CameraGraph_2`를 삭제한다. Camera_2는 남긴다. 그래프의 변경은 이 임시 장면에만 적용된다.
-2. **Window > Graph Editors > Action Graph > New Action Graph**에서 `/World/MyCameraGraph`를 만든다. 검색창에서 **On Playback Tick**, **ROS2 Context**, **Isaac Run One Simulation Frame**, **Isaac Create Render Product**, **ROS2 Camera Helper**, **ROS2 Camera Info Helper**를 추가한다.
-3. Tick의 `tick` → Run One의 `execIn`, Run One의 `step` → Render의 `execIn`을 잇는다. Render의 `execOut`을 두 Helper의 `execIn`에, `renderProductPath`를 두 Helper의 같은 입력에 연결한다. Context의 `context`도 두 Helper의 `context`에 연결한다.
-4. Render의 `cameraPrim=/World/Camera_2`, `width=640`, `height=480`, `enabled=True`를 설정한다. Camera Helper는 `type=rgb`, `topicName=manual_rgb`, `frameId=camera_2`로 설정한다. Info Helper는 `topicName=manual_camera_info`, 같은 frameId를 사용한다. Context는 **Use Domain ID Env Var**를 켠다.
-5. Play 후 `ros2 topic echo /manual_camera_info --once`로 확인한다. 이미지가 실제 렌더링되는 것은 별도 Render Product가 있기 때문이다. Viewport를 다른 카메라로 바꾸어도 이 토픽의 카메라는 바뀌지 않는다.
-6. 단축 경로도 실습한다. Stop 후 **Tools > Robotics > ROS 2 OmniGraphs > Camera**에서 Graph Path=`/World/ShortcutCamera`, Camera Prim=`/World/Camera_2`, Frame ID=`camera_2`, Node Namespace=`shortcut`을 입력하고 RGB와 Depth를 선택한다. 기존 그래프에 붙일 때만 **Add to an existing graph?**를 선택한다. Play 후 `/shortcut`으로 시작하는 토픽을 확인한다.
+Image의 `encoding`은 채널 순서와 자료형, `step`은 한 행의 바이트 수입니다. `data`를 읽을 때 단순히 너비×높이의 숫자 배열이라고 가정하지 말고 이 두 필드를 함께 확인하세요. 깊이 값의 단위는 m이며 화면의 밝기는 이 수치를 시각화한 결과입니다.
 
-## 깊이와 인식 데이터
+## 2. 카메라 그래프와 내부 파라미터 읽기
 
-Helper 하나는 한 종류의 데이터만 담당한다. `rgb`는 색, `depth`는 영상 평면까지의 거리(m), `depth_pcl`은 깊이와 내부 파라미터를 이용해 역투영한 점군이다. `bbox_2d_tight`, `bbox_2d_loose`, `bbox_3d`, `semantic_segmentation`, `instance_segmentation`도 선택할 수 있다.
+Stage에서 `/World/Camera_1`, `/World/Camera_2`를 찾고 **Window > Graph Editors > Action Graph**에서 `/World/CameraGraph_1`을 엽니다.
+
+### 코드에서 볼 부분
+
+```text
+Tick → Once → Render Product 생성 → Info·RGB·Depth·PointCloud Helper 준비
+                          └─ renderProductPath를 각 Helper에 전달
+```
+
+`Once`는 렌더 출력과 후처리 연결을 매 프레임 새로 만들지 않도록 초기 실행을 제한합니다. 준비된 센서 파이프라인이 이후 렌더링 결과를 발행합니다. 실행 포트 연결 외에 `renderProductPath` 연결이 필요한 이유는 각 Helper가 **어느 카메라의 출력인지** 알아야 하기 때문입니다.
+
+코드는 카메라마다 아래 설정을 사용합니다.
+
+```python
+camera.CreateHorizontalApertureAttr(20.955)
+camera.CreateVerticalApertureAttr(15.71625)
+camera.CreateFocalLengthAttr(18)
+```
+
+640×480 해상도에서 픽셀 단위 초점거리는 다음과 같이 구할 수 있습니다.
+
+```text
+fx = 640 × 18 / 20.955 ≈ 549.75 pixel
+fy = 480 × 18 / 15.71625 ≈ 549.75 pixel
+```
+
+CameraInfo의 내부 파라미터 행렬 K는 ROS 메시지에서 소문자 `k` 배열로 표시됩니다. 3×3 행렬을 펼친 9개 숫자로, `k[0]`, `k[4]`가 fx·fy, `k[2]`, `k[5]`가 중심점 cx·cy이며 이번 설정에서는 중심이 약 `(320, 240)`입니다. 렌즈 설정을 바꾸면 단순히 그림만 바뀌는 것이 아니라 이 값도 달라집니다.
+
+그래프를 손으로 재구성하려면 Stop 후 두 번째 카메라 그래프만 삭제하고 새 그래프를 만드세요. Camera_2 prim은 남깁니다.
+
+1. **On Playback Tick**, **Isaac Run One Simulation Frame**, **Isaac Create Render Product**, **ROS2 Context**, **ROS2 Camera Helper**, **ROS2 Camera Info Helper**를 추가합니다.
+2. Tick.tick → Once.execIn → Once.step → Render.execIn을 연결합니다. Render의 execOut과 renderProductPath를 두 Helper의 대응 입력에 연결합니다. Context.context도 두 Helper에 연결합니다.
+3. Render는 `cameraPrim=/World/Camera_2`, 640×480, `enabled=True`로 설정합니다.
+4. Camera Helper는 `type=rgb`, `topicName=manual_rgb`, `frameId=camera_2`, Info Helper는 `topicName=manual_camera_info`, 같은 frameId로 설정합니다. Context는 환경 Domain ID를 사용하도록 합니다.
+5. Play 후 `ros2 topic echo /manual_camera_info --once`와 `/manual_rgb` 영상으로 확인합니다.
+
+같은 작업은 **Tools > Robotics > ROS 2 OmniGraphs > Camera**에서도 구성할 수 있습니다. Graph Path와 Camera Prim을 지정하고 원하는 RGB·Depth 출력을 선택하세요. 별도 Render Product를 사용하므로 탐색용 Viewport 카메라를 바꾸어도 발행 카메라는 그대로입니다.
+
+### 실행 결과 확인하기
+
+기본 실행에는 인식 결과가 없습니다. 의미 라벨까지 비교하려면 앞의 앱을 종료하고 터미널 A에서 다음처럼 실행합니다.
 
 ```bash
-"$ISAAC_SIM/python.sh" run.py --perception semantic_segmentation
-"$ISAAC_SIM/python.sh" run.py --perception bbox_3d
+"$ISAAC_SIM/python.sh" src/113_ros2_ros2_camera/run.py --perception semantic_segmentation
 ```
 
-코드는 Red와 Blue prim에 `red`, `blue` 의미 라벨을 붙인다. `/camera_1/labels`에는 색/객체 ID를 해석할 라벨 정보가 발행된다. 다른 실행으로 바꿀 때는 기존 프로그램을 종료한다. **Helper가 한번 활성화된 뒤에는 type만 바꾸어 재사용하지 않는다.** 새 노드를 만들거나 장면을 다시 로드해야 내부 파이프라인이 올바르게 생성된다. 경계 상자 사용 전 ROS 환경에 `vision_msgs`가 있는지 `ros2 interface show vision_msgs/msg/Detection3DArray`로 확인한다.
+코드는 Red와 Blue prim에 `red`, `blue` 라벨을 추가합니다. `/camera_1/semantic_segmentation`과 `/camera_1/labels`를 함께 읽어 색 또는 ID가 어떤 물체를 뜻하는지 연결하세요. 경계 상자를 보려면 별도 실행에서 `--perception bbox_3d`를 선택하며 외부 ROS에 `vision_msgs`가 필요합니다.
 
-## API와 USD 개념
+Helper가 초기화된 뒤 `type` 문자열만 바꾸어 재사용하지 마세요. 새로운 데이터 종류를 선택할 때는 앱을 다시 실행하거나 새 Helper를 만들어 후처리 파이프라인을 구성합니다.
 
-- **Stage / prim**: Stage는 장면 전체, prim은 `/World/Camera_1` 같은 경로로 식별되는 객체다. `UsdGeom.Camera.Define`은 카메라 prim을 만들고 `XformCommonAPI`는 위치·회전·크기를 설정한다. USD 카메라는 로컬 -Z 방향으로 보며 +Y가 위다.
-- **Render Product**: 카메라, 해상도, 렌더 출력의 묶음이다. 카메라 prim만 존재한다고 ROS 이미지가 생기지는 않는다.
-- **`og.Controller.edit`**: 노드를 생성하고 값을 넣고 포트를 연결한다. 실행 포트는 언제 처리할지, 데이터 포트는 무엇을 처리할지 정한다.
-- **Camera Helper**: 렌더 결과를 ROS 메시지로 바꾸는 `/Render/PostProcessing/SDGPipeline`을 세션 안에서 구성한다. 이 생성된 파이프라인은 Stage 파일에 영구 저장되는 모델 데이터가 아니다.
-- **CameraInfo**: K는 3×3 내부 파라미터, P는 3×4 투영 행렬, R은 스테레오 정렬 회전이다. 단안에서는 P의 평행이동 항이 0이다. 두 Render Product를 Info Helper의 좌/우 입력에 넣으면 스테레오 baseline을 반영할 수 있다.
+## 3. 색·깊이·점군의 관계 정리
 
-## 성공 기준과 작은 실험
+```text
+같은 카메라와 Render Product
+    ├─ RGB: 픽셀의 색
+    ├─ Depth: 픽셀에 보인 표면까지의 영상 평면 기준 깊이
+    ├─ PointCloud: 깊이 + 카메라 내부 파라미터로 복원한 3D 위치
+    └─ CameraInfo: 그 복원에 필요한 렌즈·해상도 정보
+```
 
-두 RGB 토픽에서 서로 다른 시점의 영상이 보이고, 깊이 토픽이 발행되며, CameraInfo 해상도가 640×480이면 기본 경로를 확인한 것이다. `ros2 topic list`에 이름만 보이는 것은 영상 수신 검증을 대신하지 않는다.
+깊이 영상은 어두운 픽셀이 검은 재질이라는 뜻이 아닙니다. 거리를 명암으로 표시한 것입니다. 배경의 무한대 값 때문에 대비가 한쪽으로 몰릴 수 있으므로 물체·벽·바닥처럼 유한한 거리의 표면을 비교하세요.
 
-변수 하나만 바꾸는 실험: 코드의 `camera.CreateFocalLengthAttr(18)`을 `36`으로 바꾸고 재실행한다. 큐브가 더 크게 보이고 CameraInfo의 fx, fy가 두 배가 되는지 비교한다. 다른 위치·해상도는 그대로 둔다.
+USD 카메라는 로컬 -Z를 바라보고 +Y가 위입니다. ROS 영상의 optical frame은 +Z가 앞, +X가 영상 오른쪽, +Y가 아래입니다. `camera_1`이라는 frame 이름만 보고 USD 축과 같은 방향으로 점군을 해석하지 마세요. [Jazzy Image 메시지 정의](https://raw.githubusercontent.com/ros2/common_interfaces/jazzy/sensor_msgs/msg/Image.msg)도 이 광학 좌표와 CameraInfo의 frame 일치를 요구합니다.
 
-## 문제 해결
+두 카메라의 독립적인 CameraInfo를 발행하는 구성은 자동으로 스테레오 보정 전체를 수행하는 구성과도 다릅니다. 여기서는 시점 차이와 각 카메라의 렌더 출력에 집중합니다.
 
-- 토픽이 없다: 프로그램이 실행 중인지, Bridge 확장 로드 오류가 없는지, 양쪽 ROS_DOMAIN_ID가 같은지 확인한다.
-- 이름은 보이는데 영상이 없다: RViz Image의 Reliability를 Best Effort로 바꾸고 다시 확인한다. `ros2 topic info -v /camera_1/rgb`로 실제 publisher QoS를 확인한다.
-- 깊이가 흑백 두 구역뿐이다: 무한대 배경이 자동 대비 범위를 넓힐 수 있다. 카메라가 바닥·벽을 향하게 하고 유한한 거리 범위를 관찰한다.
-- ROS 단축 메뉴가 없다: **Window > Extensions**에서 `isaacsim.ros2.bridge`를 켠다.
-- 별도 TurtleBot 예제를 재현하려면 Content Browser의 **Isaac Sim > Samples > ROS2 > Scenario > turtlebot_tutorial.usd**를 연다. 이는 외부 NVIDIA 자산이 필요한 원문 확장 실습이며 본 코드의 실행 조건은 아니다.
+## 4. 간단한 확인 실험
 
-## 출처와 검증 범위
+`run.py`의 **`camera.CreateFocalLengthAttr(18)`만 `36`으로 바꾸고 다시 실행**해 보세요. 해상도와 카메라 위치는 유지합니다.
 
-[Isaac Sim 5.1 ROS 2 Cameras](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera.html), [카메라 그래프](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera.html#building-the-graph-for-an-rgb-publisher), [CameraInfo](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera.html#camera-info-helper-node), [그래프 단축 메뉴](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera.html#graph-shortcut).
+물체가 영상에서 더 크게 보이고 fx·fy가 약 1099.5 pixel로 두 배가 되는지 확인합니다. 중심점은 같은 해상도에서 유지되어야 합니다. 그래프의 카메라 두 개가 같은 생성 코드를 사용하므로 이 변경은 둘 다에 적용됩니다.
 
-해설과 실험 장면은 이 저장소에서 새로 작성했다. 설치된 5.1 노드 스키마와 대조했으며 GPU 렌더링·ROS 수신 실측 상태는 `tutorial.json`의 verification을 확인한다.
+## 실행할 때 막히면
+
+- **RGB 토픽은 보이지만 영상이 안 옴**: `ros2 topic info -v /camera_1/rgb`로 publisher QoS를 확인하고 RViz Reliability를 맞추세요. 렌더 초기화도 기다립니다.
+- **점군에 TF 오류가 남음**: 이 실습은 TF를 만들지 않습니다. 첫 카메라 점군의 Fixed Frame을 `camera_1`로 설정하세요.
+- **깊이 영상이 검거나 두 색으로만 보임**: 무한대 배경과 자동 대비를 확인하세요. RGB처럼 색상값으로 해석하지 않습니다.
+- **인식 결과 토픽이 없음**: 기본 `--perception none`인지 확인하세요. 선택한 결과만 추가 발행됩니다.
+- **`--frames`를 줬는데 GUI가 종료되지 않음**: GUI 종료 한도는 `--steps`입니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [ROS 2 Cameras](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera.html)에 대응하며, 브리지 환경은 [ROS 2 Installation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)을 참고합니다.
+
+공식 TurtleBot 장면 대신 직접 생성한 두 물체와 카메라를 사용합니다. 주행·TF는 포함하지 않고 카메라 Helper와 출력 해석을 실습합니다. `tutorial.json`은 `verification: not_run`입니다. 수치 계산은 코드 설정에서 도출한 기대값이며 실제 GPU 렌더링·ROS 영상 수신 결과는 별도 확인이 필요합니다.

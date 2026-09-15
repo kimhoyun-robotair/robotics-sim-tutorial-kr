@@ -1,65 +1,119 @@
-# 80. Isaac Sim Omnigraph Tutorial
+# 80. OmniGraph로 Jetbot의 바퀴를 움직이기
 
-권장 학습 순서 **80** · OmniGraph와 확장 개발 · 출처 ID `t109`
+## 이번에 배우는 것
 
-Jetbot의 바퀴 속도를 계산하는 Differential Controller와 물리에 적용하는 Articulation Controller를 직접 연결한다. 뒤에서는 같은 그래프를 WASD shortcut으로 생성한다.
+**전진·회전 명령을 바퀴 속도로 바꾸는 그래프를 직접 연결하고, 자동 생성한 WASD 그래프에서도 같은 흐름을 찾아봅니다.**
 
-## 이 실습의 의도
+“초당 0.1 m로 전진하세요”라는 명령은 바퀴 관절이 바로 사용하는 값이 아닙니다. 바퀴 크기를 고려해 좌우 각속도로 바꾼 뒤 각 관절에 전달해야 합니다. OmniGraph는 이 계산과 실행을 노드와 선으로 표현합니다.
 
-Jetbot의 선속도·각속도를 좌우 바퀴 명령으로 바꾸는 계산과, 그 명령을 실제 관절에 적용하는 실행을 두 controller로 나누어 이해한다. 먼저 tick·데이터·관절 이름을 직접 연결한 뒤 WASD shortcut이 만든 그래프와 비교하여 자동 생성된 연결도 읽을 수 있게 하는 실습이다. 제공된 자동 실행 파일이나 로봇 장면은 없으므로 GUI에서 Jetbot 자산을 불러오고 그래프를 구성한 뒤 Play와 속도 입력까지 수행해야 주행을 관찰할 수 있다.
+| 그래프 요소 | 역할 | 이 실습에서 확인할 값 |
+|---|---|---|
+| On Playback Tick | 재생 중 실행 신호 제공 | 두 controller의 `execIn` |
+| Differential Controller | 몸체 속도를 좌우 바퀴 속도로 변환 | 반지름 0.03 m, 좌우 바퀴 간격 0.1125 m |
+| Constant Token + Make Array | 바퀴 이름을 순서대로 전달 | 왼쪽, 오른쪽 관절 |
+| Articulation Controller | 계산 결과를 로봇 관절에 적용 | `/World/jetbot` |
 
-## 실행 후 확인할 것
+이 폴더에는 자동 실행 코드나 Jetbot USD가 없습니다. GUI에서 공식 자산을 불러오고 그래프를 만드는 실습입니다.
 
-- Stage에서 `/World/jetbot`이 바닥 위에 착지하고 `left_wheel_joint`, `right_wheel_joint`가 있는지 확인한다. Action Graph의 jointNames 배열이 이 좌·우 순서와 맞아야 계산된 두 속도가 올바른 바퀴에 전달된다.
-- tick이 Differential Controller와 Articulation Controller의 `execIn` 양쪽으로 연결되고, `velocityCommand` 출력이 Articulation Controller 입력으로 이어지는지 확인한다. 노드가 나열되어 있는 상태만으로 제어가 실행되지는 않는다.
-- Play 중 linear=`0.1`, angular=`0`에서는 두 바퀴의 명령이 같은 방향이고 본체가 직진하는지 본다. linear=`0`, angular=`0.2`에서는 반대 방향의 바퀴 명령과 본체의 제자리 회전을 확인한 뒤 두 입력을 0으로 되돌린다.
-- WASD 단계에서는 수동 그래프를 제거한 뒤 생성된 그래프의 실제 경로와 관절 대상을 확인한다. Viewport에 focus를 주고 W/S의 전후 이동, A/D의 회전이 나타나는지 보며, 같은 바퀴에 명령하는 다른 그래프가 남아 있지 않은지 확인한다.
-- wheelRadius만 두 배로 바꾼 비교에서는 같은 선속도 입력에 대한 계산된 바퀴 각속도가 절반으로 바뀌는지 본다. USD의 실제 바퀴 크기를 바꾸는 실험이 아니므로 입력 반지름을 잘못 주면 주행 속도도 목표와 달라질 수 있다.
+## 1. Jetbot과 수동 그래프 준비하기
 
-## 준비
-
-Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
+Isaac Sim 5.1.0 GUI와 지원 NVIDIA GPU가 필요합니다. 저장소 루트에서 다음으로 시작하세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-"$ISAAC_SIM_PATH/isaac-sim.sh"
+~/isaacsim/isaac-sim.sh
 ```
 
-Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 경로로 식별하는 요소다. `File > New`는 새 장면을 여므로 보관할 작업은 먼저 저장한다. 이 패키지는 `asset/`, `docs/`, 저장소 README를 필요로 하지 않는다.
+1. **File > New**로 새 장면을 열고 **Create > Physics > Ground Plane**을 추가합니다.
+2. Content Browser의 `Isaac Sim/Robots/NVIDIA/Jetbot/jetbot.usd`를 장면으로 드래그합니다. 공식 NVIDIA 자산 경로에 접근할 수 있어야 합니다.
+3. 로봇 prim 경로를 `/World/jetbot`, 위치를 `(0, 0, 0.1)` m로 맞춥니다.
+4. **Play**로 바닥에 착지하는지 확인한 뒤 **Stop**합니다. Stage에서 `left_wheel_joint`, `right_wheel_joint`를 찾습니다.
+5. **Window > Graph Editors > Action Graph > New Action Graph**로 빈 그래프를 만듭니다.
 
-## 1. Jetbot 장면
+### 설정에서 볼 부분
 
-1. `File > New`, `Create > Physics > Ground Plane`으로 바닥을 만든다.
-2. Content의 `Isaac Sim > Robots > NVIDIA > Jetbot > jetbot.usd`를 드래그한다. prim 경로를 `/World/jetbot`, 위치를 `(0,0,0.1)` m로 맞춘다. 공식 5.1 자산 접근이 필요하다.
-3. Play로 바닥에 착지하는지 확인하고 Stop한다. Stage의 `jetbot/chassis` 아래 `left_wheel_joint`, `right_wheel_joint`를 확인한다.
+**Articulation Controller**, **Differential Controller**, **On Playback Tick**, **Constant Token** 두 개, **Make Array**를 추가합니다. 각 노드 선택 후 Property에서 설정하세요.
 
-## 2. 그래프 수동 생성
+| 노드 | 입력 | 값 |
+|---|---|---|
+| Articulation Controller | `robotPath` | `/World/jetbot` |
+| Differential Controller | `wheelRadius` / `wheelDistance` | `0.03` / `0.1125` m |
+| Differential Controller | `maxAngularSpeed` | `0.2` rad/s |
+| Constant Token 두 개 | 값 | `left_wheel_joint`, `right_wheel_joint` |
+| Make Array | `arraySize` / 타입 | `2` / `token[]` |
 
-1. `Window > Graph Editors > Action Graph > New Action Graph`를 연다.
-2. **Articulation Controller**, **Differential Controller**, **On Playback Tick**, **Constant Token** 2개, **Make Array**를 추가한다.
-3. Articulation Controller의 robotPath를 `/World/jetbot`으로 하거나 targetPrim에 그 로봇을 지정한다. 5.1 UI에 usePath가 있으면 경로 방식에 맞춰 켠다.
-4. Differential Controller의 wheelDistance=`0.1125`, wheelRadius=`0.03`, maxAngularSpeed=`0.2`로 설정한다.
-5. Token 두 개의 값은 `left_wheel_joint`, `right_wheel_joint`다. Make Array는 입력 2개, arraySize=2, 타입 `token[]`으로 설정한다. 왼쪽 이름→input0, 오른쪽→input1, array→Articulation Controller의 jointNames로 연결한다.
-6. On Playback Tick의 tick을 **Differential Controller execIn**과 **Articulation Controller execIn** 양쪽에 연결한다. 5.1 Differential Controller에는 execOut 포트가 없다. Differential Controller의 velocityCommand→Articulation Controller velocityCommand도 연결한다.
-7. Play 중 Desired Linear Velocity=`0.1`, Desired Angular Velocity=`0`으로 바꾸면 직진한다. linear=`0`, angular=`0.2`는 제자리 회전이다. 관찰 후 둘 다 0으로 돌린다.
+Articulation Controller에 `usePath`가 보이면 경로 사용으로 설정합니다. 또는 `targetPrim`에 로봇을 직접 지정할 수 있습니다. Articulation은 관절로 연결된 강체 묶음이며, controller가 적용할 로봇을 이 입력으로 정합니다.
 
-## 3. WASD shortcut
+Make Array에서 `+`로 두 번째 입력을 추가한 뒤 다음과 같이 연결하세요.
 
-1. Stop하고 앞의 그래프를 삭제한다. 한 로봇 바퀴에 두 controller가 명령하지 않게 한다.
-2. `Tools > Robotics > Omnigraph Controllers > Differential Controller`를 연다.
-3. Robot Prim/Articulation Root=`/World/jetbot`, Graph Path=`/Graph/differential_controller`, wheel distance=`0.1125`, radius=`0.03`, Use Keyboard Control (WASD)=On으로 한다. 이름을 명시한다면 left/right 순서를 맞춘다.
-4. OK 후 `/Graph/differential_controller`를 열어 생성 결과를 비교한다. Play 후 Viewport를 클릭하여 키보드 focus를 주고 W/A/S/D로 이동한다.
+```text
+왼쪽 Constant Token → Make Array.input0
+오른쪽 Constant Token → Make Array.input1
+Make Array.array → Articulation Controller.jointNames
 
-## API/물리 해설과 확인
+On Playback Tick.tick → Differential Controller.execIn
+On Playback Tick.tick → Articulation Controller.execIn
+Differential Controller.velocityCommand → Articulation Controller.velocityCommand
+```
 
-Articulation은 관절로 연결된 강체 집합이다. Differential Controller는 선속도 v(m/s), 각속도 ω(rad/s)를 `(v−ωL/2)/r`, `(v+ωL/2)/r`의 좌/우 바퀴 각속도로 바꾼다. radius는 바퀴 반지름, distance는 좌우 바퀴 사이 거리다. Articulation Controller는 이 결과를 지정한 joint names의 velocity target에 쓴다. execution 선은 계산 순서, token/velocity 선은 데이터다.
+실행 신호와 숫자·이름 데이터는 역할이 다릅니다. Tick 선은 노드를 실행하게 하고, 다른 선은 계산할 값이나 적용 대상을 전달합니다. **5.1의 Differential Controller에는 `execOut`이 없으므로 tick을 두 controller에 각각 연결합니다.**
 
-한 변수 실험: 같은 v 명령에서 wheelRadius만 두 배로 하면 계산된 각속도가 절반이 되는지 Property에서 본다. 실제 자산 크기는 바뀌지 않으므로 잘못된 radius 입력은 속도 오차를 만든다. 움직이지 않으면 Play, robot prim, 관절 이름 순서, 바닥/충돌, 중복 controller를 확인한다.
+### 실행 결과 확인하기
 
-## 검증 범위
+Play한 뒤 Differential Controller의 Desired Linear Velocity를 `0.1`, Desired Angular Velocity를 `0`으로 설정합니다. 두 바퀴가 같은 방향으로 돌고 몸체가 직진하는지 보세요.
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
+이어 선속도를 `0`, 각속도를 `0.2`로 바꿉니다. 좌우 바퀴 명령이 반대 부호가 되고 로봇이 제자리에서 회전하는지 확인한 뒤 두 입력을 0으로 돌립니다. 그래프가 화면에 존재한다는 것보다 **계산 출력과 실제 로봇 반응이 이어지는지**가 확인 대상입니다.
 
-## 출처
+Stop한 뒤 **File > Save As**로 이 튜토리얼 폴더에 `manual_graph.usda`를 저장하세요. 4절의 반지름 실험에서 이 수동 그래프를 다시 사용합니다.
 
-- [Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_tutorial.html).
+## 2. 같은 제어를 WASD 그래프로 만들기
+
+Stop한 뒤 앞의 수동 그래프를 삭제합니다. 같은 바퀴에 두 그래프가 동시에 명령하지 않도록 한 가지 입력 경로만 남깁니다.
+
+1. **Tools > Robotics > Omnigraph Controllers > Differential Controller**를 엽니다.
+2. Robot Prim=`/World/jetbot`, Graph Path=`/Graph/differential_controller`로 지정합니다.
+3. Wheel Radius=`0.03`, Distance between wheels=`0.1125`를 넣습니다.
+4. Left Joint Name=`left_wheel_joint`, Right Joint Name=`right_wheel_joint`, Use Keyboard Control (WASD)=On으로 생성합니다.
+
+### 설정에서 볼 부분
+
+자동 생성한 그래프도 열어 확인하세요. 바퀴 이름을 담는 `ArrayNames`의 **input0은 왼쪽, input1은 오른쪽**이 되도록 맞춥니다. 설치된 5.1 생성 코드에서는 입력한 좌·우 이름이 반대 순서로 배열에 들어갈 수 있으므로, 팝업 입력만 보고 순서가 맞다고 가정하지 않습니다.
+
+`ScaleLinear`는 `0.1`, `ScaleAngular`는 `0.2`로 설정합니다. 키 상태는 눌림/해제 값이므로 이 배율이 실제 선속도와 각속도로 바꾸어 줍니다. 처음 실행할 때 도구가 생성한 기본 배율을 그대로 두지 말고 이 작은 로봇에 사용할 값을 확인하세요.
+
+### 실행 결과 확인하기
+
+Play하고 뷰포트를 클릭해 키보드 입력 초점을 줍니다. W/S로 전후 이동, A/D로 반대 방향 회전이 나타나는지 확인합니다. 키를 뗐을 때 입력이 돌아오는지도 봅니다. 마친 뒤 Stop하고 필요하면 **File > Save As**로 장면과 그래프를 저장하세요. 이 실습은 CSV를 자동 생성하지 않습니다.
+
+## 3. 몸체 속도에서 바퀴 속도까지 정리
+
+바퀴 반지름을 r, 바퀴 사이 거리를 L, 선속도를 v, 회전 속도를 ω라고 하면 계산은 다음과 같습니다.
+
+```text
+왼쪽 바퀴 각속도 = (v - ωL/2) / r
+오른쪽 바퀴 각속도 = (v + ωL/2) / r
+```
+
+직진 `v=0.1`, `ω=0`에서는 두 값이 모두 약 `3.33 rad/s`입니다. 제자리 회전 `v=0`, `ω=0.2`에서는 약 `-0.375`, `+0.375 rad/s`입니다. 바퀴 이름 순서가 반대면 회전 명령의 해석도 반대가 될 수 있습니다.
+
+Differential Controller는 이 수치를 계산하고, Articulation Controller는 같은 순서의 관절에 전달합니다. 실제 주행은 바닥 접촉과 물리 상태에도 영향을 받으므로 계산값과 화면을 함께 봅니다.
+
+## 4. 간단한 확인 실험
+
+**File > Open**으로 1절에서 저장한 `manual_graph.usda`를 엽니다. 수동 그래프의 직진 조건에서 **wheelRadius만 0.03에서 0.06으로** 바꿔 보세요.
+
+먼저 Stop하고 반지름을 바꾼 뒤 다시 Play합니다. 선속도 `0.1`, 각속도 `0`을 다시 입력하세요. 이 노드는 반지름을 초기화할 때 읽으므로 재생 중 값만 바꾸어 비교하면 적용 시점을 놓칠 수 있습니다.
+
+계산된 각속도는 약 `3.33 → 1.67 rad/s`로 절반이 예상됩니다. 실제 USD 바퀴 크기는 그대로이므로 로봇도 원래 목표보다 느리게 움직일 수 있습니다. 이 실험은 **제어기에 입력한 치수와 실제 로봇 치수가 일치해야 하는 이유**를 보여줍니다.
+
+## 실행할 때 막히면
+
+- **노드가 있지만 움직이지 않음**: Play, 두 execIn 연결, robotPath와 바퀴 이름을 차례로 확인하세요.
+- **회전 방향이 예상과 반대임**: `jointNames` 배열이 계산 출력의 왼쪽·오른쪽 순서와 맞는지 보세요. 자동 생성 그래프도 검사 대상입니다.
+- **WASD가 반응하지 않음**: 뷰포트를 클릭하고 입력하세요. 문자열 입력란에 초점이 있으면 키가 로봇으로 전달되지 않을 수 있습니다.
+- **반지름 수정이 반영되지 않음**: Stop→수정→Play 후 속도 명령을 다시 입력하세요. Stop하면 속도 입력도 초기화됩니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Isaac Sim Omnigraph Tutorial](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_tutorial.html)에 대응합니다. 수동 연결과 shortcut 생성에 계산 예와 실제 출력 순서 검사를 더했습니다.
+
+공식 절차와 설치된 controller·그래프 생성 소스를 대조했습니다. 이번 개정에서는 Jetbot GUI 주행을 실행하지 않았고 `tutorial.json`은 `not_run`입니다. 위 각속도는 제어식의 기대값이며 실제 로봇 측정값이 아닙니다.

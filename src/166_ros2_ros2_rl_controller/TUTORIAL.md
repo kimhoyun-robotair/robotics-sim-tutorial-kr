@@ -1,117 +1,177 @@
-# 166. H1 강화학습 정책을 ROS 2로 실행하기
+# 166. ROS 2를 거쳐 H1의 관절 명령을 돌려받기
 
-권장 학습 순서 **166** · 병렬 환경과 학습 정책 활용 · 출처 ID `t004`
+## 이번에 배우는 것
 
-예상 결과는 H1이 `/imu`, `/joint_states`, `/clock`을 내보내고, 별도 ROS 정책 프로세스가 `/joint_command`로 자세 목표를 되돌려 주어 서 있거나 앞으로 걷는 것이다. 원문의 완성 asset과 GUI 그래프를 사용하는 실습이며 학습된 정책을 재학습하거나 이 폴더에 복제한 구현이라고 주장하지 않는다.
+**H1의 IMU·관절 상태를 ROS 2로 보내고, 외부 정책이 계산한 관절 목표가 시뮬레이터로 돌아오는 과정을 확인합니다.**
 
-이 패키지는 이미 실행한 Isaac Sim GUI에서 실습합니다. 로컬 검사·설정 도구가 GUI 수명을 제한하지 않으며, 사용자가 창을 직접 닫을 때까지 유지됩니다.
+정책이 시뮬레이터 밖에서 실행되면 상태를 전달하는 통신도 제어의 일부가 됩니다. 센서 메시지가 보이더라도 서로 시각이 맞지 않으면 정책이 계산을 시작하지 못할 수 있습니다. 이번에는 완성된 H1 장면에서 왕복 통신을 확인한 뒤 그래프의 데이터 연결을 읽습니다.
 
-## 이 실습의 의도
+| 구성 요소 | 실행 장소 | 역할 |
+|---|---|---|
+| H1 USD·물리·ROS 그래프 | Isaac Sim GUI | 센서 상태 발행, 관절 목표 적용 |
+| `h1_fullbody_controller` | 외부 ROS Python | 동기화된 상태로 정책 추론 |
+| `/cmd_vel` | ROS 명령 터미널 | 원하는 전진·회전 속도 전달 |
+| `inspect_stage.py` | Script Editor | 열린 Stage의 물리·IMU·토픽 설정 확인 |
 
-시뮬레이터의 H1 센서·관절 상태를 ROS 2로 보내고, 외부 정책 프로세스가 계산한 관절 위치 목표를 다시 로봇에 적용하는 왕복 제어를 익힌다. 완성된 H1 창고 장면을 먼저 쓰는 이유는 rig·IMU·물리 주기·ROS 그래프가 맞춰진 조건에서 통신과 보행을 함께 관찰하기 위해서다. 이 폴더의 `inspect_stage.py`는 열린 장면의 설정을 읽을 뿐이며, 정책 실행은 별도로 준비한 `h1_fullbody_controller`가 담당한다.
+이 폴더에는 정책 노드나 standalone `run.py`가 없습니다. 로컬 검사기는 읽기 전용이며 정책은 공식 ROS workspace에서 준비합니다.
 
-## 실행 후 확인할 것
+## 1. 완성 장면과 ROS 정책 실행하기
 
-- **Play 전 장면 설정:** Script Editor의 검사 출력에서 PhysicsScene의 `Hz=200`, `gpu_dynamics=False`, `broadphase=MBP`와 pelvis 아래 IMU, ROS 그래프의 실제 토픽 이름을 확인한다. 출력이 다르면 현재 장면 설정을 조사해야 하며, 검사기가 이를 자동으로 고쳐 주지는 않는다.
-- **왕복 메시지:** 정책을 먼저 실행하고 Play한 뒤 `ros2 topic echo ... --once`로 `/imu`, `/joint_states`, `/joint_command`의 실제 메시지를 각각 읽는다. 발행 토픽이 목록에 있다는 사실만으로 관절 명령의 회신까지 확인된 것은 아니다.
-- **시간과 관절 대응:** `/clock`이 진행하고 `/joint_command`가 반복 수신되는지 확인한다. 상태와 명령의 관절 이름·배열 대응을 살펴본다. `ros2 topic hz`의 수신 빈도는 실행 환경의 지연 영향을 받으므로 신경망 추론 50 Hz와 무조건 같아야 하는 값으로 쓰지 않는다.
-- **몸체 반응:** 무명령 상태에서 서 있는지, 작은 전진 명령을 주면 넘어지지 않고 움직이는지, 정지 명령 후 보행이 줄어드는지 GUI에서 본다. 정지 중 작은 drift와 정책 시작 전 낙하를 구분하며, 후진·옆걸음은 이 flat 정책의 성공 기준으로 삼지 않는다.
+기본 환경은 **Ubuntu 24.04 + ROS 2 Jazzy + Isaac Sim 5.1**입니다. RTX GPU, 5.1 H1 sample assets, `isaacsim.ros2.bridge`가 필요합니다. ROS 설치가 없다면 [Isaac Sim 5.1 ROS 설치 안내](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)를 먼저 따라 준비하세요. Ubuntu 22.04에서는 Humble을 사용하고 아래 `jazzy`, `jazzy_ws`를 각각 `humble`, `humble_ws`로 바꿉니다.
 
-## 이 폴더에서 시작하기
-
-다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
-
-Bash 터미널 A와 ROS 명령을 실행할 터미널 B 각각에서 같은 설정을 적용한다.
+Bash 터미널에서 진행합니다. GUI를 켤 터미널 A와 ROS를 실행할 B·C 모두 같은 ROS 환경과 domain을 설정하세요.
 
 ```bash
-source /opt/ros/humble/setup.bash
-# Ubuntu 24.04에서는 위 한 줄 대신 source /opt/ros/jazzy/setup.bash
+source /opt/ros/jazzy/setup.bash
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export ISAAC_SIM="$HOME/isaacsim"
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. 이 폴더에는 standalone `run.py`가 없으므로 GUI에서 확장을 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+터미널 A에서 `~/isaacsim/isaac-sim.sh`를 실행합니다. **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화하고 Content Browser의 5.1 Assets에서 다음 완성 장면을 여세요. 아직 Play하지 않습니다.
 
-Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
+```text
+/Isaac/Samples/ROS2/Scenario/h1_ros_locomotion_policy_tutorial.usd
+```
 
-## 필요한 정책과 로봇을 이 실습 안에서 준비하기
-
-Isaac 5.1 asset pack에서 다음 세 asset을 사용한다. Content Browser의 **Isaac Sim** 루트를 기준으로 찾는다.
-
-| 용도 | asset 경로 |
-|---|---|
-| 물리 gain/자세가 준비된 로봇 | `Samples/Rigging/H1/h1_rigged.usd` |
-| ROS 그래프가 구성된 로봇 | `Samples/ROS2/Robots/h1_ROS.usd` |
-| 로봇·창고·200Hz 설정이 완성된 장면 | `Samples/ROS2/Scenario/h1_ros_locomotion_policy_tutorial.usd` |
-
-처음 실행은 완성 장면으로 한다. 따라서 별도 로컬 rigging 튜토리얼을 이수할 필요가 없다. 이후 아래의 재구성 절차로 노드를 하나씩 만든다. 외부 ROS Python에는 PyTorch와 PyYAML이 필요하고 `python3 -c "import torch, yaml; print(torch.__version__)"`로 확인한다. Isaac Sim 내부의 torch와 외부 정책 프로세스의 torch는 별도 환경이다.
-
-ROS workspace는 **IsaacSim-5.1.0** 버전으로 준비한다. 최신 main은 launch 파일 이름/구성이 다를 수 있다.
+터미널 B는 저장소 루트에서 시작해 외부 패키지를 준비합니다. `colcon`, ROS 메시지·`message_filters`, 외부 Python의 `torch`, `numpy`, `yaml`이 필요합니다. 이 Python 환경은 Isaac Sim 내부 Python과 별개입니다.
 
 ```bash
-git clone --branch IsaacSim-5.1.0 --depth 1 https://github.com/isaac-sim/IsaacSim-ros_workspaces.git ros_workspaces
-cd "ros_workspaces/${ROS_DISTRO}_ws"
+python3 -c "import torch, numpy, yaml; print(torch.__version__)"
+mkdir -p src/166_ros2_ros2_rl_controller/output
+git clone --branch IsaacSim-5.1.0 --depth 1 https://github.com/isaac-sim/IsaacSim-ros_workspaces.git src/166_ros2_ros2_rl_controller/output/ros_workspaces
+cd src/166_ros2_ros2_rl_controller/output/ros_workspaces/jazzy_ws
 colcon build --packages-up-to h1_fullbody_controller
 source install/setup.bash
 ros2 pkg prefix h1_fullbody_controller
 ```
 
-`colcon`, message_filters 등 package.xml의 빌드·런타임 의존성이 준비되어 있어야 한다. 의존성이 없다면 선택한 ROS 배포판에서 준비하고 다시 build한다. 정책 파일 `policy/h1_policy.pt`와 환경 정의 `policy/h1_env.yaml`은 이 upstream ROS 패키지에 포함된다. 패키지 획득·빌드는 실제 외부 의존성을 준비하는 단계이며 이 튜토리얼 폴더 밖 공통 학습 모듈에 의존하지 않는다.
+이미 같은 버전 workspace를 준비했다면 그 workspace의 `install/setup.bash`를 사용하세요. 정책 `policy/h1_policy.pt`와 환경 YAML은 upstream 패키지에 포함되어 있습니다. 버전을 고정하는 이유는 최신 main의 실행 구조와 섞이지 않게 하기 위해서입니다.
 
-## 먼저 완성 장면에서 실행하기
+### 설정에서 볼 부분
 
-1. Isaac Sim에서 `Samples/ROS2/Scenario/h1_ros_locomotion_policy_tutorial.usd`를 연다. 아직 Play하지 않는다.
-2. **Window > Script Editor**에서 `inspect_stage.py`를 실행한다. PhysicsScene의 200Hz, GPU dynamics=False, broadphase=MBP, pelvis 아래 IMU, ROS 그래프와 실제 topic 이름을 확인한다. 이 스크립트는 결과를 읽기만 하며 잘못된 rig를 정상으로 꾸미지 않는다.
-3. 위 ROS workspace를 source한 터미널에서 정책을 먼저 켠다.
+Play 전에 **Window > Script Editor**에서 이 폴더의 `inspect_stage.py` 전체를 실행합니다.
 
-   ```bash
-   ros2 launch h1_fullbody_controller h1_fullbody_controller.launch.py
-   ```
+| 검사 출력 | 완성 장면에서 확인할 값 |
+|---|---|
+| PhysicsScene | `Hz=200`, `gpu_dynamics=False`, `broadphase=MBP` |
+| IMU 경로 | H1 pelvis 아래의 IMU |
+| ROS 노드 | `/imu`, `/joint_states`, `/joint_command`, `/clock` |
+| 그래프 pipeline | 물리 step에 맞춘 실행 구성 |
 
-4. 그 다음 Isaac Sim의 Play를 누른다. 명령이 없으면 정책이 서 있는 자세를 유지한다. 정책을 켜기 전에 물리만 시작하면 로봇이 넘어질 수 있다.
-5. 별도 ROS 터미널에서 실제 연결을 관찰한다.
+검사기는 설정을 고치지 않습니다. 다른 값이 나오면 현재 열린 Scene과 실제 Prim을 확인하세요. 완성 장면을 사용하는 이유는 로봇 관절과 센서·그래프가 맞춰진 출발점을 얻기 위해서입니다.
 
-   ```bash
-   ros2 topic echo /imu --once
-   ros2 topic echo /joint_states --once
-   ros2 topic echo /joint_command --once
-   ros2 topic hz /clock
-   ros2 topic hz /joint_command
-   ```
+터미널 B에서 정책을 먼저 실행하고, 그다음 GUI의 **Play**를 누릅니다.
 
-6. `ros2 run teleop_twist_keyboard teleop_twist_keyboard`를 실행한다. 작은 속도로 `i` 전진, `u/o` 전진 회전, `j/l` 좌우 회전, `k` 정지를 시험한다. 이 flat H1 정책은 후진과 옆걸음을 지원하지 않으며 linear/angular 속도를 0.75보다 높이면 실패할 수 있다. 처음에는 0.2m/s 정도로 시작한다.
+```bash
+ros2 launch h1_fullbody_controller h1_fullbody_controller.launch.py
+```
 
-## 로봇과 그래프를 직접 재구성하기
+정책보다 물리를 먼저 시작하면 로봇이 지지 명령을 받기 전에 넘어질 수 있습니다. 종료할 때는 GUI를 Pause하고 ROS 프로세스를 Ctrl+C로 종료하세요. GUI 창은 직접 닫을 때까지 남습니다.
 
-1. `h1_rigged.usd`를 새 실습 Stage에 연다. `/h1/pelvis`를 오른쪽 클릭하고 **Create > Isaac > Sensors > Imu Sensor**로 `/h1/pelvis/Imu_Sensor`를 만든다. torso의 IMU를 대신 쓰면 pelvis frame 변환이 추가로 필요하다.
-2. **Create > Scope**로 `/Graph`를 만든다. 그 아래 **Create > Visual Scripting > ActionGraph**를 세 개 만들고 `ROS_Imu`, `ROS_Joint_States`, `ROS_Clock`으로 부른다. 각 그래프 Property의 `pipelineStage`를 **pipelineStageOnDemand**로 설정한다. **On Physics Step**이 물리 step마다 이를 실행한다.
-3. IMU 그래프에 On Physics Step, ROS2 Context, ROS2 QoS Profile, Isaac Read IMU, Isaac Read Simulation Time, ROS2 Publish IMU를 둔다. Physics Step의 실행 출력을 Read IMU.execIn에 연결하고 Read IMU.execOut을 Publish IMU.execIn에 연결한다. Read IMU의 linearAcceleration/angularVelocity/orientation을 publisher의 같은 입력에 연결한다. Time.simulationTime은 timeStamp, Context.context는 context, QoS.qosProfile은 qosProfile에 연결한다. imuPrim=`/h1/pelvis/Imu_Sensor`, Read Gravity=False, topicName=`/imu`, frameId=`pelvis`, Time.resetOnStop=True다.
-4. Joint 그래프에는 On Physics Step, Context, QoS, Time, ROS2 Publish Joint State, ROS2 Subscribe Joint State, Articulation Controller를 넣는다. Physics Step은 발행/수신/제어 execIn에, Context와 QoS는 두 ROS 노드에, Time은 publisher.timeStamp에 연결한다. publisher.targetPrim=`/h1`, publisher.topicName=`/joint_states`, subscriber.topicName=`/joint_command`, controller.targetPrim=`/h1`이다. Subscriber의 jointNames/positionCommand/velocityCommand/effortCommand를 controller의 같은 입력에 연결한다. resetOnStop=True로 맞춘다.
-5. Clock 그래프에서는 Physics Step → ROS2 Publish Clock.execIn, Time.simulationTime → timeStamp, Context → context, QoS → qosProfile을 연결한다. topicName=`/clock`, resetOnStop=True다.
-6. 로봇을 `output/h1_ros_01.usd`처럼 새 이름으로 저장한다. 새 Stage에 **Environments > Simple_Warehouse > warehouse.usd**를 reference로 놓고 이 로봇을 추가한다. 로봇 Z=1.0으로 둔다.
-7. **Create > Physics > Physics Scene**을 추가한다. **Time Steps Per Second=200**, **Enable GPU Dynamics=False**, **Broadphase Type=MBP**로 설정한다. Physics의 dt=0.005초와 정책의 5ms ROS timer가 맞아야 한다. 저장하고 앞의 순서로 정책을 먼저 실행한다.
+### 실행 결과 확인하기
 
-## 정책 입력과 rig를 이해하기
+같은 ROS 환경을 설정한 터미널 C에서 실제 메시지를 읽습니다.
 
-정책 관측은 pelvis 좌표계 선속도·각속도·중력 방향, 원하는 x/y/z회전 속도, 기본 자세로부터의 joint position 차이, joint velocity, 이전 action 순서로 구성된다. IMU는 속도를 직접 주는 센서가 아니므로 외부 노드가 orientation으로 gravity 방향을 계산하고 가속도 등을 처리한다. 관절 순서와 기본 자세도 학습 당시와 일치해야 한다. 출력은 joint 위치 목표이며 공식 외부 노드는 200Hz timer에서 4회마다 정책을 계산한다(정책 계산 주기 약 50Hz).
+```bash
+ros2 topic echo /imu --once
+ros2 topic echo /joint_states --once
+ros2 topic echo /joint_command --once
+ros2 topic echo /clock --once
+ros2 topic hz /joint_command
+```
 
-[5.1 H1 환경 YAML](https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/Policies/H1_Policies/h1_env.yaml)의 기본 자세는 hip_pitch=-0.28rad, knee=0.79rad, ankle=-0.52rad, shoulder_pitch=0.28rad, elbow=0.52rad이며 나머지 정의된 축은 0이다. USD GUI에서는 약 -16.04°, 45.26°, -29.79°, 16.04°, 29.79°로 입력한다. YAML은 rad이고 GUI는 degree라는 차이를 놓치지 않는다.
+마지막 빈도 관찰은 Ctrl+C로 끝냅니다. 토픽 목록에 이름이 있다는 것과 메시지가 실제로 전달된다는 것은 다릅니다. 상태뿐 아니라 **돌아오는 `/joint_command`**를 확인하세요. 이름 배열과 위치 배열이 대응하는지, GUI에서 몸통이 지지되는지도 함께 봅니다.
 
-rig를 수정한다면 YAML의 gain도 비교한다. hip yaw/roll stiffness=150, hip pitch/knee/torso=200, damping=5; ankle stiffness=20, damping=4; arm stiffness=40, damping=10이다. legs/arms effort limit=300, ankle=100이다. 이미 제공된 `h1_rigged.usd`를 사용하는 이유는 이 관절 구성과 자세를 같은 조건으로 시작하기 위해서다. YAML에 남아 있는 학습용 GPU/4096환경 설정을 이 단일 로봇 실습의 CPU/200Hz 설정으로 그대로 덮어쓰지 않는다.
+작은 전진 명령은 다음처럼 보낼 수 있습니다. 잠시 관찰한 뒤 Ctrl+C로 발행을 끝내고 정지 명령을 보냅니다.
 
-## 한 가지 바꾸기·문제 해결
+```bash
+ros2 topic pub --rate 10 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.2}, angular: {z: 0.0}}'
+```
 
-전진 속도만 0.2에서 0.3으로 바꾸어 추종을 본다. 후진·옆걸음으로 정책 능력을 추정하지 않는다. 넘어지면 정책 시작 순서, joint 이름·기본 자세, 물리200Hz, pelvis IMU와 topic 타임스탬프를 차례로 확인한다. PyTorch/yaml import 실패는 외부 ROS Python 환경 문제다. 정지 중 약간의 drift는 원문에서 예상한 현상이다. `/joint_command`의 실제 수신과 안정된 몸체 자세를 함께 관찰해야 성공이다.
+```bash
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0}, angular: {z: 0.0}}'
+```
 
-추가 소스: [5.1.0에 고정한 H1 ROS 패키지](https://github.com/isaac-sim/IsaacSim-ros_workspaces/tree/50de00358f220d790d17050c6368cfe9a9cb9f51/humble_ws/src/humanoid_locomotion_policy_example/h1_fullbody_controller). 이 패키지가 실제 관측 구성과 신경망 추론을 담당한다.
+발행 프로세스를 종료하는 것만으로 마지막 속도 명령이 자동으로 0이 되지는 않습니다. 정지 메시지 후 자세와 이동 감소를 확인하세요.
 
-## 출처와 검증 범위
+키보드로 비교하려면 `teleop_twist_keyboard`가 설치된 같은 ROS 환경에서 다음을 실행할 수 있습니다. 앞의 자동 발행기는 먼저 종료해 두 입력이 경쟁하지 않게 하세요.
 
-- [공식 5.1 정책 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html#about-the-h1-flat-terrain-locomotion-policy)
-- [공식 5.1 IMU 구성](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html#create-imu-publisher-node)
-- [공식 5.1 joint 구성](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html#create-joint-state-publisher-and-subscriber-nodes)
-- [공식 5.1 환경·시계](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html#publish-ros-clock-and-set-up-environment)
-- [공식 5.1 실행](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html#run-ros-2-policy)
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+```
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 앞의 실행 후 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.
+작은 속도에서 `i` 전진, `u/o` 전진 회전, `j/l` 제자리 회전, `k` 정지를 비교합니다. 터미널에 표시되는 속도 조절 키로 선속도를 약 0.2 m/s부터 맞추세요. 이 H1 flat 정책의 후진·옆걸음을 성공 기준으로 삼지는 않습니다.
+
+## 2. 그래프와 정책의 시간 연결 읽기
+
+### 코드에서 볼 부분
+
+고정된 5.1.0 ROS 패키지는 두 센서 메시지의 시간표시를 맞춘 콜백에서 정책을 진행합니다.
+
+```python
+self.sync = TimeSynchronizer(subscribers, queue_size)
+self.sync.registerCallback(self._tick)
+```
+
+여기서 subscribers는 `/joint_states`와 `/imu`입니다. 두 메시지가 모두 보여도 timestamp가 맞지 않으면 `_tick`이 실행되지 않을 수 있습니다. launch의 `publish_period_ms` 이름만 보고 독립적인 5 ms timer가 정책을 실행한다고 해석하지 마세요. 해당 버전에서는 동기화된 메시지 콜백이 실제 실행 경로입니다.
+
+정책은 동기 콜백 네 번마다 한 번 계산하고, 관절 명령은 콜백마다 발행합니다. 센서가 시뮬레이션 시간 기준 200 Hz로 동기 전달되면 추론은 약 50 Hz입니다. `ros2 topic hz`는 수신 환경과 실행 속도의 영향을 받으므로 실시간 측정값이 항상 200 또는 50으로 고정되지는 않습니다.
+
+### 설정에서 볼 부분
+
+완성 장면을 이해한 뒤 `/Isaac/Samples/Rigging/H1/h1_rigged.usd`의 복사본에서 그래프를 재구성할 수 있습니다. pelvis 아래에 IMU를 만들고, `/Graph` 아래 세 Action Graph를 둡니다. 그래프는 `pipelineStageOnDemand`와 **On Physics Step**을 사용합니다.
+
+| 그래프 | 실행·데이터 연결 | 중요한 설정 |
+|---|---|---|
+| IMU | Physics Step → Read IMU → Publish IMU | pelvis IMU, Read Gravity=False, topic `/imu` |
+| Joint | Physics Step → Publish/Subscribe Joint State 및 Articulation Controller | `/joint_states`, `/joint_command`, 실제 H1 target Prim |
+| Clock | Physics Step → Publish Clock | simulationTime을 `/clock`에 전달 |
+
+직접 구성할 때는 다음 순서로 연결하세요.
+
+1. `/h1/pelvis`를 선택해 **Create > Isaac > Sensors > Imu Sensor**로 `/h1/pelvis/Imu_Sensor`를 만듭니다. **Create > Scope**로 `/Graph`를 만들고 그 아래 **Create > Visual Scripting > ActionGraph**로 세 그래프를 추가합니다. 각 그래프의 `pipelineStage`를 `pipelineStageOnDemand`로 맞춥니다.
+2. IMU 그래프에서 **On Physics Step → Isaac Read IMU → ROS2 Publish IMU**의 실행 핀을 잇습니다. Read IMU의 `linearAcceleration`, `angularVelocity`, `orientation`을 publisher의 대응 입력에 연결합니다. `imuPrim`은 pelvis 센서, `Read Gravity=False`, `frameId=pelvis`, `topicName=/imu`로 지정합니다.
+3. Joint 그래프의 Physics Step 출력을 publisher·subscriber·Articulation Controller의 실행 입력에 연결합니다. publisher와 controller의 `targetPrim`은 실제 articulation인 `/h1`, 토픽은 각각 `/joint_states`와 `/joint_command`입니다.
+4. Clock 그래프에서 Physics Step을 **ROS2 Publish Clock**의 실행 입력에 연결하고 토픽을 `/clock`으로 맞춥니다.
+5. 로봇을 새 `output/h1_ros_01.usd`로 저장합니다. 새 Stage에 창고와 이 로봇을 참조하고 로봇 초기 Z를 1.0 m로 둡니다. Physics Scene을 추가해 **Time Steps Per Second=200**, **Enable GPU Dynamics=False**, **Broadphase Type=MBP**로 맞춘 뒤 앞 절의 정책 실행 순서를 따릅니다.
+
+세 그래프의 ROS 노드에는 Context와 QoS를 연결합니다. IMU·Joint·Clock의 timeStamp는 같은 **Isaac Read Simulation Time** 기준으로 맞추고 `resetOnStop=True`를 사용합니다. Joint subscriber의 `jointNames`, `positionCommand`, `velocityCommand`, `effortCommand`를 controller의 대응 입력에 연결하세요. 실행 선은 **언제 계산하는지**, 데이터 선은 **무엇을 넘기는지**를 정합니다.
+
+정책은 IMU 방향으로 몸체에서 본 중력 방향을 계산하고, 가속도를 적분해 선속도를 추정합니다. 관절은 메시지 도착 순서 대신 이름을 찾아 정책 순서로 재배열합니다. 기본 자세와 gain도 학습 조건에 맞아야 하므로 처음에는 준비된 rig를 사용하세요. 관절 설정을 바꾸면 YAML의 rad와 GUI 각도 단위도 구별해야 합니다. 예를 들어 기본 무릎 위치 0.79 rad는 약 45.26°이고 발목 -0.52 rad는 약 -29.79°입니다. 두 숫자를 같은 단위로 입력하면 기준 자세부터 달라집니다.
+
+## 3. 왕복 제어의 확인 지점 정리
+
+```text
+H1 물리 상태
+    → 같은 시각의 IMU·JointState 발행
+    → 외부 노드의 TimeSynchronizer
+    → 관측 69개 → 정책 행동 19개
+    → 기준 관절 위치 + 0.5 × 행동
+    → /joint_command → Articulation Controller
+    → 다음 물리 상태
+```
+
+통신 확인은 메시지 수신으로, 제어 확인은 몸체 자세와 이동으로 합니다. 두 센서가 존재하지만 회신이 없으면 동기화를, 회신이 있지만 로봇이 무너지면 관절 대응과 물리 설정을 먼저 조사할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+같은 초기 Scene에서 전진 명령의 `linear.x`만 0.2에서 0.3으로 바꿔 보세요. 각각 같은 시뮬레이션 시간 동안 관찰한 뒤 0 명령을 보냅니다.
+
+- `/joint_command`가 계속 돌아오는지 확인합니다.
+- 로봇이 몸통을 지지하며 더 빠르게 이동하는지 비교합니다.
+- 물리 주기와 관절 gain을 함께 바꾸지 않습니다. 후진·옆걸음은 이 H1 flat 정책의 성공 기준으로 사용하지 않습니다.
+
+## 실행할 때 막히면
+
+- **ROS 패키지를 못 찾음**: 빌드한 workspace의 `install/setup.bash`를 해당 터미널에서 source하세요.
+- **torch·yaml import 실패**: 외부 ROS Python 환경을 확인하세요. Isaac Sim 내부에 설치되어 있다는 사실만으로 외부 프로세스에서도 사용할 수 있는 것은 아닙니다.
+- **센서는 보이는데 joint_command가 없음**: IMU·JointState의 timestamp, QoS와 실제 동기 메시지 도착을 확인하세요.
+- **아무 토픽도 수신하지 못함**: GUI Play, ROS bridge 활성화, 두 프로세스의 `ROS_DOMAIN_ID`와 RMW를 확인하세요.
+- **로봇이 시작하자마자 넘어짐**: 정책을 먼저 켰는지, pelvis IMU와 200 Hz 물리, 준비된 rig를 사용했는지 확인하세요.
+- **정지해도 약간 움직임**: 0 명령을 실제 발행했는지 먼저 확인합니다. 작은 자세 보정과 계속된 전진 명령을 구별하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Running a Reinforcement Learning Policy through ROS 2 and Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html)에 대응합니다. 외부 실행 구조는 [5.1.0 Jazzy H1 controller 소스](https://github.com/isaac-sim/IsaacSim-ros_workspaces/blob/IsaacSim-5.1.0/jazzy_ws/src/humanoid_locomotion_policy_example/h1_fullbody_controller/scripts/h1_fullbody_controller.py)를 기준으로 설명했습니다.
+
+`tutorial.json`은 `not_run`입니다. 로컬 검사기는 Stage 설정만 읽으며 ROS 메시지 수신이나 실제 보행을 검증하지 않습니다. GUI·정책·DDS 통신을 함께 실행해 위 관찰 항목을 확인해야 합니다.

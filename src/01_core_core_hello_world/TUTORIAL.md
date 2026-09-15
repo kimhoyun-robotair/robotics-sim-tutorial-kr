@@ -1,83 +1,129 @@
 # 01. 처음 만드는 물리 세계: 큐브의 낙하를 읽기
 
-권장 학습 순서 **01** · 첫 실행과 로봇 만나기 · 출처 ID `t098`
+## 이번에 배우는 것
 
-공식 원문: **Hello World** · Isaac Sim **5.1.0** · 인덱스 **t098**
+**큐브를 떨어뜨리고 매 물리 단계의 위치와 속도를 기록하며, World의 초기화와 콜백이 어떻게 연결되는지 배웁니다.**
 
-이 패키지는 `Hello World` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
+00번에서 큐브에 강체와 충돌 속성을 붙였습니다. 이번에는 움직이는 모습을 보는 데서 한 걸음 더 나아가, 얼마나 내려왔고 얼마나 빠르게 움직이는지 숫자로 읽습니다. 한 변이 0.5 m인 파란 큐브를 중심 높이 1 m에서 떨어뜨립니다.
 
-## 이 실습의 의도
+| 코드 속 이름 | 이 실습에서 맡은 역할 |
+|---|---|
+| `SimulationApp` | Isaac Sim 앱과 확장을 시작하고 종료합니다. |
+| `World` | 물리 시간, 객체 초기화, 콜백과 단계 진행을 관리합니다. |
+| `world.scene` | Python 객체를 이름으로 등록해 관리합니다. |
+| `/World/FallingCube` | USD 장면에서 큐브를 찾는 경로입니다. |
+| `falling_cube` | Scene에 등록한 같은 큐브의 이름입니다. |
+| `observe(step_size)` | 물리 단계 직전에 위치와 속도를 기록하는 함수입니다. |
 
-한 변 0.5 m의 파란 큐브를 높이 1 m에서 떨어뜨리며 `World`, Scene 등록, reset, 물리 콜백의 연결을 익힙니다. 같은 물체의 화면 움직임과 위치·속도 기록을 함께 읽어, 낙하와 바닥 접촉을 수치로 구분하는 것이 목적입니다. 기본 실행은 별도의 제어 명령 없이 중력과 충돌로 큐브를 움직이고, 관찰값을 `fall.csv`와 `result.json`에 남깁니다.
+Stage는 Prim과 속성을 담은 USD 장면 전체입니다. `World`는 그 장면을 시뮬레이션하는 데 필요한 Python 관리 객체입니다.
 
-## 실행 후 확인할 것
+## 1. 큐브를 떨어뜨리고 기록하기
 
-- Stage의 `/World/FallingCube`를 선택하고 `F`로 맞춥니다. 파란 큐브가 떨어져 바닥에 놓여야 하며, 최종 중심 높이는 0이 아니라 큐브 반높이인 약 0.25 m입니다.
-- 터미널의 `position_m`, `velocity_mps` 또는 `fall.csv`의 `z_m`, `vz_mps`를 봅니다. 낙하 구간에서 높이가 줄고 z 속도가 음수이며, 접촉 후 속도가 0 근처로 줄어드는 흐름을 확인합니다.
-- 기본 높이에서 `--steps 300`을 끝까지 실행하면 `fall.csv`에 헤더를 제외한 300개 관찰 행이 있고 `result.json`의 `samples`도 300이어야 합니다. GUI를 일찍 닫거나 실행 길이를 바꾸면 행 수와 정착 여부도 달라집니다.
-- 종료 후 `result.json`의 `final_position_m[2]`가 약 0.25 m이고 `final_velocity_mps`가 0 근처인지 확인합니다. CSV는 물리 단계 직전, JSON은 마지막 단계 이후 값이므로 끝값이 한 단계 다를 수 있습니다.
-
-## 준비
-
-- Isaac Sim 5.1.0이 설치되고 NVIDIA GPU/드라이버가 정상 동작해야 합니다. `--headless`는 창만 숨기며 Isaac Sim 런타임 요구사항을 없애지 않습니다.
-- 외부 USD 에셋이 필요 없습니다. 큐브와 지면을 코드로 만듭니다.
-- 이 폴더의 파일을 통째로 복사해도 실행할 수 있습니다. 아래는 이 폴더 안에서 실행하는 명령입니다. `ISAAC_SIM_ROOT`에는 실제 5.1 설치 경로를 지정합니다.
+Isaac Sim 5.1과 지원 GPU·드라이버가 준비된 환경에서 실행합니다. 외부 로봇 자산은 필요하지 않습니다. 아래는 저장소 루트에서 실행하는 Linux 명령입니다. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --steps 300 --height 2.0
+~/isaacsim/python.sh src/01_core_core_hello_world/run.py --steps 300
 ```
 
-`run.py`는 `--steps`를 생략하면 사용자가 창을 닫을 때까지 물리와 제어를 계속 실행합니다. 양수 `--steps N`을 지정하면 N단계 후 종료합니다. `--headless`에서 `--steps`를 생략하면 300단계 후 종료합니다. 실행 중 GUI의 Stop/Play로 초기화를 시도하는 대신 프로그램을 다시 실행하세요. 기본 출력은 이 폴더의 `output/<고유번호>/`이며 `--output`으로 지정한 경로가 이미 있으면 덮어쓰지 않고 오류를 냅니다.
+300단계가 끝나면 결과를 저장하고 앱이 종료됩니다. 창을 유지하려면 `--steps 300`을 빼세요. `--headless`를 추가하면 창 없이 실행하며, 이때 단계 수를 생략하면 300단계입니다. Windows에서는 설치의 `python.bat`을 사용합니다.
 
-## 파일 안내
+### 코드에서 볼 부분
 
-- `run.py`
-- `tutorial.json`: 공식 출처, 실행 형태, 산출물과 검증 상태입니다.
+```python
+world = World(stage_units_in_meters=1.0, physics_dt=1/60, rendering_dt=1/60)
+world.scene.add_default_ground_plane()
+cube = world.scene.add(DynamicCuboid(
+    prim_path="/World/FallingCube", name="falling_cube", size=0.5,
+    position=np.array([0.0, 0.0, args.height]), color=np.array([0.1, 0.2, 0.9])))
+world.reset()
+```
 
-## 차례대로 실습하기
+`DynamicCuboid`는 큐브의 외형·강체·충돌을 함께 만듭니다. `scene.add()`는 이 Python 객체를 등록하고, `world.reset()`은 등록된 객체의 물리 상태를 다룰 준비를 합니다. **장면에 큐브를 작성한 시점과 물리 엔진에서 상태를 읽을 수 있는 시점은 구분해야 합니다.**
 
-1. `run.py`의 `World(...)`를 찾습니다. 길이 단위는 미터, 물리 시간 간격은 1/60초입니다. `--steps 300`은 약 5초의 시뮬레이션이며 컴퓨터의 실제 실행 시간과 다릅니다.
-2. `DynamicCuboid`의 `prim_path="/World/FallingCube"`와 `name="falling_cube"`를 비교합니다. 전자는 Stage의 주소, 후자는 Scene에서 객체를 찾는 이름입니다. Stage 창에서 `/World/FallingCube`를 선택하고 `F`로 화면 중심에 맞춥니다.
-3. 첫 실행 중 터미널의 `position_m`과 `velocity_mps`를 봅니다. 낙하 중 z 속도는 음수가 되고 접촉 후 0 근처로 줄어듭니다.
-4. `world.reset()` 다음에 콜백을 등록하는 이유를 확인합니다. USD의 물체 정의를 PhysX에서 다룰 준비가 된 뒤 상태를 읽어야 합니다. `observe(step_size)`는 매 물리 단계의 직전에 호출됩니다.
-5. 종료 후 출력된 `output/<번호>/fall.csv`를 텍스트 편집기로 엽니다. 헤더의 단위, 최초 행, 낙하 중 행, 마지막 행을 비교합니다. `result.json`의 최종 높이는 0.25 m 근처인지 확인합니다.
+바로 뒤의 `assert World.instance() is world`는 현재 프로세스에서 조회한 World가 방금 만든 객체인지 확인합니다. 다른 함수에서 `World.instance()`를 호출해도 이 World에 접근할 수 있습니다.
 
-## API와 Omniverse/USD 개념
+### 실행 결과 확인하기
 
-| 코드/API | 이 실습에서의 역할 |
-|---|---|
-| `SimulationApp` | Omniverse Kit와 확장을 먼저 시작합니다. 이 호출 전에 `omni`/`pxr`를 가져오지 않습니다. |
-| `World` / `World.instance()` | 물리 시간, Scene, callback을 관리합니다. 현재 프로세스의 World 싱글턴을 돌려줍니다. |
-| `world.scene.add` | Python 객체를 이름으로 등록하고 reset 시 물리 핸들을 초기화합니다. |
-| `DynamicCuboid` | 보이는 큐브, 강체, 충돌체를 함께 정의하는 Core API 편의 클래스입니다. |
-| `get_world_pose` | 세계 좌표의 위치와 `[w,x,y,z]` 쿼터니언을 읽습니다. |
-| `get_linear_velocity` | 강체 중심의 실제 속도를 m/s로 읽습니다. |
-| `add_physics_callback` | `step_size` 인자를 받는 함수를 각 물리 단계 직전에 실행합니다. |
+Stage에서 `/World/FallingCube`를 선택하고 `F`로 화면을 맞춰 보세요. 큐브가 낙하한 뒤 지면 위에 놓이는 흐름을 관찰합니다. 터미널에는 60번의 반복마다 `position_m`과 `velocity_mps`가 출력됩니다.
 
-USD Stage는 장면 데이터베이스, Prim은 그 안의 항목입니다. 화면에 보이는 기하와 질량/충돌 같은 물리 정보는 서로 다른 속성이지만 DynamicCuboid가 입문에 필요한 것을 한 번에 붙입니다. `world.step(render=False)`도 물리는 진행합니다. 렌더링 빈도와 물리 빈도를 혼동하지 마세요.
+결과 파일은 이 폴더의 `output/고유번호/`에 생깁니다.
 
-## 한 변수만 바꾸는 실험
+| 결과 | 읽을 부분 | 기본 실행의 기대 흐름 |
+|---|---|---|
+| `fall.csv` | `z_m`, `vz_mps` | 높이가 감소하고, 낙하 중 수직 속도가 음수가 됩니다. |
+| `fall.csv` | `time_s` | 실제 시계가 아닌 시뮬레이션 시간을 나타냅니다. |
+| `result.json` | `samples` | 300단계를 완료하면 관찰값이 300개입니다. |
+| `result.json` | `final_position_m[2]` | 충분히 정착하면 약 0.25 m입니다. |
+| `result.json` | `final_velocity_mps` | 정착 후 각 성분이 0 근처로 줄어듭니다. |
 
-`--height`만 1.0에서 2.0으로 바꿉니다. 더 늦게 바닥에 닿지만 정지 높이는 같아야 합니다. 큐브 크기를 함께 바꾸지 않습니다.
+큐브 중심이 0까지 내려가지 않는 이유는 크기 때문입니다. 한 변이 0.5 m이므로 바닥에 놓인 중심은 **0.5 ÷ 2 = 0.25 m** 높이에 있습니다. 접촉 계산의 작은 오차는 있을 수 있습니다.
 
-## 문제 해결
+## 2. 물리 콜백은 언제 값을 읽을까요?
 
-`No module named isaacsim`이면 일반 Python 대신 Isaac Sim 5.1의 `python.sh`로 실행합니다. 큐브가 화면 밖이면 Stage에서 선택하고 F를 누릅니다. `--steps 10`처럼 짧으면 바닥까지 도달하지 않습니다.
+`run.py`에서 `observe()`와 그 아래 반복문을 함께 읽어 보세요. 관찰하는 함수와 물리를 진행시키는 코드가 서로 다른 곳에 있습니다.
 
-`SimulationApp`보다 먼저 `omni`, `pxr`, Core 확장을 import하면 모듈 초기화에 실패할 수 있습니다. 일반 Python의 `--help`가 실행되는 것은 CLI 문법 검사일 뿐 물리 실행 성공은 아닙니다. 이 패키지의 검증 상태는 `tutorial.json`에 별도로 기록합니다.
+### 코드에서 볼 부분
 
-## 버전 고정 출처와 원문 대응
+```python
+def observe(step_size):
+    nonlocal sample_count
+    position, quaternion = cube.get_world_pose()
+    velocity = cube.get_linear_velocity()
+    writer.writerow([world.current_time, *position.tolist(), *velocity.tolist()])
+    sample_count += 1
 
-- [NVIDIA Isaac Sim 5.1.0 — Hello World](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_world.html)
-- [공식 5.1: singleton-world](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_world.html#singleton-world)
-- [공식 5.1: continuously-inspecting-the-object-properties-during-simulation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_world.html#continuously-inspecting-the-object-properties-during-simulation)
-- [공식 5.1: converting-the-example-to-a-standalone-application](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_world.html#converting-the-example-to-a-standalone-application)
+world.add_physics_callback("observe_fall", callback_fn=observe)
+```
 
-설명은 한국어로 새로 작성했으며 API 흐름과 실습 수치는 해당 5.1 공식 튜토리얼을 기준으로 합니다. 로컬 코드의 선택적 실행 제한, 결과 파일, 인자, 별도 성공 측정은 초심자가 단독으로 실행하고 비교하도록 추가한 구성입니다.
+`get_world_pose()`는 월드 위치와 회전을 반환합니다. 여기서는 위치의 x·y·z만 CSV에 기록합니다. 회전은 `[w, x, y, z]` 순서의 쿼터니언이며 세 축의 각도 배열과 다릅니다. `get_linear_velocity()`는 실제 선속도를 m/s 단위로 읽습니다.
 
-## 실제 실행 기록
+`step_size`는 이번 물리 간격이지만, 이 코드는 시간 열에 `world.current_time`을 사용합니다. `nonlocal`은 함수 바깥의 `sample_count`를 갱신하기 위해 필요합니다. `*position.tolist()`는 세 위치 성분을 각각 CSV 열로 펼칩니다.
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+콜백 등록 다음의 반복문이 `world.step(render=not args.headless)`를 호출합니다. 등록만 하고 단계 진행을 멈추면 관찰값도 더 이상 쌓이지 않습니다.
+
+### 실행 결과 확인하기
+
+```text
+world.step() 시작
+    → observe()가 이번 물리 계산 전의 상태를 CSV에 기록
+    → 물리 계산으로 위치·속도 갱신
+    → world.step() 반환
+    → 필요하면 터미널에 갱신된 상태 출력
+```
+
+CSV 마지막 행과 JSON의 최종 위치가 조금 달라도 곧바로 오류라고 판단하지 마세요. CSV는 마지막 물리 단계 **직전**, `result.json`은 마지막 단계가 **끝난 후**의 값입니다. 아직 낙하 중인 짧은 실행에서 이 차이가 더 잘 보입니다.
+
+관찰이 끝나면 `remove_physics_callback("observe_fall")`로 등록을 해제합니다. 파일을 닫은 후에도 콜백이 그 파일에 기록하려는 일을 막는 순서입니다.
+
+## 3. 장면 생성부터 관찰까지 정리
+
+```text
+앱 시작 → World 생성 → 큐브를 Scene에 등록 → reset으로 초기화
+       → 콜백 등록 → step 반복 → 콜백 해제 → 최종 상태 저장 → 앱 종료
+```
+
+300단계의 물리 시간은 **300 × 1/60 = 5초**입니다. 앱 시작과 화면 그리기에 걸린 실제 시간은 여기에 포함되지 않습니다. 높이만 보면 낙하 여부를 알 수 있고, 속도까지 읽으면 낙하 중인지 접촉 후 진정되는 중인지 구분할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+단계 수만 300에서 10으로 바꿔 실행해 보세요.
+
+```bash
+~/isaacsim/python.sh src/01_core_core_hello_world/run.py --steps 10
+```
+
+물리 진행 시간은 약 0.167초입니다. 기본 높이에서는 아직 낙하 중이므로 최종 높이가 0.25 m보다 높고 수직 속도가 음수일 것으로 예상할 수 있습니다. `samples`가 10인지 확인한 다음 CSV 마지막 행과 JSON의 최종 높이를 비교하세요.
+
+## 실행할 때 막히면
+
+- **`No module named isaacsim`**: 설치의 `python.sh`로 실행하세요. 일반 Python의 `--help`는 옵션만 확인하며 앱을 시작하지 않습니다.
+- **큐브를 찾기 어려움**: Stage에서 `/World/FallingCube`를 선택한 뒤 `F`로 화면을 맞추세요.
+- **바닥에 도달하기 전에 종료됨**: 정착을 보려면 `--steps 300`으로 다시 실행하세요.
+- **출력 폴더가 이미 있다는 오류**: `--output`은 새 경로만 받습니다. 옵션을 생략하거나 존재하지 않는 폴더를 지정하세요.
+- **Stop/Play 후 상태가 예상과 달라짐**: 이 파일은 GUI 리셋 조작을 별도로 처리하지 않습니다. 초기 상태부터 비교하려면 프로그램을 다시 실행하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Hello World](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_world.html)에 대응합니다. 원문의 World 공유, 객체 등록, 물리 콜백, 독립 실행 개념을 한 낙하 실험으로 연결했습니다. CSV와 최종 JSON 기록은 이 폴더의 학습용 구성입니다.
+
+`tutorial.json`에는 120개 표본과 중심 높이 약 0.25 m를 확인한 부분 실행 기록이 있습니다. 위 300단계·10단계의 값은 실행 시 확인할 기준이며, 기존 기록이 다른 실행 길이와 GUI 조작까지 검증한 것은 아닙니다.

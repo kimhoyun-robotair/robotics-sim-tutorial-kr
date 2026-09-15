@@ -1,57 +1,120 @@
-# 14. Omniverse Commands Tool Extension
+# 14. GUI에서 한 큐브 편집을 Python으로 다시 실행하기
 
-권장 학습 순서 **14** · Python 실행 환경과 USD 기초 · 출처 ID `t169`
+## 이번에 배우는 것
 
-UI로 Cube를 생성·이동한 기록을 Python command로 복원한다. Commands 창이 UI 작업과 `omni.kit.commands` 호출 사이를 연결한다는 것을 실제 재생으로 확인한다.
+**GUI로 큐브를 만들고 옮긴 기록을 Python 명령으로 복사해, 빈 장면에서 같은 결과를 재현합니다.**
 
-## 이 실습의 의도
+GUI에서 마음에 드는 배치를 만들었을 때 같은 작업을 여러 장면에 적용하려면 무엇을 저장해야 할까요? Commands 창에서는 편집 동작에 대응하는 명령 이름과 인자를 읽을 수 있습니다. 이번에는 큐브 생성·위치·크기 변경만 골라 재생해 봅니다.
 
-GUI에서 큐브를 만들고 변환한 작업을 Commands 창에서 Python 호출로 복사해, 빈 Stage에서 같은 결과를 재현한다. 생성과 위치·스케일 변경만 골라 기록하는 이유는 UI 조작을 필요한 명령과 인자로 읽고 재사용하는 연습을 하기 위해서다. 이 패키지는 자동 실행 파일 없이 GUI 절차를 제공하며, 사용자가 만든 `output/replay.py`와 재생된 장면이 실습 결과다. 물리 주행이나 낙하 대신 명령 기록·재생·Undo/Redo를 확인한다.
+| Commands 창의 항목 | 사용할 때 |
+|---|---|
+| Search commands | 실행 가능한 명령과 인자를 찾을 때 |
+| Clear History | 앞서 기록된 작업 목록을 비울 때 |
+| Selected commands | 고른 작업만 Python으로 복사할 때 |
+| Top-level commands | 기록된 최상위 작업 전체를 복사할 때 |
 
-## 실행 후 확인할 것
+Stage는 현재 USD 장면이고, Prim은 그 안에서 경로로 식별하는 요소입니다. 복사한 명령은 기록 당시의 Prim 경로를 사용하므로, **재생을 시작할 장면 상태도 결과에 영향을 줍니다.**
 
-- 큐브 생성과 Property 편집 후 Commands 목록에 해당 생성·변환 작업과 인자가 남는지 확인한다. **Clear History**는 이 기록만 지우며 Stage의 큐브가 사라지지 않는 것이 정상이다.
-- 선택한 생성·변환 명령이 `output/replay.py`에 저장되어 있는지 읽는다. 이 파일은 실행 전에 제공되는 산출물이 아니라 사용자가 기록을 복사해 만드는 파일이며, 실제 Prim 경로와 transform 인자가 담겨야 한다.
-- 빈 Stage의 Script Editor에서 재생한 뒤 큐브를 선택한다. Property의 Translate가 `(1, 0, 0.5)`, Scale이 `(0.5, 0.5, 0.5)`이고 원래 GUI 작업과 같은 형상인지 확인한다. 복사 성공이나 코드 출력만으로 재현을 판정하지 않는다.
-- Ctrl+Z로 마지막으로 기록된 변환만 이전 값으로 돌아가고 Ctrl+Y로 다시 복원되는지 확인한다. 위치와 스케일이 여러 명령으로 기록되면 한 번의 Undo로 전체 변환이 취소되지 않을 수 있다.
-- X 위치만 바꾼 재생 사본은 새 Stage에서 X만 달라져야 한다. 같은 Stage의 `prim already exists` 오류나 중복 도형은 기록 재생 위치·선택 범위를 다시 확인할 신호다.
+## 1. 먼저 큐브 편집 기록하기
 
-## 준비
-
-Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
+Isaac Sim 5.1 GUI와 지원 NVIDIA GPU가 필요합니다. 저장소 루트의 터미널에서 다음으로 앱을 켜세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-"$ISAAC_SIM_PATH/isaac-sim.sh"
+~/isaacsim/isaac-sim.sh
 ```
 
-Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 경로로 식별하는 요소다. `File > New`는 새 장면을 여므로 보관할 작업은 먼저 저장한다. 이 패키지는 `asset/`, `docs/`, 저장소 README를 필요로 하지 않는다.
+이 튜토리얼에는 `run.py`가 없습니다. 아래 GUI 작업을 직접 수행하고, 복사한 코드를 실습 결과로 저장합니다.
 
-## 1. 기록
+1. 보관할 장면이 있다면 저장한 뒤 **File > New**로 빈 Stage를 엽니다.
+2. **Window > Commands**를 엽니다.
+3. **Clear History**를 눌러 앞의 작업 목록을 비웁니다.
+4. **Create > Shape > Cube**로 큐브를 만듭니다.
+5. 큐브를 선택하고 Property의 Translate를 `(1, 0, 0.5)`, Scale을 `(0.5, 0.5, 0.5)`로 설정합니다.
 
-1. `File > New`로 새 Stage를 열고 `Window > Commands`를 연다. 메뉴가 없으면 Extensions에서 Commands 관련 UI 확장을 검색해 켠다.
-2. **Clear History**를 눌러 기존 command 기록만 비운다. 이 버튼은 Stage의 물체를 삭제하는 기능이 아니다.
-3. `Create > Shape > Cube`를 선택한다. Stage에서 생성 Cube를 선택하고 Property의 Translate X=`1`, Y=`0`, Z=`0.5`, Scale=`(0.5,0.5,0.5)`로 바꾼다.
-4. Commands 목록에서 생성과 transform에 대응하는 command 이름/인자를 읽는다. Search commands는 실행 가능한 명령 검색이며 history 필터와 구분한다.
+### 설정에서 볼 부분
 
-## 2. Python 재생
+Translate는 위치, Scale은 원래 형상에 곱하는 배율입니다. Scale 0.5를 입력했다는 사실만으로 한 변이 0.5 m라고 말할 수는 없습니다. 원래 큐브의 크기와 Stage 단위도 함께 봐야 합니다. 이번 재현에서는 같은 빈 Stage 조건에서 **같은 속성 값**을 만드는지 확인합니다.
 
-1. **Selected commands**로 Cube 생성과 transform 행만 선택하여 코드를 clipboard에 복사한다. **Top-level commands**는 전체 최상위 command를 복사하므로 중첩 command까지 중복 실행하지 않게 한다.
-2. 이 패키지 `output/replay.py`라는 새 파일에 코드를 붙이고 저장한다. 실제 UI가 생성한 경로/행렬을 그대로 읽어본다.
-3. 기록을 지우지 않은 채 **File > New**로 빈 Stage를 연다. `Window > Script Editor`에 복사 코드를 붙여 Run한다.
-4. Cube prim, X=1/Z=0.5 위치와 Scale=0.5가 원래 UI 작업과 같은지 Property에서 확인한다.
-5. Ctrl+Z로 마지막 transform을 undo하고 Ctrl+Y로 redo하여 command 기반 동작을 관찰한다.
+Commands 목록에서 큐브 생성과 변환 변경에 해당하는 행을 찾아보세요. Property의 세 축을 따로 편집했다면 여러 명령이 기록될 수 있습니다. 하나의 GUI 동작 안에 하위 명령이 들어 있는 경우도 있습니다.
 
-## API와 한 변수 실험
+**Clear History는 장면을 초기화하는 버튼이 아닙니다.** 기록을 지워도 이미 만든 큐브는 남습니다. 명령 목록과 장면 데이터가 다르다는 점을 기억하세요.
 
-`omni.kit.commands.execute("명령명", ...)`는 등록된 command를 실행하며 많은 command가 undo/redo 동작을 제공한다. 직접 `UsdGeom` attribute를 수정하는 코드와는 command history 처리 방식이 다를 수 있다. USD의 Transform은 위치/회전/스케일이며 생성 command는 prim path를 대상으로 한다.
+### 실행 결과 확인하기
 
-한 변수 실험: 재생 코드의 **위치 X 인자만** 바꾼 사본을 새 Stage에서 실행하여 Cube 위치만 달라지는지 본다. 명령이 행렬로 기록되었다면 GUI에서 X만 다시 편집해 새 기록을 비교한다. 성공은 기록 복사 자체가 아니라 빈 Stage에서 같은 형상이 재현되는 것이다. `prim already exists`면 새 Stage에서 실행하고, 출력에 잡다한 command가 많으면 선택한 top-level 작업 범위를 줄인다.
+복사하기 전에 다음 세 가지를 확인합니다.
 
-## 검증 범위
+- Stage에서 큐브의 실제 Prim 경로를 읽습니다.
+- Property에서 Translate와 Scale이 입력한 값인지 확인합니다.
+- Commands 목록에서 그 큐브를 만든 명령과 변환한 명령을 찾습니다.
 
-manifest와 제공된 GUI 절차를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 GUI 조작 후 확인해야 한다.
+이제 화면의 큐브와 기록된 작업이 연결됩니다. 목록에 다른 작업이 많이 섞였다면 새 Stage에서 기록 과정을 다시 시작하는 편이 읽기 쉽습니다.
 
-## 출처
+## 2. 기록을 복사해 빈 Stage에서 재생하기
 
-- [Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/debugging/ext_omni_kit_commands.html).
+1. Commands에서 큐브 생성과 필요한 변환 작업을 선택합니다. 중첩된 하위 명령까지 따로 중복 선택하지 않습니다.
+2. **Selected commands**를 눌러 Python 코드를 클립보드로 복사합니다.
+3. 텍스트 편집기에서 `src/14_tools_ext_omni_kit_commands/output/` 폴더를 만들고, 코드를 새 `replay.py` 파일로 저장합니다.
+4. 복사한 코드를 확보한 뒤 **File > New**로 빈 Stage를 엽니다.
+5. **Window > Script Editor**에 `replay.py`의 내용을 붙여 넣고 실행합니다.
+
+`output/replay.py`는 사용자가 이 과정에서 만드는 파일입니다. 처음부터 제공되는 파일을 찾을 필요는 없습니다. 실행하는 곳은 이미 열린 Isaac Sim의 Script Editor이며, 앱을 시작하는 `SimulationApp` 코드를 추가하지 않습니다.
+
+### 코드에서 볼 부분
+
+복사한 코드에서 다음과 같은 호출 구조를 찾아보세요. 아래는 구조를 설명하는 표시이며 그대로 실행할 예제는 아닙니다.
+
+```text
+omni.kit.commands.execute(
+    기록된 명령 이름,
+    대상 Prim 경로와 편집 값을 나타내는 인자들
+)
+```
+
+생성 명령은 물체를 만들고, 뒤의 변환 명령은 생성된 경로를 대상으로 합니다. 따라서 변환만 복사하면 빈 Stage에서 대상 물체가 없을 수 있습니다. 반대로 생성 명령을 두 번 재생하면 자동 이름이 달라지거나 기존 경로와 충돌할 수 있습니다.
+
+변환은 위치·회전·스케일 인자로 기록될 수도 있고 행렬로 기록될 수도 있습니다. **설치된 GUI가 생성한 실제 호출을 사용**하고, 인자 이름을 기억으로 바꾸지 마세요.
+
+### 실행 결과 확인하기
+
+재생한 큐브를 선택하고 원래 기록과 비교합니다.
+
+| 비교 대상 | 재현 기준 |
+|---|---|
+| 생성된 물체 | 같은 종류의 큐브가 하나 생성됨 |
+| Translate | `(1, 0, 0.5)` |
+| Scale | `(0.5, 0.5, 0.5)` |
+| 화면의 배치 | 원래 큐브의 위치·형상과 대응함 |
+
+복사 성공 알림이나 오류 없는 실행만으로 끝내지 말고, **실제 Property 값**까지 확인하세요.
+
+이어서 Ctrl+Z로 마지막 편집을 되돌리고 Ctrl+Y로 다시 적용합니다. 여러 축 편집이 별도 명령으로 기록되었다면 한 번의 Undo는 그중 마지막 명령만 취소할 수 있습니다. 전체 배치가 한 번에 원래대로 돌아오는 것을 필수 결과로 삼지는 않습니다.
+
+## 3. 기록과 재생의 관계 정리
+
+```text
+GUI 조작 → Command와 인자 기록 → 필요한 작업 선택
+    → Python으로 복사 → 빈 Stage 준비 → 같은 편집 재생
+```
+
+재생 결과를 설명하는 정보는 명령 이름만이 아닙니다. 대상 경로, 변환 값, 실행 순서와 시작 Stage가 함께 필요합니다. 그래서 복사한 코드와 재생한 장면을 함께 확인하면, UI에서 무슨 일이 일어났는지 Python 호출 단위로 이해할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+다른 조건은 유지하고 **Translate X만 1에서 2로** 바꿔 재생해 보세요.
+
+기록에 X 위치가 분리된 인자로 들어 있다면 `replay.py`의 사본에서 그 값만 바꿉니다. 행렬로 기록되었다면 원래 GUI에서 X만 2로 편집하고 그 변환 기록을 복사해 사본의 해당 변환 명령을 교체하세요. **사본에는 앞서 복사한 큐브 생성과 나머지 변환 명령도 남겨 둡니다.** 마지막 X 변경 명령만 빈 Stage에서 실행하면 대상 큐브가 없습니다. 행렬의 숫자를 임의로 추측해 수정하지 않습니다.
+
+다시 빈 Stage에서 실행했을 때 X만 2가 되고, Y·Z와 Scale은 그대로인지 확인합니다. 바뀐 결과를 보면 어느 인자가 어떤 화면 변화를 만드는지 알 수 있습니다.
+
+## 실행할 때 막히면
+
+- **Window에 Commands 메뉴가 없음**: **Window > Extensions**에서 `omni.kit.window.commands`를 활성화하세요.
+- **대상 Prim이 없다는 오류**: 변환 명령만 복사했는지 확인하세요. 빈 Stage에서는 큐브 생성이 먼저 필요합니다.
+- **큐브가 중복되거나 경로 충돌이 발생함**: 같은 Stage에 반복 재생했는지 확인하고 새 Stage에서 한 번 실행하세요.
+- **Undo가 전체 변환을 되돌리지 않음**: 기록이 몇 개의 명령으로 나뉘었는지 보세요. 취소 횟수와 마지막 편집 범위를 맞춰 확인합니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Omniverse Commands Tool Extension](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/debugging/ext_omni_kit_commands.html)을 바탕으로 구성한 GUI 실습입니다. 도구의 메뉴·복사 기능은 공식 페이지와 대조했으며, 위치·배율 값과 `replay.py` 저장 절차는 이 실습의 비교 조건입니다.
+
+`tutorial.json`의 검증 상태는 `not_run`입니다. 이번 개정에서는 GUI 절차를 검토했으며 실제 명령 복사·재생·Undo 화면을 실행해 확인하지 않았습니다. 위 속성 비교가 독자가 수행할 확인 기준입니다.

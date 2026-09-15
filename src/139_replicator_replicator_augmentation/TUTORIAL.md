@@ -1,93 +1,121 @@
-# 139. RGB와 깊이 데이터를 촬영 후 증강하기
+# 139. 장면을 바꾸지 않고 센서 데이터를 증강하기
 
-권장 학습 순서 **139** · Replicator 합성 데이터 기초와 확장 · 출처 ID `t044`
+## 이번에 배우는 것
 
-이 패키지는 Isaac Sim **5.1.0**의 Data Augmentation 실습을 독립 실행형으로 구성합니다. 빨간 상자의 원본 RGB와 깊이를 촬영하고, **원본 장면은 그대로 두면서 출력 배열을 바꾸는 과정**을 배웁니다. `annotator` 모드는 빨강/파랑 채널 교환과 두 강도의 깊이 노이즈를, `writer` 모드는 RGB→HSV→노이즈→RGB 합성과 파일 저장 직전 깊이 증강을 실행합니다. 각 모드는 NumPy CPU 함수와 Warp GPU 커널을 선택할 수 있습니다.
+**동일한 캡처의 원본과 증강 배열을 비교하고, RGB 채널 교환과 거리 노이즈의 효과를 수치로 확인합니다.**
 
-## 이 실습의 의도
+조명이나 물체 자세를 바꾸는 것은 장면의 변화입니다. 데이터 증강은 이미 얻은 센서 배열을 변환합니다. 빨간 상자가 증강 이미지에서 파랗게 보여도 USD 재질이 바뀐 것은 아닙니다. 이번 코드는 원본을 함께 저장해 이 차이를 직접 비교할 수 있게 합니다.
 
-촬영한 장면의 물체를 바꾸는 것과 센서 출력 배열을 증강하는 것을 구분하는 실습입니다. 빨간 Cube를 두고 원본 RGB·거리와 증강 결과를 같은 프레임에서 나란히 저장하므로, 채널 교환과 깊이 노이즈의 효과를 직접 비교할 수 있습니다. 기본 실행은 NumPy `annotator` 모드로 3프레임을 생성하며, Writer 적용 경로와 Warp 커널은 별도 옵션으로 선택합니다.
-
-## 실행 후 확인할 것
-
-- **색 교환:** `0000_original.png`와 `0000_bgr.png`에서 빨간 Cube가 증강 파일에서 파랗게 표현되는지 확인합니다. 같은 프레임의 `measurements.json`에서 `red_blue_swap_exact=true`여야 하며, 원본 USD 재질이 파란색으로 바뀌는 실습은 아닙니다.
-- **거리 노이즈:** `0000_depth_original.npy`, `0000_depth_small.npy`, `0000_depth_large.npy`를 비교합니다. 기본 `--sigma 0.1`에서 두 증강의 설정 표준편차는 0.1 m와 0.5 m이며, 측정값 `small_noise_std_m`, `large_noise_std_m`는 유한 깊이 픽셀의 차이로 계산됩니다. 정확한 소수값이나 비율 5를 요구하지 않습니다.
-- **배경과 비교 범위:** 배경의 `inf`는 거리 표면이 없는 픽셀로, 노이즈 통계에서 제외됩니다. 노이즈는 음수 깊이를 0으로 제한하며 `--sigma 0`에서는 두 깊이 증강 모두 유한 픽셀의 원본값을 유지해야 합니다.
-- **Writer 선택 시:** `--mode writer`의 증강 결과는 `writer/`에 있고 최상위 PNG·NPY는 원본입니다. 이 모드의 측정 기록에는 채널 교환·small/large 통계가 없으며, RGB는 HSV 변환을 거친 노이즈 합성으로 저장됩니다. `--sigma`는 여기서도 깊이 강도만 조절합니다.
-- **CPU/GPU 비교:** `--backend warp`도 같은 종류의 변환을 수행하는지 확인하되 NumPy와 난수 배열이 완전히 같아야 한다고 요구하지 않습니다. 여러 프레임의 Cube 자세도 무작위화되므로 원본·증강은 반드시 동일 프레임끼리 비교합니다.
-
-## GUI 실행과 종료
-
-GUI에서 `--steps`를 생략하면 정해진 데이터 생성과 저장을 마친 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 양수 `--steps N`은 **생성 완료 후 GUI를 관찰하는 app update 횟수**입니다. 생성 작업 자체나 데이터 프레임 수를 제한하는 값은 아니며, `--frames` 등으로 요청한 데이터가 무한히 늘어나지 않습니다. `--headless`는 관찰 대기 없이 기존 유한 작업을 마치면 종료합니다.
-
-이 패키지 폴더에서 다음과 같이 실행합니다. 설치 경로는 자신의 환경에 맞추고, 이미 사용한 출력 폴더는 새 경로로 바꿉니다.
-
-```bash
-~/isaacsim/python.sh run.py --output output/gui
-```
-
-## 준비와 실행
-
-Isaac Sim 5.1.0, 지원되는 NVIDIA RTX GPU/드라이버가 필요합니다. 설치에 포함된 NumPy, Pillow, Warp, `omni.replicator.core`를 사용합니다. 다른 로컬 튜토리얼이나 별도 공통 모듈은 필요 없습니다. 여기서는 기본 도형과 내장 OmniPBR 재질을 만들어 외부 환경 USD를 내려받지 않습니다.
-
-Linux 터미널에서 이 패키지 폴더로 이동한 뒤 실행합니다. 설치 경로가 다르면 첫 줄을 바꿉니다.
-
-```bash
-ISAACSIM="$HOME/isaacsim"
-python3 run.py --help
-"$ISAACSIM/python.sh" run.py --headless --frames 3 --output output/numpy_annotator
-"$ISAACSIM/python.sh" run.py --headless --backend warp --frames 3 --output output/warp_annotator
-"$ISAACSIM/python.sh" run.py --headless --mode writer --output output/numpy_writer
-"$ISAACSIM/python.sh" run.py --headless --mode writer --backend warp --output output/warp_writer
-```
-
-Windows에서는 같은 인수를 설치 폴더의 `python.bat`에 전달합니다. 기본 출력 위치는 이 패키지의 `output/`입니다. **출력 폴더가 이미 존재하면 중단**하므로 반복 실습에는 새 `--output` 경로를 지정합니다. `--headless`와 `--steps`를 생략하면 지정한 프레임의 캡처와 저장을 마친 뒤에도 화면을 직접 닫을 때까지 유지합니다.
-
-## 순서대로 해보기
-
-1. `filters.py`의 `swap_red_blue()`를 읽습니다. RGBA 배열의 앞 세 채널은 색이고 마지막 채널은 투명도입니다. 함수가 복사본을 만드는 이유는 다른 annotator가 공유할 수 있는 원본 배열을 손상하지 않기 위해서입니다.
-2. 첫 명령을 실행하고 `0000_original.png`와 `0000_bgr.png`를 나란히 엽니다. 빨간 물체가 파란 물체로 보여야 합니다. 이것은 실제 USD 재질 변경이 아닌 **출력 데이터 변환**입니다.
-3. `measurements.json`을 확인합니다. `red_blue_swap_exact`는 채널별 배열 대조 결과입니다. `small_noise_std_m`과 `large_noise_std_m`는 원본과 차이를 계산한 **유한 깊이 픽셀의 실제 표준편차**입니다. 후자는 전자보다 대체로 커야 합니다. 작은 이미지와 클리핑 때문에 비율이 정확히 5가 되지는 않을 수 있습니다.
-4. 원본과 증강 깊이는 `.npy`로 저장됩니다. 8비트 그림으로 정규화하지 않아 미터 단위를 보존합니다. 배경의 `inf`는 광선이 물체와 만나지 않았다는 뜻이고, 비교 통계에서 제외합니다.
-5. Warp 모드를 실행합니다. 같은 의미의 연산을 픽셀마다 병렬 실행하지만 NumPy와 Warp의 난수 생성 방식이 달라 두 파일이 비트 단위로 같아야 한다는 요구는 없습니다.
-6. Writer 모드의 `writer/` 폴더에서 RGB와 `distance_to_camera` 출력을 확인합니다. 패키지 최상위의 원본 이미지와 비교하십시오. Writer 모드에서 RGB 노이즈 강도는 `run.py`의 `sigma=6.0`이며, CLI `--sigma`는 **깊이 노이즈의 미터 값**입니다.
-
-## API와 USD 개념
-
-| 코드 | 이 실습에서의 역할 |
+| 선택 | 데이터가 바뀌는 위치 |
 |---|---|
-| `SimulationApp` | Kit, 렌더러, 확장을 초기화합니다. `omni`와 `pxr`를 먼저 import하면 확장 로더가 준비되지 않을 수 있습니다. |
-| `rep.create.cube/material_omnipbr/camera` | USD Stage에 도형, 재질, 카메라 prim을 만듭니다. Prim은 `/World/...` 같은 경로로 식별되는 장면 요소입니다. |
-| `create.render_product(camera, resolution)` | 카메라와 해상도를 연결한 렌더 출력입니다. 카메라 prim만으로 픽셀 배열이 생기지는 않습니다. |
-| `AnnotatorRegistry.get_annotator()` | RGB나 거리 같은 데이터 계산기를 가져옵니다. `attach(product)`로 어느 출력에서 읽을지 지정합니다. |
-| `Augmentation.from_function()` | NumPy 함수 또는 Warp 커널을 Replicator 증강 노드로 연결합니다. Warp의 `data_out`은 별도 출력 버퍼입니다. |
-| `annotator.augment()` | 그 annotator 뒤에 변환을 붙이고 매개변수를 덮어쓸 수 있습니다. |
-| `augment_compose()` | 앞 변환의 결과를 다음 변환의 입력으로 순서대로 전달합니다. |
-| `writer.add_annotator()` / `augment_annotator()` | Writer가 저장하는 데이터 경로에 증강을 적용합니다. `name='rgb'`는 기존 RGB 슬롯을 대체합니다. |
-| `orchestrator.step(rt_subframes=8)` | 무작위화와 렌더링·데이터 수집을 실행합니다. subframe은 같은 시점에서 렌더 품질을 안정시키는 반복입니다. |
+| `--mode annotator` | RGB·거리 annotator 뒤에 변환을 붙이고 직접 읽습니다. |
+| `--mode writer` | Writer가 저장하는 RGB·거리 경로에 변환을 붙입니다. |
+| `--backend numpy` | NumPy 함수가 CPU 배열을 계산합니다. |
+| `--backend warp` | Warp 커널이 픽셀별 연산을 수행합니다. |
+| `filters.py` | 채널 교환과 노이즈 함수·커널의 실제 구현입니다. |
 
-USD Stage의 길이 단위는 미터로 설정합니다. `distance_to_camera`는 카메라에서 픽셀에 해당하는 표면점까지의 거리이며, 카메라 광축 방향의 깊이인 `distance_to_image_plane`과 다릅니다. 이 구현은 배경 `inf`를 원본 그대로 남기고 음수 깊이만 0으로 제한합니다.
+캡처 사이 Cube의 회전은 별도로 무작위화됩니다. 따라서 원본과 증강은 반드시 **같은 프레임 번호끼리** 비교해야 합니다.
 
-`/app/omni.graph.scriptnode/opt_in`은 이번 실행에서 함수 기반 증강을 실행할 수 있도록 설정합니다. 프로젝트 전체 설정 파일을 변경하지 않습니다. `finally: app.close()`는 오류가 나도 Kit 자원을 닫습니다.
+## 1. 원본과 증강 결과를 나란히 저장하기
 
-## 한 변수만 바꾸는 실험
+Isaac Sim 5.1과 RTX GPU 환경에서 저장소 루트에서 실행하세요. NumPy·Pillow·Warp는 설치에 포함된 환경을 사용합니다.
 
-같은 `--seed 23`으로 `--sigma 0.02`와 `--sigma 0.2`를 각각 새 출력 폴더에 실행합니다. 그림의 밝기 대신 `.npy` 차이의 표준편차를 비교하십시오. 깊이 노이즈 강도가 10배가 되었는지 측정하고, `sigma`가 0일 때 깊이 차이가 0인지도 확인할 수 있습니다.
+```bash
+~/isaacsim/python.sh src/139_replicator_replicator_augmentation/run.py --mode annotator --backend numpy --headless --frames 3 --sigma 0.1 --output /tmp/tutorial139-annotator
+```
 
-## 문제 해결과 범위
+출력은 아직 없는 폴더로 지정합니다. 320×240 해상도로 세 번 촬영한 뒤 종료합니다. `--headless`를 빼면 저장 후 창을 유지하며 닫으면 종료합니다. GUI의 `--steps N`은 생성 후 관찰용 앱 갱신 수입니다. 데이터 프레임 수는 `--frames`가 정합니다.
 
-- `No module named isaacsim/omni`: 일반 Python은 도움말만 지원합니다. 실행에는 설치의 `python.sh`/`python.bat`를 사용합니다.
-- 증강 컴파일/ScriptNode 오류: 5.1 설치의 Warp/Replicator 조합인지 확인하고, NumPy 모드로 동일한 장면을 먼저 관찰합니다.
-- 모든 깊이가 무한대: 빈 stage 또는 카메라 방향 문제입니다. 이 스크립트는 유한 픽셀이 없으면 성공으로 처리하지 않습니다.
-- 원본 문서의 Grid 환경 로드는 이 패키지에서 자체 생성 평면으로 대체했습니다. 공식 문서의 두 적용 경로와 CPU/GPU 커널은 모두 실제 코드에 포함됩니다.
-- 저장된 값과 속도 수치는 실행 때 생성됩니다. 문법/도움말 검사만으로 GPU 실행이나 성능을 검증했다고 간주하지 않습니다.
+### 코드에서 볼 부분
 
-## 출처
+먼저 채널 교환 함수를 보세요.
 
-- [Isaac Sim 5.1.0: Data Augmentation — Annotator Augmentation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_augmentation.html#annotator-augmentation)
-- [Isaac Sim 5.1.0: Writer Augmentation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_augmentation.html#writer-augmentation)
-- 설치본 비교 경로: `standalone_examples/replicator/augmentation/annotator_augmentation.py`, `writer_augmentation.py`. 이 패키지는 위 예제를 그대로 실행하는 래퍼가 아니라 같은 API 흐름을 작은 장면으로 다시 구성한 코드입니다.
+```python
+def swap_red_blue(data_in):
+    result = data_in.copy()
+    result[..., 0], result[..., 2] = data_in[..., 2], data_in[..., 0]
+    return result
+```
 
-## 실제 실행 기록
+RGBA 배열에서 0번은 빨강, 2번은 파랑입니다. 원본 복사본에 값을 써서 다른 데이터 경로가 읽을 수 있는 입력을 보존합니다. 초록과 알파 채널은 유지합니다.
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+거리 노이즈는 다음과 같습니다.
+
+```python
+noise = np.random.default_rng(seed).normal(0, sigma, data_in.shape)
+return np.maximum(data_in + noise, 0).astype(data_in.dtype)
+```
+
+`sigma`는 거리 오차의 표준편차이며 단위는 m입니다. 음수 거리를 만들지 않도록 0으로 제한합니다. 같은 증강 정의를 사용하되 두 번째 거리 annotator에서는 `sigma`를 다섯 배로 덮어씁니다.
+
+### 실행 결과 확인하기
+
+| 파일 또는 JSON 값 | 읽을 내용 |
+|---|---|
+| `0000_original.png`, `0000_bgr.png` | 빨강·파랑 교환 전후를 비교합니다. |
+| `0000_depth_original.npy` | 원본 카메라-표면 거리이며 미터 값을 보존합니다. |
+| `0000_depth_small.npy`, `0000_depth_large.npy` | 기본 sigma 0.1 m와 0.5 m의 증강 결과입니다. |
+| `red_blue_swap_exact` | 같은 원본의 채널 순서를 바꾼 배열과 정확히 일치하는지 검사합니다. |
+| `small_noise_std_m`, `large_noise_std_m` | 유한 거리 픽셀에서 원본과의 차이를 측정한 표준편차입니다. |
+
+`distance_to_camera`는 표면까지의 직선 거리입니다. 카메라 광축 방향 깊이인 `distance_to_image_plane`과 구분하세요. 배경 `inf`는 표면을 얻지 못한 픽셀이므로 차이의 통계에서 제외합니다.
+
+설정 sigma가 0.1과 0.5라고 측정 표준편차가 모든 실행에서 정확히 그 값이어야 하는 것은 아닙니다. 유한 표본 수와 0 제한의 영향을 받습니다. 채널 교환은 배열의 정확한 일치로 검사하지만 거리 노이즈는 실제 분포의 크기로 읽는 이유입니다.
+
+## 2. Writer의 저장 경로에 증강 연결하기
+
+```bash
+~/isaacsim/python.sh src/139_replicator_replicator_augmentation/run.py --mode writer --backend numpy --headless --frames 3 --sigma 0.1 --output /tmp/tutorial139-writer
+```
+
+최상위 파일은 이 모드에서도 원본입니다. 증강된 결과는 `writer/` 아래 BasicWriter의 RGB와 거리 출력에 있습니다. Writer 모드의 `measurements.json`은 프레임과 원본 shape를 기록하며, annotator 모드의 채널 교환 검사나 small/large 통계까지 만들지는 않습니다.
+
+### 코드에서 볼 부분
+
+```python
+composed = rep.annotators.get('rgb').augment_compose([hsv, noise, rgb], name='rgb')
+writer.add_annotator(composed)
+writer.augment_annotator('distance_to_camera',
+    rep.AnnotatorRegistry.get_augmentation('lesson_depth_noise'))
+```
+
+RGB는 색 공간을 HSV로 바꾸고 채널에 노이즈를 더한 다음 다시 RGB로 되돌립니다. 앞 변환의 결과가 다음 변환의 입력이므로 순서가 중요합니다. `name='rgb'`로 Writer의 RGB 항목에 이 경로를 연결합니다.
+
+Writer RGB 노이즈의 sigma는 코드에 `6.0`으로 설정되어 있습니다. CLI의 **`--sigma`는 두 모드 모두 거리 노이즈만 조절**합니다. `--sigma 0`을 주어도 Writer의 RGB 노이즈가 사라지는 것은 아닙니다.
+
+GPU 경로를 확인하려면 같은 명령에서 `--backend warp`로 바꾸고 새 출력 경로를 사용하세요. Warp는 `data_out`에 픽셀별 결과를 기록합니다. 같은 seed라도 NumPy와 Warp는 난수 생성 방식이 달라 픽셀별 노이즈가 똑같아야 하는 것은 아닙니다.
+
+노이즈 함수의 `seed`가 매번 CLI의 숫자를 그대로 받는 것도 아닙니다. 설치된 Replicator 1.12.27의 CPU·GPU augmentation 노드는 `seed` 인자를 특별히 처리하여 내부 난수 흐름에서 뽑은 정수를 각 compute에 전달합니다. 따라서 함수 안에서 `default_rng(seed)`를 만들어도 고정 `--seed`가 같은 잡음 이미지를 매 프레임 반복한다는 뜻은 아닙니다. 반복 실행을 비교할 때는 seed와 함께 backend·그래프 구성·캡처 순서를 유지하고 실제 저장 배열을 대조하세요.
+
+## 3. 장면 무작위화와 데이터 증강의 차이 정리
+
+```text
+Cube 회전 변경 → 렌더 → 원본 RGB·거리
+                       ├→ 그대로 저장
+                       └→ 채널 교환 / 노이즈 / 색 공간 변환 → 증강 저장
+```
+
+두 경로를 같은 캡처에서 읽으므로 차이를 장면 변화와 혼동하지 않고 측정할 수 있습니다. `Augmentation.from_function()`은 함수나 커널을 Replicator 처리 흐름에 연결하고, `wait_until_complete()`는 Writer의 파일 쓰기가 끝날 때까지 기다립니다. `.npy`를 사용하는 이유는 거리값을 보기 좋은 8비트 색으로 바꾸지 않고 보존하기 위해서입니다.
+
+## 4. 간단한 확인 실험
+
+첫 annotator 명령에서 **`--sigma`만 0으로 바꾸어** 새 폴더에 실행하세요.
+
+- 유한 거리 픽셀에서 small·large의 원본 대비 차이는 0이어야 합니다.
+- `small_noise_std_m`, `large_noise_std_m`도 0을 기준으로 확인합니다.
+- 빨강·파랑 교환은 그대로 유지되어 `red_blue_swap_exact`는 참이어야 합니다.
+
+이 실험은 거리 변환과 색 변환이 독립된 경로라는 점을 확인합니다. 배경의 `inf - inf`는 0이 아니라 유효하지 않은 계산이므로 비교 대상에서 제외하세요.
+
+## 실행할 때 막히면
+
+- **`Renderer returned empty annotator data`**: 카메라·render product 연결과 렌더 오류를 확인하세요. 빈 배열은 증강의 성공 결과가 아닙니다.
+- **유한 거리 픽셀이 없음**: 카메라가 실제 표면을 바라보는지 확인하세요. 배경만 비교해 노이즈를 계산할 수 없습니다.
+- **Warp 또는 ScriptNode 오류**: Isaac Sim 5.1에 포함된 확장 조합인지 확인하고 NumPy 경로와 오류 지점을 비교하세요.
+- **Writer 모드에 bgr 파일이 없음**: Writer RGB는 HSV 노이즈 합성 경로를 사용합니다. annotator 모드의 출력 목록과 다릅니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Data Augmentation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_augmentation.html)에 대응합니다. 공식 annotator·Writer 증강 경로를 빨간 Cube와 자체 평면으로 구성했습니다.
+
+[RUNTIME_CHECK.md](RUNTIME_CHECK.md)의 기존 NumPy annotator 한 프레임에서는 채널 교환 일치와 거리 오차 표준편차 약 0.1005 m·0.5024 m를 기록했습니다. 이는 해당 실행의 측정 사례이며 Warp·Writer·GUI 전체 검증은 아닙니다. 이번 문서 개정에서는 새 GPU 측정을 수행하지 않았습니다.

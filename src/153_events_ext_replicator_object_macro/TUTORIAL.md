@@ -1,80 +1,136 @@
-# 153. Macro — 한국어 실습
+# 153. 매크로로 장면 값 사이의 관계 표현하기
 
-권장 학습 순서 **153** · 물체 시뮬레이션과 YAML 무작위화 · 출처 ID `t067`
+## 이번에 배우는 것
 
-전역 값, 같은 객체의 값, 리스트 항목, 프레임 seed를 참조하는 매크로를 한 장면에서 비교한다.
+**전역 값·개체 번호·다른 객체의 난수를 참조해 세 큐브와 두 조명의 값을 연결합니다.**
 
-## 이 실습의 의도
+큐브 간격을 바꿀 때 세 좌표를 각각 고치는 대신 간격 하나를 참조하게 만들 수 있습니다. 다른 조명의 세기에 일정 범위를 더하는 관계도 표현할 수 있습니다. IRO의 **매크로**는 이렇게 설정 속 값을 찾아 계산에 사용하는 `$[...]` 문법입니다.
 
-IRO 매크로의 절대 경로·상대 경로·중첩 리스트 참조가 장면 값 사이의 의존 관계를 만드는 방식을 익힙니다. 세 큐브는 같은 간격 설정과 팔레트를 공유하면서 자기 `index`로 높이와 회전을 계산하고, dome light는 다른 light의 난수 결과를 참조하므로 파일에 적힌 순서와 계산 순서가 다름을 보여 줍니다. `run.py`만 실행하면 매크로를 남긴 `prepared.yaml`을 만들며, 값의 실제 해석과 영상 생성은 native IRO 실행에서 이루어집니다.
+| 이 실습의 참조 | 의미 | 연결되는 결과 |
+|---|---|---|
+| `$[/spacing]` | 설정 루트의 간격 | 세 큐브의 X 위치 |
+| `$[../own_height]` | 부모 mutable의 자체 높이 값 | 해당 큐브의 Y 위치 |
+| `$[/palette~$[index]]` | 번호에 해당하는 팔레트 항목 | 큐브 색 전체 |
+| `$[seed]` | 현재 프레임 seed | 큐브의 회전 순서 |
+| `$[/key_light/intensity]` | 다른 조명의 해석된 세기 | dome 세기의 범위 |
 
-## 실행 후 확인할 것
+## 1. 매크로가 있는 설정 실행하기
 
-- **매크로 해석 단계:** **Simulate** 또는 `--launch --headless` 후 `descriptions/`를 열어 계산된 값과 `prepared.yaml`의 식을 비교합니다. `default_camera.camera_parameters`는 참조 문자열 대신 해석된 사전이어야 하며 화면 크기는 640×480입니다.
-- **공유 값과 개별 값:** subject 0·1·2의 중심은 각각 `(-130,40,0)`, `(0,60,0)`, `(130,80,0)`(cm)이고 색은 `palette`의 빨강·초록·파랑 순서여야 합니다. Y 값 40·60·80은 큐브 자체 높이가 아니라 중심의 위치이며, 세 큐브의 scale은 모두 0.6입니다.
-- **seed와 회전:** 각 subject의 `rotateY`가 `(index+seed)%3*45`도인지 확인합니다. 시작 seed 11의 첫 프레임이면 90·0·45도이며 다음 프레임에서 순환합니다. 물리 시간이 0이므로 이 변화는 물리 회전 운동이 아닙니다.
-- **light 의존 관계:** 같은 description 안에서 `key_light.intensity`는 600..900, `dome_light.intensity-key_light.intensity`는 50..100인지 비교합니다. 서로 다른 프레임의 light 값을 섞어 검산하지 않습니다.
-- **참조를 바꾼 효과:** `spacing`만 130에서 180으로 바꾸어 새 출력을 만들면 X 위치만 -180·0·180으로 넓어져야 합니다. 화면·description을 함께 확인하며 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)의 기본 1프레임 기록을 모든 매크로 변형의 검증으로 확대하지 않습니다.
-
-## 준비와 실행 방식
-
-Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
-
-이 학습은 공식 **IRO 확장의 native YAML workflow**다. `run.py`는 전체 설정을 가진 로컬 YAML의 경로를 정리하고 실제 Isaac Sim을 실행하는 도구다. 렌더러나 물리를 자체적으로 흉내 내지 않는다. `@PACKAGE@`와 `@OUTPUT@`는 준비 단계의 경로 표식이고, `$[...]`는 실행 시 IRO가 처리하는 매크로다. 원본 `scene.yaml` 대신 준비된 `prepared.yaml`을 IRO에 입력한다.
+Isaac Sim 5.1과 RTX GPU 환경에서 저장소 루트부터 실행합니다.
 
 ```bash
-cd src/153_events_ext_replicator_object_macro  # 저장소 루트에서 실행; 폴더를 복사했다면 그 위치로 이동
-ISAAC_ROOT="$HOME/isaacsim"
-"$ISAAC_ROOT/python.sh" run.py --frames 3
-# GUI 실행: configuration: 뒤의 절대 경로를 복사한다.
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch
-# 파일로 생성하고 끝내는 native 실행:
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch --headless --frames 3
+cd src/153_events_ext_replicator_object_macro
+~/isaacsim/python.sh run.py --frames 3
 ```
 
-`--config scene.yaml`로 이 폴더의 완전한 설정을 선택한다. 기본 출력은 이 폴더의 `output/<UTC시간>-<고유값>/`이다. `--output /절대/새폴더`로 지정할 수 있으며 기존 경로를 덮어쓰지 않는다. 출력 폴더 안 `prepared.yaml`은 사용한 설정이고, `images/`, `labels/`, `3d_labels/`, `segmentation/`, `descriptions/` 등이 IRO 결과다. 비활성화한 스위치의 데이터는 생성되지 않는다.
+이번 호출은 `output/<UTC시간>-<고유값>/prepared.yaml`을 만들고 종료합니다. 파일을 열면 `$[...]` 식이 그대로 남아 있습니다. `run.py`는 `@OUTPUT@` 같은 경로 표식을 바꾸는 준비 도구이며, IRO 매크로 계산은 아직 수행하지 않았습니다.
 
-GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action and Event Data Generation > Object SDG**로 간다. 공식 5.1 문서에는 이 패널이 **Object Detection SDG**로 표시되어 있지만 5.1에 설치된 0.4.13 확장 메뉴 이름은 Object SDG다. **Description File**에 `configuration:` 경로를 넣는다. **Initialize scene randomization**과 **Randomize scene**은 미리보기, **Simulate**는 결과 저장이다. 데이터 생성은 현재 stage를 새 장면으로 바꾸므로 작업 중인 stage는 먼저 별도로 저장한다.
+실제 계산과 촬영은 다음 호출로 진행하세요.
 
-`--steps`를 생략한 `--launch` GUI 실행은 데이터 생성이 끝나도 사용자가 창을 닫을 때까지 유지됩니다. `--frames`는 저장할 데이터 프레임 수이며 창의 수명과 별개입니다. `--steps 600`처럼 지정하면 native Kit 업데이트 600회 후 종료합니다. 시작·장면 로딩도 이 횟수에 포함되므로 짧게 제한하면 생성이 끝나기 전에 종료될 수 있습니다. `--headless`는 기존처럼 정해진 데이터 생성 후 종료합니다. 이 설정은 Kit의 공식 [`/app/quitAfter`](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html#app-quitafter-default-1)를 사용합니다.
+```bash
+~/isaacsim/python.sh run.py --launch --headless --frames 3
+```
 
-## 실습
+이번 호출은 새로운 출력 폴더를 사용합니다. 콘솔의 최신 `output:` 경로를 기록하고 생성이 끝날 때까지 기다리세요. 설치 경로가 다르면 Python 경로와 `--isaac-root /설치/경로`를 함께 바꿉니다. `--steps`는 앱 업데이트 제한이므로 이 실습에서는 생략합니다.
 
-1. spacing 130과 subject의 translate 식을 읽는다. 절대 참조 $[/spacing]가 세 객체의 간격에 공통으로 적용된다.
-2. subject의 own_height는 같은 mutable의 index를 사용한다. transform_operators 안에서는 $[../own_height]로 한 단계 위 mutable에 접근한다.
-3. palette는 세 색의 리스트다. $[/palette~$[index]]는 먼저 내부 index를 계산한 다음 해당 리스트 항목 전체를 가져온다.
-4. Simulate 후 descriptions의 카메라 파라미터가 문자열이 아닌 사전으로 해석되었는지 확인한다. dome_light 강도가 key_light보다 50..100 큰지도 비교한다.
+### 설정에서 볼 부분
 
-## 개념과 사용한 설정
+`subject`에서 높이와 이동 관계를 찾아보세요.
 
-매크로는 셸 변수나 Python f-string이 아닌 IRO의 $[...] 문법이다. /로 시작하면 설정 루트, ../는 부모, ~0은 리스트 인덱스다. 값 전체가 하나의 참조이면 사전/리스트를 그대로 전달할 수 있다. 표현식 속 참조는 산술 계산에 사용된다. count는 사전들을 확장하고 index를 붙인다. $[seed]는 시작 seed + 프레임 인덱스, 5.1 문서는 출력 이름의 $[frame]/$[camera]도 소개하지만 설치된 0.4.13에서는 이 두 심볼이 정의되지 않는다. 이 패키지는 실제 writer가 치환하는 $(camera_name)을 사용한다. 의존 관계에 순환이 생기면 해석 오류가 난다.
+```yaml
+count: 3
+own_height: 40 + $[index] * 20
+transform_operators:
+- translate:
+  - ($[../index] - 1) * $[/spacing]
+  - $[../own_height]
+  - 0
+- rotateY: ($[../index] + $[seed]) % $[../count] * 45
+- scale: [0.6, 0.6, 0.6]
+```
 
-IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
+개체 번호 0·1·2를 식에 대입하면 `own_height`는 40·60·80입니다. 이것은 큐브의 세로 길이가 아니라 **중심의 Y 위치**입니다. IRO는 Y-up·cm 단위를 사용하며 모든 큐브의 한 변은 60 cm입니다.
 
-## 한 변수 실험
+`spacing: 130`일 때 중심은 `(-130,40,0)`, `(0,60,0)`, `(130,80,0)` cm입니다. `/`로 시작하는 참조는 루트에서 찾고, `../`는 현재 속성 문맥의 부모로 올라갑니다. 이동 목록 속 식이 mutable에 정의된 번호와 높이를 쓰는 이유입니다.
 
-spacing만 130에서 180으로 바꿔 모든 큐브 사이 간격이 함께 커지는지 본다.
+### 실행 결과 확인하기
 
-## 문제 해결
+`images/`의 세 큐브와 `descriptions/`의 `own_height`를 비교하세요. 최종 위치는 각 subject의 `global_transform` 마지막 행에서 확인합니다. 저장 description은 원래 `translate`·`rotateY`·`scale`을 하나의 최종 행렬로 정리하므로, 계산 전 식은 `prepared.yaml`에서 읽어야 합니다.
 
-- `mapping values are not allowed here`는 YAML 들여쓰기/콜론을 먼저 확인한다. 탭 대신 공백을 사용한다.
-- `ModuleNotFoundError: yaml`이면 위 명령의 Isaac Sim `python.sh`로 준비한다. `--help`는 PyYAML 없이도 실행된다.
-- 카메라/물체가 안 보이면 F로 선택 물체에 초점을 맞추고, 시선 -Z와 단위 cm, clip 범위, transform 순서를 확인한다. 물리를 켠 장면은 초기 겹침 때문에 물체가 튀어나갈 수도 있다.
-- 확장 메뉴가 없으면 Extensions에서 `isaacsim.replicator.object`가 실제로 활성화되었는지 확인한다. RGB 파일이 없으면 오류 로그와 카메라 존재 여부를 확인한다. 창이 떠 있다는 사실은 데이터 생성 성공이 아니다.
-- 같은 seed는 장면 난수 재현을 돕지만 GPU/렌더 모드/자산 버전이 다르면 픽셀의 완전한 일치를 보장하지 않는다.
+## 2. 리스트 참조와 다른 난수에 의존하는 값 읽기
 
-안전한 오류 실습은 별도 YAML 복사본에서 spacing: $[/spacing]로 자기 참조를 만드는 것이다. parser가 순환을 보고해야 하며 이는 난수 범위 오류와 구별된다. 실행 완료 여부를 성공 로그 문구만으로 판단하지 말고 출력된 description 값을 확인한다.
+### 설정에서 볼 부분
 
-## 포함 파일과 검증 범위
+```yaml
+color: $[/palette~$[index]]
+```
 
-- `scene.yaml`: 기본 실습 설정
-- `run.py`: 설정 준비 및 실제 확장 실행. `--help`로 옵션을 본다.
+안쪽 `$[index]`를 먼저 계산합니다. 예를 들어 번호 1이면 바깥 참조는 팔레트의 `~1` 항목을 선택합니다. 팔레트가 RGB 벡터 세 개의 리스트이므로 **숫자 하나가 아니라 색 벡터 전체**가 color로 전달됩니다. 마찬가지로 카메라의 `$[/camera_parameters]`는 사전 전체를 넘깁니다.
 
-현재 확인한 실행 조건과 실제 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에 기록했습니다. `tutorial.json`의 `partial_runtime_verified`는 그 조건에 한정된 검증이며, 다른 모드와 GUI·외부 통합 전체의 검증을 뜻하지 않습니다.
+회전 식의 `%`는 나머지 연산입니다. 시작 seed가 11일 때 `(index+11)%3*45`는 다음과 같습니다.
 
-## 출처
+| 개체 번호 | 첫 프레임 회전 | 중심 Y | 팔레트 색 |
+|---|---:|---:|---|
+| 0 | 90° | 40 cm | `[0.9,0.2,0.1]` |
+| 1 | 0° | 60 cm | `[0.1,0.7,0.2]` |
+| 2 | 45° | 80 cm | `[0.2,0.3,0.9]` |
 
-- [NVIDIA Isaac Sim 5.1 — Macro](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/macro.html)
-- [IRO native 실행, embedded interface 및 출력 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html#run-from-the-ui)
+이 설정은 중력과 물리 시간이 0이므로 회전 변화는 물리 운동이 아니라 프레임별 배치입니다. 다음 프레임은 seed가 12이므로 회전 순서가 바뀝니다. 다만 큐브는 Y축 90도 회전에 대해 대칭입니다. **0도와 90도가 영상에서 같은 모양으로 보일 수 있으므로 RGB만으로 식을 판정하지 마세요.** 초기화 Stage의 회전이나 최종 변환 행렬을 함께 봅니다.
 
-설정과 한국어 실습은 위 문서를 기준으로 새로 작성했다. 설치된 5.1의 `isaacsim.replicator.object` 0.4.13 소스(`description/symbol.py`, `mutables/scene_dev.py`, `ui/object_detection_sdg_window.py`)에서 입력 키·장면 단위·UI 명칭을 대조했다.
+조명의 참조는 다른 객체의 난수 결과를 사용합니다.
+
+```yaml
+dome_light:
+  type: light
+  subtype: dome
+  intensity:
+    distribution_type: range
+    start: $[/key_light/intensity] + 50
+    end: $[/key_light/intensity] + 100
+```
+
+`key_light.intensity`는 600~900에서 선택됩니다. 그 값이 720이라면 dome은 770~820 사이에서 선택합니다. dome을 설명한 YAML 줄이 먼저 나와도 key light 값을 먼저 알아야 합니다. **파일의 배치 순서보다 값의 의존 관계가 계산 순서를 정합니다.** 같은 프레임에서 참조한 key light 값은 다시 새로 뽑는 값이 아닙니다.
+
+### 실행 결과 확인하기
+
+같은 `frame_11_GLOBAL.yaml` 안에서 두 light의 세기를 찾아 차이를 계산하세요. `dome - key`가 50~100이면 관계를 만족합니다. 서로 다른 프레임의 값을 섞으면 이 검산이 의미 없어집니다.
+
+카메라 파라미터가 문자열이 아닌 사전으로 풀렸는지, subject 색이 팔레트와 대응하는지도 확인합니다. GUI로 식을 살펴보려면 `--launch`로 실행하고 **Tools > Action and Event Data Generation > Object SDG**에 이번 `configuration:` 경로를 입력해 초기화하세요. **Simulate**가 저장하며, 준비와 미리보기는 별도입니다. 작업 중인 stage는 먼저 저장합니다.
+
+## 3. 경로 치환·매크로·파일명 처리 정리
+
+```text
+run.py: @OUTPUT@ → 실제 출력 경로
+IRO: $[/spacing], $[index], $[seed] → 장면 값과 계산 결과
+writer: $(camera_name) → default_camera 또는 GLOBAL
+```
+
+겉모습이 비슷해도 처리 주체가 다릅니다. IRO 매크로에 셸 변수 문법을 섞지 마세요. 제공 파일의 `frame_$[seed]_$(camera_name)`은 seed를 먼저 계산하고 저장할 때 카메라 이름을 붙입니다.
+
+공식 문서의 예약어를 다른 버전에 옮길 때도 구분이 필요합니다. 설치 IRO 0.4.13은 전역 매크로로 `seed`와 `num_frames`를 등록하지만, 공식 페이지에 등장하는 `$[frame]`·`$[camera]`는 예약 전역값으로 등록하지 않습니다. 이 파일명에서는 프레임을 구별할 때 `$[seed]`, 카메라를 구별할 때 writer의 `$(camera_name)`을 유지하세요. 특히 `$(camera_name)`을 `$[camera]`로 바꾸면 처리 주체까지 달라집니다.
+
+또한 참조 관계에는 끝나는 지점이 있어야 합니다. `spacing`이 자기 자신을 참조하면 숫자를 결정할 수 없습니다. 이런 순환은 난수 범위가 좁거나 넓은 문제와 달리 해석 오류입니다.
+
+## 4. 간단한 확인 실험
+
+`scene.yaml`을 `wide_spacing.yaml`로 복사하고 **`spacing`만 130에서 180으로** 바꿉니다.
+
+```bash
+~/isaacsim/python.sh run.py --config wide_spacing.yaml --launch --headless --frames 3
+```
+
+중심 X는 -180·0·180 cm로 넓어지고 Y는 40·60·80 cm를 유지합니다. 같은 seed의 색과 회전 규칙도 같습니다. 가운데 큐브가 움직이지 않는 이유는 `(index-1)`이 0이기 때문입니다. 세 좌표를 따로 고치지 않고 관계 하나로 배치를 바꿨다는 점을 확인하세요.
+
+## 실행할 때 막히면
+
+- **`not found reference` 오류**: 루트 참조의 `/`, 부모 참조의 `../`, 리스트 인덱스의 `~` 위치를 확인하세요.
+- **`cyclic reference` 오류**: 참조를 따라가다가 같은 속성으로 돌아오는지 살펴봅니다. 순환하는 참조를 독립 값이나 순환하지 않는 식으로 바꾸세요.
+- **0도와 90도 큐브를 영상에서 구별하기 어려움**: 큐브의 대칭 때문일 수 있습니다. 최종 변환 행렬이나 초기화 Stage의 회전을 확인하세요.
+- **dome과 key의 차이가 범위를 벗어남**: 같은 seed의 같은 description에서 두 값을 읽었는지 먼저 확인하세요.
+- **준비 파일의 매크로가 안 풀림**: 준비 단계에서는 정상입니다. 실제 생성 후 `descriptions/`를 확인합니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Macro](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/macro.html)에 대응합니다. 위치·색·회전·조명에 참조를 연결해 숫자·벡터·사전 전달과 계산 순서를 비교합니다. 파일명은 설치 IRO 0.4.13 writer가 지원하는 `$(camera_name)`을 사용합니다.
+
+[RUNTIME_CHECK.md](RUNTIME_CHECK.md)에는 기본 설정 한 프레임의 이미지 1장·주석 4개 생성 기록이 있습니다. 설정 파일은 기록 당시와 같지만 현재 `run.py`는 그 뒤 변경되었습니다. 따라서 이 기록은 당시 조건에 한정되며 현재 실행 파일, 모든 식 변경과 GUI 조작까지 확인한 것은 아닙니다. 검증 범위는 `tutorial.json`을 함께 참고하세요.

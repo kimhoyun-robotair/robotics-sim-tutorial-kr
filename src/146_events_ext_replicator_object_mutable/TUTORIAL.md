@@ -1,82 +1,138 @@
-# 146. Mutable — 한국어 실습
+# 146. 하나의 물체 정의에서 여러 개체와 재질 변화를 만들기
 
-권장 학습 순서 **146** · 물체 시뮬레이션과 YAML 무작위화 · 출처 ID `t060`
+## 이번에 배우는 것
 
-count로 생성한 네 큐브와 라벨을 수집하지 않는 구를 비교하고, 별도 설정에서는 패키지 안의 텍스처 메시에 셰이더 무작위화를 적용한다.
+**네 큐브의 개체 번호와 무작위 속성을 구분하고, 보이는 물체와 정답 수집 대상이 어떻게 다른지 확인합니다.**
 
-## 이 실습의 의도
+IRO의 **mutable**은 장면에서 속성을 바꿀 수 있는 객체입니다. 카메라·도형·조명이 여기에 해당합니다. 이번에는 `subject` 하나의 기술서로 큐브 네 개를 만들고, 각각의 번호로 위치를 계산합니다. 이어서 같은 방식의 속성 변경을 메시 재질에도 적용합니다.
 
-하나의 mutable 기술서에서 여러 객체를 만들 때 개체 번호·무작위 속성·라벨 수집 여부가 각각 어떤 역할을 하는지 배우는 실습이다. 기본 장면은 네 큐브의 간격을 고정하고 색·회전만 바꾸며, 녹색 구는 보이지만 라벨 대상에서 제외해 가시성과 tracked 설정을 구분한다. `shader.yaml`과 `shader_image.yaml`은 별도 재질 실험이며, 기본 `run.py`는 선택한 YAML을 준비할 뿐 실제 렌더링에는 native 실행 또는 GUI Simulate가 필요하다.
+| 파일 | 장면에서 비교하는 것 |
+|---|---|
+| `scene.yaml` | 네 큐브의 번호·위치·색·회전, 라벨을 붙이지 않는 구 |
+| `shader.yaml` | 로컬 메시의 체크무늬 회전·반복 크기·색조 |
+| `shader_image.yaml` | 같은 재질 실험에 텍스처 색 반전 추가 |
+| `models/textured.usda`, `checker.png` | 메시·재질 연결과 원본 무늬 이미지 |
 
-## 실행 후 확인할 것
+## 1. 번호가 있는 큐브 네 개 관찰하기
 
-- **기본 객체 구성:** IRO 초기화 후 `/World/Shapes`의 `subject_0`부터 `subject_3`에 대응하는 네 큐브를 찾는다. index 식에 따른 X 위치는 -195, -65, 65, 195 cm로 130 cm 간격이며, 난수화 후에도 이 간격이 유지되어야 한다.
-- **달라지는 속성:** Randomize scene과 저장 description을 비교해 큐브의 색 성분은 0–1, Y 회전은 -45–45도 범위에서 선택되는지 확인한다. 매번 네 색이 모두 다르거나 구간 끝값이 나올 필요는 없으며, `simulation_time=0`이므로 물리 낙하도 요구하지 않는다.
-- **보이지만 추적하지 않는 구:** 녹색 `untracked` 구가 시야 안에 있을 때 RGB에는 나타나지만 객체 라벨의 수집 대상에서 제외되는지 확인한다. 구는 다른 물체를 가릴 수 있고 바닥은 tracked 대상이므로 전체 라벨 개수를 네 큐브 수와 같다고 요구하지 않는다.
-- **셰이더 설정 선택 시:** `shader.yaml`의 `subject`는 네 기본 큐브가 아닌 `models/textured.usda` 메시 하나다. 생성된 description과 재질에서 `texture_rotate` -90–90도, `texture_scale` 각 성분 0.5–2, `diffuse_tint` 각 성분 0.2–1을 대조하고 고정 형상 위의 체크무늬만 바뀌는지 본다.
-- **이미지 변환 선택 시:** `shader_image.yaml`은 같은 셰이더 무작위화에 `diffuse_texture: <invert_color>`를 추가한다. 원본 `checker.png`와 생성 이미지의 색 반전 효과를 비교한다. `prepared.yaml`에서 로컬 USD 경로가 해소된 것과 실제 텍스처가 렌더링된 것은 따로 확인한다.
-
-## 준비와 실행 방식
-
-Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
-
-이 학습은 공식 **IRO 확장의 native YAML workflow**다. `run.py`는 전체 설정을 가진 로컬 YAML의 경로를 정리하고 실제 Isaac Sim을 실행하는 도구다. 렌더러나 물리를 자체적으로 흉내 내지 않는다. `@PACKAGE@`와 `@OUTPUT@`는 준비 단계의 경로 표식이고, `$[...]`는 실행 시 IRO가 처리하는 매크로다. 원본 `scene.yaml` 대신 준비된 `prepared.yaml`을 IRO에 입력한다.
+Isaac Sim 5.1과 RTX GPU 환경에서 저장소 루트부터 실행합니다.
 
 ```bash
-cd src/146_events_ext_replicator_object_mutable  # 저장소 루트에서 실행; 폴더를 복사했다면 그 위치로 이동
-ISAAC_ROOT="$HOME/isaacsim"
-"$ISAAC_ROOT/python.sh" run.py --frames 3
-# GUI 실행: configuration: 뒤의 절대 경로를 복사한다.
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch
-# 파일로 생성하고 끝내는 native 실행:
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch --headless --frames 3
+cd src/146_events_ext_replicator_object_mutable
+~/isaacsim/python.sh run.py --launch --frames 3
 ```
 
-`--config shader.yaml`처럼 이 폴더의 다른 설정을 선택할 수 있다(아래 파일 목록 참조). 기본 출력은 이 폴더의 `output/<UTC시간>-<고유값>/`이다. `--output /절대/새폴더`로 지정할 수 있으며 기존 경로를 덮어쓰지 않는다. 출력 폴더 안 `prepared.yaml`은 사용한 설정이고, `images/`, `labels/`, `3d_labels/`, `segmentation/`, `descriptions/` 등이 IRO 결과다. 비활성화한 스위치의 데이터는 생성되지 않는다.
+**Tools > Action and Event Data Generation > Object SDG**의 **Description File**에 콘솔의 `configuration:` 절대 경로를 넣으세요. **Initialize scene randomization**으로 초기화한 다음 **Randomize scene**을 눌러 색과 자세를 비교합니다. IRO는 stage를 교체하므로 작업 중인 장면은 먼저 저장하세요.
 
-GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action and Event Data Generation > Object SDG**로 간다. 공식 5.1 문서에는 이 패널이 **Object Detection SDG**로 표시되어 있지만 5.1에 설치된 0.4.13 확장 메뉴 이름은 Object SDG다. **Description File**에 `configuration:` 경로를 넣는다. **Initialize scene randomization**과 **Randomize scene**은 미리보기, **Simulate**는 결과 저장이다. 데이터 생성은 현재 stage를 새 장면으로 바꾸므로 작업 중인 stage는 먼저 별도로 저장한다.
+`--launch`가 없는 실행은 새 출력 폴더에 `prepared.yaml`만 만듭니다. GUI 미리보기도 데이터 저장과 별개입니다. **Simulate**가 영상·정답을 저장하며 GUI는 생성 후에도 열려 있습니다. 설치 위치가 다르면 `~/isaacsim`과 `--isaac-root /설치/경로`를 함께 맞추세요.
 
-`--steps`를 생략한 `--launch` GUI 실행은 데이터 생성이 끝나도 사용자가 창을 닫을 때까지 유지됩니다. `--frames`는 저장할 데이터 프레임 수이며 창의 수명과 별개입니다. `--steps 600`처럼 지정하면 native Kit 업데이트 600회 후 종료합니다. 시작·장면 로딩도 이 횟수에 포함되므로 짧게 제한하면 생성이 끝나기 전에 종료될 수 있습니다. `--headless`는 기존처럼 정해진 데이터 생성 후 종료합니다. 이 설정은 Kit의 공식 [`/app/quitAfter`](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html#app-quitafter-default-1)를 사용합니다.
+### 설정에서 볼 부분
 
-## 실습
+`subject`의 개수와 위치·크기 설정입니다.
 
-1. scene.yaml을 준비해 embedded interface로 초기화한다. Stage의 /World/Shapes 아래 subject_0부터 subject_3에 해당하는 prim을 찾는다.
-2. Randomize scene을 누른다. 네 객체의 index 기반 위치는 유지되고 각각의 색과 Y 회전은 바뀌는지 관찰한다.
-3. Simulate 후 녹색 untracked 구가 RGB에는 보이지만 라벨 수집 대상에서 제외되는지 확인한다.
-4. --config shader.yaml을 실행한다. 제공된 models/textured.usda와 checker.png가 있는지 확인하고 체크무늬 회전·타일 크기·색조가 프레임마다 바뀌는지 본다.
+```yaml
+count: 4
+transform_operators:
+- translate: ['($[../index] - 1.5) * 130', 50, 0]
+- rotateY:
+    distribution_type: range
+    start: -45
+    end: 45
+- scale: [0.8, 0.8, 0.8]
+```
 
-## 개념과 사용한 설정
+`count: 4`는 `subject_0`부터 `subject_3`까지 만듭니다. 각 `index`는 0·1·2·3입니다. 위치 연산 안의 `$[../index]`는 부모 mutable의 번호를 참조합니다. X 위치를 직접 대입하면 다음과 같습니다.
 
-mutable의 type은 camera/geometry/light 중 하나다. count: 4는 같은 기술서에서 네 객체를 만들고 index 0..3을 부여한다. transform_operators는 USD의 xformOpOrder로 표현되는 순서 있는 변환이다. shader_attributes는 물체의 위치가 아닌 OmniPBR의 diffuse_tint, texture_rotate, texture_scale 입력을 바꾼다. 로컬 USD의 MaterialBindingAPI가 Mesh와 MDL 재질을 연결한다.
+| 개체 | X 중심 위치 | 다음 개체와의 간격 |
+|---|---:|---:|
+| `subject_0` | -195 cm | 130 cm |
+| `subject_1` | -65 cm | 130 cm |
+| `subject_2` | 65 cm | 130 cm |
+| `subject_3` | 195 cm | — |
 
-IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
+IRO는 Y-up·cm 단위입니다. 기본 큐브 한 변 100에 0.8을 곱하므로 큐브는 80 cm이며 중심 Y는 50 cm입니다. 물리 시간이 0이라 바닥까지의 여유가 자동으로 낙하해 사라지지는 않습니다.
 
-## 한 변수만 바꾸는 실험
+색의 각 성분은 0~1, Y 회전은 -45~45도에서 개체별로 정합니다. 번호가 정한 위치와 난수가 정한 색·회전을 분리해서 보세요. 매번 모든 큐브가 서로 다른 색을 가질 필요는 없습니다.
 
-scene.yaml에서 count만 4에서 2로 바꿔 subject_0, subject_1만 생성되는지 확인한다. 식의 중앙 기준 1.5는 그대로이므로 두 객체가 왼쪽에 남는 이유를 설명한다.
+### 실행 결과 확인하기
 
-## 문제 해결
+초기화 후 Stage의 `/World/Shapes`에서 네 `subject`와 녹색 `untracked` 구를 찾아보세요. 구의 `tracked: false`는 **RGB에서 숨긴다는 뜻이 아닙니다.** 구는 영상에 보이고 다른 큐브를 가릴 수 있지만 객체 정답을 수집하는 대상으로 지정하지 않았습니다.
 
-- `mapping values are not allowed here`는 YAML 들여쓰기/콜론을 먼저 확인한다. 탭 대신 공백을 사용한다.
-- `ModuleNotFoundError: yaml`이면 위 명령의 Isaac Sim `python.sh`로 준비한다. `--help`는 PyYAML 없이도 실행된다.
-- 카메라/물체가 안 보이면 F로 선택 물체에 초점을 맞추고, 시선 -Z와 단위 cm, clip 범위, transform 순서를 확인한다. 물리를 켠 장면은 초기 겹침 때문에 물체가 튀어나갈 수도 있다.
-- 확장 메뉴가 없으면 Extensions에서 `isaacsim.replicator.object`가 실제로 활성화되었는지 확인한다. RGB 파일이 없으면 오류 로그와 카메라 존재 여부를 확인한다. 창이 떠 있다는 사실은 데이터 생성 성공이 아니다.
-- 같은 seed는 장면 난수 재현을 돕지만 GPU/렌더 모드/자산 버전이 다르면 픽셀의 완전한 일치를 보장하지 않는다.
+**Simulate** 후 이번 `output:` 폴더의 `images/`, `labels/`, `3d_labels/`, `segmentation/`을 대조하세요. 바닥도 tracked이므로 전체 라벨 개수만 세어 네 큐브 생성 여부를 판정하지 마세요. description의 `global_transform` 마지막 행에서 큐브별 중심 좌표를 확인할 수 있습니다. 원래 변환 연산은 저장 시 단일 최종 행렬로 정리됩니다.
 
-원문은 diffuse_texture의 color_map, transform, add_noise, apply_blur, color_shift, invert_color, sobel_edges, random_mutation도 소개한다. `--config shader_image.yaml`은 로컬 체크무늬에 색 반전을 실제 적용한다. 원문의 `distribution_type: texture` 사전 문법은 설치된 0.4.13 parser가 받지 않으므로, 이 설정은 `GMesh.step()`이 처리하는 `diffuse_texture: <invert_color>` 문자열을 사용한다. 이 연산은 이미지 변환이며 물리 텍스처 특성을 측정하지 않는다.
+## 2. 물체 대신 표면 무늬를 바꾸기
 
-## 포함 파일과 검증 범위
+앞의 GUI를 닫고 같은 폴더에서 다음 명령을 실행합니다.
 
-- `scene.yaml`: 기본 실습 설정
-- `shader.yaml`: 위 실습 단계에서 설명한 비교 설정
-- `shader_image.yaml`: 로컬 텍스처 색 반전
-- `run.py`: 설정 준비 및 실제 확장 실행. `--help`로 옵션을 본다.
+```bash
+~/isaacsim/python.sh run.py --config shader.yaml --launch --headless --frames 3
+```
 
-YAML 구문과 launcher 준비 동작은 GPU 없이 검사할 수 있다. 실제 RTX 결과, PhysX 접촉, GUI 표시 검증은 별개다. `tutorial.json`의 `verification: not_run`은 이 패키지의 simulator 실행 결과를 아직 검증하지 않았다는 뜻이다.
+이번 `subject`는 네 기본 큐브가 아니라 **`models/textured.usda`의 메시 하나**입니다. 이 USD에는 Mesh와 OmniPBR 재질의 연결, UV 좌표, `../checker.png` 텍스처 경로가 포함되어 있습니다. `@PACKAGE@`는 준비 도구가 패키지 절대 경로로 바꾸며, USD 안의 상대 텍스처 경로는 USD 파일 위치를 기준으로 해석됩니다.
 
-## 출처
+### 설정에서 볼 부분
 
-- [NVIDIA Isaac Sim 5.1 — Mutable](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/mutable.html)
-- [IRO native 실행, embedded interface 및 출력 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html#run-from-the-ui)
+```yaml
+shader_attributes:
+  texture_rotate:
+    distribution_type: range
+    start: -90
+    end: 90
+  texture_scale:
+    distribution_type: range
+    start: [0.5, 0.5]
+    end: [2, 2]
+  diffuse_tint:
+    distribution_type: range
+    start: [0.2, 0.2, 0.2]
+    end: [1, 1, 1]
+```
 
-설정과 한국어 실습은 위 문서를 기준으로 새로 작성했다. 설치된 5.1의 `isaacsim.replicator.object` 0.4.13 소스(`description/symbol.py`, `mutables/scene_dev.py`, `ui/object_detection_sdg_window.py`)에서 입력 키·장면 단위·UI 명칭을 대조했다.
+`texture_rotate`는 표면 무늬의 회전, `texture_scale`은 두 UV 방향의 반복 크기, `diffuse_tint`는 재질 색조를 바꿉니다. 기하학적 `scale`과 이름은 비슷하지만, `texture_scale`을 바꾼다고 메시가 커지지는 않습니다.
+
+색 반전까지 적용하려면 비교 파일을 선택하세요.
+
+```bash
+~/isaacsim/python.sh run.py --config shader_image.yaml --launch --headless --frames 3
+```
+
+이 파일에는 `diffuse_texture: <invert_color>`가 추가되어 있습니다. 설치된 IRO 0.4.13의 메시 처리 코드가 이 문자열을 이미지 연산으로 해석합니다. 두 실행을 같은 seed로 짝지어 무늬 색을 비교하세요. 최종 RGB는 조명과 색조도 적용되므로 화면 픽셀을 단순히 `1-RGB`로 계산한 결과와 같다고 기대하지 않습니다.
+
+### 실행 결과 확인하기
+
+`descriptions/`의 `shader_attributes`에서 선택된 값을 확인하고 대응 RGB에서 무늬 방향·밀도·색을 살펴보세요. 메시 외곽과 위치는 유지되어야 합니다. 형상이 움직였다면 재질 변화와 별도의 transform 변경을 혼동하지 않았는지 확인하세요.
+
+## 3. 개체·가시성·재질의 차이 정리
+
+```text
+count와 index → 어떤 개체를 몇 개 만들고 어디에 둘지
+color와 rotateY → 각 개체의 모습과 자세
+tracked → 정답 수집 대상으로 지정할지
+shader_attributes → 기존 메시의 표면 표현
+```
+
+한 mutable의 정의 안에 이 설정들이 함께 있어도 역할은 다릅니다. 객체 수가 맞는지, 화면에 보이는지, 라벨이 붙는지, 표면 무늬가 바뀌는지를 각각 관찰하면 문제를 좁힐 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`scene.yaml`을 `two_cubes.yaml`로 복사하고 **`subject.count`만 4에서 2로** 바꾸세요.
+
+```bash
+~/isaacsim/python.sh run.py --config two_cubes.yaml --launch --headless --frames 3
+```
+
+두 큐브의 X는 -195와 -65 cm가 됩니다. 식의 `1.5`를 그대로 두었기 때문에 중앙에 대칭으로 재배치되지 않습니다. 이 결과를 설명할 수 있으면 개체 수와 위치 계산이 서로 다른 설정이라는 점을 이해한 것입니다.
+
+## 실행할 때 막히면
+
+- **녹색 구가 보이는데 라벨이 없음**: `tracked: false`의 의도된 결과입니다. 화면에 보이는 것과 정답 수집을 구분하세요.
+- **셰이더 실행에서 파일을 찾지 못함**: `models/`와 `checker.png`까지 폴더 전체가 있는지, `prepared.yaml`의 `usd_path`가 맞는지 확인하세요.
+- **`shader attribute ... does not exist`**: 임의의 USD로 바꾸었다면 그 재질에 같은 입력이 있는지 확인하세요. 제공 메시에는 필요한 OmniPBR 입력을 정의했습니다.
+- **색 반전 설정을 사전 형태로 바꾸자 parser 오류**: 제공된 `<invert_color>` 문자열로 되돌리세요. 공식 문서의 텍스처 분포 예시와 설치 0.4.13의 입력 방식에는 차이가 있습니다.
+- **생성이 중간에 종료됨**: `--steps`를 생략하세요. 이 옵션은 앱 업데이트 수이며 `--frames`와 다릅니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Mutable](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/mutable.html)에 대응합니다. 원문의 개체 확장과 셰이더 변경을 네 큐브 및 로컬 체크무늬 메시로 비교합니다. 여러 이미지 연산 중 여기서는 색 반전만 다룹니다.
+
+입력 키와 재질 연결은 로컬 YAML·USD 및 설치 IRO 0.4.13을 기준으로 설명했습니다. 실제 RGB·재질 렌더링 검증 상태는 `tutorial.json`의 `not_run`을 참고하세요.

@@ -1,55 +1,136 @@
-# 175. t114 · 폐기된 ShapeNet 전용 importer 대신 OBJ 가져오기
+# 175. OBJ의 꼭짓점과 면을 USD 장면으로 가져오기
 
-권장 학습 순서 **175** · 사용 중단 문서와 레거시 참고 · 출처 ID `t114`
+## 이번에 배우는 것
 
-Isaac Sim **5.1.0**의 이 공식 페이지는 `omni.isaac.shapenet`이 deprecated이며 ShapeNet 모델을 일반 OBJ처럼 가져오라고 안내한다. 따라서 이 패키지는 현재 지원되는 OBJ→USD 변환 경로를 구현한다. 포함한 `sample.obj`는 직접 작성한 사각뿔(면 5개) 예제이며 **ShapeNet에서 내려받은 데이터가 아니다**.
+**작은 사각뿔 OBJ를 USD로 변환하고, 원본 형상과 장면에 들어온 mesh를 비교합니다.**
 
-## 이 실습의 의도
+ShapeNet 전용 importer를 찾기 전에 파일 자체가 어떤 형식을 사용하는지 살펴봅니다. Isaac Sim 5.1의 공식 안내는 사용 중단된 `omni.isaac.shapenet` 대신 일반 OBJ import 경로를 사용하도록 설명합니다. 이번에는 외부 데이터셋 없이 형상을 직접 확인할 수 있는 `sample.obj`로 같은 변환 흐름을 익힙니다.
 
-사용 중단된 ShapeNet 전용 importer에 의존하지 않고, 일반 OBJ의 꼭짓점·면을 USD mesh로 변환해 장면에서 재사용하는 흐름을 익힌다. 작은 피라미드를 사용하는 이유는 dataset 접근 없이도 원본 형상과 변환 결과를 직접 비교할 수 있기 때문이다. 기본 실행은 `sample.obj` 변환과 `/World/Imported` 아래 reference 표시까지이며, 물리 속성이나 ShapeNet 데이터 다운로드를 추가하지 않는다.
+| 파일 또는 장면 경로 | 의미 |
+|---|---|
+| `sample.obj` | 직접 작성한 꼭짓점 5개·면 5개의 사각뿔입니다. ShapeNet 데이터가 아닙니다. |
+| `run.py` | asset converter의 완료를 기다리고 변환된 mesh를 불러옵니다. |
+| `converted.usd` | 변환기가 작성한 재사용 가능한 USD 자산입니다. |
+| `/World/Imported` | 현재 장면에서 변환 자산을 reference로 연결한 위치입니다. |
 
-## 실행 후 확인할 것
+이번에는 시각 형상을 가져옵니다. rigid body나 collider를 추가하지 않으므로 피라미드를 떨어뜨리는 물리 실습은 아닙니다.
 
-- **원본 형상:** `sample.obj`의 꼭짓점 5개와 면 5개가 사각형 밑면·삼각형 옆면 네 개를 이루는지 확인한다. 정점 좌표상 밑면 폭과 높이는 각각 0.2지만 실제 단위 적용은 변환된 USD에서 확인한다.
-- **실제 변환물:** 종료 코드뿐 아니라 `output/converted.usd`와 콘솔의 `Converted mesh prims:` 목록을 확인한다. GUI의 `/World/Imported`를 선택하고 F로 맞춰 피라미드가 보이는지 본다.
-- **형상 변화:** 꼭대기 z만 0.2에서 0.4로 바꿔 새 output에 변환했을 때 밑면 폭은 유지되고 높이가 커지는지 비교한다. 파일 크기가 특정 바이트 수와 같아야 하는 것은 아니다.
-- **물리 범위:** 이 실행기는 timeline을 재생하거나 rigid body·collider를 붙이지 않으므로 피라미드가 떨어지지 않는 것이 정상이다. 화면 표시 성공과 동역학 모델 준비 완료를 구분한다.
-- **기존 실행 근거:** `RUNTIME_CHECK.md`는 지정된 headless 조건의 종료와 변환 파일 존재를 확인한 기록이다. GUI 모양, 사용자 OBJ의 재질·텍스처, 다른 옵션은 해당 기록의 보장 범위에 포함되지 않는다.
+## 1. 먼저 기본 OBJ 변환하기
 
-## 준비와 실행
+Isaac Sim 5.1, RTX GPU와 드라이버, 번들 `omni.kit.asset_converter`가 필요합니다. 기본 입력에는 별도 ShapeNet 계정이나 온라인 데이터 다운로드가 필요하지 않습니다.
 
-Isaac Sim 5.1과 RTX GPU/드라이버, 번들 `omni.kit.asset_converter`가 필요하다. 다른 로컬 패키지·온라인 dataset 계정은 기본 실습에 필요하지 않다.
+저장소 루트에서 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-export ISAAC_SIM=/home/hoyunkim/isaacsim
-cd src/175_importers_shapenet_importer
-"$ISAAC_SIM/python.sh" run.py
-# 정식으로 확보한 자신의 ShapeNet OBJ로 확장
-"$ISAAC_SIM/python.sh" run.py --obj /absolute/model_normalized.obj --output output/shapenet
+~/isaacsim/python.sh src/175_importers_shapenet_importer/run.py \
+  --output src/175_importers_shapenet_importer/output/first
 ```
 
-`output/converted.usd`에 실제 변환 결과를 저장하고 mesh prim 경로를 출력한다. 변환 완료를 기다려 실패 상태를 검사하며 기존 output은 덮어쓰지 않는다. 일반 Python의 `--help`는 simulator 없이 동작한다.
+출력 폴더는 새 경로여야 합니다. 변환이 끝나면 창이 남습니다. Stage의 `/World/Imported`를 선택하고 **F**로 선택한 물체를 화면 중심에 맞춰 보세요.
 
-`--steps`를 생략하면 변환이 끝난 뒤에도 GUI를 사용자가 닫을 때까지 유지합니다. `--steps 240`은 변환 후 화면 업데이트 240회 뒤 종료합니다. `--headless`에서 생략하면 기존 `--frames` 값(기본 120회)을 사용합니다. `--frames`는 이전 명령과의 호환을 위한 headless 미리보기 횟수이며 GUI를 자동 종료시키지 않습니다. OBJ 변환은 한 번만 실행됩니다.
+자동 종료가 필요하면 `--steps 120`을 추가합니다. 이 수는 변환 완료 후 화면을 업데이트하는 횟수입니다. 창 없이 확인하려면 다음처럼 실행할 수 있습니다.
 
-## 직접 확인하기
+```bash
+~/isaacsim/python.sh src/175_importers_shapenet_importer/run.py \
+  --headless --steps 5 \
+  --output src/175_importers_shapenet_importer/output/headless_first
+```
 
-1. `sample.obj`를 열어 `v` 다섯 개가 꼭짓점, `f`가 면의 vertex index라는 것을 확인한다. OBJ index는 1부터 시작한다.
-2. 실행한 stage에서 `/World/Imported`를 선택하고 `F`로 화면 중심에 맞춘다. 단순히 converter task가 생성되었다는 사실 대신 실제 mesh prim이 생겼는지 확인한다.
-3. 원본 OBJ의 꼭대기 z만 0.2→0.4로 바꿔 다른 output에 변환한다. 폭을 유지한 채 높이만 바뀌는지 비교한다.
-4. 자신의 ShapeNet OBJ를 넣을 때는 해당 모델의 MTL과 texture 상대 경로를 함께 유지한다. OBJ 자체는 m/cm 같은 단위 계약이 강제되지 않으므로 실제 치수를 측정해 scale을 정한다.
-5. GUI에서는 **File > Import**에서 `.obj`를 선택해 같은 변환을 할 수 있다. USD로 저장한 뒤에는 reference로 재사용한다. ShapeNet 전용 메뉴를 찾을 필요가 없다.
+headless에서 `--steps`를 생략하면 기존 호환 옵션 `--frames`의 값, 기본 120회를 사용합니다. `--frames`가 OBJ의 변환 개수나 물리 프레임을 정하는 것은 아닙니다. 변환은 한 번 수행합니다.
 
-## API와 표현 범위
+### 코드에서 볼 부분
 
-`AssetConverterContext`는 변환 설정, `create_converter_task()`는 입력/출력 파일을 지정한 비동기 작업이다. `wait_until_finished()`의 실제 결과를 기다린 다음 USD를 stage에 reference한다. `UsdGeom.Mesh`는 vertex/face topology를 가진 prim이다. OBJ에는 articulated robot joint나 PhysX rigid body가 없으므로 **시각 mesh import가 자동 물리 모델 생성은 아니다**. rigid body/collider가 필요하면 가져온 USD에 별도로 작성한다.
+실제 변환 요청은 다음 부분입니다.
 
-자산이 흰색이면 MTL/texture 경로를 확인하고, 보이지 않으면 scale·위치와 frame selection을 확인한다. timeout은 `--timeout`을 늘려 파일 크기에 맞출 수 있다. dataset 접근권한/다운로드는 사용자가 준비해야 하며 이 패키지는 전용 downloader를 되살리지 않는다. 기존 headless 변환 실행의 파일 생성은 아래 `RUNTIME_CHECK.md`에 기록되어 있다. GUI 렌더 결과와 사용자 OBJ 변환은 별도 확인이 필요하다.
+```python
+context = omni.kit.asset_converter.AssetConverterContext()
+task = omni.kit.asset_converter.get_instance().create_converter_task(
+    str(args.obj.resolve()), str(converted), None, context,
+)
+future = asyncio.ensure_future(task.wait_until_finished())
+```
 
-## 출처
+`context`는 변환 설정, `task`는 비동기 변환 작업입니다. 작업을 만들자마자 결과 파일을 읽으면 아직 변환 중일 수 있습니다. 그래서 `app.update()`로 앱 처리를 진행하며 `future.done()`이 될 때까지 기다립니다. `future.result()`가 false이면 변환기 오류를 보고합니다.
 
-[Isaac Sim 5.1 ShapeNet Importer deprecation 안내](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/shapenet_importer.html). 실제 변환 API는 설치된 5.1 `omni.kit.asset_converter`의 `tests/test_asset_converter.py`에서 확인했다.
+이후 아래 코드로 새 장면에 자산을 연결합니다.
 
-## 실제 실행 기록
+```python
+add_reference_to_stage(str(converted), '/World/Imported')
+```
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+파일 경로는 저장된 자산의 위치이고 `/World/Imported`는 장면 안의 위치입니다. Reference를 쓰면 변환된 자산을 다른 장면에서도 다시 사용할 수 있습니다.
+
+### 실행 결과 확인하기
+
+`output/first/converted.usd`와 콘솔의 `Converted mesh prims:` 목록을 확인하세요. 실행기는 변환 완료뿐 아니라 현재 Stage에서 실제 `UsdGeom.Mesh`가 있는지도 검사합니다.
+
+GUI에서는 사각형 밑면과 삼각형 옆면 네 개가 이루는 사각뿔을 확인합니다. 파일 크기가 특정 값이어야 하는 것은 아닙니다. exporter의 설정이나 표현 방식에 따라 같은 형상도 다른 파일 크기를 가질 수 있습니다.
+
+기존 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)는 2026-09-14의 headless `--frames 5` 조건에서 종료와 변환 파일 존재를 확인한 기록입니다. 기록된 1436바이트는 그 실행의 관측값이며 모든 변환 결과의 기대 크기가 아닙니다.
+
+## 2. 원본의 좌표와 변환된 형상 연결하기
+
+### 코드에서 볼 부분
+
+`sample.obj`의 꼭짓점 정의는 다음과 같습니다.
+
+```text
+v -0.1 -0.1 0
+v 0.1 -0.1 0
+v 0.1 0.1 0
+v -0.1 0.1 0
+v 0 0 0.2
+```
+
+`v`는 꼭짓점 좌표입니다. 처음 네 점은 z=0인 밑면이고, 마지막 점은 가운데 위쪽의 꼭대기입니다. 좌표상 밑면 폭과 높이는 각각 0.2입니다. OBJ 자체가 m나 cm 단위를 강제하지는 않으므로 실제 치수는 변환된 USD의 단위와 적용된 scale을 함께 확인해야 합니다.
+
+면은 꼭짓점 번호를 연결해 정의합니다.
+
+```text
+f 1 4 3 2
+f 1 2 5
+```
+
+OBJ의 번호는 1부터 시작합니다. 첫 줄은 네 꼭짓점의 밑면, 다음 줄은 두 밑면 점과 꼭대기를 이은 옆면입니다. 변환기는 이 연결 구조를 USD mesh로 옮기며 내부적으로 면 표현을 바꿀 수 있습니다. 결과 mesh의 면 개수만 원본과 같아야 한다고 요구하기보다 실제 형상도 비교하세요.
+
+자신이 확보한 OBJ로 확장하려면 다음처럼 입력을 바꿉니다.
+
+```bash
+~/isaacsim/python.sh src/175_importers_shapenet_importer/run.py \
+  --obj /data/model/model_normalized.obj \
+  --output src/175_importers_shapenet_importer/output/custom
+```
+
+ShapeNet 모델의 사용 조건에 맞게 입력을 확보하고 MTL·텍스처 상대 경로를 유지하세요. 기본 사각뿔에는 재질 파일이 없지만 사용자 OBJ는 외부 파일을 참조할 수 있습니다. GUI의 **File > Import**에서도 OBJ를 가져올 수 있으므로 같은 자산의 형상·scale을 비교해 볼 수 있습니다.
+
+## 3. 변환·배치·물리 설정의 차이 정리
+
+```text
+OBJ 꼭짓점과 면 → converter → USD mesh 자산
+                                  ↓
+                         reference로 장면에 배치
+                                  ↓
+                    필요하다면 별도 collider·rigid body 작성
+```
+
+Mesh가 보이면 형상 import를 확인한 것입니다. 관절이나 구동기, 질량과 충돌 설정까지 준비된 것은 아닙니다. 이 실행기는 timeline을 재생하지 않으므로 물체가 떨어지지 않는 것이 정상입니다.
+
+## 4. 간단한 확인 실험
+
+`sample.obj`를 `/tmp/tutorial_pyramid_tall.obj` 같은 새 파일로 복사하고, 꼭대기 줄의 z만 **0.2 → 0.4**로 바꾸세요. `--obj`로 그 파일을 전달하고 출력 경로도 새로 지정합니다.
+
+밑면 네 점은 유지했으므로 폭은 그대로이고 높이만 두 배가 되어야 합니다. GUI의 같은 시점이나 변환된 mesh의 bounds로 비교하세요. 원본 좌표 변화가 결과에 반영되는지를 확인하는 실험이며 파일 바이트 수를 두 배로 예상하는 실험이 아닙니다.
+
+## 실행할 때 막히면
+
+- **입력·출력 조건 오류**: OBJ가 존재하는지와 출력 폴더가 새 경로인지 확인하세요. 실패한 실행이 만든 폴더도 다음 실행에서는 기존 경로입니다.
+- **변환 시간 초과**: 기본 `--timeout`은 120초입니다. 큰 파일의 로그를 확인한 뒤 필요하면 늘리세요.
+- **mesh 목록은 있는데 화면에서 안 보임**: `/World/Imported` 선택 후 F를 누르고 scale·위치를 확인하세요.
+- **사용자 모델이 흰색으로 보임**: MTL과 텍스처의 상대 경로를 확인하세요.
+- **물체가 움직이지 않음**: 이 실행에는 물리 재생과 rigid body가 없습니다. import와 동역학 설정을 구분하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [ShapeNet Importer 안내](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/shapenet_importer.html)는 전용 확장의 사용 중단과 일반 OBJ import를 설명합니다. 이 폴더는 그 대체 경로를 작은 원본 OBJ로 실습합니다.
+
+이번 개정에서는 실행기·OBJ·기존 실행 기록을 대조했습니다. `tutorial.json`의 `partial_runtime_verified`는 [기록 당시의 headless 실행](RUNTIME_CHECK.md)을 나타냅니다. 이후 실행기가 변경되었으므로 현재 코드의 재실행 검증으로 확대하지 않습니다. GUI 형상·사용자 OBJ·다른 CLI 조건도 기존 확인 범위 밖이며 이번에 새 GPU 실행은 수행하지 않았습니다.

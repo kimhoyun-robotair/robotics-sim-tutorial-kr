@@ -1,86 +1,127 @@
-# 133. GUI Recorder, 사용자 Writer, 카메라 무작위화
+# 133. Recorder는 언제부터 데이터를 저장할까요?
 
-권장 학습 순서 **133** · Replicator 합성 데이터 기초와 확장 · 출처 ID `t036`
+## 이번에 배우는 것
 
-이 패키지는 **실제 Synthetic Data Recorder**를 이용하는 두 가지 실행을 제공합니다. GUI에서는 사용자가 Writer/Control 상태를 조작하며, `--headless`는 같은 확장의 `SyntheticRecorder` 클래스로 정해진 프레임을 기록합니다. 외부 창고를 받기 전에도 동작을 배울 수 있도록 class 라벨이 있는 상자와 키프레임 카메라를 로컬에서 만듭니다. 공식 창고 장면으로 반복하는 절차도 아래에 포함됩니다.
+**움직이는 카메라 장면을 준비한 뒤, Recorder의 설정과 기록 시작을 나누어 이해합니다.**
 
-## 이 실습의 의도
+132번에서는 Python이 직접 촬영을 요청했습니다. 이번에는 Synthetic Data Recorder가 카메라·해상도·저장할 항목을 받아 기록을 진행합니다. 장면이 열렸다는 것과 이미지가 저장되기 시작했다는 것은 다른 상태입니다.
 
-카메라·해상도·annotator를 묶는 Writer 설정과 Start/Pause/Resume/Stop으로 기록을 제어하는 과정을 배우는 실습입니다. `/World/Carton`은 고정하고 `/World/AnimatedCamera`만 키프레임으로 이동시켜, 시간 진행이 출력 시점에 미치는 영향을 관찰합니다. 기본 GUI 실행은 장면과 Recorder 설정 파일을 준비한 뒤 사용자의 Start를 기다리고, `--headless`는 BasicWriter로 요청 프레임을 자동 기록합니다. 사용자 writer와 랜덤 카메라는 아래에서 직접 선택·실행해야 하는 확장 실험입니다.
+| 방식 또는 파일 | 역할 |
+|---|---|
+| GUI `run.py` | 장면과 설정 JSON을 준비하고 사용자의 Start를 기다립니다. |
+| `--headless` | 같은 확장의 `SyntheticRecorder`로 유한한 자동 기록을 수행합니다. |
+| `custom_writer.py` | RGB와 표면 법선을 저장하는 `BeginnerNormalWriter`를 등록합니다. |
+| `randomize_camera.py` | Script Editor에서 실행해 무작위 시점의 카메라를 추가합니다. |
+| `visualization_params.json` | 검출 결과를 이미지 위에 표시할 때 쓰는 설정 예시입니다. |
 
-## 실행 후 확인할 것
+장면에는 고정된 `/World/Carton`과 이동하는 `/World/AnimatedCamera`가 있습니다. 상자 대신 카메라가 움직이므로 시간 진행이 사진의 시점에 어떻게 반영되는지 살펴볼 수 있습니다.
 
-- **GUI 준비 결과:** 출력 폴더에 `recorder_stage.usda`와 `recorder_config.json`이 생성되고 Stage에 `/World/Carton`, `/World/AnimatedCamera`가 있는지 확인합니다. GUI에서 아직 Start하지 않았다면 PNG가 없어도 정상입니다.
-- **기본 캡처:** 설정을 불러와 Start하거나 `--headless --frames 10`을 실행한 뒤 설정한 recording 출력에서 10프레임의 RGB·carton 의미 정답·tight box를 확인합니다. headless 코드의 PNG 존재 검사는 최소 검사이므로 내용과 프레임 수도 따로 살펴봅니다.
-- **카메라와 시간:** Control Timeline을 켠 기록에서 카메라가 x=-1→1로 보간되는지 확인합니다. 전체 키프레임은 0~120 time code, 2초 구간이므로 짧은 10프레임 기록만으로 전체 이동이 끝나기를 기대하지 않습니다.
-- **GUI 상태 조작:** 프레임 수를 늘려 Start→Pause→Resume→Stop을 직접 시험합니다. Pause 중 저장 진행과 재개 후 기록을 비교하고, headless 자동 완료를 GUI 버튼 검증으로 대신하지 않습니다.
-- **사용자 writer:** `BeginnerNormalWriter`를 선택한 실행은 `rgb.../000000.png`와 `normals.../000000.png` 같은 annotator별 폴더를 비교합니다. 법선 그림의 색은 표면 방향을 표현하며 거리나 RGB 재질 색이 아닙니다.
-- **설정과 장면 구분:** Recorder JSON을 다시 불러와도 USD 장면까지 복원되지는 않습니다. 랜덤 카메라 실험은 해당 스크립트가 만든 Camera prim을 새 render product에 연결한 뒤 프레임별 시점 변화를 확인합니다.
+## 1. GUI에서 장면을 준비하고 기록하기
 
-## GUI 실행과 종료
-
-GUI에서는 Recorder를 직접 조작하며, `--steps`를 생략하면 사용자가 창을 닫을 때까지 유지됩니다. `--steps N`을 주면 장면 준비 후 최대 N번 app update하고 종료합니다. `--headless`는 정해진 프레임을 자동 기록하며, `--steps` 생략 시 기존 10000 app update 제한을 사용합니다.
-
-이 패키지 폴더에서 다음과 같이 실행합니다. 설치 경로는 자신의 환경에 맞추고, 이미 사용한 출력 폴더는 새 경로로 바꿉니다.
+Isaac Sim 5.1 전체 설치, RTX GPU, 데스크톱 화면이 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-~/isaacsim/python.sh run.py --output output/gui
+~/isaacsim/python.sh src/133_replicator_replicator_recorder/run.py --frames 10 --output /tmp/tutorial133-gui
 ```
 
-## 준비와 명령
+`--output`은 아직 없는 폴더로 지정합니다. 터미널에 `Load Writer > Config:`와 설정 파일 경로가 표시되면 다음 순서로 진행하세요.
 
-Isaac Sim 5.1.0 전체 설치, RTX GPU/드라이버, GUI 실습용 디스플레이가 필요합니다. 기본 장면에는 외부 자산이 없습니다. `run.py`의 `SimulationApp` 생성 후 recorder 확장을 활성화하고 로컬 `custom_writer.py`를 등록합니다.
+1. **Tools > Replicator > Synthetic Data Recorder**를 엽니다.
+2. **Writer > Config**에서 `/tmp/tutorial133-gui/recorder_config.json`을 불러옵니다.
+3. render product의 카메라가 `/World/AnimatedCamera`, 해상도가 512×512인지 확인합니다.
+4. BasicWriter에서 RGB·Semantic Segmentation·Bounding Box 2D Tight를 확인합니다.
+5. Control의 프레임 수 10과 **Control Timeline**을 확인하고 Start합니다.
+
+GUI는 창을 닫을 때까지 남습니다. `--steps N`을 지정하면 준비 후 앱을 최대 N번 갱신하고 닫으므로 버튼 실습에는 생략하세요. PNG가 없는데 `recorder_stage.usda`와 `recorder_config.json`만 있다면, 아직 기록을 시작하지 않았을 수 있습니다.
+
+### 코드에서 볼 부분
+
+카메라는 기본 방향인 local -Z를 바라보고 높이 7 m에서 움직입니다.
+
+```python
+stage.SetTimeCodesPerSecond(60)
+translation.Set((-1, 0, 7), 0)
+translation.Set((1, 0, 7), 120)
+```
+
+`0`, `120`은 초가 아닌 **USD time code**입니다. 이 장면에서는 초당 60 time code이므로 전체 이동은 2초 구간에 작성되어 있습니다. 10장만 촬영해 카메라의 전체 이동이 끝나지 않아도 정상입니다. Control Timeline은 Recorder가 이 시간 진행을 제어할지를 정합니다.
+
+### 실행 결과 확인하기
+
+설정의 `out_working_dir`는 `/tmp/tutorial133-gui`, `out_dir`는 `recording`입니다. 그 아래 Recorder가 만든 기록 경로에서 RGB와 정답을 확인하세요.
+
+- RGB에서 상자가 보이고 프레임이 진행하면서 시점이 달라지는지 봅니다.
+- 의미 라벨에 `carton`이 있고 tight box가 보이는 상자와 맞는지 확인합니다.
+- `recorder_stage.usda`는 장면, `recorder_config.json`은 기록 설정입니다. JSON만 불러오면 장면까지 복원되지는 않습니다.
+
+Pause와 Resume도 확인하려면 GUI에서 프레임 수를 충분히 늘리고 **새 출력 경로**를 선택하세요. Start → Pause → Resume → Stop을 눌러 진행 상태를 비교합니다. 비동기 저장 큐에 있던 파일은 Pause 직후에도 마무리될 수 있으므로 버튼 상태와 프레임 진행을 함께 보세요.
+
+## 2. 자동 기록과 사용자 Writer 비교하기
+
+자동 실행은 같은 확장을 사용하지만 버튼을 대신 눌러야 하는 대기가 없습니다.
 
 ```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-cd src/133_replicator_replicator_recorder
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py
-# 동일 recorder 엔진의 화면 없는 유한 캡처
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --frames 10 --output output_headless
+~/isaacsim/python.sh src/133_replicator_replicator_recorder/run.py --headless --frames 10 --output /tmp/tutorial133-auto
 ```
 
-`--steps` 없는 GUI는 직접 창을 닫을 때 종료합니다. 기본 출력 폴더 `output`이 있으면 새 `--output`을 지정합니다. 자동 실행은 10프레임과 최대 10000 app update 제한을 사용하고, 파일이 없으면 실패합니다.
+`SyntheticRecorder.start_stop_async()`를 예약하고 바깥 반복문에서 `app.update()`를 호출해 작업을 진행합니다. 완료 또는 기본 10000번 앱 갱신 한도까지 기다립니다. Headless의 `--steps`는 **기록을 기다리는 한도**이고 `--frames`는 저장할 프레임 수입니다.
 
-## Writer와 Control을 직접 조작하기
+### 코드에서 볼 부분
 
-1. **Tools > Replicator > Synthetic Data Recorder**를 엽니다. Stage에서 `/World/AnimatedCamera`를 선택한 다음 **Writer > Render Products > Add New Render Product**를 누릅니다. 카메라 경로 `/World/AnimatedCamera`, 해상도 512×512를 입력합니다. 같은 카메라를 다시 추가하고 256×256로 바꾸면 시점은 같고 해상도만 다른 두 출력이 됩니다.
-2. **Writer > Parameters**에서 BasicWriter를 선택하고 RGB, Semantic Segmentation, Bounding Box 2D Tight를 켭니다. **Output**의 Working Directory를 출력 폴더의 절대경로, Folder Name을 `manual`로 설정합니다. Increment 방식은 재실행 시 이전 데이터를 보존합니다. S3는 별도 AWS 인증·버킷이 필요한 선택 기능이며 이 로컬 실습은 S3를 사용하지 않습니다.
-3. **Control**에서 Number of Frames=10, RTSubframes=4, Control Timeline=true, Verbose=true로 설정하고 **Start**를 누릅니다. 카메라는 0~120 time code 사이 x=-1에서 x=1로 움직입니다. Stage의 60 time codes/s에서 전체 애니메이션 길이는 2초입니다.
-4. 상태 전이를 관찰하려면 Number of Frames=120으로 늘리고 Start → Pause → Resume → Stop을 누릅니다. Pause는 writer를 유지하지만 Stop은 writer를 해제합니다. Number of Frames=0은 무한 기록이므로 이 실습에서는 사용하지 않습니다.
-5. **Writer > Config**에서 상태를 저장하고 다시 불러옵니다. 실행기가 만든 `output/recorder_config.json`도 불러올 수 있습니다. 로드 후 Output 경로를 확인합니다. 설정 파일은 USD 장면을 포함하지 않으므로 `recorder_stage.usda`는 별도로 열어야 합니다.
-6. **Custom Writer**에 `BeginnerNormalWriter`, **Parameters Path**에 이 패키지의 `custom_writer_params.json` 절대경로를 지정합니다. 새 출력 폴더에서 3프레임 기록합니다. RGB와 법선 시각화 PNG가 annotator별 하위 폴더에 생겨야 합니다.
-7. DataVisualizationWriter를 쓰려면 Script Editor에서 `from isaacsim.replicator.writers import DataVisualizationWriter`를 실행합니다. Custom Writer 이름을 `DataVisualizationWriter`, Parameters Path를 `visualization_params.json`으로 바꾸고 기록합니다. RGB 위 녹색 tight box, normals 위 빨간 loose box, RGB 위 3D box를 비교합니다.
-8. Script Editor에서 `randomize_camera.py` 내용을 실행합니다. Stage에 생성된 `RandomRecorderCamera` 아래 Camera prim을 선택해 새 render product로 추가합니다. 기록 프레임의 `on_frame` trigger마다 카메라가 지정된 범위에서 상자를 보도록 변합니다. 기존 키프레임 카메라와 랜덤 카메라를 별도 출력으로 비교합니다.
+GUI 실행 때 이미 등록한 `BeginnerNormalWriter`는 RGB와 normals annotator를 선택합니다. 법선은 표면이 어느 방향을 향하는지 나타내는 벡터입니다.
 
-## 공식 창고 장면으로 반복
+```python
+color = np.clip((values[..., :3] + 1) * 127.5, 0, 255).astype(np.uint8)
+self.backend.write_image(f"{key}/{self.frame:06d}.png", color)
+```
 
-새 장면에서 Content Browser의 **Isaac Sim > Samples > Replicator > Stage > full_warehouse_worker_and_anim_cameras.usd**를 엽니다. 정확한 원격 자산 URL은 다음과 같습니다.
+법선 성분의 -1~1 범위를 이미지의 0~255로 옮깁니다. 그래서 법선 이미지의 빨강·초록·파랑은 재질 색이나 물체까지의 거리가 아니라 **표면 방향을 보기 위한 표시**입니다.
+
+Recorder의 사용자 Writer 설정에서 `BeginnerNormalWriter`를 선택하고 **Parameters Path**에 이 폴더의 `custom_writer_params.json` 절대경로를 넣으세요. 이 파일은 `rgb=true`, `normals=true`를 전달합니다. 출력 경로는 새로 지정합니다. 결과는 `rgb.../000000.png`, `normals.../000000.png`처럼 annotator별 폴더에 저장됩니다. 기본 headless 명령은 BasicWriter를 사용하므로 이 사용자 Writer를 자동 선택하지 않습니다.
+
+검출 상자를 이미지 위에서 확인하려면 Script Editor에서 `from isaacsim.replicator.writers import DataVisualizationWriter`를 실행한 뒤 사용자 Writer로 `DataVisualizationWriter`를 선택하고 같은 입력 칸에 `visualization_params.json`을 지정합니다. 파일은 tight box를 RGB 위에 초록색으로, loose box를 normals 위에 빨간색으로 표시하고, 3D box를 RGB 위에 투영하도록 요청합니다. 이는 원래 검출 배열을 대신하는 학습 정답이 아니라 경계가 물체와 맞는지 살펴보는 시각화입니다.
+
+카메라 무작위화는 별도 실습입니다. 장면을 연 상태에서 **Window > Script Editor**에 `randomize_camera.py`를 붙여 넣어 실행하세요. 출력된 Camera prim 경로를 Recorder의 새 render product에 연결합니다. 스크립트가 카메라를 추가해도 기존 AnimatedCamera 연결이 저절로 바뀌지는 않습니다.
+
+### 공식 창고 장면으로 옮겨 보기
+
+로컬 상자의 기록을 확인했다면 공식 예제의 여러 카메라와 라벨이 있는 창고에서도 같은 절차를 적용할 수 있습니다. 5.1 자산 라이브러리가 필요합니다.
+
+1. 기록을 Stop한 뒤 Content Browser에서 **Isaac Sim > Samples > Replicator > Stage > full_warehouse_worker_and_anim_cameras.usd**를 엽니다.
+2. Stage에서 실제 Camera prim을 선택하고 Recorder의 **Add New Render Product**로 연결합니다. 이전 장면의 `/World/AnimatedCamera` 항목은 삭제합니다.
+3. BasicWriter의 RGB·분할을 선택하고, 새 출력 경로·유한한 프레임 수·Control Timeline을 설정한 뒤 Start합니다.
+4. 움직이는 카메라와 고정 카메라의 결과를 프레임 번호별로 비교합니다. 창고의 기존 의미 라벨도 함께 읽어 보세요.
+
+`randomize_camera.py`까지 적용한다면 `look_at="/World/Carton"`을 새 장면의 실제 표적 경로로 바꾸고 위치 범위도 창고 안의 표적 주변으로 정해야 합니다. 로컬 상자에 맞춘 좌표를 그대로 쓰면 표적 밖을 촬영할 수 있습니다. 자산 경로와 GUI 연결 방식은 [공식 Recorder의 Getting Started](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html#getting-started)에서 확인할 수 있습니다.
+
+## 3. 준비·시간 진행·파일 저장의 관계 정리
 
 ```text
-https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/Replicator/Stage/full_warehouse_worker_and_anim_cameras.usd
+USD 장면 준비 + Recorder JSON 준비
+    → Recorder에 설정 로드
+    → Start
+    → 타임라인 진행과 카메라 렌더
+    → 선택한 annotator를 Writer가 저장
 ```
 
-이 단계만 5.1 asset 서버 연결 또는 로컬 자산 미러가 필요합니다. Stage에서 실제 Camera prim을 선택해 Recorder에 추가하고 Control Timeline을 켜야 애니메이션이 진행됩니다. 로컬 `randomize_camera.py`의 look_at은 `/World/Carton`이므로 창고에서 사용하려면 실제 상자 prim 경로로 바꿉니다.
+Recorder 설정은 무엇을 기록할지 정하고 Control은 언제 기록할지 정합니다. 키프레임 카메라는 타임라인 시간을 따라 움직이며, 무작위 카메라는 Replicator의 `on_frame` 트리거로 위치를 선택합니다. 같은 카메라 변화처럼 보여도 변화의 기준이 다릅니다.
 
-## API·USD 해설과 성공 기준
+## 4. 간단한 확인 실험
 
-Camera prim의 transform time sample은 시간에 따라 보간되는 위치입니다. Recorder의 Control Timeline은 기록과 시간 진행을 함께 제어합니다. `step_async`는 UI를 멈추지 않고 렌더 완료와 writer 처리를 기다립니다. RTSubframes는 한 정답 프레임의 렌더 안정화를 늘리는 값이며 저장 프레임 수가 아닙니다.
+로컬 상자 장면에서 카메라 경로와 프레임 수를 유지하고 **해상도만 512×512에서 256×256으로 바꾸세요.** 새 폴더에 기록합니다.
 
-`WriterRegistry.register`는 GUI가 이름으로 writer를 찾게 합니다. `BeginnerNormalWriter`는 `rgb`, `normals` annotator를 요청하고 `BackendDispatch.write_image`로 PNG를 씁니다. 법선의 [-1,1] 성분을 [0,255]로 선형 매핑한 그림이며 깊이/거리 데이터가 아닙니다. 다중 카메라의 annotator key를 파일 경로에 유지해 서로 덮어쓰지 않습니다. Parameters JSON에는 생성자 인자만 쓰며 recorder가 output_dir을 추가합니다.
+저장한 RGB의 가로·세로 크기는 절반이 되고 전체 픽셀 수는 1/4이 됩니다. 같은 상자의 2D 검출 좌표도 새 이미지 크기를 기준으로 읽어야 합니다. 장면의 1 m 상자가 실제로 작아진 것은 아닙니다.
 
-성공 기준은 10프레임 녹화가 자동 종료하고 RGB/의미 정답이 존재하며, custom writer 실행에서는 표면 방향에 따라 법선 색이 달라지는 것입니다. **RTSubframes만 4→16**으로 바꾸어 빠른 카메라 이동의 잔상과 시간을 비교합니다. 두 실행의 해상도·프레임 수는 고정합니다.
+## 실행할 때 막히면
 
-Custom Writer not found라면 같은 Kit 세션에서 `custom_writer.py`를 실행/등록했는지 확인합니다. 라벨이 없으면 recorder는 일부 semantics annotator를 비활성화할 수 있습니다. 파일이 아직 쓰이는 동안 창을 닫지 않습니다. 자동 실행 검사는 GUI Pause/Resume 버튼 동작의 검증을 대신하지 않습니다.
+- **장면은 보이지만 PNG가 없음**: GUI는 준비만 수행합니다. 설정을 불러왔는지와 Start 상태를 확인하세요.
+- **`Native recorder exceeded --steps`**: 요청 프레임을 기록하기 전에 앱 갱신 한도에 도달했습니다. 먼저 프레임 수와 초기 로딩 상태를 확인하세요.
+- **사용자 Writer가 목록에 없음**: `run.py`가 실행한 창인지 확인하세요. 다른 창에서는 `custom_writer.py` 등록도 별도로 필요합니다.
+- **랜덤 카메라가 추가되었는데 같은 시점만 기록됨**: render product가 아직 `/World/AnimatedCamera`를 가리키는지 확인하세요.
+- **JSON을 불러왔는데 카메라 경로가 없음**: 장면 USD를 먼저 열어야 합니다. 설정 파일과 장면 파일은 서로 대체하지 않습니다.
 
-## 출처와 버전
+## 공식 문서와 실습 범위
 
-이 해설은 NVIDIA Isaac Sim **5.1.0** 문서와 해당 설치본을 기준으로 새로 작성했습니다. 원문의 전체 문장을 번역 복제한 것이 아니라 해당 워크플로를 독립적으로 실습하도록 설명했습니다.
+Isaac Sim **5.1.0**의 [Synthetic Data Recorder](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html)에 대응합니다. 공식 Recorder의 설정·제어·사용자 Writer를 외부 창고 자산이 필요 없는 로컬 상자로 연습합니다.
 
-- [공식 Synthetic Data Recorder](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html)
-- [writer frame](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html#writer-frame)
-- [control frame](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html#control-frame)
-- [custom writer example](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html#custom-writer-example)
-- [data visualization writer](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html#data-visualization-writer)
-- [replicator randomized cameras](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html#replicator-randomized-cameras)
-- [recording loop overview](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html#recording-loop-overview)
+[VERIFICATION.md](VERIFICATION.md)에 기록된 범위는 정적 검사이며 `tutorial.json`은 `not_run`입니다. Headless 코드의 PNG 존재 확인은 최소 검사일 뿐 프레임 수·라벨 내용·GUI 버튼 동작을 모두 검증하지 않습니다. 위 절차의 생성 결과는 실행 환경에서 직접 확인할 기준입니다.

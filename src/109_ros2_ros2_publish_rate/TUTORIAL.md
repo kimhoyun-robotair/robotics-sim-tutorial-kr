@@ -1,97 +1,147 @@
-# 109. 발행 주기: 물리 FPS, Gate, 센서 frame skip 구분하기
+# 109. 센서마다 다른 주기로 메시지 보내기
 
-권장 학습 순서 **109** · ROS 2 연결과 기본 통신 · 출처 ID `t016`
+## 이번에 배우는 것
 
-예상 결과는 같은 Stage에서 `/clock`, `/imu`, `/scan`, RGB, CameraInfo가 서로 다른 비율로 발행되는 것이다. 공식 multi-sensor scene을 직접 구성·수정하는 실습이며 `configure_rates.py`는 그 scene의 실제 속성을 검증한 뒤 설정한다.
+**한 장면의 시계·IMU·LiDAR·카메라에 서로 다른 발행 간격을 주고, 설정한 간격과 실제 수신 빈도를 구분합니다.**
 
-## 이 실습의 의도
+카메라가 초당 60번 렌더링된다고 RGB와 깊이 정보를 모두 60번 보낼 필요는 없습니다. 필요한 데이터만 적절한 주기로 보내면 수신 측 처리량과 통신량을 줄일 수 있습니다. 이번에는 전체 진행 속도와 개별 발행 간격을 따로 다룹니다.
 
-발행 주기를 바꾸는 세 위치인 앱 진행 빈도, 일반 그래프의 Simulation Gate, 센서 Helper의 frame skip을 구별한다. 같은 multi-sensor Stage에서 일부 출력을 끄고 서로 다른 간격을 적용해 센서별 비율을 비교한다. `configure_rates.py`는 지정된 sample의 속성과 목표 FPS를 설정하는 보조 도구이며, Stage 로드·IMU 그래프 생성·Play·실제 수신 측정은 아래 절차에서 수행한다.
+| 조절 위치 | 설정 | 역할 |
+|---|---|---|
+| 앱·Timeline | `TARGET_FPS=60` | 전체 진행의 목표 빈도 |
+| 일반 Action Graph | Gate의 `step=2` | 실행 신호가 두 번 올 때 한 번 통과 |
+| 센서 Helper | `frameSkipCount=3` | 세 프레임을 건너뛰고 네 번째에 발행 |
+| 외부 ROS | `ros2 topic hz` | 수신기 시계로 실제 도착 빈도 측정 |
 
-## 실행 후 확인할 것
+`configure_rates.py`는 공식 장면의 기존 속성을 바꾸는 Script Editor 코드입니다. 장면을 불러오거나 IMU 그래프를 새로 생성하지는 않습니다.
 
-- 첫 Play 전에 스크립트를 실행하면 콘솔에 LaserScan skip=11, RGB skip=3, CameraInfo skip=5와 목표 FPS=60이 출력되어야 한다. 해당 속성이 없다는 오류는 대상 sample 경로를 재확인하라는 뜻이며, 스크립트가 다른 Stage를 자동 구성한 것은 아니다.
-- `/clock`, `/imu`, `/scan`, `/camera_1/rgb/image_raw`, `/camera_1/rgb/camera_info`를 각각 10초 이상 수신 측정한다. `ros2 topic list -t`로 타입이 순서대로 `rosgraph_msgs/msg/Clock`, `sensor_msgs/msg/Imu`, `LaserScan`, `Image`, `CameraInfo`인지도 확인한다.
-- 실제 기준 진행률이 60 FPS일 때 목표는 순서대로 약 60/30/5/15/10 Hz다. IMU는 sample 또는 수동 그래프의 Gate.step=2가 필요하며, 스크립트는 IMU Gate를 새로 만들거나 그 값을 변경하지 않는다.
-- Action Graph에서 PointCloudPublish, 두 번째 카메라 Render Product, depth Helper가 비활성화되어 있는지 확인한다. 이 출력들이 멈추는 것은 비교할 토픽을 줄이기 위한 의도된 설정이다.
-- 새로 로드한 Stage에서 `RGB_SKIP`만 3에서 7로 바꾸면 RGB가 기준 진행률의 1/4에서 1/8로 줄어드는지 비교한다. 나머지 센서의 설정 간격은 유지된다.
-- HUD FPS와 ROS 수신 Hz를 함께 기록한다. 목표 60과 실제 처리량은 다를 수 있고, 센서 스캔 주기·DDS 손실·QoS 불일치도 결과에 영향을 주므로 메시지 미수신을 성능 0 Hz로 판정하지 않는다.
+## 1. 다중 센서 장면에 발행 간격 적용하기
 
-## 이 폴더에서 시작하기
+Isaac Sim 5.1, 지원 RTX GPU, ROS 2 Humble 또는 Jazzy가 필요합니다. 저장소 루트에서 Bash 터미널 A와 B를 준비하세요. 아래는 Ubuntu 24.04의 Jazzy 기준이며 Ubuntu 22.04/Humble에서는 `jazzy` 값과 라이브러리·source 경로를 `humble`로 바꿉니다.
 
-다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
-
-Bash 터미널 A와 ROS 명령을 실행할 터미널 B 각각에서 같은 설정을 적용한다.
+터미널 A는 시스템 ROS를 source하지 않은 새 셸에서 실행합니다. 설치 위치에 맞게 `ISAAC_SIM`을 바꾸세요.
 
 ```bash
-source /opt/ros/humble/setup.bash
-# Ubuntu 24.04에서는 위 한 줄 대신 source /opt/ros/jazzy/setup.bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_DISTRO=jazzy
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export ISAAC_SIM="$HOME/isaacsim"
+export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/jazzy/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+터미널 B에서는 시스템 ROS를 준비합니다.
 
-Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+```
 
-## 완성 scene으로 시작하기
+1. Content Browser에서 **Isaac Sim > Samples > ROS2 > Scenario > turtlebot_tutorial_multi_sensor_publish_rates.usd**를 엽니다. 5.1 asset 서버 또는 로컬 asset pack에 접근할 수 있어야 합니다.
+2. 아직 Play하지 않은 상태에서 **File > Save As**로 실습용 사본을 저장합니다.
+3. **Window > Script Editor**에 `src/109_ros2_ros2_publish_rate/configure_rates.py` 전체를 붙여 넣고 실행합니다.
+4. 콘솔의 속성 경로·값과 `Configured target FPS= 60`을 확인합니다. 오류가 없다면 Play하세요.
+5. Viewport의 눈 아이콘에서 **Heads Up Display > FPS**를 켭니다. 이 숫자와 ROS 수신 빈도를 함께 관찰합니다.
 
-Isaac Sim Content Browser에서 **Isaac Sim > Samples > ROS2 > Scenario > turtlebot_tutorial_multi_sensor_publish_rates.usd**를 연다. 카메라·Lidar·IMU와 그래프가 들어 있어 다른 로컬 패키지를 먼저 공부할 필요가 없다. scene을 로드한 후 **첫 Play 전에** 아래 작업을 한다.
+### 코드에서 볼 부분
 
-1. `output/rates_01.usd`처럼 새 이름으로 저장한다.
-2. **Window > Script Editor**에 `configure_rates.py` 내용을 붙여 실행한다. 스크립트는 예상하는 공식 prim/노드 속성이 전부 있는지 먼저 확인한다. scene이 다르면 경로 오류를 내고 수정을 시작하지 않는다.
-3. Play 후 viewport의 눈 아이콘 **Show/Hide > Heads Up Display > FPS**를 켠다. 목표 FPS=60과 실제 FPS를 구별한다.
-4. 각 명령을 서로 다른 ROS 터미널에서 10초 이상 실행한다.
+```python
+TARGET_FPS = 60
+RGB_SKIP = 3
+LIDAR_SKIP = 11
+INFO_SKIP = 5
+```
 
-   ```bash
-   ros2 topic hz /clock
-   ros2 topic hz /imu
-   ros2 topic hz /scan
-   ros2 topic hz /camera_1/rgb/image_raw
-   ros2 topic hz /camera_1/rgb/camera_info
-   ```
+스크립트는 먼저 수정할 **모든 속성 경로가 존재하는지** 확인합니다. 지정한 sample이 아니면 일부만 바꾼 장면을 남기지 않고 경로 오류를 냅니다. 검사 후 RGB·LaserScan·CameraInfo의 skip을 설정하고, 비교에 쓰지 않을 3D 점군·두 번째 카메라·깊이 출력을 비활성화합니다.
 
-   ROS CLI QoS가 맞지 않으면 `ros2 topic hz --help`로 설치 버전 옵션을 확인하거나 topic info의 QoS를 따르는 subscriber로 측정한다. 메시지가 안 오는 것을 0Hz 성능으로 기록하지 않는다.
+```python
+stage.SetTimeCodesPerSecond(TARGET_FPS)
+timeline.set_target_framerate(TARGET_FPS)
+```
 
-## 처음부터 Gate와 sensor skip 만들기
+USD 시간 코드와 Timeline의 목표 빈도를 함께 설정합니다. 앱 루프의 rate limit도 60으로 설정하지만, **목표를 지정했다고 GPU가 그 처리량을 보장하는 것은 아닙니다.** 이미 재생한 장면에서 목표값을 다시 실험할 때는 장면을 다시 열고 첫 Play 전에 적용하세요.
 
-원문 기본 scene **Samples/ROS2/Scenario/turtlebot_tutorial.usd**로 시작할 수도 있다. 이 경우 아래 작업을 모두 수행한다.
+### 실행 결과 확인하기
 
-1. `/World/turtlebot3_burger/base_link/imu_link`를 선택하고 **Create > Sensors > Imu Sensor**로 `Imu_Sensor`를 만든다. 같은 imu_link 아래에 `ROS_IMU` ActionGraph를 만든다. 그래프가 robot 안에 있는 것은 자동 ROS namespace 계산에 영향을 준다.
-2. Tick, Context, Read Simulation Time, **Isaac Simulation Gate**, **Isaac Read IMU**, **ROS2 Publish IMU**를 추가한다. Tick.tick → Gate.execIn → Gate.execOut → ReadIMU.execIn → ReadIMU.execOut → Publisher.execIn으로 잇는다. sensor 데이터 세 출력 linearAcceleration/angularVelocity/orientation을 publisher의 같은 입력에, Context와 simulationTime도 연결한다.
-3. Gate.step=2, ReadIMU.imuPrim=`/World/turtlebot3_burger/base_link/imu_link/Imu_Sensor`, Publisher.frameId=`imu_link`, topicName=`/imu`로 둔다.
-4. `/World/turtlebot3_burger/base_scan/ROS_LidarRTX/LaserScanPublish`의 frameSkipCount=11로 둔다. PointCloudPublish의 enabled=False로 하고 필요한 LaserScan만 남긴다.
-5. `/World/ActionGraph_camera/isaac_create_render_product_01`의 enabled=False로 두 번째 카메라를 끈다. `ros2_camera_helper`의 frameSkipCount=3, depth용 `ros2_camera_helper_02`의 enabled=False, `ros2_camera_info_helper`의 frameSkipCount=5로 둔다.
-6. `configure_rates.py`에서 작성한 Stage time code와 Timeline 목표 FPS 설정을 아래 설명에 따라 첫 Play 전에 적용한다. 그 뒤 위 실제 토픽을 측정한다.
+터미널 B에서 다음 명령을 하나씩 10초 이상 관찰한 뒤 Ctrl+C로 종료합니다. 동시에 측정하려면 동일한 ROS 환경의 터미널을 추가하세요.
 
-## 숫자를 해석하기
+```bash
+ros2 topic hz /clock
+ros2 topic hz /imu
+ros2 topic hz /scan
+ros2 topic hz /camera_1/rgb/image_raw
+ros2 topic hz /camera_1/rgb/camera_info
+```
 
-| 메시지 | 실행 간격 | 실제 기준 FPS가 60일 때 목표 |
+| 토픽 | 발행 조건 | 기준 진행률이 60일 때 목표 |
 |---|---|---|
-| /clock | 매 프레임 | 약 60Hz |
-| /imu | Gate.step=2 | 약 30Hz |
-| /scan | frameSkipCount=11 → 12프레임마다 | 약 5Hz |
-| RGB | frameSkipCount=3 → 4프레임마다 | 약 15Hz |
-| CameraInfo | frameSkipCount=5 → 6프레임마다 | 약 10Hz |
+| `/clock` | 매 프레임 | 약 60 Hz |
+| `/imu` | Gate `step=2` | 약 30 Hz |
+| `/scan` | skip 11 | 약 5 Hz |
+| RGB | skip 3 | 약 15 Hz |
+| CameraInfo | skip 5 | 약 10 Hz |
 
-`step=N`은 N번마다 통과한다. Helper의 `frameSkipCount=K`는 K프레임을 건너뛴 후 한 번 보내므로 분모가 **K+1**이다. 공식 문서 Lidar 설명에 gate step=11이라는 문장이 있지만 같은 절의 skip11/12프레임 관계를 따라 해석해야 한다. 이 스크립트는 Helper의 frameSkipCount를 설정하고 내부 SDG 그래프를 억지로 다시 연결하지 않는다.
+IMU의 30 Hz는 **장면에 Gate `step=2`가 구성되어 있을 때**의 값입니다. 로컬 스크립트는 IMU Gate를 수정하지 않습니다. 다음 절에서 이 연결을 직접 확인하세요. 표의 값은 측정 결과가 아니라 비교 기준입니다.
 
-`stage.SetTimeCodesPerSecond(60)`은 USD 시간 코드의 초당 개수, `timeline.set_target_framerate(60)`은 목표 진행 빈도를 설정한다. Stage를 로드하고 타임라인을 멈춘 상태에서 첫 Play 전에 적용한다. 이미 재생한 scene의 값을 바꾸려면 새로 로드한 뒤 다시 설정한다.
+## 2. IMU Gate와 카메라 Helper 비교하기
 
-`carb.settings`의 `/app/runLoops/main/rateLimitEnabled`, `rateLimitFrequency`, `/persistent/simulation/minFrameRate`는 앱 루프 제한을 조정하는 별도 방법이다. 원문은 Play 후 이 값을 바꾸어 OnPlaybackTick 빈도 변화를 보기도 한다. 스크립트는 초기 목표값을 함께 설정하며 Stop/Play 후 앱 설정이 재적용되는지는 별도로 확인한다. 목표 숫자는 GPU/CPU가 보장하는 실제 처리량이 아니다.
+**Window > Graph Editors > Action Graph**에서 로봇의 `base_link/imu_link` 아래 IMU 그래프를 엽니다. 아래 구성과 다르면 Stop 상태에서 수정하세요. 기본 `turtlebot_tutorial.usd`부터 구성하는 경우에는 `imu_link`를 선택하고 **Create > Sensors > Imu Sensor**로 `Imu_Sensor`를 먼저 만듭니다.
 
-## 한 가지 바꾸기·문제 해결
+IMU 그래프가 없다면 `/World/turtlebot3_burger/base_link/imu_link/ROS_IMU`에 새 Action Graph를 만듭니다. **On Playback Tick**, **Isaac Simulation Gate**, **Isaac Read IMU**, **ROS2 Publish IMU**, **ROS2 Context**, **Isaac Read Simulation Time**을 추가한 뒤 아래의 실행·데이터 연결을 구성하세요. 센서 prim을 만드는 것만으로 이 읽기·발행 노드가 생기지는 않습니다.
 
-첫 실험은 `RGB_SKIP=3`만 7로 바꾸고 scene을 다시 로드해 설정한다. RGB 비율은 기준 FPS/8로 바뀌고 다른 센서 비율은 유지되어야 한다. 이미지 대역폭 때문에 비율이 낮으면 Render Product width/height를 줄여 비교한다. 센서 scan 회전 주기, GPU 로딩, DDS 대역폭도 실제 rate를 제한한다.
+### 설정에서 볼 부분
 
-scene 경로 오류는 임의로 무시하지 말고 지정한 multi-sensor asset이 맞는지 확인한다. CPU 부하와 기존 사용자 rate 설정도 검사한다. 원문은 `isaac-sim.sh --reset-user`를 설정 초기화 진단으로, `isaac-sim.fabric.sh --reset-user`를 실험적 성능 경로로 제시한다. 사용자 설정 초기화의 영향을 이해한 뒤 선택하며 이 스크립트가 자동 실행하지 않는다. Fabric 경로의 모든 기능 지원을 전제하지 않는다. 실제 rate와 비율을 기록하는 것이 검증이다.
+```text
+Tick.tick → Gate.execIn
+Gate.execOut → ReadIMU.execIn
+ReadIMU.execOut → PublishIMU.execIn
+```
 
-## 출처와 검증 범위
+Gate의 `step`은 2, ReadIMU의 `imuPrim`은 `/World/turtlebot3_burger/base_link/imu_link/Imu_Sensor`입니다. ReadIMU의 `linearAcceleration`, `angularVelocity`, `orientation`을 발행기의 같은 입력에 연결합니다. ROS2 Context와 Isaac Read Simulation Time도 발행기에 연결하고 `frameId=imu_link`, `topicName=/imu`로 지정합니다.
 
-- [공식 5.1 Gate](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_publish_rate.html#isaac-simulation-gate-node)
-- [공식 5.1 센서 skip](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_publish_rate.html#setting-publish-rates-for-nodes-within-sdg-pipeline)
-- [공식 5.1 FPS 설정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_publish_rate.html#setting-simulation-frame-rates)
-- [공식 5.1 측정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_publish_rate.html#checking-ros-2-publish-rate)
+Gate 뒤에 읽기와 발행을 함께 두는 이유는 **그 주기에 사용할 센서값을 읽은 뒤 보내기 위해서**입니다. 실행 포트를 연결하지 않고 숫자만 채우면 언제 처리해야 할지 정해지지 않습니다.
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.
+카메라 그래프 `/World/ActionGraph_camera`에서는 직접 만든 Gate 대신 Helper의 `frameSkipCount`를 확인하세요. Helper가 렌더 후처리 파이프라인에 필요한 Gate를 구성합니다. 로컬 스크립트의 대상은 다음과 같습니다.
+
+| 노드 | 변경 |
+|---|---|
+| `ros2_camera_helper` | RGB skip 3 |
+| `ros2_camera_info_helper` | CameraInfo skip 5 |
+| `ros2_camera_helper_02` | 깊이 출력 비활성화 |
+| `isaac_create_render_product_01` | 두 번째 카메라 비활성화 |
+| `base_scan/ROS_LidarRTX/LaserScanPublish` | LaserScan skip 11 |
+| `base_scan/ROS_LidarRTX/PointCloudPublish` | 점군 출력 비활성화 |
+
+설정 콘솔은 “요청값이 속성에 들어갔다”는 증거입니다. 실제 이미지가 도착하는지는 ROS 수신으로 따로 확인합니다.
+
+## 3. 간격과 빈도의 관계 정리
+
+```text
+일반 Gate:       발행 기회 ≈ 기준 빈도 / step
+센서 frame skip: 발행 기회 ≈ 기준 빈도 / (frameSkipCount + 1)
+```
+
+`step=3`과 `frameSkipCount=3`은 다릅니다. 앞의 것은 세 번마다 한 번, 뒤의 것은 네 번마다 한 번입니다. 같은 숫자를 넣고 같은 결과를 기대하면 비교가 어긋납니다.
+
+또한 `ros2 topic hz`는 **벽시계 시간당 수신 횟수**를 보여 줍니다. 시뮬레이션 시간이 느리게 진행되면 설정상 15 Hz인 RGB가 실제로는 더 낮게 측정될 수 있습니다. LiDAR는 센서 자체의 스캔 완료 조건도 만족해야 합니다. 그래서 FPS, 토픽별 수신 Hz, 설정한 분모를 함께 기록해야 원인을 구분할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+프로그램은 그대로 두고 `configure_rates.py`의 **`RGB_SKIP`만 3에서 7로 바꿔 보세요.** 장면을 다시 열고 첫 Play 전에 변경한 스크립트를 실행합니다.
+
+RGB의 발행 기회는 기준 빈도의 1/4에서 1/8로 줄어듭니다. 기준이 60이면 목표는 15 Hz에서 7.5 Hz가 됩니다. `/camera_1/rgb/image_raw`의 수신률을 이전 기록과 비교하고, CameraInfo의 skip 5는 유지되는지 확인하세요. 관찰을 마치면 원래 값 3으로 되돌릴 수 있습니다.
+
+## 실행할 때 막히면
+
+- **`Expected official scenario attribute is missing`**: 기본 TurtleBot 장면과 multi-sensor 장면을 혼동했는지 확인하세요. 실제 노드 경로를 확인하지 않고 오류 검사를 지우지 않습니다.
+- **IMU만 예상과 다름**: `configure_rates.py`가 IMU를 만들지 않는다는 점을 기억하세요. 센서 prim, Gate `step=2`, 읽기→발행 연결을 확인합니다.
+- **토픽 이름은 있지만 `hz` 출력이 없음**: `ros2 topic info -v 토픽명`으로 QoS를 읽고 수신기의 정책과 비교하세요. 미수신을 단순히 성능 0 Hz라고 기록하지 않습니다.
+- **모든 토픽이 비슷한 비율로 느림**: HUD FPS와 GPU 부하를 먼저 확인하세요. 개별 skip과 전체 진행 속도의 문제를 나누어 봅니다.
+- **값을 바꿔도 이전 주기가 유지됨**: 장면을 다시 로드하고 Helper가 초기화되기 전 설정했는지 확인하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [ROS2 Setting Publish Rates](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_publish_rate.html)에 대응합니다. 실행 환경은 [ROS 2 Installation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)을 따릅니다.
+
+공식 다중 센서 장면에 적용할 설정을 로컬 스크립트로 묶었습니다. 설치된 5.1 Helper 코드의 `frameSkipCount + 1` 처리와 대조했으며, 표의 Hz는 실제 측정값이 아닙니다. `tutorial.json`의 `verification: not_run`처럼 GPU·ROS 수신 측정은 별도로 수행해야 합니다.

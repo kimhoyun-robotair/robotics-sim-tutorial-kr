@@ -1,89 +1,152 @@
-# 110. QoS: 센서 전달 정책과 늦게 접속한 subscriber
+# 110. 늦게 접속한 수신자에게도 메시지 전달하기
 
-권장 학습 순서 **110** · ROS 2 연결과 기본 통신 · 출처 ID `t017`
+## 이번에 배우는 것
 
-예상 결과는 `/topic`의 QoS를 실제로 확인하고, 한 번만 보낸 String을 나중에 시작한 두 subscriber가 각각 받을 수 있는 것이다. 원문의 Generic Publisher/Countdown GUI 실습에 `qos_profile.json`과 시간 제한이 있는 실제 ROS 수신기 `listen.py`를 포함했다.
+**한 번 보낸 문자열을 나중에 실행한 수신자가 받을 수 있는지 비교하며, QoS의 보존 정책을 이해합니다.**
 
-## 이 실습의 의도
+실시간 센서 영상은 다음 프레임을 받으면 되지만, 시작할 때 한 번 보낸 설정은 늦게 접속한 노드에도 필요할 수 있습니다. ROS 2의 **QoS**는 메시지를 어떻게 전달하고 보관할지 정하는 약속입니다. 발행기와 수신기가 호환되는 약속을 사용해야 데이터가 도착합니다.
 
-같은 String 토픽도 QoS 요청에 따라 현재 메시지만 받거나 늦게 접속해도 보존된 메시지를 받을 수 있음을 비교한다. 반복 발행 그래프와 초기 카운트다운 뒤 새 발행이 없는 그래프를 나누어, 전달 정책과 발행 시점의 역할을 확인한다. 이 폴더의 JSON은 정책 값이고 `listen.py`는 수신기이므로, publisher와 Countdown은 GUI에서 직접 구성해야 한다.
+| 요소 | 이번 실습에서 하는 일 |
+|---|---|
+| GUI의 Generic Publisher | `/topic`에 `qos_lesson` 문자열 발행 |
+| ROS2 QoS Profile | 전달 정책을 JSON 문자열로 구성 |
+| `qos_profile.json` | 최근 1개를 보존하는 Custom 정책 |
+| Countdown | 초기 발행 이후 실행 신호를 멈춤 |
+| `listen.py` | 요청한 QoS로 실제 메시지를 기다림 |
 
-## 실행 후 확인할 것
+**메시지를 한 번만 보내는 것과, 보낸 메시지를 보관하는 것은 별개의 설정입니다.** 이번에는 실행 연결과 QoS를 함께 바꿔 이 차이를 확인합니다.
 
-- Sensor Data 단계에서는 `/topic`이 `std_msgs/msg/String`이고 `ros2 topic info /topic -v`에 실제 publisher의 best effort/volatile 정책이 나타나는지 본다. `listen.py --volatile --best-effort`로 `qos_lesson`을 수신해야 전달 경로를 확인한 것이다.
-- 정적 발행 단계에서는 기존 Tick → Publisher 연결을 제거하고 Countdown 실행 연결을 확인한다. QoS JSON만 붙여 놓으면 발행 횟수까지 줄어들지 않는다.
-- Custom 정책을 적용하고 초기 Countdown이 끝난 뒤에도 Play와 publisher를 유지한다. 이후 서로 다른 터미널에서 기본 `listen.py`를 실행해 두 수신기 모두 `received_data= 'qos_lesson'`을 출력하는지 확인한다.
-- 같은 조건에서 늦게 시작한 `listen.py --volatile --timeout 3`이 새 메시지를 못 받아 `TimeoutError`로 끝나는 것은 의도한 비교 결과다. Countdown 중에 시작하거나 다른 publisher가 계속 발행하면 이 조건을 검사한 것이 아니다.
-- 시뮬레이터를 닫은 뒤에도 데이터가 남아야 하는 실습은 아니다. `transientLocal` 샘플의 보존 범위는 살아 있는 publisher이며, 수신기 성공은 실제 출력으로 판단하고 topic 목록만으로 판단하지 않는다.
+## 1. 계속 발행하는 문자열부터 받기
 
-## 이 폴더에서 시작하기
+Isaac Sim 5.1과 지원 GPU, ROS 2 Humble 또는 Jazzy의 `rclpy`, `std_msgs`가 필요합니다. 저장소 루트에서 Bash 터미널을 두 개 준비하세요. 아래는 Ubuntu 24.04의 Jazzy 예시이며 Ubuntu 22.04/Humble에서는 배포판 이름과 라이브러리·source 경로를 함께 바꿉니다.
 
-다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
-
-Bash 터미널 A와 ROS 명령을 실행할 터미널 B 각각에서 같은 설정을 적용한다.
+터미널 A는 시스템 ROS를 source하지 않은 새 셸입니다. Isaac Sim 설치 경로를 맞추고 내부 브리지를 사용하세요.
 
 ```bash
-source /opt/ros/humble/setup.bash
-# Ubuntu 24.04에서는 위 한 줄 대신 source /opt/ros/jazzy/setup.bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_DISTRO=jazzy
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export ISAAC_SIM="$HOME/isaacsim"
+export LD_LIBRARY_PATH="$ISAAC_SIM/exts/isaacsim.ros2.bridge/jazzy/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+"$ISAAC_SIM/isaac-sim.sh" --enable isaacsim.ros2.bridge
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+터미널 B에서는 시스템 ROS를 사용합니다.
 
-Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+```
 
-## Sensor Data QoS부터 확인하기
+1. Isaac Sim의 **File > New**로 빈 장면을 엽니다.
+2. **Tools > Robotics > ROS 2 OmniGraphs > Generic Publisher**에서 **Publish String**을 선택합니다. 생성한 그래프를 우클릭해 **Open Graph**로 여세요.
+3. String 상수의 값을 `qos_lesson`으로 바꿉니다. 발행기의 메시지 타입은 `std_msgs/msg/String`, `topicName`은 `/topic`으로 맞춥니다. 생성된 그래프에서 String 출력이 Publisher의 `data`, Tick이 `execIn`, Context가 `context`에 연결되어 있는지도 확인하세요.
+4. **ROS2 QoS Profile** 노드를 추가하고 `qosProfile` 출력을 발행기의 같은 입력에 연결합니다. `createProfile`은 **Sensor Data**로 선택하세요.
+5. Play 후 터미널 B에서 실제 정책과 문자열을 확인합니다.
 
-1. 새 Stage를 연다. **Tools > Robotics > ROS 2 OmniGraphs > Generic Publisher**에서 **Publish String**을 선택하고 OK를 누른다. `/Graph/ROS_GenericPub`를 오른쪽 클릭해 **Open Graph**를 연다.
-2. String 상수 노드의 value를 `qos_lesson`으로 바꾼다. Publisher가 `std_msgs/msg/String`, topicName=`/topic`인지 확인한다. Tick과 Context가 각각 execIn/context에 연결되어 있다.
-3. **ROS2 QoS Profile** 노드를 추가하고 출력 `qosProfile`을 publisher의 같은 입력에 연결한다. `createProfile=Sensor Data`로 선택한다. 노드를 다시 선택해 UI의 policy 값이 갱신되었는지 본다.
-4. Play 후 외부 ROS 터미널에서 실제 publisher 정책을 확인한다.
+```bash
+ros2 topic info /topic -v
+python3 src/110_ros2_ros2_qos/listen.py --volatile --best-effort --timeout 10
+```
 
-   ```bash
-   ros2 topic info /topic -v
-   python3 listen.py --volatile --best-effort --timeout 10
-   ```
+### 실행 결과 확인하기
 
-   Sensor Data는 낮은 지연을 중시하는 best effort/volatile 정책이다. reliable 수신기를 무조건 붙이면 offered/requested QoS가 맞지 않아 연결되지 않을 수 있다.
+정책 정보에서 publisher의 Reliability와 Durability를 읽으세요. Sensor Data 설정에서는 best effort와 volatile을 확인할 수 있어야 합니다. 수신기는 다음과 같이 첫 메시지의 내용을 출력하고 종료합니다.
 
-## 한 번 보낸 메시지를 보존하는 정적 publisher
+```text
+received_data= 'qos_lesson'
+```
 
-1. Stop한다. Tick → Publisher.execIn 연결을 제거한다. **On Stage Event**, **Countdown** 노드를 추가한다.
-2. On Stage Event의 eventName을 **Simulation Start Play**로 둔다. `On Stage Event.execOut → Countdown.execIn`, `Countdown.tick → Publisher.execIn`으로 연결한다. Countdown duration=3, period=1이다. 공식 흐름은 초기 두 frame에서 generic publisher를 준비하고 세 번째 실행에 메시지를 발행한다.
-3. ROS2 QoS Profile의 `createProfile`을 **Custom**으로 **먼저** 바꾼다. 그 뒤 history=keepLast, depth=1, reliability=reliable, durability=transientLocal, deadline=0.0, lifespan=0.0, liveliness=systemDefault, leaseDuration=0.0을 설정한다. custom을 먼저 선택해야 수정한 정책이 USD에 저장되지 않는 5.1 알려진 문제를 피한다.
-4. 같은 값을 직접 문자열로 입력할 때에는 이 폴더의 `qos_profile.json` 내용을 publisher.qosProfile에 붙인다. QoS 노드 출력과 직접값 입력 중 하나만 사용한다. depth는 정수, 세 시간 필드는 소수점이 있는 실수이다.
-5. 장면을 `output/qos_01.usd`처럼 새 이름으로 저장한다. Play하고 초기 카운트다운이 끝날 때까지 기다린다. 타임라인은 Play 상태로 유지해 publisher가 살아 있도록 한다.
-6. 이제 두 터미널에서 각각 다음을 실행한다. 둘 다 `received_data='qos_lesson'`을 출력해야 한다.
+`--best-effort --volatile`은 이 실험의 발행 정책에 맞는 수신 요청입니다. 기본 `listen.py`는 reliable·transient local을 요청하므로 같은 명령으로 바꿔도 항상 연결된다고 기대하면 안 됩니다.
 
-   ```bash
-   python3 listen.py --timeout 10
-   ```
+## 2. 초기 메시지를 보존하고 뒤늦게 구독하기
 
-   ROS CLI로 확인하려면 수신 정책도 명시한다.
+Stop한 뒤 그래프의 **Tick → Publisher.execIn 연결을 제거**합니다. QoS만 바꾸고 Tick을 남겨 두면 계속 새로운 문자열이 발행되어 과거 메시지를 받은 것인지 구분할 수 없습니다.
 
-   ```bash
-   ros2 topic echo /topic --qos-durability transient_local --qos-reliability reliable --once
-   ```
+### 설정에서 볼 부분
 
-7. 비교로 `python3 listen.py --volatile --timeout 3`을 **카운트다운 이후** 시작한다. 새 발행이 없다면 보존된 과거 메시지를 요청하지 않으므로 timeout이 예상된다. 이 실패는 실험의 관찰값이다. 타임아웃 오류를 숨기지 않는다.
+1. **On Stage Event**와 **Countdown**을 추가합니다.
+2. Stage Event의 `eventName`을 **Simulation Start Play**로 설정합니다.
+3. `StageEvent.execOut → Countdown.execIn`, `Countdown.tick → Publisher.execIn`을 연결합니다.
+4. Countdown의 `duration=3`, `period=1`을 지정합니다. 이 초기 세 번의 실행은 Generic Publisher의 준비 두 번과 메시지 발행 한 번에 쓰입니다.
+5. QoS Profile은 **Custom을 먼저 선택**하고 아래 값을 넣습니다. 또는 QoS 노드 연결을 해제한 뒤 `qos_profile.json` 전체를 Publisher의 `qosProfile` 문자열에 붙여 넣습니다. 둘 중 한 방식만 사용하세요.
 
-## QoS/API 해설
+```json
+{
+  "history": "keepLast",
+  "depth": 1,
+  "reliability": "reliable",
+  "durability": "transientLocal",
+  "deadline": 0.0,
+  "lifespan": 0.0,
+  "liveliness": "systemDefault",
+  "leaseDuration": 0.0
+}
+```
 
-History/Depth는 저장할 최근 샘플 수, Reliability는 재전송 보장 수준, Durability는 늦게 붙은 수신자에게 과거 샘플을 제공할지를 정한다. `transientLocal` 데이터는 살아 있는 publisher가 보존한다. 시뮬레이터를 닫아도 영구 파일처럼 남는 기능은 아니다. QoS 설정만으로 발행 횟수가 한 번으로 줄지는 않는다. Countdown 실행 연결과 durability 설정을 함께 사용한다.
+`keepLast`와 `depth=1`은 가장 최근의 메시지 하나를 유지한다는 뜻입니다. `transientLocal`은 늦게 접속한 수신자에게 그 보관분을 제공하는 정책입니다. JSON의 depth는 정수, 시간 관련 값은 실수로 입력합니다.
 
-USD Action Graph에는 정책 JSON 문자열 또는 정책 노드의 속성이 저장된다. ROS2 Publisher가 이를 실제 DDS QoS로 해석한다. `listen.py`의 `rclpy.create_subscription`에도 동일한 요청 정책을 주므로 늦게 시작한 수신 실험이 명확해진다. `time.monotonic()` 기반 제한은 `/clock` 없이도 timeout을 작동시키고 수신 메시지를 직접 출력한다.
+Play 후 Countdown의 초기 실행이 끝날 때까지 기다립니다. **그 뒤에도 Play와 Isaac Sim 창은 유지**하세요. 이제 터미널 B에서 다음을 실행하고, 종료 후 한 번 더 실행합니다.
 
-## 하나만 바꾸기·문제 해결
+```bash
+python3 src/110_ros2_ros2_qos/listen.py --timeout 10
+```
 
-publisher의 durability만 transientLocal에서 volatile로 바꾸고 새로 Play한 뒤 늦게 수신기를 붙인다. 과거 샘플이 사라지는지 비교한다. `ros2 topic info -v`에 depth가 UNKNOWN으로 보이는 것은 Fast DDS의 보고 특성일 수 있으므로 곧바로 잘못 저장되었다고 단정하지 않는다. Cyclone DDS 비교도 같은 RMW를 양쪽에 준비한 경우에만 한다.
+두 수신기 모두 `received_data= 'qos_lesson'`을 출력하는지 확인합니다. 수신기가 처음 실행되는 시점에 새 발행이 없었다면 보관된 메시지를 읽은 것입니다.
 
-문자열이 계속 오면 기존 Tick 연결이나 다른 `/topic` publisher를 확인한다. 한 번도 안 오면 Countdown의 출력 실행 포트, 세 번 초기 실행, String 상수 연결, 두 쪽 QoS 호환성을 확인한다. 단순 topic 목록보다 실제 두 늦은 subscriber의 수신 결과가 성공 기준이다.
+### 코드에서 볼 부분
 
-## 출처와 검증 범위
+`listen.py`는 수신기 쪽 정책을 다음처럼 선택합니다.
 
-- [공식 5.1 QoS 설정](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_qos.html#setting-qos-profile-for-ros-2-omnigraph-nodes)
-- [공식 5.1 정적 발행](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_qos.html#creating-static-publishers)
+```python
+profile = QoSProfile(depth=1,
+    durability=DurabilityPolicy.VOLATILE if args.volatile else DurabilityPolicy.TRANSIENT_LOCAL,
+    reliability=ReliabilityPolicy.BEST_EFFORT if args.best_effort else ReliabilityPolicy.RELIABLE)
+```
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.
+받은 메시지를 `samples`에 넣고 첫 항목이 생기면 기다림을 끝냅니다. 시간 제한에는 `time.monotonic()`을 사용하므로 `/clock`을 발행하지 않아도 timeout이 동작합니다. 아무 메시지도 받지 못하면 성공 문구 대신 `TimeoutError`를 냅니다.
+
+### 실행 결과 확인하기
+
+| 시점과 수신 요청 | 기대하는 관찰 |
+|---|---|
+| 초기 발행이 끝난 뒤 기본 수신기 실행 | 보관된 문자열 1개 수신 |
+| 같은 조건에서 두 번째 기본 수신기 실행 | 그 수신기도 문자열 수신 |
+| Isaac Sim을 닫은 뒤 새 수신기 실행 | 기존 발행기의 보관분을 기대할 수 없음 |
+
+`transientLocal`의 보관 장소는 살아 있는 publisher입니다. 디스크에 영구 저장하는 기능으로 이해하면 안 됩니다.
+
+## 3. 실행 횟수와 전달 정책의 차이 정리
+
+```text
+Countdown: 언제, 몇 번 발행할지 결정
+QoS: 발행한 메시지를 어떻게 전달·보관할지 결정
+Subscriber QoS: 어떤 전달·보관 조건으로 받을지 요청
+```
+
+reliable은 전달 신뢰성에 관한 정책이며, 그것만으로 과거 메시지를 다시 받을 수 있게 되지는 않습니다. 늦게 접속한 수신을 비교하려면 durability도 봐야 합니다. 반대로 transient local을 설정해도 발행기의 실행 신호가 계속 들어오면 새 메시지가 계속 생깁니다.
+
+## 4. 간단한 확인 실험
+
+초기 발행이 끝난 동일한 장면에서 **수신기의 `--volatile` 옵션 하나만 추가**해 보세요.
+
+```bash
+python3 src/110_ros2_ros2_qos/listen.py --volatile --timeout 10
+```
+
+새 발행이 없다면 이번 수신기는 보관된 과거 데이터를 받지 못하고 timeout으로 끝날 것으로 예상합니다. 앞의 기본 수신기와 기다리는 시간·reliability는 같고 durability 요청만 달라집니다. 다시 기본 명령을 실행해 문자열을 받을 수 있는지도 확인하세요.
+
+## 실행할 때 막히면
+
+- **volatile 수신기도 바로 문자열을 받음**: Countdown이 아직 진행 중이거나 Tick 연결이 남아 있을 수 있습니다. `ros2 topic info /topic -v`로 다른 publisher도 확인하세요.
+- **모든 수신기가 timeout**: String 데이터 연결, 초기 세 번의 실행, QoS 호환성을 확인하세요. 발행기가 살아 있는지도 확인합니다.
+- **QoS UI 값이 바뀌지 않음**: 노드 바깥을 클릭한 뒤 다시 선택해 갱신된 값을 확인하세요. 저장할 정책은 Custom을 먼저 선택해 작성합니다.
+- **depth가 `UNKNOWN`으로 보임**: Fast DDS의 정책 조회에서는 이렇게 표시될 수 있습니다. 이 값만으로 JSON 입력 실패라 단정하지 말고 실제 늦은 수신 결과를 확인하세요.
+- **`rclpy` import 오류**: `listen.py`는 터미널 B의 시스템 `python3`용입니다. Isaac Sim의 `python.sh`와 바꿔 쓰지 않습니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [ROS 2 Quality of Service](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_qos.html)에 대응하며, 환경 설정은 [ROS 2 Installation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)을 참고합니다.
+
+GUI 발행기에 정책 JSON과 시간 제한 수신기를 더해 늦은 구독을 비교하도록 구성했습니다. `tutorial.json`의 검증 상태는 `not_run`입니다. 위 출력과 timeout은 실습에서 확인할 기준이며, 실제 GUI·DDS 수신을 수행한 기록은 아닙니다.

@@ -1,89 +1,182 @@
-# 85. Extension Template Generator Explained
+# 85. Load와 Run 사이에는 어떤 준비가 필요한가?
 
-권장 학습 순서 **85** · OmniGraph와 확장 개발 · 출처 ID `t165`
+## 이번에 배우는 것
 
-네 생성 템플릿의 callback과 timeline 상태를 분석한다. 독립 starter 확장으로 UI callback을 먼저 확인하고 공식 생성물의 Load/Reset/Run, generator, 동적 관절 UI를 실험한다.
+**확장 템플릿의 버튼을 따라가며 물리 객체 초기화, 반복 콜백, 순차 스크립트의 실행 시점을 구분합니다.**
 
-## 이 실습의 의도
+로봇 prim이 Stage에 보인다고 관절을 바로 제어할 수 있는 것은 아닙니다. USD는 장면의 구성을 담고, 물리 엔진은 초기화 과정에서 움직임을 계산할 객체를 준비합니다. 템플릿의 Load와 Reset은 이 순서를 UI에 연결합니다.
 
-공식 템플릿의 버튼과 callback을 따라가며 초기화된 물리 객체를 언제 사용할 수 있고, Run/Stop/Reset마다 어떤 갱신이 시작되거나 해제되는지 이해한다. Scripting 템플릿에서는 `yield`로 Kit에 제어권을 돌려주는 과정과 실제 관절 도착 판정을 연결한다. 제공 starter는 Cube 버튼과 창 종료만 구현하며, `bounded_wait.py`도 함수 정의만 제공하므로 생성한 scenario에 연결하고 관절 명령을 보내야 대기 동작을 관찰할 수 있다.
-
-## 실행 후 확인할 것
-
-- 생성한 Loaded Scenario의 `ui_builder.py`에 넣은 함수명 출력과 버튼 동작을 대조한다. Load 후 초기화된 객체를 쓰는 post-load가 호출되고 timeline이 timestep 0에서 pause되어 Run을 기다리는지 확인한다.
-- **Run**에서 StateButton이 Stop 상태로 바뀌고 물리 callback이 반복 호출되며 로봇·물체가 움직이는지 본다. **Stop** 뒤에는 그 callback 출력이 멈추는지, Reset 후 시나리오가 다시 초기 상태로 시작하는지 확인한다. 버튼 색이나 글자만 바뀐 상태로 완료를 판단하지 않는다.
-- Scripting에서 목표 이동과 gripper 개폐가 실제로 순서대로 진행되면서 GUI 입력에 응답하는지 본다. `wait_for_target`을 연결한 경우 `[7,8]`의 실제 관절 위치가 목표에 tolerance 이내로 도달해야 다음 단계로 진행하며, 기본 300회 검사 안에 도착하지 않으면 `TimeoutError`가 기대되는 실패 경로다.
-- Configuration은 Play한 articulation을 dropdown에서 선택했을 때 해당 관절 UI가 생성되고 목표 변경이 실제 관절에 전달되는지 확인한다. Play 전 물리 handle이 없는 상태에서 조작이 막히는 것은 초기화 순서의 제약이다.
-- 생성 확장을 종료하면 추가한 callback 출력이 더 이상 이어지지 않는지 본다. 제공 starter에서는 **Create Cube** 뒤 `/World/ExtensionCube`가 생기고 disable 시 창만 사라지는 것이 확인 범위이며, 물리 callback이나 로봇 시나리오는 포함되어 있지 않다.
-
-## 준비
-
-Isaac Sim **5.1.0** GUI와 지원 NVIDIA GPU가 필요하다. 이 폴더만 복사해서 사용하며 다른 로컬 패키지나 공통 모듈을 참조하지 않는다. 터미널에서 다음으로 실행한다. 설치 위치가 다르면 변수만 바꾼다.
-
-```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-"$ISAAC_SIM_PATH/isaac-sim.sh"
-```
-
-Stage는 현재 USD 장면 전체이고 prim은 그 안의 `/World/Cube` 같은 경로로 식별하는 요소다. `File > New`는 새 장면을 여므로 보관할 작업은 먼저 저장한다. 이 패키지는 `asset/`, `docs/`, 저장소 README를 필요로 하지 않는다.
-## 공식 생성기로 네 종류 생성
-
-1. `Window > Extensions`에서 **isaacsim.examples.extension**을 켜고 `Utilities > Generate Extension Templates`를 연다.
-2. 이 패키지 안에 새 `output/extensions/` 폴더를 만들고 **Loaded Scenario Template**을 펼친다. Extension Path=`/absolute/path/to/this-package/output/extensions/kr.loaded`, Name=`kr.loaded`, Description=`Load reset run lesson`을 입력해 Generate Extension을 누른다.
-3. **Scripting Template**은 `kr.scripted`, **Configuration Tooling Template**은 `kr.configuration`, **UI Component Library**는 `kr.components`로 같은 부모 아래 각각 생성한다. 같은 폴더에 덮어쓰지 않는다.
-4. `Window > Extensions`의 메뉴→Settings→Extension Search Paths에서 **부모 output/extensions 절대 경로**를 +로 추가한다. Third Party 탭에서 각 확장을 찾아 하나씩 Enabled를 켠다.
-5. 메뉴바에 새 항목이 나타나는지 확인하고 해당 창을 연다. 공식 로봇을 쓰는 generated sample은 Isaac Sim 5.1 자산 서버/로컬 asset pack이 필요하다.
-
-| 템플릿 | 수행할 동작 | 성공 기준 |
+| 살펴볼 대상 | 담당하는 일 | 관찰 지점 |
 |---|---|---|
-| Loaded Scenario | Load → Run → Stop → Reset | 로드 후 동작, reset 시 초기 상태 |
-| Scripting | Load → Run | 순차 동작이 프레임마다 진행되고 UI가 응답 |
-| Configuration | 새 Stage에 Franka 추가, Play, 로봇 dropdown 선택 | 관절 UI 생성 및 선택 관절 이동 |
-| UI Component Library | FloatField/체크박스/button 값 변경 | callback이 전달받는 값/타입 확인 |
+| Loaded Scenario의 Load/Reset | 장면과 물리 객체 준비 | post-load/post-reset의 위치 |
+| Run/Stop StateButton | 시나리오 갱신 구독과 해제 | 반복 콜백 출력 |
+| Scripting의 generator | 여러 동작을 순서대로 진행 | `yield` 사이의 실제 관절 이동 |
+| `bounded_wait.py` | 목표 도착을 제한 횟수 안에 검사 | 허용 오차와 `TimeoutError` |
+| `kr.lifecycle.starter` | 간단한 창의 시작과 종료 | 버튼 클릭과 창 정리 |
 
-Franka는 Content `Isaac Sim > Robots > FrankaRobotics > FrankaPanda > franka.usd`를 새 Stage에 드래그한다. Configuration 템플릿은 Stage/타임라인을 소유하지 않으므로 사용자가 Play한 로봇을 선택해야 한다.
+여기서는 **언제 사용할 수 있는 상태가 되었는지**를 중심으로 읽습니다. 같은 콜백이라도 창을 열 때 한 번 부르는 함수와 물리 단계마다 부르는 함수의 역할은 다릅니다.
 
-## 1. Callback이 보장하는 상태
+## 1. 생성한 템플릿의 버튼과 콜백 연결하기
 
-생성된 `scripts/ui_builder.py`를 연다. 다음 함수에 `print("함수명")` 한 줄씩 넣어 각 버튼과 timeline event가 어느 함수를 호출하는지 Console에서 확인한다. 공식 설치 원본이 아닌 방금 만든 output 아래 파일을 편집한다.
-
-| 함수 | 호출 시점/사용법 |
-|---|---|
-| `build_ui` | UI 구성, field/button callback 연결 |
-| `on_menu_callback` | 도구 창 열기 |
-| `on_timeline_event` | Play/Pause/Stop 반응 |
-| `on_physics_step` | Play 중 물리 step마다 실행 |
-| `on_stage_event` | Stage 열기/닫기 대응 |
-| `cleanup` | subscription 등 자원 해제 |
-
-Loaded Scenario의 Load는 World 생성→`setup_scene_fn`에서 `world.scene.add`→초기화→`setup_post_load_fn` 순서다. post-load에서는 timestep 0에 pause된 초기화 객체를 사용할 수 있다. Reset의 pre-reset은 상태를 가정하지 않고 post-reset은 기본 pose로 복원된 객체를 사용한다. `World`는 하나의 simulator lifecycle을 관리하는 singleton이므로 다른 예제 World와 동시에 섞지 않는다.
-
-## 2. StateButton과 물리 callback
-
-Loaded Scenario에서 Run을 누르면 A(Run)→B(Stop) 상태로 바뀐다. `on_a_click`, `on_b_click`과 B 상태에서만 활성인 `physics_callback_fn`을 찾아 출력으로 호출 순서를 확인한다. Stop은 해당 subscription을 해제한다. 타임라인의 외부 Stop을 눌러도 template이 UI 가정을 복구하는지 관찰한다.
-
-## 3. Scripting의 yield / yield from
-
-`scenario.py`의 `my_script()`는 `goto_position`, `open_gripper_franka`, `close_gripper_franka`를 `yield from`으로 순서대로 실행한다. 매 physics step의 `next(generator)`는 다음 yield까지 진행하고 제어권을 Kit에 반환한다. `while`로 도착을 기다리면서 yield를 빼면 UI/physics 모두 멈추므로 도착하지 못한다.
-
-제공 `bounded_wait.py`의 `wait_for_target`은 같은 원리를 작은 함수로 구현하며 300 step 이후 도착하지 않으면 TimeoutError를 낸다. 생성한 scenario에 함수를 복사하고 `yield from wait_for_target(articulation, [7,8], [0.04,0.04])`처럼 **명령을 보낸 뒤** 호출한다. 이것은 실제 관절 위치를 읽으며 시간 경과만으로 성공을 꾸미지 않는다.
-
-## 4. Configuration과 UI wrapper
-
-Configuration 템플릿은 현재 Stage에서 articulation을 검색해 dropdown을 채우고 선택이 바뀔 때 Robot Control Frame을 다시 만든다. Play 전에는 물리 handle이 없어서 관절 조작을 막는다. UI Component Library는 FloatField, DropDown, StateButton 등 wrapper callback의 인수/반환 타입을 확인하는 참고 구현이다. UI 값 변경만으로 물리가 변하지 않으며 연결된 callback이 실제 action을 보내야 한다.
-
-## 제공 starter와 확인
+Isaac Sim 5.1 GUI, 지원 NVIDIA GPU, 기본 로봇 자산에 접근할 수 있는 환경이 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-"$ISAAC_SIM_PATH/isaac-sim.sh" --ext-folder /absolute/path/to/this-package/exts --enable kr.lifecycle.starter
+mkdir -p src/85_tools_extension_templates_tutorial/output/extensions
+realpath src/85_tools_extension_templates_tutorial/output/extensions
+~/isaacsim/isaac-sim.sh
 ```
 
-Create Cube callback과 `on_shutdown`의 window.destroy를 보고 생성기 boilerplate와 비교한다. 한 변수 실험: Scripting의 관절 도착 tolerance만 0.001→0.01로 바꾸고 다음 동작 시작 시점을 비교한다. 성공은 Load/Reset 상태 보장, Run 동안 UI 응답, 실제 관절 도착 후 다음 동작, 확장 종료 후 callback 해제다. 오래 멈추면 목표 도달 가능성/관절 인덱스/yield를 점검한다.
+1. `isaacsim.examples.extension`을 켜고 **Utilities > Generate Extension Templates**를 엽니다.
+2. **Loaded Scenario**를 선택합니다. 위 절대 경로를 부모로 하여 Extension Path를 `<출력 경로>/kr.lifecycle.loaded`, 이름을 `kr.lifecycle.loaded`로 정하고 생성합니다.
+3. **Scripting**은 같은 부모 아래 `kr.lifecycle.scripted`로 생성합니다. 이어 **Configuration Tooling**은 `kr.lifecycle.configuration`, **UI Component Library**는 `kr.lifecycle.components`로 각각 다른 폴더에 생성합니다.
+4. **Window > Extensions > Settings > Extension Search Paths**에 부모 `<출력 경로>`를 추가합니다.
+5. 먼저 `kr.lifecycle.loaded`만 켜고 생성된 창을 엽니다. Load가 새 Stage를 만들므로 보관할 작업은 미리 저장하세요.
 
-## 검증 범위
+### 코드에서 볼 부분
 
-제공된 Python/JSON/TOML의 문법과 5.1 설치 소스/API를 대조했다. GPU/Kit에서 화면과 동작은 아직 실행하지 않았으므로 manifest는 `verification: not_run`이다. 앞의 확인 항목을 실제 실행 후 점검해야 한다.
+생성된 `output/extensions/kr.lifecycle.loaded/kr_lifecycle_loaded_python/ui_builder.py`에서 다음 연결을 찾으세요. 로컬 5.1 생성기는 확장 이름의 점을 밑줄로 바꾸고 `_python`을 붙인 폴더에 코드를 넣습니다.
 
-## 출처
+```python
+LoadButton(
+    "Load Button", "LOAD",
+    setup_scene_fn=self._setup_scene,
+    setup_post_load_fn=self._setup_scenario,
+)
+```
 
-- [Isaac Sim 5.1 공식 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_templates_tutorial.html).
+`_setup_scene`은 로봇과 물체를 만들고 `world.scene.add(...)`로 World에 등록합니다. 초기화가 끝난 뒤 `_setup_scenario`가 실행됩니다. 후자의 시점에는 초기화된 물리 객체를 사용할 수 있고 타임라인은 시작 시점에서 일시정지되어 있습니다.
+
+생성한 파일의 `_setup_scene`, `_setup_scenario`, `_on_post_reset_btn` 함수 본문에 각각 함수명 출력 한 줄을 추가해 보세요. 설치 원본 대신 **output에 생성한 파일**을 수정합니다. 이어 `_update_scenario`에는 `print("scenario step", step)`을 넣으세요.
+
+Run 버튼은 다음 세 연결을 사용합니다.
+
+```python
+on_a_click_fn=self._on_run_scenario_a_text,
+on_b_click_fn=self._on_run_scenario_b_text,
+physics_callback_fn=self._update_scenario,
+```
+
+Run을 누르면 타임라인을 재생하고 물리 단계별 갱신을 구독합니다. Stop을 누르면 구독을 해제하고 이 템플릿에서는 타임라인도 Pause합니다. `step`은 이번 물리 단계의 시간 간격이며 초 단위입니다.
+
+### 실행 결과 확인하기
+
+| 누른 버튼 | 출력과 화면에서 볼 내용 |
+|---|---|
+| Load | scene 준비 → scenario 준비 순서, 로봇과 물체가 나타남 |
+| Run | `scenario step`이 반복되고 관절과 큐브가 움직임 |
+| Stop | 시나리오 콜백 출력과 움직임이 멈춤 |
+| Reset | post-reset 출력 후 시나리오를 다시 시작할 준비가 됨 |
+
+Reset은 World에 등록한 객체의 기본 상태 복원과 시나리오 내부 상태 초기화를 연결합니다. 버튼 글자가 Run으로 돌아온 것만 보지 말고 실제 물체 위치와 재실행을 함께 확인하세요. 타임라인 왼쪽의 Stop을 직접 누르는 경우에는 물리 상태가 해제될 수 있어 템플릿이 Run을 비활성화합니다. 다시 Load/Reset으로 필요한 상태를 준비하세요.
+
+### 창·Stage·확장 종료에서 구독 정리 확인하기
+
+같은 생성 파일의 `on_timeline_event`, `on_stage_event`, `cleanup`에도 함수명 출력 한 줄을 넣고 확장을 다시 불러오세요. `extension.py`가 Stage와 타임라인의 이벤트를 받아 이 함수들로 전달합니다. `cleanup()`은 감싼 UI 요소의 `cleanup()`을 호출하여 StateButton 등의 구독을 정리합니다.
+
+1. Load → Run 뒤 창을 닫아 반복한 `scenario step` 출력이 멈추는지 봅니다. 창을 닫을 때도 UI 정리가 필요합니다.
+2. 창을 다시 열고 Load → Run한 뒤 File > New로 Stage를 바꿉니다. 새 Stage에는 이전 로봇의 handle을 쓸 수 없으므로 템플릿이 실행 버튼을 비활성화하는지 확인하세요.
+3. 다시 준비해 Run한 뒤 확장을 끕니다. `cleanup` 출력과 반복 콜백 중단을 함께 확인합니다. 물체가 Stage에 남는 것과 콜백 구독이 남는 것은 서로 다른 문제입니다.
+
+이 진단 출력은 호출 순서를 확인하기 위한 임시 편집입니다. 관찰을 마치면 생성한 파일에서 추가한 출력만 제거하세요.
+
+## 2. 기다리는 동안에도 로봇이 움직이게 하기
+
+Loaded Scenario를 끄고 `kr.lifecycle.scripted`를 켭니다. Load → Run으로 기본 시퀀스를 먼저 관찰한 뒤 생성된 `output/extensions/kr.lifecycle.scripted/kr_lifecycle_scripted_python/scenario.py`를 여세요.
+
+### 코드에서 볼 부분
+
+시나리오는 generator를 만들고 물리 단계마다 다음 위치까지 진행합니다.
+
+```python
+self._script_generator = self.my_script()
+```
+
+```python
+result = next(self._script_generator)
+```
+
+`my_script()` 안의 `yield from`은 하위 동작이 끝날 때까지 기다렸다가 다음 줄로 이어집니다. 하위 함수의 `yield`는 실행 위치를 기억한 채 Kit에 제어권을 돌려줍니다. 그 사이 앱이 물리를 진행하므로 다음 검사에서 관절 위치가 달라질 수 있습니다.
+
+제공 `bounded_wait.py`는 이 대기를 다음처럼 제한합니다.
+
+```python
+for _ in range(max_steps):
+    actual = articulation.get_joint_positions()[indices]
+    if np.allclose(actual, target, atol=tolerance, rtol=0):
+        return True
+    yield
+raise TimeoutError("Articulation did not reach the target within max_steps")
+```
+
+`rtol=0`이므로 각 관절의 `|현재값 - 목표값|`이 `tolerance` 이내인지 검사합니다. 함수는 명령을 보내지 않습니다. 목표를 지정한 뒤 호출해야 합니다.
+
+실제로 연결하려면 `bounded_wait.py`의 함수 전체를 생성된 `scenario.py`의 클래스 바깥에 복사하세요. `open_gripper_franka`의 **관절 명령 전송 부분은 유지**하고, 기존 `while` 대기와 마지막 반환을 다음으로 교체합니다.
+
+```python
+return (yield from wait_for_target(
+    articulation, [7, 8], [0.04, 0.04],
+    tolerance=0.001, max_steps=300,
+))
+```
+
+이 인덱스는 기본 Franka의 두 손가락 관절에 맞춘 값입니다. 다른 로봇에서는 관절 이름과 인덱스를 다시 확인해야 합니다. 손가락 이동이 미터 단위인 이 예제에서 0.001은 1 mm의 허용 오차입니다.
+
+### 실행 결과 확인하기
+
+저장 후 확장을 다시 불러오고 Load → Run을 수행하세요. 손가락이 목표에 도착하면 다음 동작으로 이어지며, 대기 중에도 GUI가 응답해야 합니다.
+
+300은 **위치 검사 횟수**입니다. 호출자가 물리 단계마다 한 번 진행하고 간격이 1/60초라면 약 5초의 시뮬레이션 진행에 해당하지만 실제 시계로 잰 제한 시간은 아닙니다. 도착하지 못하면 오류가 발생합니다. 이 예외를 생성 템플릿이 자동 복구하는 코드는 제공하지 않으므로 Stop 후 목표와 상태를 확인하세요.
+
+로컬 `kr.lifecycle.starter`의 창 수명만 따로 비교하고 싶다면 앞의 앱을 종료하고 다음을 실행할 수 있습니다.
+
+```bash
+~/isaacsim/isaac-sim.sh \
+  --ext-folder "$PWD/src/85_tools_extension_templates_tutorial/exts" \
+  --enable kr.lifecycle.starter
+```
+
+이 starter의 Create Cube는 `/World/ExtensionCube`를 만들고 disable은 창만 지웁니다. 위 로봇 대기 함수는 starter에 연결되어 있지 않습니다.
+
+### Configuration과 UI Component의 값 전달 비교하기
+
+Scripting을 끄고 새 Stage에서 `kr.lifecycle.configuration`을 켜세요. Content의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`를 추가하고 Play한 뒤 **Select Articulation**에서 로봇을 고릅니다. 생성된 `kr_lifecycle_configuration_python/ui_builder.py`에서 다음 연결을 찾으세요.
+
+```python
+lambda value, index=i: self._on_set_joint_position_target(index, value)
+```
+
+`index=i`는 필드를 만들 당시의 관절 번호를 보관합니다. 관절 목표 필드 하나를 허용 범위 안에서 조금 바꾸고, 그 번호의 관절이 움직이는지 확인하세요. 타임라인 Stop 후 제어 UI가 비활성화되고 Play·재선택으로 다시 준비되는지도 봅니다. Configuration은 장면을 직접 만드는 Load 대신 현재 장면의 선택과 물리 초기화 상태에 의존합니다.
+
+이어서 `kr.lifecycle.components`의 창을 열고 Float Field와 Check Box를 각각 바꿉니다. 생성된 `kr_lifecycle_components_python/ui_builder.py`의 `_on_float_field_value_changed_fn(new_value: float)`와 `_on_checkbox_click_fn(value: bool)`는 받은 값을 상태 표시 필드에 씁니다. **필드 표시 변경 → 콜백 인수 → 상태 메시지 갱신**을 대조하세요. 이 UI 예제는 관절 명령을 보내지 않으므로 숫자를 바꿨다고 로봇이 움직이지는 않습니다.
+
+## 3. 상태와 실행 시점 정리
+
+```text
+Load → 장면 작성 → 물리 초기화 → Pause → post-load
+Run  → Play → 물리 콜백 → generator의 다음 yield까지 진행
+Stop → 시나리오 구독 해제 → Pause
+Reset → 기본 물리 상태 복원 → 시나리오 상태 초기화
+```
+
+**초기화 콜백은 사용할 수 있는 상태를 마련하고, 물리 콜백은 시간이 흐를 때 할 일을 정합니다.** 도착을 기다리는 루프에도 `yield`가 있어야 물리가 진행되어 기다리는 조건 자체가 바뀔 수 있습니다.
+
+Configuration은 준비된 장면의 관절에 값을 전달하고, Component Library는 상태 메시지로 입력값을 보여 줍니다. 같은 숫자 필드라도 연결한 콜백의 내용에 따라 결과가 달라집니다.
+
+## 4. 간단한 확인 실험
+
+Configuration/UI 비교를 끝냈다면 두 확장을 끄고 Scripting을 다시 켜 Load하여 같은 로봇 시나리오로 돌아오세요. 앞에서 연결한 `wait_for_target` 호출의 **`tolerance=0.001`만 `0.01`로** 바꾸세요. 같은 시작 상태에서 다시 Load → Run하고 손가락 다음 동작으로 넘어가는 시점을 비교합니다.
+
+허용 오차가 1 mm에서 10 mm로 넓어져 목표에 덜 가까워도 완료로 판단할 수 있습니다. 목표 위치 0.04와 검사 한도 300은 유지하세요. 눈으로 차이가 작다면 두 실행에서 대기 종료 직전의 실제 관절 위치를 출력해 비교하면 됩니다.
+
+## 실행할 때 막히면
+
+- **`bounded_wait.py`만 실행했는데 아무 일도 없음:** 함수 정의만 있는 파일입니다. 생성 시나리오에서 명령을 보낸 뒤 `yield from`으로 호출하세요.
+- **Run 출력이 너무 많음:** `_update_scenario`는 매 물리 단계 호출됩니다. 호출 순서를 확인한 뒤 추가한 진단 출력을 제거하세요.
+- **대기 중 화면까지 멈춤:** 위치 검사 루프에 `yield`가 있는지 확인하세요. 이벤트 루프를 점유하면 관절도 목표로 이동하지 못합니다.
+- **`TimeoutError` 발생:** 타임라인 재생 상태, 실제 관절 인덱스, 도달 가능한 목표와 접촉 방해 여부를 확인하세요. 대기 시간을 늘리기 전에 실제 위치가 변하는지 보세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Extension Template Generator Explained](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_templates_tutorial.html)에 대응합니다. 버튼 이름과 callback 연결은 로컬 5.1의 Loaded Scenario·Scripting 템플릿 소스와 대조했습니다.
+
+`bounded_wait.py`는 제한 횟수가 있는 도착 검사를 익히는 로컬 보조 함수입니다. 자동 연결이나 예외 복구까지 구현하지 않습니다. 이번 개정은 소스·설정 검토이며 GUI 로봇 동작과 도착 검사는 실행하지 않았습니다. `tutorial.json`의 검증 상태는 `not_run`입니다.

@@ -1,81 +1,148 @@
-# 144. Object Simulation and Synthetic Data Generation — 한국어 실습
+# 144. YAML 한 장이 큐브 낙하와 학습 데이터가 되기까지
 
-권장 학습 순서 **144** · 물체 시뮬레이션과 YAML 무작위화 · 출처 ID `t058`
+## 이번에 배우는 것
 
-정적인 받침 위로 색과 초기 자세가 다른 큐브 여섯 개를 떨어뜨리고 RGB·경계 상자·분할·재현용 description을 함께 저장한다. 공식 표/상자 예제의 파이프라인을 기본 도형으로 재작성하여 외부 모델 없이 실행한다.
+**여섯 큐브의 초기 상태를 무작위로 정하고, 물리 계산을 거친 장면에서 영상과 정답 데이터를 함께 만듭니다.**
 
-## 이 실습의 의도
+합성 데이터를 만들려면 물체를 화면에 보이게 하는 것만으로는 부족합니다. 어디에 놓을지, 얼마나 움직인 뒤 촬영할지, 어떤 물체에 정답을 붙일지까지 정해야 합니다. Isaac Sim Replicator Object, 줄여서 **IRO**는 이 규칙을 YAML 파일로 받아 장면을 구성합니다.
 
-IRO의 YAML 규칙이 초기 배치, 물리 낙하, 센서 촬영, 라벨 저장으로 이어지는 전체 흐름을 배우는 실습이다. 바닥에는 정적 충돌을, 여섯 큐브에는 강체 물리를 부여하여 무작위 배치 직후와 1.5초 물리 진행 후의 차이를 관찰한다. 기본 `run.py`는 3프레임용 `prepared.yaml`만 만들며, 실제 데이터 생성에는 `--launch --headless` 또는 GUI의 Description File 지정과 Simulate가 필요하다.
+| 이 실습의 요소 | 담당하는 일 |
+|---|---|
+| `scene.yaml` | 여섯 큐브의 색·초기 자세·물리·카메라·출력 규칙 |
+| `run.py` | 출력 경로를 만들고 IRO에 넘길 `prepared.yaml` 준비 |
+| `floor`의 `physics: collision` | 움직이지 않으면서 큐브를 받치는 바닥 |
+| `subject`의 `physics: rigidbody` | 중력과 충돌로 움직이는 큐브 |
+| `tracked: true` | 해당 물체를 정답 수집 대상으로 지정 |
 
-## 실행 후 확인할 것
+이 장면은 **Y축이 위쪽이고, 길이 1단위는 1 cm**입니다. 기본 큐브의 한 변은 100 cm이며 배율 0.6을 적용하면 60 cm가 됩니다. 미터와 Z-up을 쓰는 로봇 예제의 좌표를 그대로 옮기면 크기와 낙하 방향이 달라집니다.
 
-- **준비 단계:** 터미널의 `configuration:` 경로에 `prepared.yaml`이 생기고 `num_frames=3`, 출력 절대경로가 반영되었는지 확인한다. 이 파일만 있고 RGB가 없는 것은 `--launch` 없는 실행의 정상 결과다.
-- **초기 배치와 물리:** GUI의 Initialize/Randomize 미리보기에서 `subject` 큐브 6개의 색·자세·초기 높이가 달라지는지 본다. 시작 Y 높이는 130–230 cm이며, Simulate에서는 중력 981 cm/s²로 1.5초 진행한 뒤 촬영한다. 바닥은 떨어지지 않으며 큐브가 바닥·서로와 충돌하는지 확인한다.
-- **저장 결과:** native 생성 완료 후 `images/`에서 기본 카메라의 640×480 RGB 3장과 `labels/`, `3d_labels/`, `segmentation/`, `descriptions/`의 대응 결과를 확인한다. Randomize scene 미리보기만으로 저장 파일이 생기지는 않는다.
-- **라벨 해석:** 보이는 tracked 큐브를 RGB와 경계 상자·분할에 대조한다. 바닥도 `tracked:true`이므로 전체 라벨 줄 수를 큐브 수 6과 같다고 요구하지 않는다. 가림·시야와 라벨 필터에 따라 보이는 큐브 라벨 수는 줄어들 수 있다.
-- **시간과 재현:** `simulation_time=0`인 별도 실행에서는 낙하 전 배치를 촬영하는지 비교한다. 1.5초 실행도 모든 큐브의 완전 정착을 보장하지 않으며, 기록된 description으로 선택된 장면 값을 확인한다. 짧은 `--steps` 종료만으로 요청한 데이터 생성이 완료됐다고 판단하지 않는다.
+## 1. 설정을 준비하고 장면 실행하기
 
-## 준비와 실행 방식
-
-Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
-
-이 학습은 공식 **IRO 확장의 native YAML workflow**다. `run.py`는 전체 설정을 가진 로컬 YAML의 경로를 정리하고 실제 Isaac Sim을 실행하는 도구다. 렌더러나 물리를 자체적으로 흉내 내지 않는다. `@PACKAGE@`와 `@OUTPUT@`는 준비 단계의 경로 표식이고, `$[...]`는 실행 시 IRO가 처리하는 매크로다. 원본 `scene.yaml` 대신 준비된 `prepared.yaml`을 IRO에 입력한다.
+Isaac Sim 5.1, NVIDIA RTX GPU와 호환 드라이버, `isaacsim.replicator.object` 확장이 필요합니다. 아래 명령은 저장소 루트에서 시작합니다. 설치 경로가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-cd src/144_events_replicator_object  # 저장소 루트에서 실행; 폴더를 복사했다면 그 위치로 이동
-ISAAC_ROOT="$HOME/isaacsim"
-"$ISAAC_ROOT/python.sh" run.py --frames 3
-# GUI 실행: configuration: 뒤의 절대 경로를 복사한다.
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch
-# 파일로 생성하고 끝내는 native 실행:
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch --headless --frames 3
+cd src/144_events_replicator_object
+~/isaacsim/python.sh run.py --frames 3
 ```
 
-`--steps`를 생략한 `--launch` GUI 실행은 데이터 생성이 끝나도 사용자가 창을 닫을 때까지 유지됩니다. `--frames`는 저장할 데이터 프레임 수이며 창의 수명과 별개입니다. `--steps 600`처럼 지정하면 native Kit 업데이트 600회 후 종료합니다. 시작·장면 로딩도 이 횟수에 포함되므로 짧게 제한하면 생성이 끝나기 전에 종료될 수 있습니다. `--headless`는 기존처럼 정해진 데이터 생성 후 종료합니다. 이 설정은 Kit의 공식 [`/app/quitAfter`](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html#app-quitafter-default-1)를 사용합니다.
+터미널에 `configuration:`, `output:`, `native command:`가 출력됩니다. 이 호출은 **YAML 준비 후 종료**합니다. `output/<UTC시간>-<고유값>/prepared.yaml`이 생겨도 아직 큐브를 떨어뜨리거나 이미지를 촬영한 것은 아닙니다.
 
-`--config scene.yaml`로 이 폴더의 완전한 설정을 선택한다. 기본 출력은 이 폴더의 `output/<UTC시간>-<고유값>/`이다. `--output /절대/새폴더`로 지정할 수 있으며 기존 경로를 덮어쓰지 않는다. 출력 폴더 안 `prepared.yaml`은 사용한 설정이고, `images/`, `labels/`, `3d_labels/`, `segmentation/`, `descriptions/` 등이 IRO 결과다. 비활성화한 스위치의 데이터는 생성되지 않는다.
+이번에는 같은 폴더에서 GUI를 엽니다.
 
-GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action and Event Data Generation > Object SDG**로 간다. 공식 5.1 문서에는 이 패널이 **Object Detection SDG**로 표시되어 있지만 5.1에 설치된 0.4.13 확장 메뉴 이름은 Object SDG다. **Description File**에 `configuration:` 경로를 넣는다. **Initialize scene randomization**과 **Randomize scene**은 미리보기, **Simulate**는 결과 저장이다. 데이터 생성은 현재 stage를 새 장면으로 바꾸므로 작업 중인 stage는 먼저 별도로 저장한다.
+```bash
+~/isaacsim/python.sh run.py --launch --frames 3
+```
 
-## 실습
+1. 이번 호출이 출력한 `configuration:`의 절대 경로를 복사합니다. 호출마다 새 출력 폴더가 생깁니다.
+2. **Tools > Action and Event Data Generation > Object SDG**를 엽니다. 메뉴가 없으면 **Window > Extensions**에서 `isaacsim.replicator.object`를 확인하세요.
+3. **Description File**에 복사한 `prepared.yaml` 경로를 넣습니다.
+4. **Initialize scene randomization**으로 초기화하고 **Randomize scene**으로 다른 초기 배치를 살펴봅니다.
+5. **Simulate**를 눌러 세 프레임을 생성합니다. 기존 stage를 교체하므로 편집 중인 장면은 먼저 저장하세요.
 
-1. 아래 명령으로 설정을 준비하고 출력된 configuration 절대 경로를 Object SDG의 Description File에 붙인다.
-2. Initialize scene randomization을 누른 뒤 Randomize scene을 세 번 눌러 시작 자세를 비교한다. 이 미리보기 단계는 이미지 저장이 아니다.
-3. Simulate를 눌러 세 프레임을 생성한다. 중력은 각 프레임의 무작위 배치 이후 1.5초 동안 계산된다.
-4. 출력 descriptions의 한 YAML을 새 실행의 --config로 지정해 한 장면을 다시 생성한다. 재현 시에도 별도 output 디렉터리가 생성된다.
-5. Scene Editing 실습: 초기화된 장면에서 Create > Mesh > Cube를 만들고 Translate와 Scale로 두 물체를 감싼다. 그 큐브를 선택한 상태로 Toggle visibility of selected region을 눌러 선택 범위 안 물체의 가시성을 확인한다.
+미리보기와 저장은 별도 동작입니다. 창 없이 데이터를 생성하고 종료하려면 다음 명령을 사용하세요.
 
-## 개념과 사용한 설정
+```bash
+~/isaacsim/python.sh run.py --launch --headless --frames 3
+```
 
-YAML은 장면의 확률 규칙이고 USD stage는 그 규칙을 적용한 실제 장면이다. parser가 매 프레임 값을 정하고, geometry prim을 배치하고, PhysX를 계산한 뒤 Replicator writer가 센서 결과를 기록한다. tracked는 라벨 수집 대상 여부이며 rigidbody는 실제 동역학 대상 여부다. 둘은 독립 설정이다.
+GUI는 생성 후에도 창을 유지합니다. `--steps`는 데이터 수가 아니라 앱 업데이트 횟수 제한이며, 짧게 지정하면 로딩 중 종료될 수 있습니다. 이 실습에서는 생략하세요. 설치 위치를 바꾼 경우에는 Python 실행 경로와 함께 `--isaac-root /설치/경로`도 지정합니다.
 
-IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
+### 설정에서 볼 부분
 
-## 한 변수만 바꾸는 실험
+`scene.yaml`의 `subject`에서 다음 항목을 찾아보세요. 전체 설정 중 낙하에 필요한 부분만 발췌했습니다.
 
-simulation_time만 0으로 바꿔 다시 실행한다. 큐브가 떨어지기 전 공중에 있는 영상과 비교한다.
+```yaml
+count: 6
+physics: rigidbody
+transform_operators:
+- translate:
+    distribution_type: range
+    start: [-180, 130, -100]
+    end: [180, 230, 100]
+- rotateXYZ:
+    distribution_type: range
+    start: [-30, -180, -30]
+    end: [30, 180, 30]
+- scale: [0.6, 0.6, 0.6]
+```
 
-## 문제 해결
+`count`는 여섯 개체를 만듭니다. `translate`의 세 성분은 X·Y·Z 순서이며, 중심의 초기 Y 높이는 130~230 cm입니다. 회전 범위는 도 단위입니다. 위치와 회전을 함께 바꾸므로 어떤 큐브는 평평한 면으로, 어떤 큐브는 모서리 쪽으로 먼저 닿습니다.
 
-- `mapping values are not allowed here`는 YAML 들여쓰기/콜론을 먼저 확인한다. 탭 대신 공백을 사용한다.
-- `ModuleNotFoundError: yaml`이면 위 명령의 Isaac Sim `python.sh`로 준비한다. `--help`는 PyYAML 없이도 실행된다.
-- 카메라/물체가 안 보이면 F로 선택 물체에 초점을 맞추고, 시선 -Z와 단위 cm, clip 범위, transform 순서를 확인한다. 물리를 켠 장면은 초기 겹침 때문에 물체가 튀어나갈 수도 있다.
-- 확장 메뉴가 없으면 Extensions에서 `isaacsim.replicator.object`가 실제로 활성화되었는지 확인한다. RGB 파일이 없으면 오류 로그와 카메라 존재 여부를 확인한다. 창이 떠 있다는 사실은 데이터 생성 성공이 아니다.
-- 같은 seed는 장면 난수 재현을 돕지만 GPU/렌더 모드/자산 버전이 다르면 픽셀의 완전한 일치를 보장하지 않는다.
+장면 전역의 `gravity: 981`은 981 cm/s², 즉 9.81 m/s²입니다. `simulation_time: 1.5`만큼 물리를 계산한 다음 촬영합니다. 마찰 `friction: 0.6`과 선형·각 감쇠 값 1은 접촉 후 미끄러짐과 운동에 영향을 줍니다. **1.5초가 지났다는 사실만으로 모든 큐브가 완전히 정지했다고 판단하지는 마세요.**
 
-공식 파이프라인의 모델 학습/배포는 TAO 6.0의 별도 작업이다. 이 패키지는 데이터를 실제 IRO로 생성하는 단계까지 구현한다. Docker에서도 폴더 전체를 /work로 마운트하고 같은 run.py로 /work 안 출력 경로를 준비하면 된다. 기본 도형의 색상 재질은 Isaac Sim의 내장 OmniPBR를 사용한다.
+## 2. 생성된 파일을 같은 장면으로 연결하기
 
-## 포함 파일과 검증 범위
+`output:`으로 표시된 폴더를 엽니다. 기본 설정은 한 카메라로 세 장면을 촬영합니다.
 
-- `scene.yaml`: 기본 실습 설정
-- `run.py`: 설정 준비 및 실제 확장 실행. `--help`로 옵션을 본다.
+### 실행 결과 확인하기
 
-YAML 구문과 launcher 준비 동작은 GPU 없이 검사할 수 있다. 실제 RTX 결과, PhysX 접촉, GUI 표시 검증은 별개다. `tutorial.json`의 `verification: not_run`은 이 패키지의 simulator 실행 결과를 아직 검증하지 않았다는 뜻이다.
+| 위치 | 확인할 내용 |
+|---|---|
+| `images/` | 640×480 RGB 영상, 바닥에 닿거나 아직 움직이는 큐브 |
+| `labels/`, `3d_labels/` | 영상의 2D 경계 상자와 3D 정답 |
+| `segmentation/` | 물체 영역을 구분하는 분할 결과 |
+| `descriptions/` | 촬영 시점의 장면을 다시 구성할 설정 |
 
-## 출처
+파일명은 `frame_11_default_camera.jpg`처럼 seed와 카메라 이름을 연결합니다. description은 카메라별 사진이 아니라 장면 전체를 저장하므로 `frame_11_GLOBAL.yaml`과 짝을 맞춥니다.
 
-- [NVIDIA Isaac Sim 5.1 — Object Simulation and Synthetic Data Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html)
-- [IRO native 실행, embedded interface 및 출력 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html#run-from-the-ui)
+바닥에도 `tracked: true`가 있으므로 라벨 수를 무조건 6이라고 기대하면 안 됩니다. 큐브끼리 가려지는 경우도 있습니다. RGB에서 보이는 물체와 해당 경계 상자·분할 영역을 하나씩 대조해 보세요.
 
-설정과 한국어 실습은 위 문서를 기준으로 새로 작성했다. 설치된 5.1의 `isaacsim.replicator.object` 0.4.13 소스(`description/symbol.py`, `mutables/scene_dev.py`, `ui/object_detection_sdg_window.py`)에서 입력 키·장면 단위·UI 명칭을 대조했다.
+**저장 description의 변환은 초기 낙하 설정과 다릅니다.** IRO 0.4.13은 촬영 직전 월드 변환을 `global_transform`과 단일 `transform` 연산으로 기록합니다. 따라서 원래의 `translate`나 `rotateXYZ` 난수 범위를 이 파일에서 다시 찾는 대신, `prepared.yaml`의 초기 규칙과 저장된 최종 위치를 비교하세요. 변환 행렬의 마지막 행 앞 세 값이 X·Y·Z 이동입니다. 정착한 큐브도 자세와 쌓임에 따라 중심 높이가 달라집니다.
+
+한 장면을 다시 구성하려면 description의 실제 경로를 사용합니다.
+
+```bash
+~/isaacsim/python.sh run.py --config /절대/출력경로/descriptions/frame_11_GLOBAL.yaml --frames 1 --launch --headless
+```
+
+복원용 description은 물리 속성을 제거하고 촬영 당시 배치를 저장합니다. 이 재실행은 원래 난수에서 다시 낙하시키는 실험과 목적이 다릅니다.
+
+### GUI에서 한 영역의 물체 숨겨 보기
+
+Object SDG의 **Scene Editing**은 현재 Stage를 살펴보는 보조 기능입니다. GUI 실행에서 장면을 초기화한 뒤 다음 순서로 확인해 보세요.
+
+1. **Create > Mesh > Cube**로 영역 표시용 큐브를 추가합니다.
+2. 이동과 배율을 조정해 기존 큐브 두 개의 **중심**을 포함하는 상자를 만듭니다. 영역 표시용 큐브는 회전시키지 마세요.
+3. 영역 표시용 큐브를 선택한 채 **Scene Editing > Toggle visibility of selected region**을 누릅니다.
+4. 영역 안에 있던 물체가 숨겨지는지 확인하고, 같은 버튼을 다시 눌러 되돌립니다.
+
+설치 IRO 0.4.13은 선택한 큐브의 이동·배율로 축에 나란한 상자 범위를 만들고, 다른 prim의 원점이 그 안에 있는지 검사합니다. 물체 외곽이 조금 걸친다는 이유만으로 선택되는 방식은 아닙니다. 장면 계층의 여러 prim이 검사 대상이므로 부모·자식의 가시성도 함께 살펴보세요. 선택한 영역 표시용 큐브 자체는 토글 대상에서 제외됩니다.
+
+이 조작은 현재 Stage의 가시성을 바꿉니다. `tracked`를 바꾸거나 원본 YAML에 제외 규칙을 저장하지 않습니다. **Simulate**는 입력 description으로 장면을 다시 구성하므로, 숨기기 조작이 다음 데이터 생성에도 유지된다고 기대하지 마세요.
+
+## 3. 초기 규칙과 촬영 결과의 관계 정리
+
+```text
+scene.yaml의 확률 규칙
+    → run.py가 경로 표식을 치환한 prepared.yaml
+    → IRO가 각 큐브의 색·초기 위치·회전 선택
+    → 강체 속도 초기화와 1.5초 물리 계산
+    → 최종 월드 변환 기록
+    → 카메라 촬영과 정답 저장
+```
+
+`@OUTPUT@`는 준비 도구가 바꾸는 경로 표식입니다. `$[seed]`는 IRO가 장면을 만들 때 해석하는 매크로입니다. 두 처리를 구분하면 준비된 YAML에 매크로가 남아 있는 이유와, description에는 선택된 값이 들어 있는 이유를 이해할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`scene.yaml`을 `before_fall.yaml`로 복사하고 **`simulation_time`만 1.5에서 0으로** 바꿔 보세요.
+
+```bash
+~/isaacsim/python.sh run.py --config before_fall.yaml --launch --headless --frames 3
+```
+
+같은 seed의 RGB와 `global_transform`을 비교합니다. 물리 시간이 0인 실행에서는 초기 공중 배치를, 1.5초 실행에서는 낙하·충돌을 거친 배치를 관찰하는 것이 목표입니다. 출력 폴더가 서로 다르므로 결과를 덮어쓰지 않고 비교할 수 있습니다.
+
+## 실행할 때 막히면
+
+- **`prepared.yaml`만 있고 RGB가 없음**: 준비 명령만 실행했는지 확인하세요. GUI의 **Simulate** 또는 `--launch --headless`가 실제 생성 단계입니다.
+- **큐브가 예상과 다른 방향으로 떨어짐**: 이 장면의 높이는 Z가 아니라 Y입니다. 원본의 중력·좌표 규칙을 확인하세요.
+- **큐브가 튀거나 일부가 안 보임**: 초기 난수 배치가 서로 겹칠 수 있습니다. 초기 미리보기와 최종 화면을 비교해 충돌과 카메라 밖 이동을 구분하세요.
+- **복원 실행에서 큐브가 다시 낙하하지 않음**: description은 촬영 당시의 배치를 복원합니다. 낙하를 반복하려면 `scene.yaml`을 선택하세요.
+- **`ModuleNotFoundError: yaml`**: PyYAML이 포함된 Isaac Sim `python.sh`로 실행하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Object Simulation and Synthetic Data Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html)에 대응합니다. 공식 파이프라인을 외부 물체 모델 없이 따라갈 수 있도록 기본 도형 여섯 개로 구성했습니다. 모델 학습과 배포는 포함하지 않습니다.
+
+장면 단위와 description 저장 방식은 설치 IRO 0.4.13을 기준으로 설명했습니다. 위 결과는 실행 시 확인할 기준이며, 실제 RTX 렌더링·물리 검증 상태는 `tutorial.json`의 `not_run`을 참고하세요.

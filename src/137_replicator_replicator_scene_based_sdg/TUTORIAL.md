@@ -1,81 +1,145 @@
-# 137. 창고 장면 기반 합성 데이터셋
+# 137. 창고의 관계를 유지하며 데이터셋 만들기
 
-권장 학습 순서 **137** · Replicator 합성 데이터 기초와 확장 · 출처 ID `t038`
+## 이번에 배우는 것
 
-이 패키지는 지게차·팔레트·상자·콘이 있는 **공식 scene-based SDG 전체 파이프라인**을 로컬로 포함합니다. 지게차 주변의 의미 있는 위치 관계, 물리 낙하, 세 카메라, 서로 다른 randomizer 주기, 여러 writer 설정을 유지합니다. `scene_based_sdg.py`와 `scene_based_sdg_utils.py`는 NVIDIA 5.1 설치 예제를 Apache-2.0 고지와 함께 포함했고 실행 제한·출력 보호·오류 시 앱 종료를 추가했습니다.
+**창고의 지게차·팔레트·상자를 배치하고, 서로 다른 세 시점의 이미지와 정답을 함께 생성합니다.**
 
-## 이 실습의 의도
+장면 중심 합성 데이터는 물체 하나의 모양뿐 아니라 주변 물체와의 관계를 담습니다. 팔레트가 지게차 앞에 있고 상자가 팔레트 위에 있어야 창고 장면으로 해석할 수 있습니다. 이번 코드는 이 관계를 먼저 만든 뒤 조명·배치·시점을 바꿉니다.
 
-창고에서 지게차 앞의 팔레트, 그 위의 상자처럼 관계가 있는 장면을 구성한 뒤 여러 시점의 학습 데이터를 만드는 실습입니다. 물리로 떨어뜨린 상자와 캡처마다 재배치하는 상자를 함께 두어, 물리 진행과 장면 무작위화가 서로 다른 단계임을 보여 줍니다. 기본 실행은 세 카메라에서 6회 캡처하여 BasicWriter 결과를 저장하며 검출 모델 학습은 시작하지 않습니다.
+| 파일 또는 구성 | 역할 |
+|---|---|
+| `run.py` | JSON 설정을 조합하고 Isaac Sim 실행 프로세스를 시작합니다. |
+| `config.json` | 창고 자산, 해상도, 클래스와 Writer 항목을 정합니다. |
+| `scene_based_sdg.py` | 장면 구성과 세 카메라의 캡처를 진행합니다. |
+| `scene_based_sdg_utils.py` | 충돌 설정, 상자 배치와 낙하 준비를 담당합니다. |
+| TopView·DriverView·PalletView | 위쪽, 운전석 높이, 팔레트 주변의 세 관찰 시점입니다. |
 
-## 실행 후 확인할 것
+이 폴더에는 NVIDIA 구현과 helper가 포함되어 있습니다. 기본 도형으로 대체하는 예제가 아니라 5.1 자산 라이브러리의 창고와 소품을 불러옵니다.
 
-- **준비와 실행 구분:** `--check-config`는 적용할 JSON만 출력합니다. 실제 실행 후의 `effective_config.json`에서 `num_frames=6`, `resolution=[512,512]`, `writer=BasicWriter`와 출력 경로를 확인합니다.
-- **관계가 있는 장면:** GUI의 `/World/Forklift`, `/World/Pallet`, `/World/SimulatedPallet`, `/World/SimulatedCardbox_0` 등을 살펴봅니다. 지게차 앞 팔레트의 scatter 상자와 별도 팔레트로 떨어뜨린 8개 상자를 구분합니다. 물리 준비 루프는 최대 250스텝 또는 마지막 상자의 저속 상태에서 끝나며 전체 상자의 완전 정착을 판정하지 않습니다.
-- **세 시점:** 출력의 `TopView`, `DriverView`, `PalletView` 식별자로 RGB를 구분하고 기본 완료 시 카메라마다 6장, 총 18장의 512×512 RGB를 확인합니다. TopView의 천장 일부가 잘려 보이는 것은 가까운 clipping 거리를 6 m로 설정한 결과입니다.
-- **정답 데이터:** 같은 카메라·프레임의 semantic 매핑, 2D/3D bounding box, `distance_to_image_plane`, occlusion 출력을 확인합니다. 보이는 대상의 `forklift`, `pallet`, `cardbox`, `traffic_cone` 라벨을 RGB와 대조하되 모든 클래스가 모든 시점에 보여야 한다고 요구하지 않습니다.
-- **변화 주기:** 캡처 로그와 이미지를 비교해 상자·조명·Driver/Pallet 카메라는 매 캡처, Top 카메라는 4프레임 간격, 콘 이벤트는 프레임 0·2·4에 적용되는 구성을 확인합니다. 캡처 중 `delta_time=0`이므로 물리 낙하가 영상마다 계속 진행되지 않는 것은 정상입니다.
+## 1. 설정 확인과 실제 생성을 나누어 실행하기
 
-## 준비와 실행
-
-Isaac Sim 5.1.0 전체 설치, 지원 RTX GPU/드라이버, 5.1 자산 서버 연결 또는 로컬 asset root가 필요합니다. 다른 튜토리얼의 공통 모듈은 필요하지 않습니다. 이 폴더 전체만 복사해도 로컬 helper와 config가 함께 갑니다. 런처는 일반 Python이고 자식 파이프라인을 설치본 `python.sh`로 실행합니다.
+먼저 저장소 루트에서 일반 Python으로 적용될 설정을 확인하세요.
 
 ```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-cd src/137_replicator_replicator_scene_based_sdg
-python3 run.py --check-config
-python3 run.py --frames 6 --headless
-# 화면을 보면서 실행
-python3 run.py --frames 6 --output output_gui
-# 저장 후 GUI를 120회 갱신하고 자동 종료
-python3 run.py --frames 6 --steps 120 --output output_limited
+python3 src/137_replicator_replicator_scene_based_sdg/run.py --check-config --headless --frames 6 --output /tmp/tutorial137-first
 ```
 
-`--steps`를 생략하면 정해진 프레임을 캡처하고 저장을 마친 후에도 GUI가 유지됩니다. 사용자가 창을 직접 닫으면 종료합니다. 대기 중에는 새 데이터셋 프레임을 생성하지 않습니다. `--steps N`은 **저장 완료 후 GUI를 갱신하는 횟수**이며 양수만 받습니다. 캡처 수를 정하는 `--frames`와 물리 스텝 수는 별개입니다. `--headless`는 GUI 대기를 건너뛰고 기존의 유한한 캡처가 끝나면 종료합니다.
+이 명령은 JSON을 읽고 런처가 덮어쓴 값을 출력합니다. **Isaac Sim을 시작하거나 자산 접근·렌더링을 검사하지 않습니다.** JSON이 출력되었다는 사실만으로 데이터 생성 준비가 끝난 것은 아닙니다.
 
-기본 `output`이 있으면 새 `--output`을 지정합니다. 실제 적용한 설정은 `effective_config.json`에 보존됩니다. 외부 자산을 처음 여는 시간은 캡처 프레임 시간과 다를 수 있습니다. 데이터 캡처는 프레임 수만큼 끝나지만 원격 자산 다운로드가 오래 걸릴 수 있습니다.
+실제 실행에는 Isaac Sim 5.1 전체 설치, RTX GPU와 5.1 자산 서버 또는 같은 구조의 로컬 미러가 필요합니다.
 
-필요한 자산은 5.1 root 아래 `/Isaac/Environments/Simple_Warehouse/full_warehouse.usd`, `/Isaac/Props/Forklift/forklift.usd`, `/Isaac/Environments/Simple_Warehouse/Props/SM_PaletteA_01.usd`, `S_TrafficCone.usd`, `SM_CardBoxD_04.usd`입니다. texture/mesh 참조도 해당 자산이 가리키는 위치에서 읽습니다. asset root는 `isaacsim.storage.native.get_assets_root_path()`로 결정됩니다.
+```bash
+python3 src/137_replicator_replicator_scene_based_sdg/run.py --isaac-sim ~/isaacsim --headless --frames 6 --output /tmp/tutorial137-first
+```
 
-## 실습 순서
+일반 Python 런처가 지정한 설치의 `python.sh`로 `scene_based_sdg.py`를 실행합니다. 출력 폴더는 새 경로여야 하며 적용한 설정은 `effective_config.json`에 남습니다.
 
-1. `config.json`을 열어 resolution=512×512, num_frames=6, BasicWriter, class 이름 forklift/traffic_cone/pallet/cardbox를 확인합니다. CLI의 `--frames` 값이 JSON의 num_frames보다 우선합니다.
-2. 실행 후 로그에서 창고 load, randomizer 등록, 상자 물리 낙하, 프레임 캡처가 순서대로 일어나는지 확인합니다. 배경이 없는 작은 임의 도형 예제가 아니라 지게차와 팔레트의 실제 참조 자산이 보여야 합니다.
-3. 출력의 TopView/DriverView/PalletView 카메라별 RGB를 비교합니다. TopView는 높은 clipping 시작거리로 천장 너머의 작업 대상을 관찰하고, DriverView는 운전석 높이, PalletView는 팔레트를 향한 무작위 시점입니다.
-4. 같은 프레임의 semantic label JSON과 bounding box 데이터에서 클래스 이름을 확인합니다. BasicWriter에 3D box, occlusion, distance_to_image_plane도 요청하므로 RGB 파일만 확인하고 완료로 판단하지 않습니다.
-5. 두 번째 실행에서 `clear_previous_semantics`만 false로 바꾼 JSON 복사본을 사용합니다. 배경의 기존 의미 라벨까지 정답에 들어오는지 비교합니다. 별도 output을 사용합니다.
+GUI로 보려면 `--headless`를 빼세요. 저장 후에도 창을 유지하며 닫으면 종료합니다. `--steps 120`은 **캡처가 끝난 뒤의 GUI 갱신 횟수**입니다. 상자 낙하의 물리 단계나 데이터 장수를 제한하지 않습니다.
 
-## 코드 읽는 순서와 API
+### 설정에서 볼 부분
 
-Stage는 USD 장면 전체이고 `create_prim(usd_path=...)`는 외부 USD를 reference로 조합해 지게차/팔레트를 배치합니다. 파일 내용을 복사해서 정점으로 만드는 것이 아니라 원본 장면을 참조하므로 root와 그 아래 자산 URL이 모두 필요합니다. `Gf.Matrix4d`로 팔레트 오프셋을 지게차 좌표계에서 월드 좌표계로 변환합니다. 두 물체를 독립적으로 아무 곳에 놓는 randomization과 다릅니다.
+```json
+"resolution": [512, 512],
+"num_frames": 6,
+"writer": "BasicWriter",
+"clear_previous_semantics": true
+```
 
-`register_scatter_boxes`는 팔레트의 bounding box를 기준으로 scatter plane을 만들고 `scatter_2d(..., check_for_collisions=True)`로 상자끼리 겹치지 않게 배치합니다. AABB는 월드 축에 평행한 상자이고 OBB는 물체 방향을 고려한 상자입니다. 콘 randomizer는 지게차 OBB의 아래 모서리 중에서 위치를 고릅니다.
+CLI `--frames`는 JSON의 `num_frames`보다 우선합니다. 해상도는 세 카메라에 공통으로 적용됩니다. `clear_previous_semantics`는 기존 창고의 의미 라벨을 지운 뒤 실습 대상의 라벨을 붙일지를 정합니다. 배경의 기존 클래스와 새 학습 클래스가 섞이는 것을 제어하는 설정입니다.
 
-`simulate_falling_objects`는 World와 강체·충돌을 이용해 별도의 상자를 팔레트로 떨어뜨립니다. 최대 250스텝 또는 마지막 상자의 선속도 <0.001 m/s에서 준비를 끝내며, 모든 상자의 정착을 별도로 검사하지는 않습니다. 이후 캡처 루프의 `delta_time=0.0`은 그 물리 상태를 고정합니다. `rep.trigger.on_frame`의 상자·조명·카메라 변화는 캡처마다, top camera는 4프레임마다, `randomize_cones` custom event는 코드에서 2프레임마다 발생합니다. Trigger는 OmniGraph에 기록된 실행 조건이며 일반 Python for문과 같은 시점에 항상 실행되는 것은 아닙니다.
+자산은 `full_warehouse.usd`, Forklift, 팔레트, TrafficCone, CardBox를 사용합니다. `/Isaac/...`는 컴퓨터 루트 경로가 아니라 `get_assets_root_path()`로 찾은 **자산 루트에 덧붙이는 경로**입니다. USD 내부의 메시·재질·텍스처 참조도 함께 읽을 수 있어야 합니다.
 
-Render product는 세 카메라의 렌더 요청입니다. 준비 중에는 `hydra_texture.set_updates_enabled(False)`로 불필요한 센서 렌더를 끄고 SDG 직전에 다시 켭니다. `BasicWriter.initialize(**writer_config)`가 어떤 정답을 저장할지 결정하고 모든 render product에 attach합니다. 종료 전 출력 큐를 기다린 뒤 detach/destroy합니다.
+### 실행 결과 확인하기
 
-## writer 설정 확장
+기본 완료 시 6캡처 × 3카메라의 RGB를 확인합니다. 로그의 `Actual PNG files`에는 의미 분할 이미지도 포함될 수 있으므로 이 숫자를 RGB 장수와 바로 비교하지 마세요.
 
-공식 `config_basic_writer.yaml`, `config_default_writer.json`, `config_kitti_writer.yaml`, `config_coco_writer.yaml`도 이 폴더에 포함합니다. 입문 런처는 JSON만 받습니다. YAML을 직접 사용하려면 설치 Python으로 `scene_based_sdg.py --config <절대 YAML 경로>`를 실행할 수 있지만, 먼저 YAML의 output_dir를 **새 절대경로**로 바꾸고 num_frames를 유한한 값으로 설정합니다. 이 직접 경로는 런처의 출력 충돌 검사를 거치지 않습니다. 직접 실행도 `--steps` 생략 시 GUI를 유지하며 `--steps N`으로 저장 후 GUI 갱신 횟수를 제한합니다. 기존 config의 `close_app_after_run` 값은 실행 시 `headless`와 명시적인 `--steps` 여부에 맞춰 결정됩니다.
+| 출력 항목 | 이미지와 연결해서 볼 부분 |
+|---|---|
+| 카메라별 RGB | TopView, DriverView, PalletView가 같은 장면을 다르게 보는지 확인합니다. |
+| Semantic segmentation | `forklift`, `traffic_cone`, `pallet`, `cardbox`를 읽습니다. |
+| 2D tight box | 보이는 물체의 이미지상 경계와 픽셀 좌표를 비교합니다. |
+| 3D box·occlusion | 물체 공간 범위와 가림 정보를 살펴봅니다. |
+| `distance_to_image_plane` | 카메라 광축 방향의 깊이입니다. RGB 색과 별도의 수치 데이터입니다. |
 
-CocoWriter는 `coco_categories`의 ID와 class 라벨 대응을, KittiWriter는 해당 데이터 형식의 라벨/색상 옵션을 요구합니다. 기본 writer_config와 다른 writer의 인자를 무작정 섞으면 초기화가 실패합니다. 이 로컬 구현도 외부 writer_config가 주어지면 기본 writer 인자를 비웁니다.
+세 카메라에서 모든 클래스가 항상 보여야 하는 것은 아닙니다. 가림과 시야를 먼저 확인한 뒤 해당 프레임의 정답을 읽으세요.
 
-원문의 다음 단계인 TAO DetectNet V2 학습은 별도 TAO 환경·모델·학습 사양 파일이 필요한 후속 과정입니다. 여기서 생성한 데이터만으로 모델 학습이 자동 실행되지는 않습니다. Kitti 출력 검토 → TAO dataset-convert용 export spec 작성 → train용 spec과 모델 준비의 순서로 진행합니다. 링크의 오래된 모델/도구 버전과 Isaac Sim 버전을 혼동하지 않습니다.
+## 2. 배치 관계와 무작위화 순서 따라가기
 
-## 관찰, 실험, 오류
+### 코드에서 볼 부분
 
-세 카메라의 RGB와 class 매핑·깊이·검출 정답을 함께 확인합니다. 개별 카메라의 가림과 시야에 따라 보이는 클래스가 다를 수 있습니다. **rt_subframes만 16→32**로 바꾸고 재배치된 상자/재질의 잔상과 캡처 시간을 비교합니다. 위치 random seed를 이 예제에서 고정하지 않으므로 두 실행의 픽셀 차이를 subframe 효과만으로 단정하면 안 됩니다.
+팔레트는 월드 좌표에서 독립적으로 놓지 않고 지게차의 변환을 기준으로 배치합니다.
 
-자산을 열지 못하면 asset root와 5.1 경로를 확인합니다. dataset이 비었으면 writer 등록 이름, class 라벨, 카메라 시야를 확인합니다. `--check-config`는 JSON 구성을 확인할 뿐 GPU·원격 자산 실행 검증이 아닙니다. 복사한 NVIDIA 파일의 저작권/변경 사항은 `NOTICE.txt`와 `LICENSE-APACHE-2.0.txt`를 확인합니다.
+```python
+forklift_tf = omni.usd.get_world_transform_matrix(forklift_prim)
+pallet_offset_tf = Gf.Matrix4d().SetTranslate(
+    Gf.Vec3d(0, random.uniform(-1.2, -1.8), 0))
+pallet_pos_gf = (pallet_offset_tf * forklift_tf).ExtractTranslation()
+```
 
-## 출처와 버전
+먼저 지게차 기준의 앞쪽 위치를 고르고, 그 변환을 월드 좌표로 옮깁니다. 지게차가 회전해도 팔레트와의 관계를 유지하기 위한 계산입니다.
 
-이 해설은 NVIDIA Isaac Sim **5.1.0** 문서와 해당 설치본을 기준으로 새로 작성했습니다. 원문의 전체 문장을 번역 복제한 것이 아니라 해당 워크플로를 독립적으로 실습하도록 설명했습니다.
+상자는 두 방식으로 준비합니다. `register_scatter_boxes()`는 팔레트 크기로 숨은 평면을 만들고 충돌 검사를 켠 `scatter_2d`로 다섯 상자를 배치합니다. `simulate_falling_objects()`는 별도의 팔레트 위로 여덟 상자를 떨어뜨립니다. 후자는 최대 250단계 또는 **마지막 상자의 선속도 <0.001 m/s**에서 준비를 끝냅니다. 전체 상자에 대한 연속 정착 검사는 아니므로 “모든 상자가 완전히 안정되었다”는 보장으로 읽지 마세요.
 
-- [공식 Scene Based Synthetic Dataset Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html)
-- [config scenarios](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html#config-scenarios)
-- [domain randomization](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html#domain-randomization)
-- [running the script](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html#running-the-script)
-- [next steps](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html#next-steps)
-- [TAO 5.2 DetectNet V2 후속 학습 안내](https://docs.nvidia.com/tao/tao-toolkit-archive/5.2.0/text/object_detection/detectnet_v2.html)
+캡처에 들어가면 변화의 주기가 나뉩니다.
+
+| 변경 대상 | 코드의 기준 |
+|---|---|
+| 팔레트 위 scatter 상자·조명·Driver/Pallet 카메라 | `on_frame()` |
+| Top 카메라 | `on_frame(interval=4)` |
+| Traffic cone | 0부터 센 짝수 캡처에서 custom event 전송 |
+
+Top 카메라는 near clipping 거리를 크게 두어 가까운 천장 면을 제외합니다. 따라서 다른 카메라처럼 가장 가까운 물체까지 모두 보여 주는 시점은 아닙니다.
+
+### Writer 설정을 확장할 때
+
+`config_basic_writer.yaml`, `config_default_writer.json`, `config_coco_writer.yaml`, `config_kitti_writer.yaml`은 다른 저장 설정의 예시입니다. 입문 런처는 JSON만 받지만 본체는 YAML도 받습니다. 예를 들어 저장소 루트에서 BasicWriter YAML을 복사하세요.
+
+```bash
+cp src/137_replicator_replicator_scene_based_sdg/config_basic_writer.yaml /tmp/tutorial137-basic.yaml
+```
+
+복사본에서 `launch_config.headless`를 `true`, `writer_config.output_dir`를 아직 없는 `/tmp/tutorial137-basic`으로 바꾸고 최상위에 `num_frames: 6`을 추가합니다. 본체의 기본 캡처 수는 20이므로 런처를 거치지 않을 때는 이 값을 직접 지정해야 합니다. 준비한 복사본을 설치 Python으로 실행하세요.
+
+```bash
+~/isaacsim/python.sh src/137_replicator_replicator_scene_based_sdg/scene_based_sdg.py --config /tmp/tutorial137-basic.yaml
+```
+
+이 YAML은 Grid 배경과 RGB만 선택합니다. 1절의 창고·분할·깊이 구성과 결과가 다른 이유를 `env_url`과 `writer_config`에서 확인해 보세요. GUI로 실행하려면 복사본의 `headless`를 `false`로 바꿉니다. 이때 `--steps`를 생략하면 저장 후 창을 유지하고, `--steps 120`을 붙이면 저장 후 최대 120번 앱을 갱신합니다.
+
+직접 실행은 런처의 새 출력 폴더 검사를 거치지 않습니다. CocoWriter의 클래스 ID와 KittiWriter 옵션을 BasicWriter 인자에 덧붙이는 식으로 섞지 말고, **Writer 종류와 그 설정 묶음을 함께 선택**하세요. 이 실습의 기본 데이터 생성은 모델 학습을 시작하지 않습니다.
+
+## 3. 물리 준비와 캡처의 역할 정리
+
+```text
+창고 참조 → 지게차 기준으로 팔레트 배치
+    → 상자 배치 그래프 등록 + 별도 상자 낙하 준비
+    → render product 활성화
+    → 캡처별 무작위화 → delta_time=0으로 촬영
+    → 파일 쓰기 완료 대기 → GUI 관찰 또는 종료
+```
+
+센서 렌더는 물리 준비 중 꺼 두었다가 캡처 전에 켭니다. 물리적으로 가능한 배치를 준비하는 일과, 그 상태의 여러 외관을 촬영하는 일을 나누어 비용을 줄입니다. `rt_subframes`는 렌더 안정화 반복이며 상자가 떨어지는 시간을 늘리는 설정이 아닙니다.
+
+## 4. 간단한 확인 실험
+
+`config.json`을 `/tmp/tutorial137-small.json`으로 복사하고 **`resolution`만 `[256, 256]`으로 바꾸세요.** 다음 명령으로 실행합니다.
+
+```bash
+python3 src/137_replicator_replicator_scene_based_sdg/run.py --isaac-sim ~/isaacsim --config /tmp/tutorial137-small.json --headless --frames 6 --output /tmp/tutorial137-small
+```
+
+카메라 수와 캡처 수는 그대로이고 RGB 한 장의 픽셀 수는 1/4이 됩니다. 검출 좌표가 새 해상도를 기준으로 저장되는지 확인하세요. 실행 사이 난수 배치가 고정되지 않으므로 상자가 정확히 같은 위치에 있을 것을 기대하지는 않습니다.
+
+## 실행할 때 막히면
+
+- **`python.sh not found`**: `--isaac-sim`이 설치 폴더를 가리키는지 확인하세요. 스크립트 파일 경로 자체를 넣는 옵션은 아닙니다.
+- **창고·재질 로딩 실패**: 자산 루트와 내부 참조 경로를 확인하세요. JSON 검사는 이 접근을 시험하지 않습니다.
+- **Writer 초기화 오류**: 선택한 Writer와 설정 인자 종류가 맞는지 확인하세요.
+- **PNG 개수가 예상보다 많음**: RGB와 분할 PNG를 나누어 세세요. 카메라가 세 대라는 점도 반영합니다.
+- **`Output exists`**: 이전 결과를 보존하고 새로운 `--output`을 지정하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Scene Based Synthetic Dataset Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html)에 대응합니다. 포함한 NVIDIA 코드의 출처와 변경 고지는 [NOTICE.txt](NOTICE.txt)에 있습니다. 기본 JSON은 세 카메라와 BasicWriter의 입문용 설정이며 TAO 모델 학습은 범위 밖입니다.
+
+[VERIFICATION.md](VERIFICATION.md)는 문법·도움말·설정 읽기를 확인한 기록이고 `tutorial.json`은 `not_run`입니다. 이 문서에서 제시한 장수와 정답 항목은 실제 자산·GPU 환경에서 확인할 기준입니다.

@@ -1,84 +1,126 @@
-# 26. 좌표 offset과 고유 이름으로 여러 Task 확장하기
+# 26. 같은 작업을 여러 벌 배치하려면 무엇을 나눠야 할까?
 
-권장 학습 순서 **26** · 물리 기초와 Core API 확장 · 출처 ID `t103`
+## 이번에 배우는 것
 
-공식 원문: **Multiple Tasks** · Isaac Sim **5.1.0** · 인덱스 **t103**
+**Jetbot–Franka 작업을 세 벌 만들고, 좌표·이름·제어 상태를 작업마다 분리하는 방법을 익힙니다.**
 
-## 이 실습의 의도
+25번의 이동·후퇴·집기 흐름을 여러 번 생성하면 로봇 수도 늘어납니다. 하지만 객체 이름이 같으면 관찰값이 덮어써지고, 같은 제어기를 공유하면 한 로봇의 완료 상태가 다른 로봇에도 영향을 줄 수 있습니다. 이번에는 같은 `HandoverTask` 클래스로 서로 구별되는 작업을 만듭니다.
 
-한 Stage에 Jetbot–Franka 작업을 기본 세 벌 배치해, 같은 작업 클래스를 고유 이름·좌표 offset·별도 controller 상태로 확장하는 방법을 익힙니다. 각 lane의 Jetbot 이동 목표 x를 시드 기반으로 달리해 작업 진행 시점이 달라도 관찰과 명령이 섞이지 않도록 구성합니다. 각 작업은 동일한 DRIVE→RETREAT→PICK을 시도하며, lane 분리는 같은 물리 세계 안의 배치이므로 실제 큐브 운반·배치 결과는 작업마다 따로 확인합니다.
+| 나눠야 할 것 | 이 실습의 구성 |
+|---|---|
+| 공간 | 작업별 y방향 `offset`, 기본 간격 2 m |
+| 이름 | `lane_0`·`lane_1`·`lane_2`, 고유한 로봇·큐브 이름 |
+| 관찰 | 작업 이름이 포함된 event 키와 객체별 상태 |
+| 제어 진행 | lane마다 별도 이동 제어기와 집기 제어기 |
+| 결과 | `result.json`에 작업마다 한 항목 |
 
-## 실행 후 확인할 것
+여기서 lane은 같은 Stage 안에 나란히 배치한 작업 구역입니다. 각각 별도의 물리 세계가 생기는 것은 아닙니다.
 
-- 기본 `--tasks 3 --spacing 2`에서 작업 기준 y offset은 -2,0,2 m입니다. 각 lane의 Jetbot과 큐브 시작 y는 그 offset에 0.3 m를 더한 값이며, 세 Franka·세 Jetbot·세 큐브가 한쪽으로 두 번 이동하거나 겹쳐 있지 않은지 봅니다.
-- 시작 시 출력되는 `lane_0`, `lane_1`, `lane_2`의 parameters에서 robot/cube/Jetbot 이름이 서로 구별되는지 확인합니다. `world.get_observations()`에서도 작업별 event 키를 사용해 다른 lane의 제어 상태를 덮어쓰지 않아야 합니다.
-- 터미널 event 딕셔너리에서 lane별 0→1→2 전환을 추적합니다. 목표 x가 1.2~1.6 m에서 달라지므로 모든 작업의 동시 전환을 요구하지 않습니다. 같은 seed는 목표 생성 조건을 재현하지만 물리 궤적의 완전 일치까지 보장하는 것은 아닙니다.
-- `result.json` 배열 길이가 지정한 tasks 수와 같고 각 `task` 이름이 유일한지 확인합니다. 모든 항목의 `controller_done`, `cube_target_error_m`, `within_3cm`를 읽어 실제 목표 3 cm 이내 배치를 lane별로 판정합니다. 한 lane의 완료나 event=2만으로 전체 성공을 판단하지 않습니다.
-- GUI 무제한 실행의 저장 시점은 모든 pick controller 완료 후 120단계이며, headless/명시한 `--steps`는 정해진 길이에서 부분 상태를 남길 수 있습니다. 충분히 실행해도 큐브가 밀려나거나 집기를 놓쳤다면 그 lane의 실제 실패로 기록하고, 목표 시드·후퇴 단계·배치 간격을 함께 비교합니다.
+## 1. 세 작업을 한 번에 실행하기
 
-## 실행 방식
+Isaac Sim 5.1, 지원 NVIDIA GPU, Jetbot·Franka 에셋과 내장 Lula/RMPflow가 필요합니다. 로봇은 각각 `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`, `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`를 사용합니다.
 
-이 패키지는 `Multiple Tasks` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
-
-## 준비
-
-- Isaac Sim 5.1.0이 설치되고 NVIDIA GPU/드라이버가 정상 동작해야 합니다. `--headless`는 창만 숨기며 Isaac Sim 런타임 요구사항을 없애지 않습니다.
-- Isaac Sim 5.1과 Jetbot `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`, Franka `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`, 내장 RMPflow 확장이 필요합니다. `--asset`은 Jetbot USD만 지정하며 Franka는 기본 5.1 asset root를 사용합니다. 작업 수가 증가하면 GPU 메모리/CPU 물리 비용도 늘어납니다.
-- 이 폴더의 파일을 통째로 복사해도 실행할 수 있습니다. 아래는 이 폴더 안에서 실행하는 명령입니다. `ISAAC_SIM_ROOT`에는 실제 5.1 설치 경로를 지정합니다.
+저장소 루트에서 아래 명령을 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --tasks 3 --spacing 2 --seed 7
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --tasks 1 --seed 7 --steps 2400
+~/isaacsim/python.sh src/26_core_core_multiple_tasks/run.py --tasks 3 --spacing 2 --seed 7 --steps 2400
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 2400단계를 사용합니다. `--steps`를 생략한 GUI에서는 모든 pick controller가 끝나고 120단계 뒤 결과를 저장한 다음 물리 시뮬레이션과 창을 유지합니다. headless 또는 `--steps N` 실행에서는 정해진 길이까지 진행한 시점의 결과를 저장하므로 모든 작업의 완료와 안정화가 보장되지는 않습니다. 실행 중 GUI의 Stop/Play로 초기화를 시도하는 대신 프로그램을 다시 실행하세요. 기본 출력은 이 폴더의 `output/<고유번호>/`이며 `--output`으로 지정한 경로가 이미 있으면 덮어쓰지 않고 오류를 냅니다.
+Franka·Jetbot·큐브가 세 벌 생성됩니다. 각 작업은 Jetbot 이동, 기본 200단계 후퇴, Franka 집기 순서로 진행합니다. 물리 2400단계 후 그때의 상태를 저장하고 종료하므로 아직 진행 중인 작업이 있을 수도 있습니다. 창 없이 실행하려면 `--headless`를 추가하세요. headless의 기본 상한도 2400단계입니다.
 
-## 파일 안내
+### 코드에서 볼 부분
 
-- `handover_task.py`
-- `run.py`
-- `tutorial.json`: 공식 출처, 실행 형태, 산출물과 검증 상태입니다.
+작업 구역의 중심 y좌표는 다음 식으로 만듭니다.
 
-## 차례대로 실습하기
+```python
+offset=np.array([0.0, (index - (args.tasks-1)/2) * args.spacing, 0.0])
+```
 
-1. `run.py`의 `tasks` 생성식을 봅니다. 기본 세 작업의 y offset은 -2,0,2 m이며 각 작업에는 고유한 `lane_0`, `lane_1`, `lane_2` 이름이 주어집니다.
-2. `handover_task.py`에서 PickPlace에 offset을 넘기는 부분과 `_move_task_objects_to_their_frame()`을 비교합니다. PickPlace가 큐브와 Franka에 offset을 이미 적용했으므로 외부 Task의 `_task_objects`에는 Jetbot만 등록합니다.
-3. 실행 후 출력된 각 작업의 params에서 Jetbot, Franka, cube의 이름을 비교합니다. 같은 Stage 안의 Prim 경로와 Scene 이름 충돌이 없어야 합니다.
-4. 각 lane의 Jetbot 목표 x가 1.2~1.6 m에서 달라지는 것을 확인합니다. `default_rng(seed)`를 사용하므로 같은 seed는 같은 목표를 생성합니다.
-5. 터미널 event 딕셔너리를 봅니다. 관찰 키가 `lane_0_event`, `lane_1_event`처럼 구별되므로 한 작업의 도착이 다른 작업을 후퇴시키지 않아야 합니다.
-6. `result.json` 배열에서 lane별 controller_done과 실제 큐브 오차를 비교합니다. 모든 로봇이 같은 순간에 완료한다고 가정하지 않습니다.
+세 작업일 때 `index`가 0·1·2이고 중심을 가운데에 맞추므로 offset은 -2·0·2 m입니다. Jetbot과 큐브의 로컬 시작 y는 0.3 m이므로 실제 시작 y는 다음과 같습니다.
 
-## API와 Omniverse/USD 개념
+| 작업 | y offset | Jetbot·큐브의 시작 y | Franka base의 y |
+|---|---:|---:|---:|
+| `lane_0` | -2 m | -1.7 m | -2 m |
+| `lane_1` | 0 m | 0.3 m | 0 m |
+| `lane_2` | 2 m | 2.3 m | 2 m |
 
-각 lane은 자체 `HandoverTask`, `WheelBasePoseController`, `DifferentialController`, `PickPlaceController`를 가집니다. 제어기의 상태 머신을 여러 로봇이 공유하면 한 로봇의 진행 단계가 다른 로봇에 영향을 주므로 인스턴스를 각각 만듭니다.
+위치는 달라도 로봇 사이의 상대 배치는 같은 방식으로 유지됩니다. 각 Jetbot의 목표 x는 `default_rng(seed)`로 1.2~1.6 m에서 뽑습니다. 같은 seed는 같은 목표값을 만들지만, 물리 궤적 전체가 항상 완전히 같다는 뜻은 아닙니다.
 
-| 확장 문제 | 코드의 해결 방법 |
-|---|---|
-| 물체가 겹침 | 모든 해당 물체와 목표를 같은 offset으로 평행이동 |
-| 두 번 이동됨 | 내장 PickPlace가 적용한 offset을 외부에서 다시 적용하지 않음 |
-| USD Prim 경로 충돌 | `find_unique_string_name` + `is_prim_path_valid` |
-| Scene 객체 이름 충돌 | `find_unique_string_name` + `scene.object_exists` |
-| 관찰 딕셔너리가 덮어써짐 | 작업 이름이 포함된 event 키와 고유 객체 이름 |
-| 제어 단계 혼동 | 작업마다 별도 controller 인스턴스와 reset |
+### 실행 결과 확인하기
 
-USD Stage는 하나지만 논리적 Task가 여러 개일 수 있습니다. offset은 새 세계를 만드는 것이 아니라 같은 세계 안에서 좌표를 이동하는 것입니다. 이 실습은 물리 격리나 병렬 학습 환경을 보장하지 않습니다. lane 간격을 너무 줄이면 다른 작업 물체와도 충돌할 수 있습니다.
+시작 콘솔의 `parameters`에서 lane별 로봇·큐브·Jetbot 이름이 서로 다른지 확인하세요. 이후 출력되는 event 딕셔너리는 각 작업이 `0 DRIVE`, `1 RETREAT`, `2 PICK` 중 어디에 있는지 보여줍니다. 목표 거리가 다르므로 모든 lane이 동시에 전환될 필요는 없습니다.
 
-## 한 변수만 바꾸는 실험
+이 폴더의 `output/<고유번호>/result.json`에는 지정한 작업 수만큼 항목이 생깁니다. 각 항목에서 `task`, `event`, `controller_done`, `cube_target_error_m`, `within_3cm`를 함께 읽으세요. `within_3cm`는 **그 lane의 최종 큐브 중심이 자기 목표에서 3 cm 안에 있는지** 나타냅니다. 한 항목의 성공을 전체 작업의 성공으로 읽지 않습니다.
 
-`--tasks 3`을 `--tasks 2`로만 바꿔 이름 충돌 없이 필요한 두 쌍만 생성되는지 확인합니다. 다른 실험에서는 `--seed`만 바꿔 운반 거리 변화가 집기 성능에 미치는 영향을 비교합니다.
+## 2. 좌표와 제어 상태가 섞이지 않는 이유
 
-## 문제 해결
+`handover_task.py`는 내장 `PickPlace`를 사용해 Franka와 큐브를 만들고 Jetbot을 추가합니다. offset을 적용할 때는 누가 이미 위치를 옮겼는지 구분해야 합니다.
 
-GPU 메모리가 부족하면 --tasks 1로 동일 흐름부터 확인합니다. lane이 겹치면 offset이 두 번 적용되었거나 spacing을 줄였는지 확인합니다. 프로그램은 spacing 1.5 m 미만을 거부합니다. 한 lane 완료가 전체 성공을 의미하지 않으므로 결과 배열의 모든 항목을 봅니다.
+### 코드에서 볼 부분
 
-`SimulationApp`보다 먼저 `omni`, `pxr`, Core 확장을 import하면 모듈 초기화에 실패할 수 있습니다. 일반 Python의 `--help`가 실행되는 것은 CLI 문법 검사일 뿐 물리 실행 성공은 아닙니다. 이 패키지의 검증 상태는 `tutorial.json`에 별도로 기록합니다.
+내장 Task에 offset을 전달하는 부분과, 바깥 Task에 Jetbot을 등록하는 부분을 연결해 읽어 보세요.
 
-## 버전 고정 출처와 원문 대응
+```python
+self.pick = PickPlace(name=name + "_pick", cube_initial_position=np.array([0.1, 0.3, 0.05]),
+                      target_position=np.array([0.7, -0.3, 0.02575]), offset=self._offset)
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — Multiple Tasks](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_multiple_tasks.html)
-- [공식 5.1: parameterizing-tasks](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_multiple_tasks.html#parameterizing-tasks)
-- [공식 5.1: scaling-to-many-tasks](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_multiple_tasks.html#scaling-to-many-tasks)
+같은 offset을 내장 Task에도 전달하므로 큐브의 시작 위치와 목표가 해당 lane의 좌표로 해석됩니다. 바깥 Task가 직접 옮길 객체는 다음처럼 따로 등록합니다.
 
-설명은 한국어로 새로 작성했으며 API 흐름과 실습 수치는 해당 5.1 공식 튜토리얼을 기준으로 합니다. 로컬 코드의 선택적 실행 길이 제한, 결과 파일, 인자, 별도 성공 측정은 초심자가 단독으로 실행하고 비교하도록 추가한 구성입니다.
+```python
+self._task_objects[self.jetbot.name] = self.jetbot
+self._move_task_objects_to_their_frame()
+```
+
+PickPlace가 Franka와 큐브를 이미 자기 작업 좌표로 옮겼으므로, 바깥 Task에서는 Jetbot만 옮깁니다. 같은 물체를 양쪽에 등록하면 offset을 두 번 적용할 수 있습니다. 좌표를 더할 때는 물체 위치뿐 아니라 Jetbot 목표와 큐브 목표에도 같은 기준을 사용합니다.
+
+이름도 두 종류를 나눠 확인합니다. `/World/Jetbot` 같은 Prim 경로는 USD Stage에서 유일해야 하고, `jetbot` 같은 Scene 이름은 관찰값과 객체 검색에 사용됩니다. `find_unique_string_name()`은 각 공간에서 이미 사용 중인 이름을 피합니다.
+
+`run.py`에서는 작업마다 제어기를 새로 만들고 묶어서 저장합니다.
+
+```python
+controllers.append((drive, pick))
+```
+
+이후 `zip(tasks, controllers)`로 같은 순서의 작업과 제어기를 연결합니다. 매 단계 `observations[task.name + "_event"]`를 읽기 때문에 `lane_0_event`가 바뀌어도 다른 lane의 상태는 그대로입니다.
+
+### 실행 결과 확인하기
+
+GUI를 계속 관찰하려면 앞 명령에서 `--steps 2400`을 빼세요. 모든 집기 제어기가 끝난 뒤 120단계를 더 진행하고 결과를 저장하며, 창과 물리는 계속 유지됩니다. 한 lane이 DRIVE에 머무르면 이 완료 조건도 기다리게 됩니다. 유한 실행 결과는 정해진 길이에서의 측정이라는 차이를 기억하세요.
+
+## 3. 여러 Task를 확장하는 기준 정리
+
+```text
+같은 작업 클래스
+    ├─ lane_0: offset_0 + 고유 객체 + controller_0 → 결과_0
+    ├─ lane_1: offset_1 + 고유 객체 + controller_1 → 결과_1
+    └─ lane_2: offset_2 + 고유 객체 + controller_2 → 결과_2
+                         ↓
+                 하나의 World에서 물리 진행
+```
+
+공간 배치는 offset으로, 데이터 구별은 이름으로, 동작 진행은 별도 인스턴스로 관리했습니다. 작업 수를 늘리는 것은 이 세 가지를 함께 늘리는 일입니다. 같은 World를 쓰므로 가까이 놓은 작업끼리는 물리적으로 간섭할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`--tasks`만 3에서 2로 바꿔 보세요.
+
+```bash
+~/isaacsim/python.sh src/26_core_core_multiple_tasks/run.py --tasks 2 --spacing 2 --seed 7 --steps 2400
+```
+
+로봇 쌍과 결과 항목이 둘로 줄어야 합니다. 중심을 맞추는 식 때문에 y offset도 -1·1 m로 바뀝니다. 세 작업 중 하나가 단순히 사라져 -2·0 m에 남는 구성이 아닙니다. 객체 이름의 중복이 없는지, 결과의 `task`가 두 개인지, 각 큐브가 자기 목표와 비교되는지 확인하세요.
+
+## 실행할 때 막히면
+
+- **GPU 메모리가 부족하거나 로딩이 매우 느림**: `--tasks 1`로 한 작업을 먼저 확인하세요. 같은 에셋을 쓰더라도 로봇 수에 따라 물리·렌더링 비용이 증가합니다.
+- **`--spacing` 오류**: 코드는 1.5 m 미만을 거부합니다. 기본 2 m로 돌아가 배치부터 확인하세요.
+- **한 lane만 끝나지 않음**: 그 lane의 event와 큐브 위치를 확인하세요. Jetbot이 도착했더라도 큐브가 충분히 밀리지 않았을 수 있습니다.
+- **로컬 Jetbot을 사용하려는데 Franka 로딩이 실패함**: `--asset`은 Jetbot USD만 지정합니다. Franka와 RMPflow는 기본 5.1 자산·확장 설정을 사용합니다.
+- **GUI Stop/Play 후 진행이 맞지 않음**: 이 루프는 제어기까지 재설정하는 GUI 재시작을 구현하지 않습니다. 프로그램을 다시 실행해 동일한 초기 조건으로 비교하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Multiple Tasks](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_multiple_tasks.html)에 대응합니다. Task의 매개변수와 offset을 여러 작업으로 확장하는 개념을 유지하고, 작업 수·간격·난수 seed와 lane별 최종 오차를 로컬 실행 옵션으로 구성했습니다.
+
+`tutorial.json`은 `not_run`입니다. 위 설명은 코드의 생성식과 관찰·결과 구조에 따른 확인 기준입니다. 여러 로봇의 실제 운반·집기 성공과 GUI 배치는 아직 실행 검증하지 않았습니다.

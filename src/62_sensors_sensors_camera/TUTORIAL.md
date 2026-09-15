@@ -1,77 +1,147 @@
-# 62. 카메라 영상·렌즈·투영 좌표
+# 62. 카메라가 본 상자는 이미지의 어느 픽셀에 있나요?
 
-권장 학습 순서 **62** · 센서와 측정 데이터 · 출처 ID `t145`
+## 이번에 배우는 것
 
-고정된 세 물체를 640×480 카메라로 촬영하고 RGB, motion vector, 월드 점의 영상 좌표를 저장합니다. 원문의 외부 환경을 로컬 도형으로 바꾸고 측정 스냅샷을 저장한 뒤 GUI에서 계속 관찰할 수 있게 했습니다. 렌즈 왜곡은 5.1의 네이티브 OpenCV schema를 사용합니다.
+**세 상자를 촬영한 이미지와 월드 좌표의 투영 결과를 비교하며, 카메라 자세·내부 보정·렌즈 왜곡의 역할을 구별합니다.**
 
-## 이 실습의 의도
+이미지에서 물체를 찾으려면 장면 속 위치와 이미지 속 위치를 연결해야 합니다. 월드 좌표가 미터로 표현된다면 이미지 좌표는 픽셀로 표현됩니다. 이번에는 움직이지 않는 카메라와 상자를 사용해 이 연결을 차근차근 확인합니다.
 
-고정된 세 상자를 위에서 촬영하여 USD 카메라 설정이 실제 이미지와 픽셀 좌표로 이어지는 과정을 익힌다. 물체와 카메라를 정지시켜 렌즈 왜곡에 따른 영상 변화와 움직임에 따른 motion vector를 구별할 수 있게 했다. 기본 `--lens none`은 왜곡 계수 0인 OpenCV pinhole 설정이며, 렌더링 후 이미지 한 장과 이상적 투영 좌표를 저장한다.
+| 구성 | 기본 설정 | 확인할 데이터 |
+|---|---|---|
+| 카메라 | 높이 5 m에서 아래를 바라봄 | `/World/Camera`의 자세 |
+| 세 상자 | x가 -1, 0, 1 m, 윗면 높이 0.9 m | 상자 윗면 중심의 투영 좌표 |
+| 영상 | 640×480, 30 Hz | `rgba.png`, `camera.npz` |
+| 내부 보정 | fx=fy=320, cx=320, cy=240 픽셀 | `measurements.json`의 `intrinsic_matrix` |
+| 기본 렌즈 | 왜곡 계수가 0인 OpenCV pinhole | 이미지와 이상적 투영의 대응 |
 
-## 실행 후 확인할 것
+물리와 렌더링은 60 Hz로 진행하지만 카메라는 30 Hz로 설정합니다. 따라서 물리 한 단계마다 독립적인 새 이미지가 생긴다고 가정하지 않습니다.
 
-- **카메라 영상**: `rgba.png`와 `camera.npz`의 `rgba`를 열어 `/World/Box0`~`Box2`와 바닥이 보이는지 확인한다. 기본 해상도의 배열 형태는 `[480, 640, 4]`이며, 검은 화면이나 빈 배열을 정상 촬영으로 보지 않는다.
-- **월드 점과 픽셀의 대응**: 기본 렌즈에서 `measurements.json`의 `projected_points`는 각 상자 윗면 중심 `[-1,0,0.9]`, `[0,0,0.9]`, `[1,0,0.9]` m의 `(u,v)`다. 이미지 배열은 `[v,u]`로 찾아 상자 영역과 대조하고, 카메라 방향 때문에 월드 x의 변화가 이미지 세로 방향으로 나타나는 것을 확인한다.
-- **정지 장면의 센서값**: `motion_vectors`가 거의 0인 것은 이 장면의 의도에 맞는다. 카메라는 30 Hz, 물리·렌더 step은 60 Hz이므로 매 step이 독립적인 새 카메라 샘플이라고 가정하지 않는다.
-- **렌즈 비교의 경계**: `--lens pinhole`과 `--lens fisheye`로 만든 이미지의 주변부 형태를 비교한다. 왜곡 pinhole의 저장 좌표는 여전히 이상적 투영이고 fisheye의 `projected_points`는 빈 배열이므로, 두 경우를 기본 렌즈의 픽셀 대응 실패로 판정하지 않는다.
-- **저장 시점**: 기본 실행은 240스텝 후 마지막 RGBA·motion vector를 한 번 저장한다. 이후 GUI가 계속 갱신되어도 저장 파일은 영상 스트림이나 모든 프레임의 기록으로 늘어나지 않는다.
+## 1. 세 상자를 촬영하고 이미지 열기
 
-## 이 패키지만으로 준비하기
-
-Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.
-
-```bash
-export ISAAC_SIM_PATH=/path/to/isaacsim
-cd src/62_sensors_sensors_camera
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/run-01
-```
-
-출력 폴더는 **존재하지 않는 새 경로**를 지정합니다. 이미 있으면 오류로 멈추어 이전 결과를 보호합니다. `--output`을 생략하면 이 패키지의 `output/날짜_시간/`에 저장합니다.
-
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 렌더링·카메라 갱신이 계속됩니다. 처음 240스텝을 마친 시점의 이미지·motion vector와 투영 좌표를 한 번 저장하며, 이후 관찰 중에는 파일을 추가하거나 바꾸지 않습니다. `--steps N`에 양수를 주면 N스텝 뒤 스냅샷을 저장하고 종료합니다. `--headless`만 사용하면 기존과 같이 240스텝 후 종료합니다. `--interactive`는 기존 명령 호환용이며 이제 필요하지 않습니다. 명시한 `--steps`의 종료 조건을 해제하지 않고, `--headless`와 함께 사용할 수 없습니다.
-
-run.py는 standalone 실행용이므로 Script Editor에 전체를 붙이지 않습니다. 처음 240스텝을 마치기 전에 창을 닫으면 결과 파일은 완성되지 않을 수 있습니다.
-
-창 없이 유한 실행으로 결과만 만들 때는 별도의 새 출력 경로를 사용합니다.
+Isaac Sim 5.1과 지원 NVIDIA GPU가 있는 환경에서, 저장소 루트 기준으로 실행하세요.
 
 ```bash
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --steps 240 --output output/batch-01
+~/isaacsim/python.sh src/62_sensors_sensors_camera/run.py --steps 240 --output src/62_sensors_sensors_camera/output/base
 ```
 
-## 실습 순서와 관찰
+240단계 후 마지막 카메라 프레임을 저장하고 앱이 종료됩니다. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요. 출력 폴더는 아직 없는 경로여야 합니다. `--output`을 생략하면 튜토리얼 폴더의 `output/날짜_시간/` 아래에 만듭니다.
 
-1. 기본 명령을 실행하고 출력 `rgba.png`를 엽니다. 세 상자와 바닥을 확인합니다. `camera.npz`에는 RGBA 배열, 투영한 점, motion vector가 있습니다. 정지 장면의 motion vector가 거의 0인 것은 정상입니다.
-2. `--headless`와 `--steps` 없이 실행해 뷰포트 카메라 메뉴 **Cameras > Camera**로 전환합니다. Stage에서 `/World/Camera`를 선택해 focalLength와 aperture를 봅니다. **Create > Camera**로 별도 카메라를 만들면 prim만 생성되며 영상 배열을 얻으려면 render product가 필요합니다.
-3. **Tools > Sensors > Camera Inspector**를 열고 **Refresh** 후 `/World/Camera`를 선택합니다. Camera State의 위치·orientation을 복사하고 **Create Viewport**로 두 영상을 나란히 봅니다. 해상도 비율은 aperture 비율과 일치시켜 square pixel을 유지합니다.
-4. `--lens pinhole --output output/pinhole`과 `--lens fisheye --output output/fisheye`로 각각 실행합니다. 같은 도형의 가장자리 휨과 주변부 시야를 비교합니다. 렌즈 변경만으로 카메라 위치는 바뀌지 않습니다.
-5. 기본 `--lens none`도 명시적인 OpenCV pinhole schema에 0 왜곡 계수를 설정하여 640×480, fx=fy=320, cx=320, cy=240을 렌더러에 지정합니다. 출력 좌표는 동일한 K와 `get_view_matrix_ros()`로 계산한 이상적인 pinhole 투영입니다. Fisheye 모드에서는 이 좌표를 생략합니다. 왜곡을 켠 pinhole 영상에는 별도의 distortion mapping이 필요하므로 이상적 좌표와 그대로 일치한다고 해석하면 안 됩니다.
+GUI에서 카메라를 계속 관찰하려면 `--steps 240`을 빼세요. 처음 240단계 후 파일을 한 번 저장하고 창은 직접 닫을 때까지 유지합니다. 창 없이 촬영하려면 `--headless`를 추가합니다. Headless에서도 영상 렌더링은 수행합니다.
 
-## API와 USD 개념
+### 실행 결과 확인하기
 
-`SimulationApp`은 Kit를 먼저 시작하고, `World`는 물리/렌더 step을 관리합니다. `Camera.initialize()`가 render product와 기본 RGB annotator를 준비합니다. `get_rgba()`는 그 렌더 결과입니다. Camera prim은 USD 장면의 렌즈·자세 정의이고 render product는 실제 이미지 생성 요청입니다.
+먼저 `output/base/rgba.png`를 엽니다. 세 상자와 바닥이 보이는지 확인하세요. 같은 폴더의 다른 파일은 다음 정보를 담습니다.
 
-이 예제는 m 단위입니다. `Camera.set_focal_length(.018)`은 18 mm, `set_horizontal_aperture(.036)`은 36 mm를 의미합니다. Raw USD 카메라 속성에는 1/10 stage unit 관례가 있으므로 wrapper와 raw 숫자를 그대로 섞지 마세요. quaternion 순서는 `(w,x,y,z)`입니다. Camera wrapper의 world 축 관례와 USD Camera의 -Z 시선 축은 내부에서 변환됩니다. 5.1의 `get_image_coords_from_world_points()`/`get_intrinsics_matrix()`는 렌즈 모델 이름에 소문자 pinhole이 있는지를 검사하여 OpenCV 모델 이름에서도 제한이 생깁니다. 이 패키지는 알려진 K와 공개 view matrix로 직접 투영하여 그 제한을 피합니다. 실제 렌더에도 같은 K를 명시합니다.
+| 결과 | 읽는 방법 |
+|---|---|
+| `camera.npz`의 `rgba` | `[높이, 너비, 채널]`, 기본 `[480,640,4]` 배열 |
+| `projected_points` | 상자 윗면 중심 세 점의 `(u,v)` 픽셀 좌표 |
+| `motion_vectors` | 마지막 프레임의 움직임 정보; 이 정지 장면에서는 큰 움직임을 기대하지 않음 |
+| `measurements.json` | 렌즈 모드, 배열 크기, 투영 좌표, 내부 보정 행렬 |
+| `scene.usda` | 촬영에 사용한 장면 설정 |
 
-내부 보정 K의 fx,fy,cx,cy는 픽셀, 외부 보정은 센서/월드 좌표 변환입니다. 다른 도구의 변환행렬은 축 방향·world-to-camera인지 camera-to-world인지 확인한 뒤 변환해야 합니다. rig Xform 밑에 카메라들을 자식으로 두면 공통 변환을 상속합니다.
+기본 렌즈의 투영 좌표는 대략 `(320,318)`, `(320,240)`, `(320,162)`입니다. 이미지 배열에서는 **`rgba[v, u]`** 순서로 픽셀을 찾습니다. 첫 좌표의 상자는 이미지 아래쪽, 마지막 좌표의 상자는 위쪽에 놓입니다. 월드의 x 방향이 이미지에서도 가로일 것이라고 생각하면 이 결과가 뒤바뀐 것처럼 보일 수 있습니다.
 
-## 확장 실습·성공 기준·문제 해결
+## 2. 카메라 설정에서 픽셀 좌표까지 따라가기
 
-렌즈 모드 하나만 바꾸어 세 이미지의 가장자리 형태를 비교합니다. 검은 영상이면 `--steps 480`으로 워밍업을 늘리고 빛과 카메라 시선을 확인합니다. `--headless`에서는 viewport가 없으므로 저장된 PNG를 봅니다.
+### 코드에서 볼 부분
 
-원문의 센서 rig 예제인 RealSense D455는 NVIDIA 에셋 `/Isaac/Sensors/Intel/RealSense/rsd455.usd`를 Content Browser에서 열어 RSD455 아래 left/right/color/IMU 및 `Camera_Pseudo_Depth`를 확인합니다. 이 pseudo depth는 펌웨어 stereo 알고리즘을 재현한 결과가 아닙니다. 좌우 카메라의 상대 transform을 바꾸며 baseline 의미를 관찰하세요.
+```python
+camera = Camera(
+    '/World/Camera', position=np.array([0., 0., 5.]),
+    orientation=euler_angles_to_quats(np.array([0.,90.,0.]), degrees=True),
+    resolution=(640,480), frequency=30,
+)
+world.reset()
+camera.initialize()
+camera.add_motion_vectors_to_frame()
+```
 
-5.1 추가 pre-ISP 실습은 새 출력 폴더로 다음 원래 설치 예제를 실행합니다. HDR→color correction→CFA→companding 단계별 출력과 최종 ISP 이미지를 비교하고 CFA 데이터가 RGB 이미지와 다른 배열임을 확인하세요. 이것은 설치된 NVIDIA 예제 실행입니다.
+Camera prim은 렌즈와 자세를 정의합니다. `initialize()`는 그 카메라로 이미지를 만들 render product와 기본 영상 읽기를 준비합니다. `add_motion_vectors_to_frame()`은 추가 출력 종류를 요청합니다. 카메라를 장면에 배치하는 일과 그 영상을 데이터로 받는 일이 여기서 연결됩니다.
+
+코드의 `set_focal_length(.018)`과 `set_horizontal_aperture(.036)`은 이 미터 단위 장면에서 각각 초점거리 18 mm와 센서 너비 36 mm를 설정합니다. `set_lens_aperture(0)`은 깊이에 따른 초점 흐림을 끄므로, 이 실험에서는 흐릿함보다 렌즈 왜곡과 픽셀 위치에 집중할 수 있습니다.
+
+이 숫자는 Camera wrapper의 입력 단위입니다. Raw USD의 focalLength·aperture에는 1/10 stage unit 관례가 적용되므로 Property의 원시 숫자를 wrapper에 그대로 옮기지 마세요. 해상도 비율 640:480과 aperture 비율 36:27도 같아야 정사각형 픽셀의 비율이 유지됩니다.
+
+기본 렌즈는 다음과 같이 명시합니다.
+
+```python
+camera.set_opencv_pinhole_properties(
+    cx=320, cy=240, fx=320, fy=320, pinhole=[0.0]*12
+)
+```
+
+`fx`, `fy`는 카메라 축에서 벗어난 점이 이미지에서 얼마나 멀어지는지를 정하는 픽셀 단위 초점 값입니다. `cx`, `cy`는 광학 중심이 놓이는 픽셀입니다. 왜곡 계수가 모두 0이므로 먼저 이상적인 pinhole 관계를 확인할 수 있습니다.
+
+코드는 알려진 내부 보정 행렬 `K`와 `get_view_matrix_ros()`를 곱해 월드 점을 투영합니다. 의미를 풀면 다음과 같습니다.
+
+```text
+월드 점
+    → view matrix로 카메라 기준 X, Y, Z 계산
+    → u = fx × X/Z + cx
+    → v = fy × Y/Z + cy
+```
+
+거리가 두 배인 물체는 같은 옆 방향 간격을 가져도 이미지에서는 중심에 더 가깝게 보입니다. 위 식의 `X/Z`, `Y/Z`가 그 원근 관계를 표현합니다. 이 파일은 Camera wrapper의 투영 편의 함수 대신 설정한 `K`와 공개 view matrix를 직접 사용합니다.
+
+### 렌즈 모드에서 볼 부분
+
+`--lens pinhole`은 왜곡 계수를 넣고, `--lens fisheye`는 fisheye 모델을 사용합니다. 두 모드에서도 카메라와 상자 위치는 유지됩니다. 다만 저장 좌표의 의미는 다음처럼 구분해야 합니다.
+
+| 렌즈 모드 | 렌더링 | 저장된 `projected_points` |
+|---|---|---|
+| `none` | 왜곡 없는 pinhole | 실제 영상과 대조할 이상적 좌표 |
+| `pinhole` | 왜곡 있는 pinhole | 왜곡을 적용하기 전의 이상적 좌표 |
+| `fisheye` | fisheye | 계산을 생략한 빈 배열 |
+
+왜곡 pinhole 이미지에서 이상적 좌표가 정확히 상자 중심을 가리키지 않는 것은 두 계산에 적용한 렌즈 모델이 다르기 때문입니다.
+
+### Camera Inspector와 센서 rig 살펴보기
+
+1. 1절을 새 출력 경로에서 `--steps` 없이 실행하고 **Tools > Sensors > Camera Inspector**를 여세요.
+2. **Refresh** 후 `/World/Camera`를 선택하고 **Create Viewport**를 누릅니다. 센서 시점에서 본 상자 배치와 저장 PNG를 비교하세요.
+3. **Camera State**에서 위치·회전을 확인합니다. 카메라 자세를 바꾸면 영상 속 위치도 바뀌지만 이미 저장한 PNG는 갱신되지 않습니다.
+4. 센서 여러 개를 묶은 rig는 별도 새 stage에서 5.1 Assets의 `Isaac/Sensors/Intel/RealSense/rsd455.usd`를 reference해 살펴보세요. RSD455 아래의 left/right/color와 `Camera_Pseudo_Depth`를 비교하면 한 rig에도 서로 다른 카메라 기준점이 있다는 것을 볼 수 있습니다. 이 자산은 기본 상자 실습에 필요하지 않습니다.
+
+`Camera_Pseudo_Depth`는 깊이를 읽기 위한 편의 카메라입니다. 실제 RealSense 펌웨어가 좌우 영상으로 깊이를 계산하는 알고리즘을 재현한 결과와 구분하세요.
+
+### RGB가 만들어지기 전의 데이터 비교하기
+
+영상 처리 단계까지 보려면 설치된 별도 예제를 저장소 루트에서 실행합니다.
 
 ```bash
-"$ISAAC_SIM_PATH/python.sh" "$ISAAC_SIM_PATH/standalone_examples/api/isaacsim.sensors.camera/camera_pre_isp_pipeline.py" --draw-output --output-dir output/pre-isp-01
+~/isaacsim/python.sh ~/isaacsim/standalone_examples/api/isaacsim.sensors.camera/camera_pre_isp_pipeline.py \
+  --draw-output --output-dir src/62_sensors_sensors_camera/output/pre-isp
 ```
 
-이전 fisheyePolynomial 근사나 폐기된 RTX Camera Projection 속성 대신 이 패키지의 `set_opencv_*_properties`를 사용합니다.
+이 예제는 headless로 짧게 렌더링한 뒤 종료합니다. 새 출력 폴더에서 `hdr_input.png`, `raw_sensor_output.png`, `isp_output.png`를 비교하세요. HDR은 렌더링 입력, raw는 CFA 색 배열로 부호화한 센서 데이터, ISP 출력은 영상 처리 뒤 RGB입니다. raw의 밝기를 일반 RGB 픽셀과 바로 비교하면 안 되는 이유를 확인하는 단계입니다. 폴더에는 원시 `.bin`도 저장되며 로컬 `camera.npz`와는 별도 결과입니다. [공식 카메라 처리·Inspector 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera.html#exposing-the-pre-isp-camera-pipeline)을 참고하세요.
 
-## 출처와 검증 범위
+## 3. 자세·내부 보정·왜곡의 관계 정리
 
-- [NVIDIA Isaac Sim 5.1.0 — Camera Sensors](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera.html)
-- 구현 API는 설치된 5.1 `exts/`와 해당 `standalone_examples/` 원본을 함께 확인했습니다. 원문과 다른 작은 장면·GUI 관찰 루프·측정 스냅샷 저장은 이 패키지에서 추가했습니다.
+**카메라 자세는 어느 방향에서 보는지, 내부 보정은 그 방향을 몇 번째 픽셀로 옮기는지, 왜곡은 이상적인 픽셀 배치를 어떻게 변형하는지 정합니다.**
 
-현재 확인한 실행 조건과 실제 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에 기록했습니다. `tutorial.json`의 `partial_runtime_verified`는 그 조건에 한정된 검증이며, 다른 모드와 GUI·외부 통합 전체의 검증을 뜻하지 않습니다.
+이 실습에서는 세 요소를 구분하기 위해 장면을 정지시켰습니다. 이미지와 점을 대조할 때는 먼저 기본 렌즈와 `(u,v)` 순서를 확인한 뒤 왜곡 모델을 살펴보세요. 조명과 렌더링 때문에 PNG 색은 소스의 색 배열과 정확히 같은 정수값이 아닐 수 있으므로 상자의 영역과 상대적인 색을 확인합니다.
+
+## 4. 간단한 확인 실험
+
+렌즈만 왜곡 pinhole로 바꿔 촬영하세요.
+
+```bash
+~/isaacsim/python.sh src/62_sensors_sensors_camera/run.py --steps 240 --lens pinhole --output src/62_sensors_sensors_camera/output/pinhole
+```
+
+기본 PNG와 같은 위치의 상자 가장자리, 중심에서 먼 부분의 형태를 비교해 보세요. `measurements.json`의 이상적 투영 좌표는 같아도 이미지는 달라질 수 있습니다. **같은 카메라 자세와 같은 K만으로 왜곡까지 설명할 수 있는지**가 이번 비교의 핵심입니다.
+
+## 실행할 때 막히면
+
+- **`Camera returned no image`**: 새 출력 경로에서 `--steps 480`으로 준비 시간을 늘리고 렌더러 로그를 확인하세요. 마지막까지 빈 배열이면 촬영 완료로 볼 수 없습니다.
+- **뷰포트에는 상자가 있는데 PNG가 검음**: 뷰포트 시점과 센서 카메라는 다릅니다. GUI 카메라 메뉴에서 `/World/Camera` 시점으로 전환하고 조명·카메라 방향을 확인하세요.
+- **투영 픽셀이 상자와 맞지 않음**: 우선 `--lens none`인지 확인하고 `(u,v)`를 배열의 `[v,u]`로 읽었는지 보세요.
+- **fisheye의 투영 배열이 비어 있음**: 해당 모드에서 계산을 생략하는 코드의 동작입니다. PNG 촬영 여부는 별도로 확인합니다.
+- **GUI를 움직여도 저장 PNG가 바뀌지 않음**: 파일은 한 번만 저장합니다. 새 장면의 측정값은 새 출력 폴더로 재실행하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Camera Sensors](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera.html)에 대응합니다. 공식 Camera와 OpenCV 렌즈 API를 세 상자 장면에 적용하고 PNG·배열·투영 좌표 저장을 추가했습니다.
+
+기존 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)는 기본 렌즈의 headless 60단계에서 영상 크기와 투영 픽셀의 상자 색을 확인한 과거 기록입니다. 현재 파일을 다시 실행한 결과는 아니며 왜곡 렌즈·Inspector·D455·pre-ISP 실습도 포함하지 않습니다. 실행 조건은 `tutorial.json`을 참고하고 각 모드의 출력으로 직접 확인하세요.

@@ -1,78 +1,132 @@
-# 41. UR10e 관절과 Robotiq 접촉 성질 조정하기
+# 41. 관절 계산·모터 힘·손가락 마찰을 따로 조정하기
 
-권장 학습 순서 **41** · 로봇 자산 가져오기와 제작 · 출처 ID `t125`
+## 이번에 배우는 것
 
-공식 인덱스 **t125** · Isaac Sim **5.1.0**
+**조립된 UR10e와 Robotiq에 물리 설정을 적용하고, 저장한 값과 실제 목표 추종을 나누어 확인합니다.**
 
-## 이 실습의 의도
+로봇이 물체를 잘 잡으려면 손가락이 목표대로 움직이고 접촉도 유지되어야 합니다. 이때 solver 반복 횟수, 모터 effort 한도, 마찰은 서로 다른 곳에 작용합니다. 하나의 숫자만 크게 만든다고 모든 문제가 해결되지는 않습니다.
 
-조립된 UR10e+Robotiq에 solver 반복 횟수, finger drive의 effort 한도, 손가락 접촉 재질을 각각 설정하고 이 값들이 제어와 접촉에 어떤 역할을 하는지 구분합니다. 기본 실행은 원본 reference 위에 로컬 설정을 작성하고 보고서를 저장합니다. 실제 목표 추종과 진동 변화는 Physics Inspector·Gain Tuner에서 따로 관찰하므로, 설정 파일이 만들어졌다는 사실과 로봇이 안정적으로 물체를 잡는다는 결과를 구분해서 확인합니다.
+| 조정 대상 | 기본값 | 영향을 주는 부분 |
+|---|---|---|
+| Solver Position/Velocity Iterations | 64 / 4 | 관절·접촉 제약을 푸는 반복 계산 |
+| finger_joint Max Force | 200 | 회전 drive가 낼 수 있는 effort 한도 |
+| 손가락 Static/Dynamic Friction | 1.0 / 1.0 | 접촉면의 미끄러짐 저항 |
+| Sleep / Stabilization Threshold | 0.00005 / 0.00001 | 작은 운동을 다루는 물리 설정 |
 
-## 실행 후 확인할 것
+`run.py`가 이 값을 로컬 USD에 작성합니다. 목표 추종 곡선은 별도로 Physics Inspector와 Gain Tuner에서 관찰합니다.
 
-- **solver 설정:** `configuration_report.json`의 articulation 경로가 원하는 로봇 root인지, `solver_position_iterations=64`, `solver_velocity_iterations=4`인지 확인합니다. Property에서는 sleep `0.00005`, stabilization `0.00001`도 확인합니다.
-- **직접 구동 관절:** 보고서의 `finger_joint`와 `max_force`를 봅니다. 기본은 `max_force=200`이고 `--max-force`를 바꾸면 지정값이 기록되어야 합니다. 이 제한을 설정한 것만으로 finger가 자동으로 닫히지는 않습니다.
-- **재질의 실제 연결:** `material_bound_colliders`에 좌우 inner finger 경로가 포함되는지 확인하고, 각 collider의 physics material이 `/ur/Looks/FingerPhysics`를 가리키는지 봅니다. 기본 static/dynamic friction은 둘 다 1.0이며 `--friction 0.5`에서는 둘 다 0.5입니다.
-- **GUI 목표 추종:** Physics Inspector에서 finger 목표를 작게 바꾸고 실제 DOF 위치가 따라오는지 관찰합니다. Gain Tuner에서는 같은 관절·시험 조건으로 목표/실제 plot을 비교해 오차와 과도한 진동이 줄어드는지 봅니다. 이 동작 실험은 `--headless --frames ...` 실행으로 수행되지 않습니다.
-- **결과 해석:** `configured.usda`를 다시 열어 위 속성이 남아 있는지 확인합니다. 보고서는 적용한 속성을 기록하며 접촉 물체·잡기 시퀀스·추종 오차를 측정하지 않으므로, 마찰값이나 max force만으로 grasp 성공을 판정하지 않습니다.
+## 1. 설정한 USD와 보고서 만들기
 
-## 준비와 실행
-
-Isaac Sim 5.1.0, 지원 NVIDIA GPU/드라이버와 다음 공식 에셋만 있으면 됩니다. 앞선 로컬 튜토리얼의 산출물은 필요 없습니다.
-
-- 시작 에셋: `/Isaac/Samples/Rigging/Manipulator/import_manipulator/ur10e/ur/ur_gripper.usd`
-- 완성 참고: `/Isaac/Samples/Rigging/Manipulator/configure_manipulator/ur10e/ur/ur_gripper.usd`
+Isaac Sim 5.1.0, 지원 GPU와 공식 UR10e+Robotiq 에셋 접근이 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --frames 10 --friction 0.5
+~/isaacsim/python.sh src/41_robot_setup_configure_manipulator/run.py \
+  --output src/41_robot_setup_configure_manipulator/output/baseline
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 1200회 한도를 사용한다. 기존 `--frames`는 `--steps` 없는 headless 실행의 한도로만 쓰며 GUI를 닫지 않는다.
+기본 입력은 `/Isaac/Samples/Rigging/Manipulator/import_manipulator/ur10e/ur/ur_gripper.usd`입니다. 이전 튜토리얼 결과 없이 실행할 수 있고, 자신의 조립 결과는 `--asset`으로 지정합니다.
 
-현재 폴더 `output/<고유번호>/configured.usda`와 `configuration_report.json`이 생성됩니다. `--output`으로 기존 폴더를 지정하면 덮어쓰지 않습니다. 원본 USD reference 위의 **로컬 layer에만 override**를 쓰므로 설치 에셋은 수정하지 않습니다. 출력 파일은 원본 reference 접근이 계속 필요합니다. `--steps`는 Kit 갱신 횟수이며 자동 물리 실행은 아닙니다. 실습하려면 파일을 File > Open으로 다시 열어도 됩니다.
+창은 직접 닫을 때까지 유지됩니다. 스크립트는 자동 Play하지 않으며 `--steps`는 앱 갱신 횟수입니다. 설정 파일만 만들고 종료하려면 `--headless --steps 10`을 추가하세요. Headless에서 `--steps`를 생략하면 `--frames` 값인 기본 1200회가 적용됩니다.
 
-## 1. articulation 설정
+### 코드에서 볼 부분
 
-1. GUI 수동 실습은 시작 에셋을 열어 새 로컬 사본을 만듭니다. 원문의 방식은 `configuration/*_physics.usd` layer를 직접 편집하는 것이며 이 패키지 코드는 같은 값을 로컬 상위 layer에서 override합니다.
-2. `/ur/root_joint`를 선택합니다. Physics/Articulation의 Articulation Enabled를 켭니다.
-3. Solver Position Iterations Count=**64**, Solver Velocity Iterations Count=**4**로 설정합니다.
-4. Sleep Threshold=**0.00005**, Stabilization Threshold=**0.00001**로 설정합니다. 저장한 report의 position/velocity 값이 64/4인지 확인합니다.
+실행기는 articulation root를 찾아 정확히 하나인지 확인한 뒤 설정합니다.
 
-반복 계산 횟수를 늘리면 mimic과 접촉 제약을 더 정밀하게 풀지만 계산 비용이 늘어납니다. sleep은 거의 움직이지 않는 물체의 계산을 줄이는 기준입니다. 이 값들이 모터 목표 위치를 대신하지 않습니다.
+```python
+articulation.CreateSolverPositionIterationCountAttr(64)
+articulation.CreateSolverVelocityIterationCountAttr(4)
+articulation.CreateSleepThresholdAttr(0.00005)
+articulation.CreateStabilizationThresholdAttr(0.00001)
+```
 
-## 2. fingertip 재질과 effort
+반복 횟수는 관절이나 접촉 제약을 더 반복해서 풀도록 하는 값입니다. 모터가 따라갈 목표 위치나 stiffness를 대신하지는 않습니다. 이 예제는 원본 에셋을 직접 수정하지 않고 그 위에 현재 장면의 설정을 작성합니다.
 
-1. 원문에서 독립 gripper physics layer는 `import_manipulator/robotiq_2f_140/configuration/robotiq_2f_140_physics.usd`입니다. 직접 편집할 때는 그 layer의 로컬 사본을 사용합니다.
-2. 그리퍼에 Create > Physics > Physics Material > Rigid Body Material을 생성합니다. Looks 아래에 두고 static friction=**1.0**, dynamic friction=**1.0**을 설정합니다.
-3. `colliders/left_inner_finger/mesh_1/box`와 `colliders/right_inner_finger/mesh_1/box`의 Physics Material에 생성한 재질을 바인딩합니다. 전체 조립 에셋에서는 이 경로 앞에 `/ur/ee_link`가 붙을 수 있습니다.
-4. `joints/finger_joint`의 Drive/Angular/Max Force=**200**을 설정합니다. 이 joint 하나가 구동하고 다른 finger/knuckle은 mimic으로 따라갑니다.
-5. `configuration_report.json`에서 실제 바인딩한 collider 경로와 max_force=200을 확인합니다. 코드는 양쪽 inner finger의 CollisionAPI가 붙은 shape를 찾아 동일 재질을 바인딩합니다.
+### 실행 결과 확인하기
 
-PhysxArticulationAPI는 NVIDIA PhysX의 solver 속성을 저술합니다. UsdPhysics.DriveAPI의 angular max force는 회전 관절의 effort 제한이며 API/물리 맥락에서는 토크입니다. 시각 재질은 색을, `MaterialBindingAPI(..., purpose="physics")`는 마찰/반발을 설정합니다. 마찰 1이 어떤 물체든 반드시 잡는다는 의미는 아닙니다.
+`output/baseline`에 `configured.usda`와 `configuration_report.json`이 생성됩니다.
 
-## 3. Physics Inspector에서 추종 확인
+| 보고서 항목 | 기대할 내용 |
+|---|---|
+| `articulation` | 실제 설정한 root 경로 |
+| `solver_position_iterations`, `solver_velocity_iterations` | 64, 4 |
+| `finger_joint`, `max_force` | 직접 구동 joint 경로, 200 |
+| `friction` | 1.0 |
+| `material_bound_colliders` | 좌우 inner finger의 Collider 경로 |
 
-1. `configured.usda` 또는 공식 완성 에셋을 엽니다. Tools > Physics > Physics Inspector를 선택합니다.
-2. Stage에서 `/ur` articulation을 선택하고 원형 refresh 버튼을 누릅니다.
-3. finger_joint의 blue target slider를 작은 값부터 움직입니다. 실제 DOF position이 목표에 도달하는지 확인합니다.
-4. 일반 시뮬레이션 전에 Physics Inspector를 닫습니다. 도구가 작성한 시험 값을 저장할지 묻는다면 의도하지 않은 시험 값은 버립니다. Inspector는 PhysX를 부분 초기화하므로 열린 채 일반 시뮬레이션과 혼용하지 않습니다.
+`configured.usda`는 원본을 참조하는 파일이므로 원본 에셋 접근도 계속 필요합니다. 현재 앱의 장면은 메모리상의 stage이며 파일은 Export로 만들어집니다. GUI 편집까지 저장하려면 **File > Open으로 `configured.usda`를 다시 열고** 그 파일을 작업 대상으로 삼으세요.
 
-## 4. Gain Tuner 실험
+## 2. 손가락의 힘과 접촉을 관찰하기
 
-1. Tools > Robotics > Asset Editors > Gain Tuner에서 Select Robot=`ur`를 선택합니다.
-2. Tune Gains의 Nat. Freq.=**0.5**, Damping Ratio=**1.0**으로 시작합니다. 원문의 시작점이며 모든 로봇의 정답 gain은 아닙니다.
-3. Test Gains Settings에서 손가락 또는 같이 움직일 작은 관절 묶음만 선택합니다. Sequence로 실행 순서를 정하고 테스트합니다.
-4. 목표/실제 위치 plot을 비교합니다. 목표에 못 미치면 natural frequency를 조금 올려 보고, overshoot가 크면 frequency를 조금 낮추고 damping ratio를 올려 봅니다.
-5. 필요하면 시험 중 중력을 꺼 gain 효과를 분리합니다. 실제 사용보다 지나치게 빠른 최대 속도 테스트는 줄입니다.
+### 코드에서 볼 부분
 
-성공은 설정 파일 저장과 별도로 **측정 position이 목표를 추종하고 불필요한 진동이 줄어드는 것**입니다. 코드의 report는 USD 설정만 검증하며 Gain Tuner plot 검증은 사용자가 GUI에서 수행합니다. 한 변수 실험은 friction=1.0→0.5 또는 damping ratio만 변경하여 비교합니다.
+모터 한도와 물리 재질은 따로 작성합니다.
 
-No finger_joint/두 collider 오류는 다른 구성의 USD를 지정했거나 gripper variant=None일 때 확인합니다. 높은 effort에서 관통/진동이 생기면 물리 Time Steps per Second를 높이는 실험이 필요할 수 있습니다. maxForce를 올리는 것만으로 안정성이 개선되지는 않습니다.
-## 버전 고정 출처
+```python
+drive.CreateMaxForceAttr(args.max_force)
+physics.CreateStaticFrictionAttr(args.friction)
+physics.CreateDynamicFrictionAttr(args.friction)
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — Tutorial 7: Configure a Manipulator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_configure_manipulator.html)
+여기서 `drive`는 `finger_joint`의 angular drive입니다. 회전 관절의 effort 한도이므로 물리적으로 토크에 해당합니다. 이 한도를 200으로 설정하는 것만으로 손가락이 닫히지는 않습니다. 위치나 속도 목표도 있어야 합니다.
 
-한국어 절차는 새로 작성했습니다. 원문 GUI 기능과 이 폴더의 준비/검사/실행 코드를 구별해 설명합니다. 실제 runtime 검증 범위는 tutorial.json의 verification 기록을 확인합니다.
+재질은 `/ur/Looks/FingerPhysics`에 만들고, 이름에 `left_inner_finger` 또는 `right_inner_finger`가 포함된 실제 Collider를 찾아 연결합니다.
+
+```python
+UsdShade.MaterialBindingAPI.Apply(collider).Bind(material, materialPurpose="physics")
+```
+
+`physics` 목적의 바인딩은 손가락 색을 바꾸는 외관 재질과 구분됩니다. 보고서의 Collider 목록을 선택하여 Property에서도 같은 재질을 가리키는지 확인하세요. 코드는 편집할 수 있도록 찾은 instance prim의 Instanceable을 해제하지만, 별도 구조의 사용자 에셋까지 모두 처리한다고 가정하지 않습니다.
+
+### 설정에서 볼 부분: 목표 추종
+
+1. `configured.usda`를 열고 **Tools > Physics > Physics Inspector**를 선택합니다.
+2. `/ur`를 선택한 뒤 Inspector의 Refresh를 누릅니다.
+3. `finger_joint`의 목표 슬라이더를 작은 범위에서 움직이고 실제 DOF 위치가 따라오는지 봅니다.
+4. 다음 일반 시뮬레이션으로 넘어가기 전에 Inspector를 닫습니다. 시험 값을 저장할지 묻는다면 유지할 값만 선택합니다.
+5. **Tools > Robotics > Asset Editors > Gain Tuner**를 열고 로봇 `ur`를 선택합니다.
+6. Tune Gains에서 Natural Frequency=0.5, Damping Ratio=1.0을 시작점으로 두고, Test Gains Settings에서 작은 관절 묶음을 선택해 시험합니다.
+
+Natural Frequency는 목표에 반응하는 빠르기와 관련되고, Damping Ratio는 진동을 얼마나 억제할지 조정하는 기준입니다. 이 값은 공식 수업의 출발점이지 모든 관절의 최적값은 아닙니다. 먼저 목표와 실제 위치 곡선이 어느 구간에서 벌어지는지 읽으세요.
+
+### 실행 결과 확인하기
+
+Inspector에서는 실제 위치가 목표 방향으로 움직이는지, Gain Tuner에서는 응답이 목표를 지나쳤다가 반복해서 돌아오는지 확인합니다. 목표에 도달하지 못하는 현상과 목표를 지나치는 현상은 다른 원인을 가질 수 있습니다.
+
+설정 보고서에는 추종 오차나 물체 잡기 기록이 없습니다. **보고서의 friction=1.0은 적용한 값의 증거이며 grasp 성공의 증거는 아닙니다.** 접촉 물체와 집기 시퀀스가 있어야 마찰의 실제 효과를 비교할 수 있습니다.
+
+## 3. 조정 위치에 따른 역할 정리
+
+```text
+목표·drive gain → 어떤 운동을 얼마나 강하게 요구하는가
+Max Force      → drive가 낼 수 있는 effort를 어디까지 허용하는가
+마찰           → 물체와 닿았을 때 미끄러짐에 어떻게 저항하는가
+solver 반복    → 관절·접촉 조건을 얼마나 반복해서 계산하는가
+```
+
+값을 저장하는 단계와 물리를 실행하는 단계를 구분하면, 설정 오류를 동작 문제로 오해하거나 그 반대로 판단하는 일을 줄일 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+**`--friction`만 1.0에서 0.5로** 바꿔 새 결과를 만드세요.
+
+```bash
+~/isaacsim/python.sh src/41_robot_setup_configure_manipulator/run.py \
+  --headless --steps 10 --friction 0.5 \
+  --output src/41_robot_setup_configure_manipulator/output/friction_05
+```
+
+두 보고서에서 friction이 달라지고 Max Force와 solver 반복은 같은지 확인합니다. 새 USD의 재질에서는 Static과 Dynamic Friction이 모두 0.5여야 합니다. 이번 비교가 직접 보여주는 것은 **작성된 접촉 설정의 변화**입니다. 실제 미끄러짐까지 비교하려면 동일한 물체·자세·손가락 목표를 갖춘 별도 접촉 실험이 필요합니다.
+
+## 실행할 때 막히면
+
+- **`Expected one articulation` 오류가 납니다**: 조립 파일의 root가 둘로 남았거나 그리퍼 구성이 달라졌는지 확인하세요.
+- **finger_joint 또는 양쪽 Collider를 못 찾습니다**: `--asset`이 UR10e+Robotiq 구성인지, gripper variant가 `None`인지, 실제 prim 이름이 기대 구조와 같은지 확인하세요.
+- **손가락이 자동으로 닫히지 않습니다**: 실행기는 목표를 바꾸지 않습니다. Inspector에서 작은 목표를 주어 시험하세요.
+- **진동이 커집니다**: Max Force만 올리지 말고 local frame, 초기 접촉 겹침, gain과 물리 간격을 나누어 확인하세요.
+- **GUI에서 바꾼 값이 파일에 없습니다**: Export된 `configured.usda`를 다시 열어 편집하고 저장했는지 확인하세요. JSON은 최초 적용값만 기록합니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Tutorial 7: Configure a Manipulator](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_configure_manipulator.html)에 대응합니다. 원문의 physics layer 편집값을 로컬 실행기는 참조 위의 override로 작성합니다.
+
+`tutorial.json`의 상태는 `not_run`입니다. 설정 파일의 구조 대조와 실제 Inspector·Gain Tuner·접촉 동작은 다른 확인 범위이며, 본 문서의 관찰 설명은 GUI에서 수행할 실습 기준입니다.

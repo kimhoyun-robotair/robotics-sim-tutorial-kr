@@ -1,65 +1,136 @@
-# 32. t112 · USD에서 URDF를 내보낼 때 사라지는 것 이해하기
+# 32. 보이는 형상과 충돌 형상을 URDF로 내보내기
 
-권장 학습 순서 **32** · 로봇 자산 가져오기와 제작 · 출처 ID `t112`
+## 이번에 배우는 것
 
-이 패키지는 Isaac Sim **5.1.0** URDF exporter backend로 같은 로봇의 실험 구를 **visual-only / visual+collision / collision-only**로 바꾸며 세 번 내보낸다. 코드에서 만드는 작은 2-link 로봇은 외부 mesh 없이 독립적이며 질량·관성을 명시한다. 공식 Franka GUI 실습은 아래에 별도로 재현한다.
+**같은 USD 로봇에 붙인 작은 구를 세 조건으로 내보내고, URDF의 visual과 collision이 어떻게 달라지는지 비교합니다.**
 
-## 이 실습의 의도
+화면에서 숨긴 물체도 충돌에는 사용할 수 있습니다. 반대로 보이는 장식이 반드시 접촉을 막아야 하는 것은 아닙니다. 이번에는 두 링크로 된 로봇에 실험용 구 하나를 붙여, visibility와 Collision API가 서로 다른 역할을 한다는 점을 변환 파일에서 확인합니다.
 
-USD의 보이는 형상과 접촉 형상이 URDF의 `visual`·`collision`으로 각각 어떻게 내보내지는지 비교한다. 같은 2-link 로봇 옆의 작은 구에 CollisionAPI와 visibility만 차례로 바꿔, 차이가 export 조건에서 왔는지 추적할 수 있게 했다. 기본 실행은 세 변환 결과와 XML 개수를 저장하며 물리 재생이나 URDF 재import는 자동 수행하지 않는다.
+| 출력 폴더 | 실험 구의 표시 | 실험 구의 충돌 |
+|---|---|---|
+| `visual/` | 보임 | Collision API 없음 |
+| `both/` | 보임 | Collision API 적용 |
+| `collision/` | 숨김 | Collision API 유지 |
 
-## 실행 후 확인할 것
+표의 조건은 **실험 구 하나**에 대한 것입니다. 두 링크의 기본 큐브에는 모든 조건에서 collider가 있습니다. `visual/`이라는 이름이 로봇 전체의 collision을 없앴다는 뜻은 아닙니다.
 
-- **세 출력 세트:** `output/visual`, `output/both`, `output/collision` 각각에 `source.usda`와 `robot.urdf`가 있고, 최상위 `counts.json`에 같은 세 키의 `link`, `joint`, `visual`, `collision` 개수가 기록되는지 확인한다.
-- **실험 구의 역할:** 각 `source.usda`의 `/Robot/link/experiment_sphere`를 비교한다. `visual`에서는 보이지만 collider가 없고, `both`에서는 보이면서 collider가 있으며, `collision`에서는 숨겨져도 collider가 있어야 한다. 두 링크의 기본 cube에는 세 경우 모두 collider가 있으므로 `visual`이라는 폴더명이 로봇 전체의 collision이 없다는 뜻은 아니다.
-- **재import 결과:** 각 URDF를 따로 가져와 collider 표시를 켠 뒤, 링크 옆 반지름 0.03 m 구가 의도한 표시·충돌 쪽에 남았는지 본다. exporter가 geometry를 합칠 수 있어 XML element 개수만으로 구의 보존 여부를 판정하지 않는다.
-- **관절과 위치:** `/Robot/hinge`에 해당하는 URDF joint의 두 링크 연결, Y축, 구의 링크 기준 위치를 원본과 비교한다. 단순히 XML을 읽을 수 있다는 것과 올바른 로봇 구조가 내보내졌다는 것은 별도 확인이다.
-- **기본 창의 상태:** 실행 창에는 마지막 `collision` 조건이 남아 구가 보이지 않을 수 있다. 앞선 두 조건은 저장된 파일을 열어 비교하며, 가만히 있는 장면은 이 변환 실습에서 정상이다.
+## 1. 같은 로봇을 세 번 내보내기
 
-## 준비와 실행
+Isaac Sim 5.1과 지원 RTX GPU가 필요합니다. 로봇은 코드에서 생성하므로 외부 모델이 필요하지 않습니다. 실행기는 `isaacsim.asset.exporter.urdf`를 켜고, 확장에 포함된 `UsdToUrdf`를 사용합니다.
 
-Isaac Sim 5.1, RTX GPU/드라이버, `isaacsim.asset.exporter.urdf`가 필요하다. backend `nvidia.srl.from_usd.to_urdf.UsdToUrdf`는 해당 extension에 번들되어 있다. 다른 패키지의 URDF를 필요로 하지 않는다.
+저장소 루트에서 실행하세요. `~/isaacsim`은 설치 위치로 바꾸세요.
 
 ```bash
-export ISAAC_SIM=/home/hoyunkim/isaacsim
-cd src/32_importers_export_urdf
-"$ISAAC_SIM/python.sh" run.py
-# GUI 없이 변환 (새 출력 폴더)
-"$ISAAC_SIM/python.sh" run.py --headless --output output/headless
+~/isaacsim/python.sh src/32_importers_export_urdf/run.py --steps 120 --output src/32_importers_export_urdf/output/export_a
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. `--headless`에서 생략하면 기존 120회 한도를 사용한다. 기존 `--frames`는 `--steps` 없는 headless 실행의 한도로만 쓰며 GUI를 닫지 않는다.
+`export_a`는 아직 없는 경로여야 합니다. 세 변환 결과를 먼저 저장한 뒤 앱 업데이트 120회 후 종료합니다. 물리 Play나 URDF 재import는 자동으로 수행하지 않습니다. `--steps`를 빼면 GUI가 계속 열려 있고, headless에서 생략하면 기본 120회입니다. `--frames`는 단계 수를 생략한 headless의 업데이트 한도를 정하는 기존 옵션입니다.
 
-`output/{visual,both,collision}/`에 `source.usda`, `robot.urdf` 및 필요 mesh가 생성된다. `counts.json`은 XML에서 실제로 센 link/joint/visual/collision 개수다. 개수만으로 geometry가 보존되었다고 결론 내리지 말고 각 파일을 다시 열어 본다.
+### 코드에서 볼 부분
 
-## 세 가지 export 비교
+`run.py`는 `/Robot/base`와 `/Robot/link`에 강체·질량·관성을 작성하고, Y축 회전 관절인 `/Robot/hinge`로 연결합니다. 두 링크의 질량은 각각 1 kg과 0.5 kg입니다. hinge의 body0·body1과 로컬 기준점이 변환할 링크 관계의 근거입니다.
 
-1. `source.usda`에서 `/Robot/link/experiment_sphere`를 찾는다. 반지름 0.03 m 구가 링크 옆에 붙는다. 이는 원문의 Franka 손 위 구 실험을 작은 로봇으로 축소한 것이다.
-2. `visual` 출력은 구에 CollisionAPI가 없고 보인다. URDF에서 visual geometry에는 포함되고 collider에는 포함되지 않아야 한다.
-3. `both` 출력은 보이는 구에 CollisionAPI를 추가한다. visual과 collision 양쪽에 포함되는지 확인한다.
-4. `collision` 출력은 CollisionAPI를 유지하고 visibility를 invisible로 바꾼다. 구는 collision에만 있어야 한다. 각 링크의 여러 shape가 한 mesh로 합쳐질 수 있으므로 XML element 수가 항상 shape 수와 같지는 않다.
-5. Isaac Sim **File > Import**로 `robot.urdf`를 다시 가져오고 viewport **Show by type > Physics > Colliders > All**을 켠다. 원래 stage와 관절 연결, 구의 위치, 보이는 형상/충돌 형상을 비교한다.
+실험 구는 link 아래에 놓입니다.
 
-## 공식 Franka native GUI 실습
+```python
+sphere = UsdGeom.Sphere.Define(stage, '/Robot/link/experiment_sphere')
+sphere.CreateRadiusAttr(0.03)
+sphere.AddTranslateOp().Set(Gf.Vec3d(0.13, 0, 0))
+```
 
-1. Window > Extensions에서 USD to URDF exporter를 켠다. 5.1 자산 루트의 `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`를 연다.
-2. **File > Export to URDF**에서 새 output 폴더와 `franka.urdf`를 지정한다. `franka.urdf`와 `meshes/`를 확인한다.
-3. `panda_hand` 우클릭 **Create > Mesh > Sphere**를 추가하고 scale X/Y/Z 모두 0.3으로 둔다. 같은 비율의 scaling을 유지한다. stage 원본을 저장할 필요는 없다.
-4. 구를 그대로 export, **Properties > + Add > Physics > Colliders Preset** 적용 후 export, eye 아이콘으로 구를 숨긴 뒤 export한다. 매번 서로 다른 출력 경로를 사용한다.
-5. 재import하거나 원문이 연결한 URDF viewer로 링크·joint 및 **Show Collision** 결과를 확인한다. viewer를 쓸 경우 이전 데이터를 지우고 다시 로드한다.
+구의 반지름은 3 cm, 위치는 링크 기준 x=13 cm입니다. 작은 구를 링크 옆에 따로 두었기 때문에 기본 큐브와 구의 변환 결과를 구별할 수 있습니다.
 
-## 경로 옵션과 변환 API
+각 조건을 설정한 뒤 다음 호출로 로봇만 내보냅니다.
 
-`Mesh Folder Name`은 기본 `meshes`다. **Mesh Path Prefix**는 `file://` 절대 경로, `package://` ROS package 경로, `./` 상대 경로 중 선택한다. package 경로는 **Package Name**을 지정해야 하며 비우면 URDF 파일명이 사용된다. 파일과 mesh 폴더를 함께 옮겨야 한다. `Root Prim Path`로 큰 장면에서 로봇만 선택하고 바닥/배경을 export하지 않게 한다. **Visualize Collisions**는 숨겨진 collider도 visual로 포함하게 한다.
+```python
+UsdToUrdf(stage, root='/Robot').save_to_file(
+    str(target), mesh_dir='meshes', mesh_path_prefix='./', use_uri_file_prefix=False,
+)
+```
 
-코드의 `UsdToUrdf(stage, root='/Robot')`는 USD의 transform/joint graph를 URDF tree로 변환하며 `save_to_file()`이 XML과 mesh를 작성한다. USD의 rigid body mass/inertia와 joint Body0/Body1, local frame이 변환 근거다. primitive sphere는 별도 OBJ 없이 URDF primitive로 표현될 수도 있다.
+`root='/Robot'`은 변환 범위를 지정합니다. `mesh_path_prefix='./'`는 URDF 주변의 파일을 상대경로로 찾게 하므로, 필요한 mesh가 생성되면 URDF와 함께 옮겨야 합니다.
 
-## URDF의 표현 한계
+### 실행 결과 확인하기
 
-kinematic tree 구조가 필요하며 loop를 그대로 보존할 수 없다. joint는 revolute/prismatic/fixed, link는 Xform이어야 한다. body0은 parent, body1은 child로 맞추고 양쪽 joint 기준점의 위치/방향을 일치시킨다. sphere는 등방 scale, cylinder는 반지름 두 축 scale이 같아야 한다. geometry는 Cube/Sphere/Cylinder/Mesh 및 tree leaf, sensor는 Camera/IsaacImuSensor가 대상이다. USD의 모든 기능을 1:1로 옮길 수 없으므로 변환 후 이름과 구조도 검토한다.
+| 출력 | 읽을 부분 |
+|---|---|
+| `visual/source.usda`, `both/source.usda`, `collision/source.usda` | 각 변환 직전의 구 API와 visibility |
+| 각 폴더의 `robot.urdf` | 링크·관절 관계, visual·collision의 geometry |
+| 필요에 따라 생성되는 `meshes/` | URDF가 참조하는 형상 파일 |
+| 최상위 `counts.json` | 각 URDF에서 실제로 센 link·joint·visual·collision 요소 수 |
 
-변수 하나 실험은 sphere visibility만 바꾸어 재export하는 것이다. exporter 오류가 나면 tree와 local joint frame부터 확인한다. mesh가 없으면 경로 prefix와 폴더 이동을 확인한다. 문법/CLI 및 설치 API는 확인했지만 exporter runtime과 재import 화면은 미검증이다.
+실행 창에는 마지막 collision 조건이 남습니다. 구가 보이지 않는 것은 그 조건에서 설정한 visibility 때문일 수 있습니다. 앞의 두 조건은 저장된 `source.usda`를 열어 확인하세요.
 
-## 출처
+## 2. 내보낸 URDF를 다시 열어 비교하기
 
-[Isaac Sim 5.1 Export URDF](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/export_urdf.html), [collision 변환](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/export_urdf.html#collision-objects), [표현 제약](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/export_urdf.html#limitations). backend 호출은 설치된 5.1 `isaacsim.asset.exporter.urdf/exporter.py`와 대조했다.
+XML 요소 수만 비교하면 형상 보존을 놓칠 수 있습니다. exporter가 여러 형상을 합쳐 표현할 수 있어 `visual` 요소 하나가 구 하나와 반드시 대응하지는 않기 때문입니다.
+
+1. Isaac Sim의 새 장면에서 `isaacsim.asset.importer.urdf`를 활성화하세요.
+2. **File > Import**로 `export_a/visual/robot.urdf`를 가져옵니다. 재import 출력은 별도 새 폴더로 정하세요.
+3. 링크 옆의 작은 구가 화면에 보이는지 확인하고, **Show by type > Physics > Colliders > All**로 충돌 윤곽을 확인하세요.
+4. 새 장면에서 both와 collision 파일도 같은 조건으로 가져와 비교하세요. 세 모델을 겹쳐 놓으면 어떤 구를 보고 있는지 구분하기 어렵습니다.
+
+### 코드에서 볼 부분
+
+세 조건을 만드는 반복문은 Collision API를 추가한 뒤 마지막 조건에서 표시만 숨깁니다.
+
+```python
+if mode != 'visual':
+    UsdPhysics.CollisionAPI.Apply(sphere.GetPrim())
+sphere.CreateVisibilityAttr(UsdGeom.Tokens.invisible if mode == 'collision' else UsdGeom.Tokens.inherited)
+```
+
+both에서 적용한 Collision API는 collision에서도 남아 있습니다. visibility를 invisible로 바꾸는 것이 물리 형상을 제거하는 일과 다르다는 것을 이 순서에서 볼 수 있습니다.
+
+### 실행 결과 확인하기
+
+세 URDF에서 base와 link의 연결, hinge의 Y축, 구의 링크 기준 위치를 비교하세요. visual에서는 구가 표시 쪽에, both에서는 표시와 충돌 양쪽에, collision에서는 충돌 쪽에 보존되는지 확인합니다. exporter와 importer가 형상을 어떤 XML 구조로 표현했는지도 함께 보세요.
+
+`counts.json`은 XML을 실제로 파싱해 요소 수를 기록하지만, 이 재import 화면 검사나 동역학 검증까지 수행하지는 않습니다. 가만히 있는 USD 생성 장면만 보고 관절 구동을 확인했다고 결론 내리지 마세요.
+
+### 공식 Franka에서도 같은 조건 만들기
+
+작은 두 링크 모델과 비교하려면 별도 GUI에서 공식 `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`를 엽니다. 이 선택 실습만 공식 Franka와 종속 mesh 접근이 필요합니다.
+
+1. **Window > Extensions**에서 `isaacsim.asset.exporter.urdf`를 켭니다.
+2. **File > URDF Exporter**를 엽니다. 설치된 5.1 확장의 메뉴 이름이며 공식 문서에서는 **Export to URDF**로 안내하기도 합니다.
+3. Root Prim Path는 Stage에서 확인한 Franka root, Mesh Folder Name은 `meshes`, Mesh Path Prefix는 `./`로 지정하고 새 폴더에 `franka.urdf`를 내보냅니다. **Visualize Collisions는 끕니다.**
+4. `panda_hand`를 찾아 그 아래에 **Create > Mesh > Sphere**로 구를 추가하고 Scale을 `(0.3, 0.3, 0.3)`으로 설정합니다. 세 축을 같은 비율로 유지하세요. 링크 기준 위치와 실제 크기도 확인합니다.
+5. 구에 Collider가 없는 상태, **+ Add > Physics > Colliders Preset**을 적용한 상태, Collider를 유지하고 visibility만 숨긴 상태를 각각 다른 출력 폴더에 내보냅니다.
+6. 각 결과를 새 장면으로 다시 가져와 손 위의 구가 표시·충돌 형상 중 어디에 남았는지 비교합니다. 원본 Franka USD를 저장할 필요는 없습니다.
+
+GUI의 **Visualize Collisions**를 켜면 숨긴 collider도 표시 형상으로 포함할 수 있어 이번 visibility 실험의 조건이 달라집니다. 또 Mesh Path Prefix의 기본값은 `file://`이므로 위에서 `./`를 명시해 코드 실행과 맞춥니다. `package://`를 선택할 때는 Package Name과 실제 ROS 패키지의 mesh 위치까지 함께 구성해야 합니다. 경로 종류를 바꾸는 것은 mesh 파일을 자동 배포하는 작업이 아닙니다.
+
+## 3. 표시와 충돌의 변환 정리
+
+```text
+USD visibility ───────────────→ 표시 형상 판단
+USD Collision API ────────────→ 충돌 형상 판단
+USD body·joint·mass·inertia ───→ 로봇 링크와 관절 구조
+                         ↓
+                URDF + 필요한 geometry 파일
+```
+
+내보내기는 파일 확장자만 바꾸는 작업이 아닙니다. USD에서 표현한 정보를 URDF 구조로 옮기는 과정입니다. 따라서 결과 XML의 존재, 구조의 연결, 형상의 표시·충돌 보존을 각각 확인해야 합니다.
+
+이 exporter는 관절이 트리로 연결된 로봇을 대상으로 합니다. 닫힌 고리를 그대로 내보내거나 임의의 USD 기능을 모두 옮길 수는 없습니다. 연결의 Body0/Body1과 양쪽 joint 기준점이 맞아야 하며, sphere는 세 축 scale이 같고 cylinder는 반지름 방향 두 축 scale이 같아야 합니다. 변환 오류가 생기면 파일 경로에 앞서 해당 geometry와 관절 구조가 지원되는 표현인지 살펴보세요.
+
+## 4. 간단한 확인 실험
+
+생성된 `both/source.usda`를 별도 GUI에서 열고 `/Robot/link/experiment_sphere`의 **visibility만** invisible로 바꿔 보세요. Collision API와 크기·위치는 그대로 둡니다.
+
+`isaacsim.asset.exporter.urdf`를 활성화하고 **File > URDF Exporter**에서 Root Prim Path를 `/Robot`, Mesh Path Prefix를 `./`, Visualize Collisions를 끈 상태로 맞춰 새 경로에 내보내세요. 원래 both 결과와 비교하면 구의 표시 쪽만 달라지고 충돌 형상은 유지되는 것이 기대 결과입니다. 앞에서 자동 생성한 collision 결과와도 대조할 수 있습니다.
+
+## 실행할 때 막히면
+
+- **URDF 내보내기 메뉴가 없음**: Extensions에서 `isaacsim.asset.exporter.urdf`를 활성화하고 File의 **URDF Exporter**를 찾으세요. 공식 문서의 Export to URDF와 이름이 다를 수 있습니다.
+- **URDF는 열리지만 mesh가 없음**: XML의 mesh 경로와 `meshes/` 위치를 확인하세요. 상대경로 파일은 함께 보관해야 합니다.
+- **visual 폴더에도 collision 요소가 있음**: 조건은 실험 구에만 적용했습니다. 기본 두 큐브는 계속 collider를 가집니다.
+- **세 조건의 요소 수 차이가 예상과 다름**: 형상이 합쳐졌는지 XML geometry와 재import 결과를 확인하세요. 요소 수를 shape 수와 같다고 가정하지 마세요.
+- **exporter가 링크 구조를 거부함**: 임의 장면을 추가했다면 로봇 루트, body0·body1, 관절 기준점을 확인하세요. USD의 모든 장면 기능이 URDF로 그대로 옮겨지는 것은 아닙니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Tutorial: Export URDF](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/export_urdf.html)에 대응합니다. 원문의 표시·충돌 실험을 외부 에셋 없이 생성하는 두 링크 로봇으로 구성하고, 공식 Franka의 GUI export도 선택적으로 비교합니다. 더 자세한 표현 제약은 공식 페이지에서 확인할 수 있습니다.
+
+`tutorial.json`은 `not_run`입니다. 세 조건과 파일 구조는 코드에 따른 확인 기준입니다. exporter 실행, URDF 재import, GUI 형상 보존은 아직 검증하지 않았습니다.

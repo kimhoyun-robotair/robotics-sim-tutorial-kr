@@ -1,53 +1,129 @@
-# 99. t082 · Decider network와 상태 모니터
+# 99. 상태를 기다릴 때와 조건을 다시 판단할 때
 
-권장 학습 순서 **99** · 환경 구축과 로봇 행동 · 출처 ID `t082`
+## 이번에 배우는 것
 
-한 폴더에 세 가지 실제 동작을 담았다. `follow.py`는 목표 구를 따라가며 도달 여부로 손가락을 여닫고, `run.py`는 로컬 `simple_state_machine.py` 또는 `simple_decider_network.py`를 로드한다. 로봇·지면·물체 생성도 이 폴더 실행기에 포함되어 있다.
+**Franka의 왕복 이동, 목표 구 추종, 위치별 분기를 비교하며 상태 기계·모니터·decider의 역할을 구분합니다.**
 
-## 이 실습의 의도
+“목표에 도달하면 다음으로 이동”과 “현재 상황에 맞는 행동을 선택”은 서로 다른 제어 흐름입니다. Cortex에서는 순서를 다루는 상태 기계와 조건을 판단하는 decider를 함께 사용할 수 있습니다. 판단에 필요한 값은 모니터가 먼저 갱신합니다.
 
-순차적으로 완료를 기다리는 state machine, 매 cycle 조건으로 가지를 고르는 decider, 판단에 필요한 값을 먼저 갱신하는 monitor의 역할을 세 실행으로 비교한다. 기본 `run.py`는 네 색 블록이 놓인 Franka 장면에서 두 손끝 목표를 왕복하는 `simple_state_machine`을 실행한다. 구 추종과 영역별 로그는 각각 `follow.py`, `--behavior simple_decider_network`로 따로 실행해야 하며 네 블록을 쌓는 실습은 아니다.
+| 실행 | 실제 파일 | 확인할 질문 |
+|---|---|---|
+| 두 목표 왕복 | `run.py` + `simple_state_machine.py` | 언제 다음 상태로 넘어가나요? |
+| 구 추종 | `follow.py` | 관찰값이 그리퍼 동작에 어떻게 쓰이나요? |
+| 위치별 출력 | `run.py` + `simple_decider_network.py` | 매번 어떤 가지를 선택하나요? |
 
-## 실행 후 확인할 것
+`run.py` 장면의 네 블록은 장애물입니다. 이번 행동은 블록 쌓기가 아닙니다.
 
-- **기본 상태 기계:** 손끝이 `(0.2,-0.2,0.01)`과 `(0.6,0.3,0.6)`을 번갈아 향하는지 본다. `ReachState.step()`은 실제 손끝과 목표 거리가 0.01 미만이어야 다음 상태로 넘어가므로 고정 시간마다 전환하지 않는다.
-- **구 추종:** `follow.py --interactive`에서 Play한 뒤 자홍색 `/World/FollowSphere`를 움직이면 손끝이 추종하고, 콘솔 `is_target_reached`가 false일 때 gripper가 열리고 true일 때 닫히는지 확인한다. 상태 진입 시 구가 현재 손끝으로 이동하는 것은 초기 목표 설정이다.
-- **높이 제한의 경계:** 추종 명령은 z를 최소 0.02로 제한하지만 도달 monitor는 실제 구 위치와 비교한다. 구를 그보다 아래나 작업영역 밖에 두면 도달 false가 지속될 수 있으므로 기본 비교는 도달 가능한 z≥0.02 위치에서 한다.
-- **decider 분기:** `simple_decider_network` 실행에서 `/World/motion_commander_target`을 옮겨 실제 손끝 y가 `≤-0.15`, `-0.15<y<0.15`, `≥0.15` 영역을 지날 때 콘솔의 `<left>`, `<middle>`, `<right>`를 비교한다. 판단 대상은 목표 prim의 y가 아니라 `get_fk_p()[1]`로 읽은 실제 손끝이다.
-- **로그 수명:** `PrintAction`은 `enter()`에서 출력하므로 같은 가지에 머물면 같은 문구가 매 프레임 반복되지 않는다. 실행 종료 로그는 loop 종료 알림이며 세 가지 behavior 모두의 성공을 요약한 결과는 아니다.
+## 1. 두 목표를 왕복하는 상태 기계 실행하기
 
-## 세 behavior 실행과 비교
-
-```bash
-"$HOME/isaacsim/python.sh" follow.py --interactive
-"$HOME/isaacsim/python.sh" run.py --behavior simple_state_machine
-"$HOME/isaacsim/python.sh" run.py --behavior simple_decider_network --interactive
-```
-
-1. follow 창에서 Play를 누르고 Stage의 `/World/FollowSphere`를 선택한다. Move 도구로 x/y를 조금 이동한다. 구를 멀리 옮기면 gripper가 열리고 손끝이 쫓아가며, 약 1cm 이내에 도달하면 닫힌다.
-2. `FollowContext.add_monitors()`의 순서를 읽는다. `monitor_end_effector`가 `is_target_reached`를 먼저 갱신하고 `monitor_gripper`가 그 값을 사용한다. monitor 순서를 바꾸면 한 cycle 전의 판단을 사용할 수 있다.
-3. `FollowState.step()`이 `self`를 반환하는 이유를 확인한다. 계속 같은 상태를 수행한다는 뜻이다. `None`은 state sequence에서 해당 상태 완료를 의미한다.
-4. simple state machine을 실행하면 손끝이 두 목표 사이를 오간다. `enter/step/exit`와 상태 전이 반환값을 로컬 코드에서 찾아 화면의 전환 시점에 대응시킨다.
-5. simple decider network를 실행하고 Stage에서 `/World/motion_commander_target`을 선택해 Move 도구로 y 방향으로 옮긴다. 실제 손끝이 영역을 바꿀 때 `<left>`, `<middle>`, `<right>` 콘솔 출력이 바뀌는지 확인한다. 로컬 `PrintAction`은 진입 때만 출력하므로 이탈 횟수는 코드의 `exit()` 흐름을 따로 읽는다. 같은 leaf가 계속 선택되는 경우와 다른 branch로 바뀌는 경우를 구분한다.
-
-`DfNetwork`는 `DfDecider`들의 방향성 비순환 그래프를 root에서 leaf까지 매 cycle 따라간다. `DfDecision`은 선택할 child 이름과 필요시 parameters를 전달한다. 같은 경로면 `decide()`가 반복되고, 경로가 바뀌면 이전 가지에 leaf부터 `exit()`, 새로운 가지에는 root 쪽부터 `enter()`가 호출된다. `DfRobotApiContext`는 로봇 command API와 논리 상태를 공유한다. `DfStateMachineDecider`는 상태 기계를 반응형 network 안의 한 node로 감싼다.
-
-한 변수 실험: `follow.py`의 거리 임계값 0.01만 0.03으로 바꿔 gripper 닫힘 시점이 빨라지는지 확인한다. 목표 z는 바닥 관통을 줄이기 위해 0.02 이상으로 제한한다. 관절 위치를 드래그하는 것과 목표 구를 드래그하는 것을 구분한다. 목표가 도달 불가능하면 false 로그가 계속되는 것이 예상되는 동작이다.
-
-## 독립 실행 환경
-
-이 디렉터리를 단독으로 복사하여 사용할 수 있다. Isaac Sim **5.1.0** 설치, 지원 RTX GPU/드라이버 및 해당 로봇 자산 접근이 필요하다. `isaacsim.cortex.framework`는 설치된 SDK이며 다른 로컬 튜토리얼 패키지를 import하지 않는다. Python/Kit 초기화와 scene 구성은 각 실행기에 들어 있다. USD Stage는 장면 전체, prim은 `/World/Franka` 같은 경로로 찾는 장면 객체이고, transform은 위치·회전·스케일이다.
+Isaac Sim 5.1, 지원 NVIDIA RTX GPU와 Franka 자산을 준비합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-cd /path/to/99_digital_twin_cortex_2_decider_networks
-python3 run.py --help
-"$HOME/isaacsim/python.sh" run.py
+~/isaacsim/python.sh src/99_digital_twin_cortex_2_decider_networks/run.py --behavior simple_state_machine
 ```
 
-기본은 창을 띄우고 자동 Play하며 사용자가 창을 닫을 때까지 계속 실행한다. 사람이 물체를 이동하는 실습은 `--interactive`를 추가하고 창에서 Play를 누른다. `--steps 1800`처럼 양수를 명시하면 interactive 여부와 관계없이 해당 physics step에 도달했을 때 종료한다. 화면 없는 실행은 `--headless`이며 `--steps` 생략 시 1800 step으로 종료한다. `--headless`와 `--interactive`는 동시에 사용할 수 없다. 새 데이터를 저장하는 튜토리얼이 아니며 성공은 위에 명시한 동작 관찰로 판단한다.
+자동 Play 후 손끝이 두 목표를 번갈아 향합니다. 창을 닫으면 종료하며, `--steps 1800`을 추가하면 지정 단계에서 끝납니다. `--headless`의 기본 한도는 1800단계입니다. GUI에서 Play 시점을 고르려면 `--interactive`를 쓰세요.
 
-## 버전·검증·출처
+### 코드에서 볼 부분
 
-- [Isaac Sim 5.1 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_2_decider_networks.html)의 모든 주요 하위 실습을 위 단계에 연결했다. 실행 코드는 설치본 5.1의 API와 대조했다.
-- NVIDIA 예제를 포함한 파일은 원래 Apache-2.0 copyright header와 `LICENSE-NVIDIA-EXAMPLES`를 보존한다. 변경 내역은 `NOTICE.md`에 있다. 설치본 원본은 `standalone_examples/api/isaacsim.cortex.framework/` 및 `exts/isaacsim.cortex.behaviors/isaacsim/cortex/behaviors/`다.
-- 작성 시 compile과 CLI help를 확인했다. GPU의 실제 로봇 동작과 GUI 상호작용은 실행하지 않았으며 `tutorial.json`은 `not_run`이다. 일반 Python에서 `omni`/`isaacsim` import가 없는 것은 `python.sh` 런타임을 쓰지 않았기 때문일 수 있다.
+`simple_state_machine.py`의 목표는 다음 두 점입니다. 좌표 단위는 m입니다.
+
+```python
+p1 = np.array([0.2, -0.2, 0.01])
+p2 = np.array([0.6, 0.3, 0.6])
+```
+
+`ReachState.enter()`가 목표를 한 번 보내고, `step()`은 현재 손끝과의 거리를 확인합니다.
+
+```python
+if np.linalg.norm(self.target_p - self.context.robot.arm.get_fk_p()) < 0.01:
+    return None
+return self
+```
+
+`get_fk_p()`는 현재 관절 상태에서 계산한 손끝 위치입니다. 목표와의 거리가 1 cm 미만이면 상태를 끝내고 다음 목표로 넘어갑니다. 그렇지 않으면 같은 상태에 머뭅니다. 따라서 **고정된 초 간격으로 목표를 교대하는 코드가 아닙니다.**
+
+### 실행 결과 확인하기
+
+손끝이 낮은 첫 목표와 높은 두 번째 목표 사이를 이동하는지 확인하세요. 한 목표 근처에서 다음 방향으로 돌아서는 시점이 도달 판정과 연결됩니다. 목표가 막히거나 도달할 수 없으면 상태가 오래 유지될 수 있습니다.
+
+종료 시 `Cortex loop ended at physics step ...`는 반복문이 끝난 이유를 알려 줄 뿐, 두 목표의 도달 횟수를 요약한 성공 보고서는 아닙니다.
+
+## 2. 관찰값으로 그리퍼와 분기 제어하기
+
+첫 창을 닫고 구 추종 예제를 실행합니다.
+
+```bash
+~/isaacsim/python.sh src/99_digital_twin_cortex_2_decider_networks/follow.py --interactive
+```
+
+1. Play를 누릅니다. 상태 진입 시 자홍색 `/World/FollowSphere`가 현재 손끝 위치로 옮겨집니다.
+2. Stage에서 이 구를 선택하고 Move 도구로 X 또는 Y를 조금 이동합니다.
+3. 손끝이 구를 따라가는 동안 그리퍼가 열리고, 가까워지면 닫히는지 봅니다. 처음에는 Z가 0.02 m 이상인 도달 가능한 위치에서 실험하세요.
+
+### 코드에서 볼 부분
+
+`FollowContext`의 모니터는 등록된 순서대로 실행됩니다.
+
+```python
+self.add_monitors([
+    FollowContext.monitor_end_effector,
+    FollowContext.monitor_gripper,
+    FollowContext.monitor_diagnostics,
+])
+```
+
+첫 모니터는 실제 손끝과 구의 거리를 읽어 `is_target_reached`를 갱신합니다. 두 번째는 그 결과로 그리퍼를 여닫고, 세 번째는 콘솔에 판단값을 출력합니다. 같은 위치 계산을 여러 행동에서 반복하지 않아도 되는 구조입니다.
+
+추종 상태의 `step()`은 매번 새 구 위치를 읽고 `self`를 반환합니다. 구가 움직여도 상태를 끝낼 필요 없이 목표만 계속 갱신합니다. 다만 명령 Z는 최소 0.02 m로 제한하고 도달 판정은 원래 구 좌표를 사용합니다. 구를 그 아래에 놓으면 “명령한 점”과 “비교하는 점”이 달라질 수 있습니다.
+
+이제 창을 닫고 조건 분기 예제를 실행하세요.
+
+```bash
+~/isaacsim/python.sh src/99_digital_twin_cortex_2_decider_networks/run.py --behavior simple_decider_network --interactive
+```
+
+Play 후 Stage에서 `/World/motion_commander_target`을 선택해 도달 가능한 범위에서 Y를 옮깁니다. 이 behavior는 위치 영역에 따라 문구를 출력하며, 자체적으로 왕복 목표를 생성하지 않습니다.
+
+### 실행 결과 확인하기
+
+| 실제 손끝 Y | 선택 결과 | 콘솔 문구 |
+|---|---|---|
+| `y <= -0.15` m | 왼쪽 가지 | `<left>` |
+| `-0.15 < y < 0.15` m | 가운데 가지 | `<middle>` |
+| `y >= 0.15` m | 오른쪽 가지 | `<right>` |
+
+판단에 쓰이는 값은 목표 prim의 좌표가 아니라 `get_fk_p()[1]`입니다. 목표를 옮겨도 손끝이 아직 이동 중이라면 이전 영역으로 판단할 수 있습니다.
+
+`Dispatch.decide()`는 가운데 여부를 먼저 검사합니다. 가운데라면 `DfDecision("print", "<middle>")`로 `print` 자식과 출력할 문자열을 함께 전달하고, 그 밖에서는 `print_left` 또는 `print_right`를 선택합니다. 음의 Y이면서 가운데 범위인 점도 `<middle>`로 판단하는 이유입니다.
+
+네트워크는 매 cycle 루트에서 선택한 자식으로 내려갑니다. 같은 경로를 유지하면 판단만 반복하고, 가지가 바뀌면 이전 가지를 말단부터 `exit()`한 뒤 새 가지의 `enter()`를 호출합니다. `PrintAction`은 `enter()`에서 출력하므로 같은 가지에 머무는 동안 매 프레임 같은 로그가 생기지는 않습니다. 반면 구 추종의 진단 모니터는 계속 출력하므로 두 로그의 빈도가 다른 것은 자연스럽습니다.
+
+## 3. 순서와 판단의 차이 정리
+
+```text
+왕복: 목표 A → 1 cm 이내 도달 → 목표 B → 도달 → 반복
+추종: 구 위치 읽기 → 도달 여부 갱신 → 그리퍼 판단 → 새 목표 명령
+분기: 실제 Y 읽기 → 가운데/왼쪽/오른쪽 선택 → 선택한 Action 실행
+```
+
+상태 기계는 현재 단계의 완료를 표현합니다. decider는 현재 논리 상태로 자식 행동을 선택합니다. `DfStateMachineDecider`를 사용하면 한 가지 안에서 순차 행동을 수행할 수도 있습니다.
+
+## 4. 간단한 확인 실험
+
+`follow.py`의 `monitor_end_effector()`에서 **거리 임계값만 `0.01`에서 `0.03`으로** 바꿔 보세요. 구의 높이 제한과 다른 명령은 그대로 둡니다.
+
+같은 거리만큼 구를 옮겼을 때 이전보다 멀리 떨어진 상태에서 `is_target_reached=True`가 되고 그리퍼가 닫히는지 확인합니다. 손끝 명령의 목표 자체가 바뀌는 실험이 아니라 **도달했다고 판단하는 범위**를 넓히는 실험입니다. 확인 후 원래 값으로 돌려놓으세요.
+
+## 실행할 때 막히면
+
+- **구가 처음 위치에서 손끝으로 이동함**: `FollowState.enter()`의 초기 목표 설정입니다. Play 후에 구를 움직이세요.
+- **구 추종에서 계속 False**: 구가 너무 낮거나 로봇 작업 영역 밖인지 확인하세요. 명령 높이 제한과 도달 판정 좌표가 다를 수 있습니다.
+- **decider 실행에서 팔이 왕복하지 않음**: 출력 행동만 선택하는 모드입니다. 왕복은 `simple_state_machine`으로 실행합니다.
+- **`--interactive` 실행이 정지 상태임**: Play를 누르세요. 이 옵션은 `--headless`와 함께 사용할 수 없습니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Decider networks](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_2_decider_networks.html)에 대응합니다. NVIDIA 예제의 세 행동을 각각 실행할 수 있도록 장면과 실행기를 묶었습니다. 출처는 `NOTICE.md`, 라이선스는 `LICENSE-NVIDIA-EXAMPLES`를 참고하세요.
+
+세 behavior의 목표 도달·분기 전환·그리퍼 반응은 각각 관찰해야 합니다. `tutorial.json`의 검증 상태는 `not_run`이며 루프 종료가 세 행동의 성공을 뜻하지는 않습니다.

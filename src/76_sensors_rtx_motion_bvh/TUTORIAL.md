@@ -1,73 +1,126 @@
-# 76. Motion BVH의 활성화와 움직이는 RTX 표적
+# 76. Motion BVH 설정은 언제 적용해야 할까요?
 
-권장 학습 순서 **76** · 센서와 측정 데이터 · 출처 ID `t179`
+## 이번에 배우는 것
 
-움직이는 Radar 표적을 만들고 Motion BVH를 켠/끈 두 실행을 비교합니다. 설정을 실제 SimulationApp 생성 시 적용하며 point cloud와 표적 상태를 기록합니다.
+**같은 이동 표적을 두 번 실행하면서 Motion BVH만 켜고 끄고, 렌더러 설정과 Radar 반환에서 확인할 수 있는 범위를 구분합니다.**
 
-## 이 실습의 의도
+움직이는 상자는 화면의 프레임 사이에서도 위치가 달라집니다. 센서가 노출이나 스캔 동안의 움직임을 다루려면 렌더러에도 시간에 따른 기하 정보가 필요합니다. Motion BVH는 광선과 물체의 교차를 빠르게 찾는 구조에 이런 움직임 정보를 포함하는 기능입니다.
 
-높이 1 m의 `/World/Radar` 앞에서 `/World/Target`을 X축 방향으로 움직여, Motion BVH 설정을 렌더러 생성 시 적용하는 방법과 동일 조건의 비교 실행을 배웁니다. 표적에는 중력을 끄고 기본 X 속도 -0.5 m/s를 주어 낙하 대신 수평 이동을 관찰하게 했습니다. 기본 실행은 BVH를 켜고 처음 240스텝의 반환 수·표적 위치와 마지막으로 비어 있지 않았던 점군을 저장하지만, Doppler 속도나 성능 차이를 직접 측정하지는 않습니다.
+| 비교 조건 | 기본 실행 | 비교 실행 |
+|---|---|---|
+| 옵션 | 생략 또는 `--motion-bvh` | `--no-motion-bvh` |
+| 앱 시작 설정 | `enable_motion_bvh=True` | `enable_motion_bvh=False` |
+| 표적 | `(8, 0, 1)` m에서 X 속도 -0.5 m/s | 동일 |
+| 수집 | 반환 수, 마지막 유효 점군, 최종 위치 | 동일 |
+| 확인할 한계 | Cartesian 점군만 기록 | Doppler 정확도까지 판정할 수 없음 |
 
-## 실행 후 확인할 것
+## 1. Motion BVH를 켠 기준 결과 만들기
 
-- Stage/뷰포트에서 `/World/Target`이 초기 `(8, 0, 1)` m 부근에서 X가 감소하는 방향으로 이동하는지 봅니다. 중력을 끈 표적이 바닥으로 떨어지지 않는 것은 이 비교 장면의 의도입니다.
-- `measurements.json`에서 기본 `motion_bvh=true`, `target_speed_m_s=-0.5`와 `target_final_position`을 확인합니다. 위치는 수집 종료 시점의 기록이므로 이후 계속 열린 GUI의 현재 위치와 구별합니다.
-- `returns_per_frame` 중 비어 있지 않은 반환이 생겼는지, `points.npy`에 실제 점 배열이 있는지 확인합니다. `points.npy`는 **마지막 비어 있지 않은 프레임**을 보존하므로 마지막 항목의 점 수가 0이어도 저장 점군이 있을 수 있습니다. 모든 프레임이 비면 코드는 오류로 종료합니다.
-- `--no-motion-bvh` 실행에서는 출력 폴더를 분리하고 속도·스텝 수를 같게 두어 `motion_bvh=false`, 표적 이동, 반환 기록을 대조합니다. 두 실행 모두 점이 나와도 이 파일에는 Doppler 측정값이 없으므로 속도 추정의 정확성을 입증한 결과는 아닙니다.
-- `points.npy`, `measurements.json`, `scene.usda`가 수집 구간 후 생성되는지 확인합니다. 기본 GUI는 저장 후에도 계속 실행되며, 표적이 나중에 센서 시야를 벗어나는 현상과 이미 저장된 측정 구간을 구분합니다.
-
-## 이 패키지만으로 준비하기
-
-Isaac Sim **5.1.0**, 지원 NVIDIA GPU/드라이버, Isaac Sim 설치의 `python.sh`가 필요합니다. GUI 관찰 단계는 화면과 RTX 렌더링이 가능한 환경에서 수행합니다. 로컬 기본 장면은 코드로 만들며 다른 `src` 패키지, 공통 모듈, 저장소의 asset/에 의존하지 않습니다. 원문의 별도 에셋·설치 예제를 사용하는 추가 단계는 아래에 구체적으로 구분했습니다.
+Isaac Sim 5.1.0, 지원 NVIDIA GPU와 RTX 렌더링 환경에서 실행합니다. 아래 명령은 저장소 루트 기준이며 설치 경로가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-export ISAAC_SIM_PATH=/path/to/isaacsim
-cd src/76_sensors_rtx_motion_bvh
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/run-01
+~/isaacsim/python.sh src/76_sensors_rtx_motion_bvh/run.py --steps 240
 ```
 
-출력 폴더는 **존재하지 않는 새 경로**를 지정합니다. 이미 있으면 오류로 멈추어 이전 결과를 보호합니다. `--output`을 생략하면 이 패키지의 `output/날짜_시간/`에 저장합니다.
+240단계 뒤 이 폴더의 `output/날짜_시간/`에 `points.npy`, `measurements.json`, `scene.usda`를 저장합니다. 터미널의 `Output:` 경로를 기준 결과로 기록하세요. 기본값이 Motion BVH 활성화이므로 별도 켜기 옵션은 필요하지 않습니다.
 
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 물리·렌더링·센서 갱신이 계속됩니다. 처음 240스텝의 측정 결과를 한 번 저장하며, 이후 관찰 중에는 파일이나 기록 배열을 계속 늘리지 않습니다. `--steps N`에 양수를 주면 N스텝의 결과를 저장하고 종료합니다. `--headless`만 사용하면 기존과 같이 240스텝 후 종료합니다. `--interactive`는 기존 명령 호환용이며 이제 필요하지 않습니다. 명시한 `--steps`의 종료 조건을 해제하지 않고, `--headless`와 함께 사용할 수 없습니다.
+GUI를 계속 관찰하려면 `--steps`를 생략합니다. 최초 수집 뒤에도 표적은 움직이지만 파일은 다시 쓰지 않습니다. `--headless`를 쓰면 창 없이 유한 실행하며, 단계 수 생략 시 240단계입니다.
 
-run.py는 standalone 실행용이므로 Script Editor에 전체를 붙이지 않습니다. 처음 240스텝을 마치기 전에 창을 닫으면 결과 파일은 완성되지 않을 수 있습니다.
+### 코드에서 볼 부분
 
-창 없이 유한 실행으로 결과만 만들 때는 별도의 새 출력 경로를 사용합니다.
+설정이 전달되는 위치가 중요합니다.
+
+```python
+parser.add_argument('--motion-bvh',
+                    action=argparse.BooleanOptionalAction, default=True)
+app = SimulationApp({'headless': args.headless,
+                     'enable_motion_bvh': args.motion_bvh})
+```
+
+`BooleanOptionalAction`은 하나의 불리언 옵션에서 `--motion-bvh`와 `--no-motion-bvh`를 함께 제공합니다. 파싱된 값은 **앱 생성 시점**에 렌더러 설정으로 들어갑니다. 실행 중에 Python 변수만 바꾸고 이미 만들어진 렌더러가 바뀌었다고 생각하지 마세요. 이 실습은 설정별로 앱을 새로 시작합니다.
+
+### 실행 결과 확인하기
+
+`measurements.json`에서 `motion_bvh=true`, `target_speed_m_s=-0.5`를 확인합니다. `returns_per_frame`에 양수인 항목이 있는지 살펴보고 `points.npy`를 `np.load()`로 열어 비어 있지 않은 배열인지 확인하세요.
+
+`target_final_position`의 X는 초기 8 m보다 작아지는 것이 예상됩니다. 다만 저장 점군은 **마지막으로 비어 있지 않았던 프레임**이고 위치는 수집 종료 때 읽습니다. 마지막 프레임이 비었다면 둘은 같은 시각의 관찰이 아닙니다.
+
+또한 기본 Radar 점군의 기준은 `omni:sensor:WpmDmat:outputFrameOfReference=SENSOR`입니다. 점의 좌표는 m 단위이지만 월드 원점이 아니라 높이 1 m의 센서를 기준으로 합니다. 월드 좌표인 표적 위치와 비교할 때는 좌표 기준과 취득 시점을 모두 맞춰야 합니다.
+
+## 2. 설정을 끈 결과와 비교하기
+
+기준 실행을 종료한 뒤 다음을 실행합니다.
 
 ```bash
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --steps 240 --output output/batch-01
+~/isaacsim/python.sh src/76_sensors_rtx_motion_bvh/run.py --steps 240 --no-motion-bvh
 ```
 
-## 실습 순서와 관찰
+출력 자동 경로가 분리되므로 두 실행을 구별할 수 있습니다. 직접 경로를 지정하려면 아직 존재하지 않는 `--output` 경로를 사용하세요. 비교할 때 표적 속도와 단계 수는 바꾸지 않습니다.
 
-1. 기본 명령은 `enable_motion_bvh=True`로 실행합니다. `measurements.json`의 motion_bvh, target_speed_m_s, 반환 수를 확인합니다.
-2. `--no-motion-bvh --output output/bvh-off`로 **설정 하나만** 바꾸어 다시 실행합니다. 표적 속도·센서·steps는 동일하게 유지합니다.
-3. 두 실행에서 반환 점이 생겼다고 Doppler가 같다고 결론 내리지 마세요. 이 패키지의 일반 point-cloud annotator는 Doppler 속도를 직접 내보내지 않습니다. BVH off 실행은 잘못된 Radar 조건을 관찰하는 비교군입니다.
-4. GUI 환경에서는 아래 세 command-line 설정을 함께 지정하는 방식도 확인합니다. Settings에서 값이 실제 적용되었는지 보고 같은 target motion 실험을 수행합니다.
-5. 속도 효과가 필요한 실험은 BVH On으로 유지하고, 정적 Lidar 성능 측정처럼 필요 없는 경우 비용을 비교한 뒤 선택합니다.
+### 코드에서 볼 부분
 
-## API와 USD 개념
+두 실행의 장면은 동일하게 구성됩니다.
 
-BVH는 ray가 geometry에 맞는지 빠르게 찾는 공간 가속 구조이고 Motion BVH는 시간에 따른 geometry 변화를 포함합니다. RTX Lidar motion compensation과 Radar Doppler에 필요합니다. Isaac Sim 5.1의 기본값은 성능을 위해 Off입니다.
+```python
+PhysxSchema.PhysxRigidBodyAPI.Apply(target.prim).CreateDisableGravityAttr(True)
+world.reset()
+target.set_linear_velocity(np.array([args.target_speed, 0., 0.]))
+```
 
-`SimulationApp({'enable_motion_bvh':True})`는 렌더러 초기화 시 관련 설정을 적용합니다. 뒤늦게 Python bool만 바꾸어 이미 생성된 렌더러가 바뀌었다고 가정하지 않습니다. renderer 노출 시간 중 움직임과 단순 frame 사이 transform 변화는 별개입니다.
+중력을 끈 것은 수평 이동을 유지하기 위해서입니다. Motion BVH를 껐다고 이 PhysX 속도 명령이 없어지는 것은 아닙니다. 따라서 BVH가 꺼진 화면에서도 표적이 움직일 수 있습니다.
 
-이 예제는 Radar Cartesian 점군과 물리 target 위치를 기록합니다. 정확한 Doppler/속도 성능을 검증하려면 Radar GMO의 해당 필드를 확인하고 radial velocity 기준으로 독립 평가해야 합니다. 반환 count 차이만으로 물리 정확도를 증명할 수 없습니다.
+### 실행 결과 확인하기
 
-## 확장 실습·성공 기준·문제 해결
+다음 순서로 비교하면 서로 다른 종류의 증거를 혼동하지 않을 수 있습니다.
 
-GUI/다른 workflow에서 사용하는 공식 설정은 다음과 같습니다.
+1. JSON의 `motion_bvh`가 각각 `true`, `false`인지 확인합니다.
+2. `target_speed_m_s`와 반환 이력 길이가 같은지 확인합니다.
+3. 최종 물리 위치로 두 실행 모두 표적을 이동시켰는지 확인합니다.
+4. 반환 수와 저장 점군을 비교하되, **점 수 차이만으로 Doppler가 맞거나 틀렸다고 판정하지 않습니다.**
+
+BVH를 끈 실행은 Radar의 정상 설정으로 권하는 실행이 아니라 기능의 의존성을 살펴보는 비교 조건입니다. 모든 프레임이 비면 코드가 오류를 내며 점군 파일을 저장하지 않습니다. 이 경우도 반환 실패 조건으로 기록하고 성공한 출력처럼 다루지 마세요.
+
+## 3. 물리 이동과 렌더러의 움직임 처리 정리
+
+```text
+PhysX 속도 명령 → 실제 Stage의 표적 이동
+                         ↓
+앱 시작의 Motion BVH 설정 → 렌더러가 움직임 정보를 다루는 방식
+                         ↓
+                   Radar 반환 배열
+```
+
+공식 5.1 문서는 Lidar의 motion compensation과 Radar의 Doppler 관련 계산에 Motion BVH가 필요하다고 설명합니다. 반면 이 로컬 코드의 annotator는 일반 Cartesian 점군을 저장합니다. **필요한 설정을 켰는지 확인하는 실습과, 그 물리 효과를 수치로 검증하는 실험은 범위가 다릅니다.**
+
+또한 이 파일은 GPU 메모리나 안정 상태의 렌더 시간을 측정하지 않습니다. 두 앱의 전체 실행 시간을 시계로 재면 초기 자산 로딩과 shader 준비도 포함되므로 그 차이를 곧바로 Motion BVH 비용이라고 부르지 않습니다.
+
+이미 GUI 중심의 장면을 사용하고 있다면 같은 기능을 앱 시작 인자로 켤 수도 있습니다.
 
 ```bash
-"$ISAAC_SIM_PATH/isaac-sim.sh" --/renderer/raytracingMotion/enabled=true --/renderer/raytracingMotion/enableHydraEngineMasking=true --/renderer/raytracingMotion/enabledForHydraEngines='0,1,2,3,4'
+~/isaacsim/isaac-sim.sh --/renderer/raytracingMotion/enabled=true --/renderer/raytracingMotion/enableHydraEngineMasking=true --/renderer/raytracingMotion/enabledForHydraEngines='0,1,2,3,4'
 ```
 
-Motion BVH는 모든 관련 센서의 VRAM과 render time을 늘릴 수 있습니다. 비교 시 첫 로딩·shader compilation 시간을 steady-state 비용으로 섞지 마세요. BVH Off에서도 화면상 표적은 움직일 수 있으며 Radar 전체 물리 모델이 올바르다는 근거가 되지 않습니다. 반환이 없으면 timeline·RTX GPU·FOV도 별도로 검사합니다. 작성 시 실제 GPU 비교 실행은 수행하지 않았습니다.
+이 명령은 기능을 켠 GUI를 열며, 이번 표적이나 출력 파일을 자동으로 만들지는 않습니다. 위의 `run.py`는 `SimulationApp` 옵션으로 이 설정을 전달하는 독립 실행 방식입니다.
 
-## 출처와 검증 범위
+## 4. 간단한 확인 실험
 
-- [NVIDIA Isaac Sim 5.1.0 — RTX Sensors](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx.html)
-- 구현 API는 설치된 5.1 `exts/`와 해당 `standalone_examples/` 원본을 함께 확인했습니다. 원문과 다른 작은 장면·GUI 관찰 루프·측정 스냅샷 저장은 이 패키지에서 추가했습니다.
+이번에는 Motion BVH를 켠 상태에서 표적 속도만 0으로 바꿉니다.
 
-Python 문법·도움말과 파일 구성을 검사했으며, RTX 영상/점군과 PhysX 런타임·GUI 상호작용은 작성 작업에서 실행하지 않았습니다. 실제 성공 여부는 위 단계의 **측정 파일과 화면 결과**로 확인합니다. `tutorial.json`의 verification은 그 이유로 `not_run`입니다.
+```bash
+~/isaacsim/python.sh src/76_sensors_rtx_motion_bvh/run.py --steps 240 --target-speed 0
+```
+
+1절의 기준 실행과 비교해 최종 X가 초기 위치에 머무는지 확인하세요. `motion_bvh`는 두 실행 모두 `true`여야 합니다. 이렇게 하면 “BVH를 끈 효과”와 “표적을 정지시킨 효과”를 별도로 관찰할 수 있습니다. 정지 표적에서도 점군이 나올 수 있으며, 반환의 존재 자체가 운동 측정값을 뜻하지는 않습니다.
+
+## 실행할 때 막히면
+
+- **설정을 바꿨는데 JSON 값이 같음**: 기존 파일을 보고 있지 않은지 `Output:` 경로부터 확인하세요. 끄기 옵션은 정확히 `--no-motion-bvh`입니다.
+- **BVH를 껐는데 상자가 움직임**: 표적 이동은 PhysX가 진행합니다. 렌더러의 Motion BVH 설정과 이동 명령은 별개입니다.
+- **`Radar produced no point cloud`**: RTX GPU, timeline, 표적의 시야 내 위치를 확인하고 기준인 BVH 켜기 실행부터 비교하세요.
+- **실행 후반에 반환이 줄어듦**: 음의 X 속도로 계속 이동하면 표적이 센서를 지나갈 수 있습니다. 비교 구간을 동일한 240단계로 유지하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [RTX Sensors](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx.html)의 Motion BVH 설명에 대응합니다. 앱 시작 옵션을 실제 코드에 연결하고 동일한 Radar 장면으로 비교하도록 구성했습니다.
+
+이번 문서 개정에서는 코드와 공식 설정을 대조했으며 BVH 켜기/끄기 GPU 실행은 수행하지 않았습니다. `tutorial.json`은 `not_run`입니다. Doppler 오차와 VRAM·성능 차이는 이 실습의 저장 파일만으로 검증되지 않습니다.

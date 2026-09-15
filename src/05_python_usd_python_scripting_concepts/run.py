@@ -23,8 +23,8 @@ def main() -> None:
         "%Y%m%d-%H%M%S-%f"
     )
     output.mkdir(parents=True, exist_ok=False)
-    from isaacsim import SimulationApp
 
+    from isaacsim import SimulationApp
     app = SimulationApp({"headless": args.headless})
     try:
         import csv

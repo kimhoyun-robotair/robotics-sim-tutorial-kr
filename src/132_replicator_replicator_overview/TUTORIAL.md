@@ -1,75 +1,115 @@
-# 132. Replicator 도구를 한 장면으로 연결하기
+# 132. 사진에 보이는 물체는 모두 정답이 될까요?
 
-권장 학습 순서 **132** · Replicator 합성 데이터 기초와 확장 · 출처 ID `t035`
+## 이번에 배우는 것
 
-이 실습은 같은 모양의 상자 두 개를 만들되 `/World/Labeled`에만 `carton` 의미 라벨을 붙입니다. RGB에는 둘 다 보이고, 의미 분할·검출 정답에는 라벨이 있는 물체가 포함되는 차이를 관찰합니다. 공식 Overview의 다섯 도구를 작은 로컬 장면에서 연결한 입문용 구현입니다.
+**같은 크기의 상자 두 개를 촬영하고, 의미 라벨이 RGB와 학습용 정답을 어떻게 연결하는지 확인합니다.**
 
-## 이 실습의 의도
+사진에는 상자가 보이는데 검출 정답에는 상자가 없을 수 있습니다. 렌더러가 물체를 그리는 데 필요한 정보와, 그 물체를 `carton`이라는 종류로 분류하는 정보가 서로 다르기 때문입니다. 이번에는 한 상자에만 라벨을 붙여 이 차이를 눈으로 확인합니다.
 
-RGB에 물체가 보이는 조건과 학습용 의미·검출 정답에 포함되는 조건이 다름을 배우는 실습입니다. 두 상자를 같은 크기·높이로 두고 하나에만 라벨을 붙여 그 차이를 명확히 비교합니다. 기본 `run.py`는 정지한 장면을 세 번 캡처하고 PNG·정답 파일·`labels.usda`를 저장하며, GUI는 저장 후 관찰용으로 유지됩니다. Semantics 편집, GUI Recorder 재녹화, `workflow.yaml` 실행은 그 뒤에 직접 수행하는 별도 단계입니다.
+| 구성 | 이 실습에서 하는 일 |
+|---|---|
+| `/World/Labeled` | x=-1.5 m에 있는 상자이며 `class=carton`을 가집니다. |
+| `/World/Unlabeled` | x=1.5 m에 있는 상자이며 의미 라벨이 없습니다. |
+| 카메라와 render product | 같은 장면을 512×512 픽셀로 촬영합니다. |
+| BasicWriter | RGB, 의미 분할, 2D 검출 상자를 파일로 저장합니다. |
+| `workflow.yaml` | 별도 장면에서 라벨 있는 상자 하나의 회전을 바꾸는 대안입니다. |
 
-## 실행 후 확인할 것
+두 상자의 한 변은 1 m이고 중심 높이는 0.5 m입니다. 이 장면은 물리 낙하를 실행하지 않으므로 같은 위치를 여러 번 촬영합니다.
 
-- **객체 식별:** Stage에서 `/World/Labeled`는 x=-1.5, `/World/Unlabeled`는 x=1.5이고 둘 다 크기 1 m, z=0.5인지 봅니다. 카메라의 화면 왼쪽·오른쪽 대신 prim 경로로 라벨 대상을 구분합니다.
-- **RGB와 정답 차이:** 출력 RGB에는 두 상자가 보이지만 `carton` 라벨 mapping과 tight bounding box는 기본 장면의 `/World/Labeled`를 대상으로 해야 합니다. Unlabeled가 RGB에 보이면서 carton 정답에 빠지는 것은 의도된 동작입니다.
-- **저장 결과와 횟수:** 기본 출력 폴더에서 세 캡처의 RGB·semantic segmentation·bounding box 파일과 `labels.usda`를 확인합니다. 움직임이나 randomizer가 없으므로 장면 배치가 프레임마다 같아도 정상이며 `--steps`는 이 캡처 수를 정하지 않습니다.
-- **라벨 추가 실험:** GUI에서 `/World/Unlabeled`에도 class=`carton`을 붙인 뒤 새 Recorder 출력으로 기록하여 두 객체가 정답에 포함되는지 비교합니다. 이미 저장된 첫 캡처는 라벨 편집만으로 다시 쓰이지 않습니다.
-- **YAML 대안:** `workflow.yaml`은 새 장면에 라벨 있는 상자 하나를 만들고 세 프레임의 Z 회전을 무작위화합니다. 기본 Python의 두 상자 장면과 구분해 새 출력 경로의 결과를 확인합니다.
+## 1. 라벨이 다른 두 상자 촬영하기
 
-## GUI 실행과 종료
-
-GUI에서 `--steps`를 생략하면 정해진 데이터 생성과 저장을 마친 뒤 사용자가 창을 닫을 때까지 장면을 유지합니다. 양수 `--steps N`은 **생성 완료 후 GUI를 관찰하는 app update 횟수**입니다. 생성 작업 자체나 데이터 프레임 수를 제한하는 값은 아니며, `--frames` 등으로 요청한 데이터가 무한히 늘어나지 않습니다. `--headless`는 관찰 대기 없이 기존 유한 작업을 마치면 종료합니다.
-
-이 패키지 폴더에서 다음과 같이 실행합니다. 설치 경로는 자신의 환경에 맞추고, 이미 사용한 출력 폴더는 새 경로로 바꿉니다.
+Isaac Sim 5.1 전체 설치와 지원되는 NVIDIA RTX GPU가 필요합니다. 저장소 루트에서 다음 명령을 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-~/isaacsim/python.sh run.py --output output/gui
+~/isaacsim/python.sh src/132_replicator_replicator_overview/run.py --frames 3 --output /tmp/tutorial132-first
 ```
 
-## 준비와 실행
+출력은 **아직 없는 폴더**를 지정합니다. 세 번 촬영하고 저장을 마치면 창은 관찰용으로 남습니다. 창을 닫으면 종료합니다. `--headless`를 추가하면 저장 후 바로 종료하고, GUI에서 `--steps 120`을 추가하면 저장 후 앱을 120번 갱신하고 종료합니다. `--steps`는 사진 개수가 아닙니다.
 
-Isaac Sim **5.1.0** 전체 설치, 지원되는 NVIDIA RTX GPU/드라이버, GUI 실습 시 데스크톱이 필요합니다. 이 패키지는 외부 USD 자산이나 다른 로컬 패키지를 쓰지 않습니다. 일반 Python은 `--help`에만 사용하고 렌더링은 설치본의 `python.sh`로 실행합니다.
+### 코드에서 볼 부분
 
-```bash
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-cd src/132_replicator_replicator_overview
-"$ISAAC_SIM_PATH/python.sh" run.py
-# 화면 없이 데이터만 생성할 때; 기존 output을 보존하도록 새 경로 사용
-"$ISAAC_SIM_PATH/python.sh" run.py --headless --frames 3 --output output_headless
+`run.py`는 두 상자를 같은 반복문에서 만들지만 라벨을 붙이는 부분에만 조건을 둡니다.
+
+```python
+if name == "Labeled":
+    add_labels(cube.GetPrim(), labels=["carton"], instance_name="class")
 ```
 
-명령은 새 출력 폴더만 허용합니다. 기본 실행은 세 번 캡처하고 창을 직접 닫을 때까지 유지합니다. 기존 `--interactive` 옵션은 호환용이며 명시한 `--steps` 제한을 무시하지 않습니다. `output/labels.usda`는 검사할 수 있는 텍스트 USD입니다.
+`class`는 라벨의 종류이고 `carton`은 그 값입니다. USD 장면의 한 요소를 **prim**이라고 부르며 `/World/Labeled`는 그 prim의 주소입니다. 화면의 왼쪽·오른쪽은 카메라 방향에 따라 달라지므로 주소로 두 상자를 구분하세요.
 
-## 직접 해보기
+```python
+writer.initialize(output_dir=str(output), rgb=True, semantic_segmentation=True,
+                  colorize_semantic_segmentation=True, bounding_box_2d_tight=True)
+writer.attach(rp)
+```
 
-1. Stage에서 `/World/Labeled`와 `/World/Unlabeled`를 각각 선택합니다. 둘의 크기와 높이는 같고 x 위치만 다릅니다. USD의 prim은 장면 트리의 한 항목이며 경로는 해당 항목의 주소입니다.
-2. **Tools > Replicator > Semantics Schema Editor**를 엽니다. `/World/Labeled`의 class 값 `carton`을 확인합니다. `/World/Unlabeled`에는 class가 없습니다. `/World/Unlabeled`에도 `carton`을 추가한 뒤 다시 기록하면 두 물체의 정답이 생깁니다. 동일 class는 동일 물체 인스턴스를 의미하지 않습니다.
-3. Viewport의 **Synthetic Data Visualizer** 아이콘에서 RGB 다음 Semantic Segmentation을 선택합니다. 라벨과 RGB 색은 별개입니다. 라벨 변경 후 렌더를 갱신합니다. Cross Correspondence는 두 카메라의 대응 관계가 필요한 별도 센서라 이 단일 카메라 실습의 성공 기준에 넣지 않습니다.
-4. **Tools > Replicator > Synthetic Data Recorder**를 엽니다. **Add New Render Product**로 카메라를 추가하고 Stage의 Camera prim 경로를 입력합니다. 해상도는 512×512, RGB와 Semantic Segmentation, Bounding Box 2D Tight를 켜고 Number of Frames는 3으로 둡니다. Output은 이 패키지 아래 새 폴더로 지정하고 Start를 누릅니다.
-5. `output`의 RGB PNG, 의미 분할 이미지와 라벨 JSON, 2D bounding box 배열을 비교합니다. 색으로 보이는 상자와 학습 정답에 포함된 상자는 다를 수 있습니다.
-6. YAML 방식을 체험하려면 **새 장면**에서 `workflow.yaml`을 엽니다. 파일의 `output_dir`를 이 패키지 아래 **아직 없는 절대경로**로 먼저 변경합니다. 기본 예시 경로를 그대로 여러 번 쓰면 이전 데이터와 충돌할 수 있습니다. **Tools > Replicator > Replicator YAML**에서 이 YAML을 불러오고 생성/실행합니다. 세 프레임 동안 carton의 z 회전만 달라집니다. YAML 파서가 `create.camera`, `writers.get`, `trigger.on_frame`을 Replicator API 호출로 연결합니다.
+카메라는 시점을, `rp`는 카메라와 해상도의 연결을 나타냅니다. **Annotator**가 렌더 결과에서 분할·검출 정보를 만들고 **Writer**가 그 결과를 저장합니다. `bounding_box_2d_tight`는 화면에서 보이는 대상의 경계를 둘러싼 2D 상자입니다.
 
-## 코드와 개념 해설
+### 실행 결과 확인하기
 
-`SimulationApp`은 Kit와 렌더러의 수명을 관리하므로 `omni`나 `pxr`를 import하기 전에 생성합니다. `UsdGeom.SetStageMetersPerUnit(..., 1)`은 숫자 1을 1m로 해석하도록 기록하고 z-up은 중력/높이 축을 명확히 합니다. `add_labels(..., instance_name="class")`는 학습용 class 라벨을 prim에 작성합니다.
+`/tmp/tutorial132-first`에서 다음 결과를 함께 보세요.
 
-Camera prim은 투영 조건을 정의합니다. `rep.create.render_product`는 그 카메라를 어떤 해상도로 렌더할지 정의합니다. **Annotator**는 렌더 결과에서 RGB·분할·상자 같은 데이터를 만들고 **Writer**는 annotator 결과를 파일로 보냅니다. **OmniGraph**는 이러한 처리와 trigger를 연결하는 실행 그래프입니다. YAML, GUI Recorder, Python은 같은 SDG 개념에 접근하는 서로 다른 입력 방식입니다.
+| 결과 | 읽을 때 확인할 내용 |
+|---|---|
+| RGB PNG | 두 상자가 모두 보이는지 확인합니다. |
+| Semantic segmentation 이미지와 라벨 JSON | `carton`에 대응하는 영역이 라벨 있는 상자인지 확인합니다. 분할 색은 재질 색이 아닙니다. |
+| Bounding box 배열과 라벨 정보 | `carton` 검출이 `/World/Labeled`에 대응하는지 확인합니다. 좌표는 이미지 픽셀 기준입니다. |
+| `labels.usda` | 상자 배치와 라벨을 저장한 텍스트 USD입니다. 사진 자체를 담는 파일은 아닙니다. |
 
-`set_capture_on_play(False)`로 타임라인 Play와 파일 기록을 분리했습니다. `step(delta_time=0.0)`은 시뮬레이션 시간을 멈춘 상태의 캡처입니다. `wait_until_complete()`는 비동기 디스크 쓰기가 끝날 때까지 기다리며 writer를 detach한 후 render product를 destroy합니다. `.usda`는 장면 설명이고 PNG/JSON은 해당 장면을 관찰한 결과라 역할이 다릅니다.
+기본 장면에는 무작위화가 없으므로 세 RGB의 배치가 같아도 정상입니다. 의미 정답에 라벨 없는 상자가 빠졌다고 해서 RGB 렌더링이 실패한 것은 아닙니다.
 
-## 확인과 한 가지 실험
+## 2. GUI와 YAML에서 같은 연결 살펴보기
 
-성공 기준은 RGB에 두 상자가 보이고 첫 실행의 의미 정답에는 `carton`이 있는 상자만 포함되는 것입니다. **라벨 하나만** 추가하고 카메라·조명·해상도는 유지해 다시 녹화합니다. 두 캡처의 label mapping과 bounding box 개수를 비교합니다. 왼쪽/오른쪽 화면 위치는 카메라 방향에 따라 달라지므로 반드시 prim 경로로 구분합니다.
+창이 남아 있는 동안 Stage에서 두 prim을 차례로 선택하세요. **Tools > Replicator > Semantics Schema Editor**에서 `/World/Labeled`의 `carton`을 확인하고, Viewport의 **Synthetic Data Visualizer**에서 의미 분할을 선택해 보세요. 시각화는 현재 장면을 관찰하는 기능이며 이미 저장된 파일을 다시 쓰지는 않습니다.
 
-메뉴가 없으면 Window > Extensions에서 `isaacsim.replicator.synthetic_recorder`, `omni.replicator.replicator_yaml`과 Semantics 관련 확장을 검색해 활성화합니다. RGB가 검으면 카메라 경로와 조명을 확인합니다. 상자는 보이는데 bounding box가 비면 class 라벨과 카메라 시야를 확인합니다. `--help`와 문법 검사는 렌더·GUI 성공을 증명하지 않으며 실제 실행 상태는 `tutorial.json`을 따릅니다.
+GUI로 새 데이터를 기록하려면 **Tools > Replicator > Synthetic Data Recorder**를 엽니다. 새 render product에 Stage에서 확인한 Camera prim 경로와 512×512 해상도를 넣고, RGB·Semantic Segmentation·Bounding Box 2D Tight를 선택합니다. 프레임 수는 3, 출력은 새 폴더로 지정한 뒤 Start하세요.
 
-## 출처와 버전
+### 설정에서 볼 부분
 
-이 해설은 NVIDIA Isaac Sim **5.1.0** 문서와 해당 설치본을 기준으로 새로 작성했습니다. 원문의 전체 문장을 번역 복제한 것이 아니라 해당 워크플로를 독립적으로 실습하도록 설명했습니다.
+`workflow.yaml`은 Python 장면을 다시 불러오는 파일이 아니라 **별도 장면을 구성하는 명세**입니다.
 
-- [공식 Overview](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html)
-- [the semantics schema editor](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html#the-semantics-schema-editor)
-- [the synthetic data visualizer](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html#the-synthetic-data-visualizer)
-- [the synthetic data recorder](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html#the-synthetic-data-recorder)
-- [replicator yaml](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html#replicator-yaml)
-- [getting started scripts](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html#getting-started-scripts)
+```yaml
+carton:
+  create.cube:
+    semantics: [["class", "carton"]]
+    scale: 1
+trigger:
+  trigger.on_frame:
+    max_execs: 3
+```
+
+YAML 아래쪽의 `modify.pose`는 Z 회전을 0~90도에서 고릅니다. 먼저 새 장면을 열고 YAML의 `output_dir`를 아직 없는 절대경로로 바꾸세요. **Tools > Replicator > Replicator YAML**에서 파일을 불러와 실행하면, 상자 하나를 세 번 촬영하는 구성을 비교할 수 있습니다. 이 YAML은 RGB와 의미 분할만 요청하며 Python의 2D 상자 출력까지 동일하지는 않습니다.
+
+## 3. 장면에서 정답 파일까지의 흐름 정리
+
+```text
+USD 물체 + class 라벨
+    → 카메라와 해상도로 렌더
+    → annotator가 RGB·분할·검출 계산
+    → writer가 파일 저장
+```
+
+Python, Recorder, YAML은 이 연결을 설정하는 서로 다른 방법입니다. `set_capture_on_play(False)`는 Play와 자동 기록을 분리하고, `step(delta_time=0.0)`은 시간을 진행시키지 않은 상태를 촬영합니다. 마지막 `wait_until_complete()`가 파일 쓰기를 기다린 뒤 writer와 render product를 해제합니다. 그래서 창이 계속 열려 있어도 첫 데이터셋의 장수가 늘어나지 않습니다.
+
+## 4. 간단한 확인 실험
+
+`/World/Unlabeled`에도 **class 라벨 `carton` 하나만 추가**하세요. 카메라와 조명은 그대로 두고 Recorder로 새 폴더에 기록합니다.
+
+- RGB에는 여전히 두 상자가 보입니다.
+- 의미 분할에서는 두 상자가 같은 클래스에 속합니다.
+- 검출 정답에는 두 물체에 대응하는 상자가 나타나야 합니다.
+
+같은 클래스라고 해서 같은 물체 인스턴스가 되는 것은 아닙니다. 두 이미지의 색보다 **라벨 매핑과 검출 개수**를 비교하세요.
+
+## 실행할 때 막히면
+
+- **출력 경로가 이미 있다는 오류**: 새 `--output`을 지정하세요. 초기 실행에서 폴더가 생성된 뒤 실패했어도 그 경로는 다시 사용할 수 없습니다.
+- **Replicator 메뉴가 없음**: Window > Extensions에서 `isaacsim.replicator.synthetic_recorder`, `omni.replicator.replicator_yaml`과 Semantics 관련 확장을 확인하세요.
+- **라벨을 추가했는데 기존 파일이 그대로임**: 편집 후 새로 촬영해야 합니다. 장면 편집과 저장된 데이터 갱신은 별도 작업입니다.
+- **상자는 보이는데 검출이 비어 있음**: 해당 prim의 class 라벨과 카메라 시야를 함께 확인하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Overview](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html)에 대응합니다. 공식 문서의 라벨 편집·시각화·Recorder·YAML 연결을 로컬 상자 장면으로 익히는 실습입니다.
+
+두 상자 비교와 `labels.usda` 저장은 이 폴더의 구성입니다. [VERIFICATION.md](VERIFICATION.md)는 문법·도움말·설정 확인을 기록하며, `tutorial.json`의 실행 상태는 `not_run`입니다. 위 이미지와 정답 설명은 실제 환경에서 확인할 기준이며 GPU 캡처와 GUI 조작을 이번 문서 개정에서 실행하지는 않았습니다.

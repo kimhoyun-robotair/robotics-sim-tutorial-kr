@@ -1,75 +1,132 @@
-# 51. Articulation Controller: 관절 목표와 실제 상태
+# 51. 원하는 관절에만 목표를 보내려면?
 
-권장 학습 순서 **51** · 로봇 제어와 동작 계획 · 출처 ID `t133`
+## 이번에 배우는 것
 
-Franka의 팔과 그리퍼 관절을 이름으로 선택하고 position target을 전달합니다. 공식 Python/OmniGraph 인터페이스를 익히며 순간 이동과 물리 drive 제어의 차이를 확인합니다.
+**Franka의 관절을 이름으로 선택해 위치 목표를 보내고, 목표값과 실제 관절값을 구분해서 읽습니다.**
 
-## 이 실습의 의도
+팔을 움직이는 명령과 손가락을 여닫는 명령은 모두 관절 위치로 표현할 수 있습니다. 다만 배열의 숫자만 맞아서는 충분하지 않습니다. **어느 관절에 어느 값을 적용하는지**, 그리고 **그 값의 단위가 무엇인지**도 맞아야 합니다.
 
-Franka의 관절 이름을 실제 DOF 인덱스로 바꾸고 선택한 관절에만 위치 목표를 보내는 흐름을 익힙니다. 기본 실행은 팔 7축과 손가락 2축에 각 관절의 고정된 목표를 반복 전달하고, 물리 drive가 만든 최종 관절 상태를 저장합니다. 목표 배열을 보낸 것과 실제 로봇이 그 값에 도달한 것을 별도로 확인하는 실습입니다.
+| 구분 | 기본 실행 | `--fingers-only` 실행 |
+|---|---|---|
+| 선택 관절 | 팔 7개와 손가락 2개 | 손가락 2개 |
+| 팔 목표 | 코드에 정한 7축 자세 | 새 목표를 보내지 않음 |
+| 손가락 목표 | 각각 `--finger-width` | 각각 `--finger-width` |
+| 위치 단위 | 팔 rad, 손가락 m | m |
+| 결과 파일 | `joints.json`에 선택한 9축 | `joints.json`에 선택한 2축 |
 
-## 실행 후 확인할 것
+## 1. 먼저 팔과 손가락을 함께 움직이기
 
-- GUI의 `/World/panda`에서 팔이 목표 자세로 움직이고 두 손가락이 지정한 벌림값으로 이동하는지 봅니다. 기본 `--finger-width 0.02`는 손가락 관절 하나의 이동 목표 0.02 m이며 전체 집게 폭 값이 아닙니다.
-- 실행을 마친 뒤 `joints.json`의 `joint_names`, `joint_indices`, `targets`, `measured`를 같은 배열 순서로 대조합니다. 기본 모드는 9개, `--fingers-only` 모드는 두 finger 관절만 기록해야 합니다.
-- 각 관절의 `absolute_error`를 초기 오차 `|initial-targets|`와 비교해 실제 추종을 확인합니다. 팔의 오차는 rad, 손가락의 오차는 m이므로 같은 숫자로 서로 다른 관절의 품질을 비교하지 않습니다.
-- 이 JSON은 초기값과 최종값만 저장합니다. 수렴 과정이나 중간 overshoot는 GUI에서 관찰하거나 서로 다른 `--steps`의 별도 실행을 비교하며, 짧은 실행의 잔류 오차를 곧바로 제어 실패로 판단하지 않습니다.
-- `--fingers-only --finger-width 0.03`과 0.01을 비교해 손가락 목표와 간격이 함께 바뀌는지 확인합니다. 이 모드는 팔 관절에 새 목표를 보내지 않으므로 팔 전체가 반드시 정지한다고 보장하는 실험은 아닙니다.
+Isaac Sim 5.1과 5.1 Assets의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`가 필요합니다. 자산 서버 또는 로컬 팩에서 USD와 종속 mesh·재질을 읽을 수 있어야 합니다.
 
-## 준비와 실행
-
-이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
-
-Isaac Sim 5.1 Assets의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`가 필요합니다. `get_assets_root_path()`가 반환하는 asset 서버 또는 로컬 asset 팩에서 읽습니다. 첫 로딩에는 네트워크가 필요할 수 있습니다. 이 로봇 USD와 해당 재질/mesh 참조를 함께 사용할 수 있어야 합니다.
-
-터미널에서 이 패키지 폴더(`51_motion_articulation_controller`)로 이동한 뒤 아래를 실행합니다. 설치 위치가 다르면 첫 줄만 바꿉니다. Windows에서는 설치 폴더의 `python.bat`에 동일한 인수를 전달합니다.
+아래는 **저장소 루트**에서 실행하는 명령입니다. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --fingers-only --finger-width 0.03
+~/isaacsim/python.sh src/51_motion_articulation_controller/run.py --steps 600
 ```
 
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 물리·제어 루프가 계속 실행됩니다. `--steps 600`처럼 양수를 지정하면 그 물리 스텝 수까지 실행하고 종료합니다. GUI의 `--steps 0`도 무제한이며, `--headless`에서 생략하면 기존 기본값인 600스텝을 실행합니다. headless의 0과 음수는 허용하지 않습니다. 창을 닫거나 지정한 스텝에 도달하면 실행 결과가 이 폴더의 새 `output/run_*` 디렉터리에 저장됩니다. `--output /절대경로/새폴더`를 지정할 수도 있지만 기존 폴더를 덮어쓰지 않습니다. 코드는 `SimulationApp`을 만든 뒤 Isaac/Omni/USD 모듈을 가져오고 마지막에 `close()`로 종료합니다.
+600단계를 진행한 뒤 결과를 저장하고 앱이 종료됩니다. 창 없이 실행하려면 `--headless`를 추가하세요. GUI에서 `--steps`를 생략하면 창을 닫을 때까지 같은 목표를 계속 보냅니다. 결과는 이 폴더의 새 `output/run_*`에 저장되며, 종료 시 표시되는 `Output:` 경로를 확인하세요.
 
-## 단계별 실습
+### 코드에서 볼 부분
 
-1. Stage의 `/World/panda`를 펼칩니다. articulation은 강체 링크와 조인트로 구성된 로봇을 물리 엔진에서 묶어 제어하는 단위입니다.
-2. `world.scene.add(SingleArticulation(...))`로 prim을 Python 객체에 연결합니다. `world.reset()`이 scene 객체를 초기화한 뒤에 관절 상태/이름을 읽고 명령을 보냅니다. USD를 참조하는 것만으로 물리 핸들이 초기화되지는 않습니다.
-3. `get_dof_index(name)`로 `panda_joint1`부터 7까지와 finger 관절의 실제 인덱스를 얻습니다. `joints.json`에서 이름, 인덱스, 초기값, 목표값, 최종 측정값을 나란히 확인합니다.
-4. 기본 실행은 팔의 7개 관절과 손가락 2개를 제어합니다. `--fingers-only --finger-width 0.03`은 두 손가락 관절에 각각 0.03 m의 위치 목표를 보냅니다. 전체 그리퍼 폭은 양쪽 이동량과 geometry를 함께 고려해야 합니다.
-5. GUI 실행을 늘려 움직임을 관찰합니다. command가 한 번에 바뀌어도 링크는 물리 drive를 통해 목표로 이동합니다. 종료 시 absolute_error를 초기 오차와 비교합니다.
+로봇 USD를 참조한 다음 Python에서 제어할 객체를 만들고 초기화합니다.
 
-## API와 단위
+```python
+robot = world.scene.add(SingleArticulation('/World/panda', name='panda'))
+world.reset()
+```
 
-`SingleArticulation`은 내부 articulation view와 controller를 소유합니다. `ArticulationAction(joint_positions=..., joint_indices=...)`는 이번 명령의 목표와 적용할 자유도를 표현하고 `apply_action()`이 물리 drive에 전달합니다. 벡터 길이와 인덱스 순서는 반드시 맞아야 합니다. 이 예제는 0이라는 위치도 명시적 목표로 사용합니다. 제어하지 않을 관절은 인덱스에서 제외하는 방식으로 모호함을 피합니다.
+USD reference는 장면의 로봇을 가져오고, `SingleArticulation`은 그 로봇의 관절 상태와 명령에 접근하는 역할을 합니다. `world.reset()` 이후에 물리 상태와 관절 인덱스를 읽습니다.
 
-각도는 Python API에서 radian, USD 관절 속성 화면에서는 degree일 수 있습니다. 슬라이딩 손가락 관절은 m 단위입니다. `set_joint_positions()`는 상태를 바로 바꾸는 기능이므로 일반적인 목표 추종과 다릅니다. velocity 제어에는 `joint_velocities`, torque 제어에는 `joint_efforts`를 사용하고 controller의 제어 모드와 gain을 맞춰야 합니다. 동일 관절에 위치와 torque 제어를 동시에 적용하지 않습니다.
+```python
+indices = np.array([robot.get_dof_index(name) for name in names])
+action = ArticulationAction(joint_positions=targets, joint_indices=indices)
+```
 
-직접 `ArticulationController`를 구성하려면 복수 articulation view를 만들고 물리 초기화 후 `initialize(view)`에 전달합니다. 단일 로봇의 초급 실습에서는 이를 감싸는 `SingleArticulation`을 사용해 초기화 순서를 단순하게 유지합니다.
+`names`는 제어할 관절 이름 목록, `indices`는 그 이름에 대응하는 실제 자유도 인덱스입니다. `targets[0]`은 로봇의 무조건 첫 관절이 아니라 **`indices[0]`이 가리키는 관절의 목표**입니다. 배열의 길이와 순서를 함께 유지해야 합니다.
 
-## OmniGraph로 같은 손가락 동작 만들기
+반복문은 같은 action을 적용하고 `world.step()`을 호출한 다음 실제 관절값을 읽습니다. 시작 위치를 강제로 바꾸는 방식이 아니라, 물리 drive가 목표로 움직이는 과정을 관찰합니다.
 
-1. 코드 실행이 끝난 후 새 GUI 세션에서 위 Franka USD를 `/World/panda`에 참조합니다. PhysicsScene을 추가하고 Play합니다.
-2. `Window > Graph Editors > Action Graph`에서 새 그래프를 만들고 **On Playback Tick**과 **Isaac Articulation Controller** 노드를 놓습니다.
-3. Tick의 exec 출력을 controller의 `execIn`에 연결합니다. `robotPath`를 `/World/panda`로 설정하고 `targetPrim`은 비웁니다.
-4. `jointNames`에 `[panda_finger_joint1, panda_finger_joint2]`, `positionCommand`에 `[0.03,0.03]`을 입력합니다. 배열 입력에는 필요한 **Construct Array** 노드를 연결할 수 있습니다. `jointIndices`와 velocity/effort command는 비웁니다.
-5. Play 중 손가락을 관찰하고 `positionCommand`만 `[0.01,0.01]`로 바꿉니다. 같은 관절을 Python과 그래프 양쪽에서 동시에 제어하지 않습니다.
+### 실행 결과 확인하기
 
-## 관찰 기준과 한 변수 실험
+`joints.json`의 같은 인덱스에 있는 값들을 가로로 연결해 읽어 보세요.
 
-`--fingers-only`를 유지하고 `--finger-width`만 0.03에서 0.01로 바꾸어 비교합니다. 두 손가락의 목표와 최종 측정값이 함께 달라지는지 확인합니다. `joints.json`에는 팔의 측정값이나 시간별 응답은 없으므로 팔의 정지 여부와 손가락의 중간 움직임은 GUI에서 별도로 관찰합니다.
+| 항목 | 의미 |
+|---|---|
+| `joint_names`, `joint_indices` | 값이 어느 관절에 속하는지 나타내는 대응표 |
+| `initial` | 명령을 보내기 전 상태 |
+| `targets` | 반복해서 전달한 고정 목표 |
+| `measured` | 마지막으로 읽은 실제 위치 |
+| `absolute_error` | `abs(measured - targets)` |
 
-## 문제 해결
+예를 들어 `panda_finger_joint1`의 target이 0.02라면 손가락 하나의 이동 목표는 **2 cm**입니다. 이 숫자를 집게 전체 폭이라고 읽지 마세요. 양쪽 손가락의 이동과 원래 형상을 함께 고려해야 집게 사이 간격을 알 수 있습니다.
 
-초기화 오류는 reset/play 이전에 controller를 사용했는지 확인합니다. 관절명 오류는 다른 robot USD를 불러왔는지 확인합니다. 흔들림이나 느린 추종은 목표값과 측정값을 비교하고 USD의 stiffness/damping을 확인합니다. 수치가 출력됐다는 사실만으로 목표 도달을 주장하지 않습니다.
+초기 오차 `abs(initial - targets)`와 마지막 오차를 비교해 보세요. 마지막 오차가 작아졌다면 실제로 목표에 접근한 근거가 됩니다. 팔의 0.01 rad와 손가락의 0.01 m는 다른 크기이므로 오차 배열 전체에 같은 감각의 기준을 적용하지 않습니다.
 
-## 검증 범위
+## 2. 손가락 관절만 선택해 제어하기
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 아래 관찰 기준으로 직접 결과를 확인합니다.
+앞 실행을 마친 뒤 아래 명령을 실행하세요.
 
-## 출처
+```bash
+~/isaacsim/python.sh src/51_motion_articulation_controller/run.py \
+  --fingers-only --finger-width 0.03 --steps 600
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — Articulation Controller](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/articulation_controller.html)
-- 원문의 학습 목적과 API를 유지하면서 한국어 설명, 명령행 옵션, 실행 길이 선택과 실제 상태 기록을 추가한 독립 예제입니다. 원문 전체를 복제한 문서가 아닙니다.
+이번 `names`는 `panda_finger_joint1`, `panda_finger_joint2` 두 개입니다. 목표 배열도 `[0.03, 0.03]`으로 짧아지며 실제 DOF 인덱스는 이름으로 다시 구합니다. 팔 자리에 0을 채워 넣는 대신, 명령 대상에서 팔을 제외합니다. **0도 유효한 위치 목표**이므로 “값이 0이면 제어하지 않는다”는 가정에 기대지 않는 방식입니다.
+
+### 코드에서 볼 부분
+
+부분 제어의 핵심은 적용할 자유도를 지정하는 것입니다.
+
+```text
+손가락 이름 2개 → 실제 인덱스 2개 → 위치 목표 2개
+    → apply_action() → 선택한 손가락의 상태 2개 기록
+```
+
+이 모드는 팔에 새 목표를 보내지 않습니다. 그렇다고 팔에 중력이나 기존 drive의 영향이 없어지는 것은 아니므로 “팔을 잠그는 옵션”으로 이해하면 안 됩니다.
+
+### 실행 결과 확인하기
+
+새 결과 파일의 모든 배열이 두 손가락 순서로 기록됐는지 확인하세요. 화면에서 움직이는 방향도 함께 봅니다. 이 JSON은 초기와 최종 상태만 저장하므로 중간에 목표를 얼마나 넘었는지, 언제 수렴했는지는 알 수 없습니다. 그런 응답을 보려면 GUI에서 움직임을 관찰하거나 실행 길이가 다른 결과를 비교해야 합니다.
+
+같은 동작을 OmniGraph로 구성할 때도 관절 선택이 핵심입니다. 다음 비교는 스크립트 실행을 종료한 뒤 새 Isaac Sim 세션에서 진행하세요.
+
+1. 새 stage에 같은 Franka USD를 `/World/panda`로 reference하고 Physics Scene을 추가합니다.
+2. **Window > Graph Editors > Action Graph**에서 그래프를 만들고 **On Playback Tick → Articulation Controller**의 실행 포트를 연결하세요. 설치 5.1의 노드 타입 이름은 `IsaacArticulationController`입니다.
+3. controller의 `robotPath`를 `/World/panda`로 지정하고 `targetPrim`은 비웁니다.
+4. `jointNames`에는 두 finger 이름, `positionCommand`에는 `[0.03, 0.03]`을 넣습니다. 필요한 배열은 **Construct Array** 노드로 만들고 `jointIndices`, velocity/effort command는 비웁니다.
+5. Play하여 손가락 움직임을 확인하세요. `positionCommand`만 `[0.01, 0.01]`로 바꾸면 두 관절의 새 목표가 됩니다.
+
+배열 포트의 역할은 [공식 Articulation Controller 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/articulation_controller.html)에서 함께 확인할 수 있습니다. Python의 이름·목표 대응을 그래프 포트로 표현한 것입니다.
+
+## 3. 명령과 상태의 차이 정리
+
+```text
+ArticulationAction: 어디로 가야 하는가?
+    → apply_action(): drive에 목표 전달
+    → world.step(): 힘과 제약에 따라 물리 진행
+    → get_joint_positions(): 지금 어디에 있는가?
+```
+
+목표 전달은 움직임의 시작이고, `measured`는 결과입니다. `set_joint_positions()`로 실제 상태를 바로 설정하면 이 사이의 추종 과정을 건너뜁니다. 이번 실습에서 목표와 측정값을 나눠 저장하는 이유가 여기에 있습니다.
+
+또한 Python API의 회전 관절 위치는 rad입니다. USD Property의 각도 표시가 degree라면 `180도 = π rad`로 변환해서 비교하세요. 손가락처럼 미끄러지는 관절은 길이 단위를 사용합니다.
+
+## 4. 간단한 확인 실험
+
+2절의 명령에서 **`--finger-width`만 0.03에서 0.01로** 바꿔 보세요. 같은 600단계를 실행하고 두 결과의 `targets`와 `measured`를 비교합니다.
+
+각 손가락 목표는 2 cm 줄어듭니다. 실제 측정값도 함께 줄고 화면의 집게 간격이 좁아지는지 확인하세요. `absolute_error`가 작아도 어느 관절의 값인지 확인하지 않으면 잘못된 관절을 정확히 움직인 결과를 놓칠 수 있습니다.
+
+## 실행할 때 막히면
+
+- **관절 이름을 찾지 못함**: 코드가 기대하는 Franka 5.1 USD인지 확인하세요. 다른 로봇에서는 이름과 자유도 구성이 달라집니다.
+- **물리 초기화 관련 오류**: 관절 인덱스와 상태를 읽는 코드가 `world.reset()` 뒤에 있는지 확인하세요.
+- **손가락 폭 오류**: `--finger-width`는 손가락 하나의 이동량이며 0~0.04 m만 허용합니다.
+- **목표와 측정값 차이가 큼**: 짧은 실행인지 확인하고, 지속되면 관절 drive의 stiffness/damping과 접촉 상태를 살펴보세요.
+- **JSON이 아직 없음**: 결과는 반복문이 끝날 때 저장됩니다. 유한 `--steps`를 지정하면 저장 시점을 분명히 할 수 있습니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Articulation Controller](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/articulation_controller.html)에 대응합니다. 로컬 실습은 관절 이름 선택, 부분 위치 명령, 초기·최종 상태 비교에 집중합니다.
+
+`tutorial.json`은 `not_run` 상태입니다. 이번 개정은 코드와 문서 대조이며, 실제 팔·손가락 추종이나 OmniGraph 조작을 새로 실행해 확인한 것은 아닙니다.

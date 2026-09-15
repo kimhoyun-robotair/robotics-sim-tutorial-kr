@@ -1,76 +1,133 @@
-# 158. 배우를 바라보는 카메라 무작위 배치
+# 158. 카메라를 어디에 놓고 누구를 바라보게 할까요?
 
-권장 학습 순서 **158** · 액터와 공간 이벤트 데이터 · 출처 ID `t055`
+## 이번에 배우는 것
 
-이 패키지의 GUI 실습은 사용자가 실행한 Isaac Sim의 native 패널에서 진행합니다. 데이터 생성 프레임 수는 작업 분량이며, 작업 완료가 GUI를 닫지는 않습니다. 창은 사용자가 직접 닫습니다. 설정 생성용 Python 도구는 GUI를 실행하지 않고 설정 파일을 만든 뒤 종료합니다.
+**배우를 바라보는 카메라의 배치 범위를 설정하고, 설정값·실제 월드 좌표·촬영 영상을 비교합니다.**
 
-## 이 실습의 의도
+사람이 장면에 있어도 카메라가 천장이나 빈 통로를 보면 유용한 영상이 나오지 않습니다. 이번에는 사람을 기준으로 카메라 위치와 시선을 정합니다. 카메라의 위치를 바꾸는 설정과 렌즈 값을 바꾸는 설정도 구별합니다.
 
-actor를 바라보는 카메라의 배치 범위와 렌즈 무작위화를 구분하고, UI 설정이 실제 USD 카메라 위치와 영상에 반영되는지 확인합니다. 기본 구성은 사람 두 명과 카메라 한 대이며 `prepare.py`는 구성 파일만 만들기 때문에 `camera_settings.json`은 별도로 Script Editor에서 적용한 뒤 Setup해야 합니다. 같은 stage의 기존 카메라를 재사용하면 변경 효과가 드러나지 않을 수 있어 비교 실행은 새 stage에서 진행합니다.
+| 파일 | 하는 일 | 확인할 결과 |
+|---|---|---|
+| `prepare.py`, `lesson.json` | 사람 두 명·카메라 한 대의 IRA 설정 생성 | `config.yaml` |
+| `camera_settings.json` | 배치 높이·거리·시선·렌즈 범위 지정 | 적용할 입력값 |
+| `apply_camera_settings.py` | 열린 앱에 카메라 설정 적용 | 적용된 설정값 출력 |
+| `inspect_cameras.py` | Setup 후 실제 카메라 조사 | 월드 위치, focalLength, 시선 방향 |
 
-## 실행 후 확인할 것
+설정 적용 함수는 카메라를 직접 만들지 않습니다. **설정을 적용한 뒤 Setup해야** 새 배치에 반영됩니다.
 
-- **설정 적용:** `apply_camera_settings()`가 출력한 값을 JSON과 대조합니다. `aim_camera_to_character=true`, focus 높이 0.7, 카메라 높이 2..3, 거리 6.5..14, focalLength 13..23이 설정되어야 하며, 이 출력은 아직 실제 카메라가 배치됐다는 증거가 아닙니다.
-- **실제 카메라:** Setup 후 `inspect_cameras.py`에서 `/World/Cameras/` 아래 카메라의 `world position`, `focalLength`, `view direction`이 출력되는지 확인합니다. 유효한 actor 지향 배치가 이루어진 경우 world Z가 2..3 m 범위인지 보고 카메라 뷰에서 배우도 확인합니다. 출력 스크립트 자체는 actor까지의 거리나 시선 일치를 자동 판정하지 않습니다.
-- **높이 고정 비교:** min/max 높이를 둘 다 2.5로 바꾸어 적용하고 **File > New** 후 다시 Setup합니다. world Z가 약 2.5 m로 고정되는지 비교하며, 이전 카메라를 그대로 읽어 설정이 무시됐다고 판단하지 않습니다.
-- **서로 다른 스위치:** `aim_camera_to_character=false`는 배우를 향한 배치를 끄는 비교이고, `randomize_camera_info=false`는 렌즈 정보 무작위화의 비교입니다. focalLength 13..23은 배우까지의 거리(m)가 아니므로 서로 바꾸어 해석하지 않습니다.
-- **배치 실패 구분:** NavMesh나 유효한 배치 공간이 없어서 원점을 바라보는 결과는 actor 지향 범위 검증에 포함하지 않습니다. 올바른 뷰가 확보된 후 생성한 RGB·카메라 파라미터를 확인하고, persistent 설정은 실험 후 원래 값으로 복원합니다.
+## 1. 카메라 설정을 적용하고 장면 만들기
 
-## 준비와 실행 방식
-
-Isaac Sim 5.1 GUI, NVIDIA RTX GPU/드라이버, Isaac Sim 5.1 Assets 접근이 필요합니다. GUI는 설치 디렉터리의 `./isaac-sim.sh`로 실행합니다. `Window > Extensions`에서 `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`를 켜고 요구되는 재시작을 마칩니다. 사람 애니메이션은 `omni.anim.people`, `omni.anim.graph`, 경로 탐색은 `omni.anim.navigation`, 로봇은 `isaacsim.anim.robot`가 담당하며 IRA 의존성으로 활성화됩니다. 클라우드 LLM·ROS·별도 Python 설치는 필요하지 않습니다.
-
-기본 환경은 `https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Environments/Simple_Warehouse/full_warehouse.usd`, 사람은 같은 Assets 루트의 `/Isaac/People/Characters/`입니다. 오프라인 자산팩을 설치했다면 `--assets-root /절대경로/Assets/Isaac/5.1`을 지정합니다. 자산팩 자체는 이 패키지에 포함하지 않습니다.
-
-이 패키지는 원문의 **확장 UI와 YAML 설정 방식**을 유지합니다. `prepare.py`는 해당 수업 설정과 명령 파일을 실제 생성합니다. 설정을 만드는 것만으로 사람을 시뮬레이션하거나 영상을 저장하지는 않습니다. 모든 명령은 이 패키지 디렉터리에서 실행합니다.
+Isaac Sim 5.1, RTX GPU, 5.1 창고·사람 자산이 필요합니다. 저장소 루트에서 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-python3 prepare.py --output ./output/run_01 --frames 90
-/home/hoyunkim/isaacsim/isaac-sim.sh
+python3 src/158_events_ext_replicator_agent_camera_control/prepare.py --output src/158_events_ext_replicator_agent_camera_control/output/camera_01 --frames 90
+~/isaacsim/isaac-sim.sh
 ```
 
-설치 경로는 자신의 환경에 맞게 바꿉니다. `output/run_01/config.yaml`은 JSON 문법으로 작성한 유효한 YAML 1.2 파일이며 Isaac Sim의 YAML 로더가 읽습니다. `lesson.json`의 `{ASSETS}`, `{OUTPUT}`, `{PACKAGE}`는 준비 스크립트가 절대 경로로 치환합니다. `isaacsim.replicator.agent` 아래에 설정을 중첩하는 구조는 설치된 5.1 기본 설정과 같습니다. 설정 버전 `0.7.0`은 Sim 버전 `5.1.0`과 다른 IRA 설정 호환성 버전입니다.
-
-1. `Tools > Action and Event Data Generation > Actor SDG`를 엽니다. `Config File Path`에서 생성한 `config.yaml`을 선택합니다.
-2. 환경에 NavMesh가 없으면 창고 USD를 먼저 열고, Stage 우클릭 `Create > Navigation > NavMesh Include Volume`을 추가해 바닥을 덮습니다. `Window > Navigation > NavMesh`에서 Bake 후 `Save As`로 패키지 `output/warehouse_nav.usd`에 저장합니다. `Scene > Asset Path`를 그 복사본으로 바꾸고 설정을 저장합니다. NavMesh는 사람이 서거나 걸을 수 있는 표면입니다.
-3. `Set Up Simulation`을 누르고 사람/카메라 자산 로딩이 끝날 때까지 기다립니다. Stage의 `/World/Characters`, `/World/Cameras`에서 실제 이름을 확인합니다. 명령의 `Character_01` 같은 이름은 실제 탭 이름과 일치시킵니다.
-4. Character 패널에서 명령을 확인하고 디스크 아이콘으로 **Save Commands**합니다. UI의 파란색은 미저장, 빨간색은 잘못된 입력입니다. 설정만 바꾸면 화면 값과 디스크 파일이 달라질 수 있으므로 `Save`도 누릅니다.
-5. 아래 수업별 조작을 진행한 다음 `Start Data Generation`을 누릅니다. 기본 90프레임은 30 FPS 기준 3초입니다. 완료 후 `output/run_01/capture`를 확인합니다. 중단 후 재실행할 때는 저장 종료를 기다립니다.
-
-## 설정 적용과 관찰
-
-1. `Set Up Simulation` **이전**에 `Window > Script Editor`를 열어 아래 두 줄을 실행합니다. 두 파일의 경로를 현재 패키지의 절대 경로로 바꿉니다. 설정은 현재 앱의 persistent 영역에 저장되므로 실험 후 원래 JSON을 재적용합니다.
+1. **Window > Extensions**에서 `isaacsim.replicator.agent.core`, `isaacsim.replicator.agent.ui`를 활성화하고 필요한 재시작을 마칩니다.
+2. **Tools > Action and Event Data Generation > Actor SDG**에서 생성한 `output/camera_01/config.yaml`을 불러옵니다.
+3. Scene의 창고에 NavMesh가 없으면 창고를 열어 **Create > Navigation > NavMesh Include Volume**으로 바닥을 덮고 **Window > Navigation > NavMesh**에서 Bake합니다. 새 USD로 저장하고 **Scene > Asset Path**를 그 복사본으로 지정합니다.
+4. **Set Up Simulation을 누르기 전에** Script Editor를 열고 아래 두 줄을 실행합니다. 두 경로는 현재 저장소의 실제 절대 경로로 바꾸세요.
 
 ```python
-exec(open('/절대경로/158_events_ext_replicator_agent_camera_control/apply_camera_settings.py').read())
-apply_camera_settings('/절대경로/158_events_ext_replicator_agent_camera_control/camera_settings.json')
+exec(open('/절대경로/저장소/src/158_events_ext_replicator_agent_camera_control/apply_camera_settings.py').read())
+apply_camera_settings('/절대경로/저장소/src/158_events_ext_replicator_agent_camera_control/camera_settings.json')
 ```
 
-2. 기본값은 배우 발 위치보다 0.7 m 높은 곳을 바라보며, 카메라 높이는 2–3 m, 배우까지 거리는 6.5–14 m, 내려다보는 각도는 0–60도입니다. 높이 최소값이 초점 높이보다 커야 하고 최대 높이가 최대 거리보다 작아야 합니다. 유효 공간이 없거나 NavMesh가 없으면 원점을 바라보는 배치로 돌아갈 수 있으므로 정상 랜덤 배치로 오해하지 않습니다.
-3. `Set Up Simulation` 후 카메라 뷰를 선택해 실제 배우가 화면에 있는지 봅니다. Script Editor에서 `inspect_cameras.py`를 열어 실행하면 USD world 좌표와 focalLength가 출력됩니다. XformCache는 부모 변환까지 합친 좌표를 구합니다. USD 카메라의 시선은 로컬 -Z입니다.
-4. `min_camera_height`와 `max_camera_height`를 모두 2.5로 맞추고 새 설정·새 stage에서 다시 Setup합니다. 이전 카메라가 이미 충분하면 IRA가 그대로 재사용하므로 File > New 후 반복합니다. 모든 카메라 높이가 2.5 m로 고정되는지 비교합니다.
-5. `aim_camera_to_character=false`로 바꾸면 배우 추적용 무작위 배치를 끄고 원점을 향합니다. `randomize_camera_info=false`는 초점거리를 통일하는 별개 스위치입니다. 고정된 실제 카메라만 쓰려면 `sensor.camera_num`을 없애고 `camera_list: ["/World/Cameras/Camera"]`를 설정합니다. 두 키는 동시에 사용하지 않습니다.
+5. **Set Up Simulation**을 누르고 사람·카메라 로딩을 기다립니다. Character 명령의 이름을 실제 actor 이름과 맞추고 **Save Commands**합니다.
+6. 카메라 뷰에서 사람이 보이는지 확인한 뒤 설정을 저장하고 **Start Data Generation**을 실행합니다. 90프레임 생성 후 GUI는 남습니다.
 
-카메라 focalLength와 aperture는 USD 카메라 단위 규칙을 따릅니다. 공식 카메라 배치 문서가 focalLength 수치에 meter 표기를 붙였지만 13–23을 카메라가 배우에서 13–23 m 떨어지는 거리로 해석하면 안 됩니다. 이 수업은 설치된 IRA 기본 수치와 설정 키를 사용합니다. 원문 마지막 코드의 `isaacsim/replicator.agent` 경로 오타를 설치된 `extension.toml`의 `isaacsim.replicator.agent` 경로로 바로잡았습니다.
+### 설정에서 볼 부분
 
-완료 기준은 실제 카메라 world 높이와 영상에서 설정 효과를 함께 확인하는 것입니다. 한 변수 실험은 모든 높이를 2.5로 고정해 높이 변화만 제거하는 위 4번입니다. 추가 내·외부 파라미터 보정은 `isaacsim.sensors.rtx.placement` 확장으로 할 수 있지만 이 패키지를 실행하는 데 필요하지 않습니다.
-## 공통 배경을 이 패키지에서 이해하기
+`camera_settings.json`에는 다음 범위가 들어 있습니다.
 
-USD Stage는 열린 장면 전체이고 Prim은 `/World/Cameras/Camera`처럼 주소를 가진 장면 요소입니다. USD 파일 경로는 디스크/서버의 파일을 가리키며 Prim 경로는 그 안의 객체를 가리킵니다. Xform은 위치·회전·크기를 계층적으로 합성합니다. NavMesh는 물리 충돌 모양 자체가 아니라 이동 가능한 바닥 영역이므로 충돌 설정을 했다고 자동으로 경로가 생기지는 않습니다.
+| 설정 | 기본값 | 의미 |
+|---|---|---|
+| `aim_camera_to_character` | `true` | 사람을 기준으로 배치합니다. |
+| `character_focus_height` | `0.7` | 사람 발 위치보다 0.7 m 높은 지점을 봅니다. |
+| `min/max_camera_height` | `2.0 / 3.0` | 카메라 높이 범위(m)입니다. |
+| `min/max_camera_distance` | `6.5 / 14.0` | 사람 기준 배치 거리 범위(m)입니다. |
+| `min/max_camera_look_down_angle` | `0.0 / 60.0` | 내려다보는 각도 범위(도)입니다. |
+| `min/max_camera_focallength` | `13.0 / 23.0` | 렌즈의 focalLength 속성 범위입니다. |
 
-IRA가 장면과 actor 동작을 구성하고 Replicator writer가 RGB·주석을 디스크에 기록합니다. `seed`는 무작위 선택을 재현하기 위한 값이며 같은 조작 순서도 유지해야 비교가 가능합니다. `simulation_length`는 프레임 수, `Idle 2` 같은 actor 명령 시간은 초입니다. camera 수가 많을수록 렌더 타깃이 늘어 GPU 메모리가 증가합니다.
+거리와 focalLength는 다른 값입니다. 13~23을 배우까지의 거리(m)로 읽지 마세요. 렌즈 속성은 USD 카메라 단위 규칙을 따릅니다.
 
-## 문제 해결
+## 2. 설정값이 실제 카메라에 반영됐는지 확인하기
 
-자산을 찾지 못하면 Content Browser에서 위 USD URL이 열리는지 먼저 확인합니다. UI 초기화가 오래 걸리는 경우 공식 문서의 `--/persistent/isaac/asset_root/timeout=1.0` 실행 옵션으로 접근 실패를 빠르게 확인할 수 있습니다. 사람이 안 움직이면 NavMesh Bake, 실제 actor 이름, Save Commands 여부를 순서대로 확인합니다. 사진이 비면 카메라 뷰를 직접 선택해 배우가 화면에 있는지 봅니다. GPU 메모리 부족은 카메라 1대/인원 1명으로 줄여 원인을 분리합니다. 출력 폴더가 이미 있으면 `prepare.py`는 덮어쓰지 않으므로 새로운 `--output`을 사용합니다.
+### 코드에서 볼 부분
 
+적용 함수는 먼저 범위의 모순을 검사한 뒤 설정을 씁니다.
 
-## 출처와 검증 범위
+```python
+prefix = "/persistent/exts/isaacsim.replicator.agent/"
+settings = carb.settings.get_settings()
+settings.set(prefix + name, value)
+```
 
-Isaac Sim **5.1.0** 공식 문서에 맞춘 독립 패키지입니다. 아래 설명과 실습은 한국어로 새로 작성했습니다. 공식 확장 기능은 설치된 Isaac Sim이 제공하며 이 패키지에 복제하지 않습니다.
+최소값이 최대값보다 크면 거부합니다. 카메라 최소 높이는 초점 높이보다 높아야 하고, 최대 높이는 최대 거리보다 작아야 합니다. 이 검사는 숫자의 관계를 확인할 뿐 창고 안에 유효한 공간이 있는지까지 판정하지는 않습니다.
 
-- [무작위 카메라 배치](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/camera_control.html#camera-placement-randomization)
-- [설정 API](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/camera_control.html#from-the-script)
-- [고급 도구](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/camera_control.html#advanced-camera-tools)
+Setup 후 **Window > Script Editor**에서 `inspect_cameras.py` 전체를 실행하세요. 핵심은 다음 부분입니다.
 
-설정 생성·Python 문법 확인과 실제 GPU 시뮬레이션은 별개의 검사입니다. 이 패키지의 기본 상태는 `not_run`이며 렌더링·애니메이션·외부 서비스 결과를 실행 완료로 주장하지 않습니다.
+```python
+transform = cache.GetLocalToWorldTransform(prim)
+transform.ExtractTranslation()
+transform.TransformDir((0, 0, -1))
+```
+
+`GetLocalToWorldTransform()`은 카메라의 부모 Xform까지 합친 변환을 구합니다. 카메라 자신의 Translate만 보면 부모의 이동·회전을 놓칠 수 있습니다. USD 카메라가 보는 로컬 방향은 -Z이므로 `(0, 0, -1)`을 월드 방향으로 바꿔 출력합니다.
+
+### 실행 결과 확인하기
+
+출력에서 `/World/Cameras/` 아래 카메라마다 세 값을 확인합니다.
+
+- `world position`: 유효한 배우 지향 배치가 이루어졌다면 Z가 설정한 2~3 m 범위인지 봅니다.
+- `focalLength`: 렌즈 무작위화가 켜져 있을 때 13~23 범위인지 봅니다.
+- `view direction`: 시선 벡터입니다. 이 값만 보고 배우가 보인다고 판정하지 말고 실제 카메라 뷰도 확인하세요.
+
+검사 스크립트는 카메라와 배우 사이의 거리나 시선 일치를 자동 판정하지 않습니다. `output/camera_01/capture`의 RGB와 카메라 파라미터까지 대조해야 촬영 조건을 확인할 수 있습니다.
+
+유효한 배우 지향 위치를 찾지 못하면 원점을 향하는 기본 배치가 사용될 수 있습니다. NavMesh 자체가 없으면 카메라 배치 단계가 실패할 수도 있으므로 먼저 Bake 여부를 확인하세요. 이런 결과를 정상적인 배우 지향 무작위 표본으로 세지 마세요.
+
+`aim_camera_to_character`와 `randomize_camera_info`도 별개입니다. 전자는 배우 중심 배치를, 후자는 렌즈 정보 무작위화를 제어합니다. 미리 배치한 카메라를 사용하려면 Setup한 장면에서 카메라를 원하는 위치로 옮겨 새 USD로 저장합니다. 새 출력 설정의 `scene.asset_path`에 그 USD를 지정하고 `sensor.camera_num`을 제거한 뒤 다음처럼 실제 카메라 경로를 넣으세요.
+
+```json
+{"camera_list": ["/World/Cameras/Camera"]}
+```
+
+이 객체는 `sensor` 항목의 내용이며 경로는 Stage의 실제 이름으로 바꿉니다. 새 설정을 불러와 Setup한 뒤 inspector와 RGB를 비교하세요. `camera_num`과 `camera_list`를 동시에 두지 않습니다.
+
+## 3. 입력 범위와 실제 관찰값 정리
+
+```text
+JSON의 배치 범위
+    → 앱의 persistent 설정
+    → Setup에서 유효한 위치 선택
+    → USD 카메라의 월드 위치·시선
+    → RGB와 카메라 파라미터
+```
+
+설정 출력은 “앱이 어떤 값을 받았는가”를 보여 주고, inspector는 “어떤 카메라가 만들어졌는가”를 보여 줍니다. RGB는 그 카메라가 실제로 본 결과입니다. 이 세 단계를 함께 읽어야 값은 적용됐지만 이전 카메라가 재사용된 경우도 구별할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+카메라 **높이 조건만** 고정해 보세요. `camera_settings.json`의 복사본에서 `min_camera_height`, `max_camera_height`를 모두 `2.5`로 바꾸고 다른 값은 유지합니다.
+
+1. 복사본을 적용하고 **File > New**로 새 Stage를 만듭니다.
+2. 새 출력 설정을 불러와 같은 Scene으로 다시 Setup합니다.
+3. inspector의 실제 Z가 약 2.5 m로 고정되는지 비교하세요. 렌즈 값과 수평 배치는 여전히 달라질 수 있습니다.
+
+기존 Stage에 카메라가 충분히 있으면 IRA가 이를 재사용할 수 있으므로 새 Stage가 필요합니다. 설정은 persistent 영역에 남으니 실험 후 원본 JSON을 다시 적용하세요.
+
+## 실행할 때 막히면
+
+- **`unknown settings` 오류**: IRA 확장을 먼저 활성화하세요. 함수는 존재하지 않는 설정 키에 조용히 값을 쓰지 않습니다.
+- **높이 변경이 보이지 않음**: 기존 카메라를 조사한 것은 아닌지 확인하고 새 Stage에서 Setup하세요.
+- **카메라가 원점만 봄**: NavMesh와 사람 배치를 확인한 뒤 거리·높이·각도 조건을 만족할 공간이 있는지 봅니다.
+- **검사 출력이 비어 있음**: Setup 완료 여부와 실제 카메라 경로를 확인하세요. 검사 대상은 `/World/Cameras/` 아래의 Camera Prim입니다.
+- **이미지에 사람이 없음**: viewport의 Perspective가 아니라 writer가 사용하는 카메라 뷰를 선택해 확인하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Camera Control](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/camera_control.html)에 대응합니다. 로컬 도구는 설정값 적용과 USD 카메라 관찰을 연결합니다. 실제 카메라 생성과 촬영은 IRA 확장이 수행합니다.
+
+`tutorial.json`은 `not_run`입니다. 범위 검사나 설정값 출력이 실제 카메라 배치·렌더링 검증을 대신하지 않습니다.

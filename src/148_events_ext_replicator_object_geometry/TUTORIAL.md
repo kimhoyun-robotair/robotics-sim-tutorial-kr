@@ -1,82 +1,129 @@
-# 148. Geometry — 한국어 실습
+# 148. 도형의 모양과 물리 역할을 따로 정하기
 
-권장 학습 순서 **148** · 물체 시뮬레이션과 YAML 무작위화 · 출처 ID `t062`
+## 이번에 배우는 것
 
-기본 도형의 정적 충돌체와 동적 강체를 구분하고, 로컬 USD 메시와 변형 병을 각각 독립 설정으로 실행한다.
+**정적 충돌체와 동적 강체를 비교하고, 기본 도형·USD 메시·변형 병이 각각 어떻게 만들어지는지 살펴봅니다.**
 
-## 이 실습의 의도
+화면에 큐브가 있다는 사실만으로 그 큐브가 떨어지거나 다른 물체를 받치지는 않습니다. `subtype`은 모양을 고르고 `physics`는 물리 계산에 참여하는 방식을 고릅니다. 이번에는 두 설정을 분리해 읽는 연습을 합니다.
 
-보이는 도형의 종류와 물리 참여 방식을 별도로 설정하는 법을 배우는 실습이다. 기본 장면은 정적 바닥·녹색 큰 큐브와 동적인 빨간 구·파란 작은 큐브를 대비시켜, `collision`만 있는 물체와 `rigidbody`의 낙하·충돌 반응을 구분한다. 기본 `run.py`는 3프레임 설정을 준비하며 실제 물리·렌더링에는 native 실행 또는 GUI Simulate가 필요하고, 메시와 병은 별도 YAML을 선택한다.
+| 설정 파일 | 주요 대상 | 관찰할 변화 |
+|---|---|---|
+| `scene.yaml` | 빨간 구, 정적 녹색 큐브, 떨어지는 파란 큐브 | 낙하와 정적 받침의 차이 |
+| `mesh.yaml` | `models/box.usda`의 메시 | USD 참조와 축별 배율 |
+| `bottle.yaml` | 확장에 포함된 병 모델 | effector 값에 따른 형상 변경 |
 
-## 실행 후 확인할 것
+모든 위치는 **cm**, 위쪽은 **Y축**입니다. 기본 큐브 한 변이 100 cm라는 기준을 기억하면 중심 높이와 받침 높이를 계산할 수 있습니다.
 
-- **고정된 받침:** 기본 `scene.yaml`의 `floor`와 녹색 `static_cube`는 `physics: collision`이다. 물리 전후 큰 큐브 중심 `(100,50,0)` cm가 유지되는지 보고, 정적 충돌체가 중력으로 떨어지지 않는 이유를 설명한다.
-- **동적 도형:** 빨간 구는 YAML 이름 `subject`로 `(-130,180,0)` cm에서, 파란 `falling_cube`는 `(100,210,0)` cm에서 시작한다. `gravity=981`, `simulation_time=1` 적용 후 구는 바닥 쪽으로, 작은 큐브는 큰 큐브 위로 내려와 충돌하는지 확인한다. 1초가 모든 물체의 완전 정착을 보장하는 기준은 아니다.
-- **파일과 미리보기:** 초기화 화면의 공중 배치와 Simulate 후 `images/`의 기본 640×480 RGB 3장 및 라벨·분할 결과를 비교한다. `prepared.yaml`만 생성한 상태에서는 낙하나 결과 이미지가 없어도 정상이다.
-- **메시 선택 시:** `mesh.yaml`의 `subject` 참조를 펼쳐 `models/box.usda`의 Mesh와 Material을 확인한다. 배율 `(1,1.5,0.7)`에 따라 세 축 길이가 달라지며, 이 설정에는 메시 강체 물리가 없어 바닥과 겹쳐 보이더라도 자동으로 밀려나지 않는다.
-- **병 선택 시:** `bottle.yaml`은 청록색 체크무늬 병의 네 effector를 바꾼다. description에서 base=0.2–0.7, neck·horizontal·vertical=0.2–0.8 범위를 확인하고 Randomize scene에서 형상 차이를 본다. 병에 physics를 지정하지 않았으므로 낙하·충돌·물리 변형은 이 실습의 확인 대상이 아니다.
+## 1. 고정된 받침과 떨어지는 물체 비교하기
 
-## 준비와 실행 방식
-
-Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
-
-이 학습은 공식 **IRO 확장의 native YAML workflow**다. `run.py`는 전체 설정을 가진 로컬 YAML의 경로를 정리하고 실제 Isaac Sim을 실행하는 도구다. 렌더러나 물리를 자체적으로 흉내 내지 않는다. `@PACKAGE@`와 `@OUTPUT@`는 준비 단계의 경로 표식이고, `$[...]`는 실행 시 IRO가 처리하는 매크로다. 원본 `scene.yaml` 대신 준비된 `prepared.yaml`을 IRO에 입력한다.
+Isaac Sim 5.1, `isaacsim.replicator.object` 확장과 RTX GPU 환경에서 실행하세요. 아래는 저장소 루트 기준입니다.
 
 ```bash
-cd src/148_events_ext_replicator_object_geometry  # 저장소 루트에서 실행; 폴더를 복사했다면 그 위치로 이동
-ISAAC_ROOT="$HOME/isaacsim"
-"$ISAAC_ROOT/python.sh" run.py --frames 3
-# GUI 실행: configuration: 뒤의 절대 경로를 복사한다.
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch
-# 파일로 생성하고 끝내는 native 실행:
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch --headless --frames 3
+cd src/148_events_ext_replicator_object_geometry
+~/isaacsim/python.sh run.py --launch --frames 3
 ```
 
-`--config bottle.yaml`처럼 이 폴더의 다른 설정을 선택할 수 있다(아래 파일 목록 참조). 기본 출력은 이 폴더의 `output/<UTC시간>-<고유값>/`이다. `--output /절대/새폴더`로 지정할 수 있으며 기존 경로를 덮어쓰지 않는다. 출력 폴더 안 `prepared.yaml`은 사용한 설정이고, `images/`, `labels/`, `3d_labels/`, `segmentation/`, `descriptions/` 등이 IRO 결과다. 비활성화한 스위치의 데이터는 생성되지 않는다.
+콘솔에 나온 `configuration:` 경로를 **Tools > Action and Event Data Generation > Object SDG > Description File**에 넣습니다. **Initialize scene randomization**으로 처음 배치를 보고, **Simulate**로 물리를 진행한 뒤 결과를 저장하세요. 초기화는 stage를 바꾸므로 편집 중인 장면을 먼저 저장합니다.
 
-GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action and Event Data Generation > Object SDG**로 간다. 공식 5.1 문서에는 이 패널이 **Object Detection SDG**로 표시되어 있지만 5.1에 설치된 0.4.13 확장 메뉴 이름은 Object SDG다. **Description File**에 `configuration:` 경로를 넣는다. **Initialize scene randomization**과 **Randomize scene**은 미리보기, **Simulate**는 결과 저장이다. 데이터 생성은 현재 stage를 새 장면으로 바꾸므로 작업 중인 stage는 먼저 별도로 저장한다.
+`run.py`만 호출하면 `output/<UTC시간>-<고유값>/prepared.yaml` 준비에서 끝납니다. `--launch`가 실제 앱을 열며 GUI는 생성 후에도 남습니다. 창 없이 세 장을 생성하고 종료하려면 `--launch --headless --frames 3`을 사용하세요. 설치 위치가 다르면 Python 경로와 `--isaac-root /설치/경로`도 바꿉니다.
 
-`--steps`를 생략한 `--launch` GUI 실행은 데이터 생성이 끝나도 사용자가 창을 닫을 때까지 유지됩니다. `--frames`는 저장할 데이터 프레임 수이며 창의 수명과 별개입니다. `--steps 600`처럼 지정하면 native Kit 업데이트 600회 후 종료합니다. 시작·장면 로딩도 이 횟수에 포함되므로 짧게 제한하면 생성이 끝나기 전에 종료될 수 있습니다. `--headless`는 기존처럼 정해진 데이터 생성 후 종료합니다. 이 설정은 Kit의 공식 [`/app/quitAfter`](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html#app-quitafter-default-1)를 사용합니다.
+### 설정에서 볼 부분
 
-## 실습
+```yaml
+static_cube:
+  type: geometry
+  subtype: cube
+  tracked: true
+  color: [0.2, 0.7, 0.3]
+  transform_operators:
+  - translate: [100, 50, 0]
+  - scale: [1, 1, 1]
+  physics: collision
+```
 
-1. scene.yaml을 실행한다. 구인 subject와 falling_cube는 rigidbody이며 floor와 static_cube는 collision이다.
-2. gravity 981, simulation_time 1의 결과에서 구가 바닥으로 떨어지고 작은 큐브가 큰 큐브와 충돌하는지 확인한다.
-3. --config mesh.yaml을 실행하여 models/box.usda의 Mesh를 참조한다. stage에서 참조를 펼쳐 Mesh와 Material을 확인한다.
-4. --config bottle.yaml을 embedded interface로 초기화하고 Randomize scene을 반복한다. 네 effector가 병의 몸통·목·바닥 모양을 어떻게 바꾸는지 관찰한다. 병에는 physics를 설정하지 않았다.
+녹색 큐브는 한 변 100 cm, 중심 Y가 50 cm이므로 밑면은 바닥 Y=0, 윗면은 Y=100에 있습니다. `physics: collision`은 부딪힐 표면을 제공하지만 동적 강체를 만들지 않습니다. 중력을 켜도 받침 자체는 떨어지지 않습니다.
 
-## 개념과 사용한 설정
+파란 `falling_cube`는 중심 `(100,210,0)`, 한 변 60 cm이며 `physics: rigidbody`입니다. 녹색 받침과 X·Z가 같으므로 아래로 내려오면서 받침 위에 닿습니다. 빨간 구 `subject`도 rigidbody이지만 X=-130 cm에 있어 바닥 쪽으로 떨어집니다.
 
-subtype은 cone/cube/cylinder/disk/torus/plane/sphere, bottle, mesh를 구분한다. collision은 부딪힘만 제공하는 정적 장애물이고 rigidbody는 중력·속도·충돌 반응이 있는 물체다. mesh의 usd_path는 기존 USD 모델을 참조한다. USD reference는 모델의 형상과 재질을 합성하는 기능이며 파일 자체를 Python으로 import하는 것이 아니다. bottle은 내부 변형 모델의 effector를 제어한다.
+전역 중력은 981 cm/s²이고 물리 시간은 1초입니다. **충돌체인지와 라벨 대상인지는 서로 독립적**입니다. `tracked: true`를 지정해도 물리가 생기지 않으며, `collision`이라고 자동으로 정답 대상이 되는 것도 아닙니다.
 
-IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
+### 실행 결과 확인하기
 
-## 한 변수만 바꾸는 실험
+초기화 때의 공중 배치와 `Simulate` 후 `images/`의 640×480 RGB를 비교하세요. 녹색 큐브 위치는 유지되고, 빨간 구와 파란 큐브는 내려오는 것이 관찰 기준입니다. 접촉이 일어났다고 완전히 정착했다고 단정하지 마세요.
 
-scene.yaml에서 구인 subject의 physics만 rigidbody에서 collision으로 바꾸어 구가 공중에 고정되는지 비교한다.
+`descriptions/`는 촬영 시점의 `global_transform`을 저장합니다. 행렬 마지막 행의 X·Y·Z를 보면 최종 중심 위치를 확인할 수 있습니다. 물리 이전의 `translate`·`scale` 연산은 `prepared.yaml`에서 확인하세요. IRO는 저장할 때 이를 최종 행렬로 합칩니다.
 
-## 문제 해결
+## 2. USD 메시와 변형 병 실행하기
 
-- `mapping values are not allowed here`는 YAML 들여쓰기/콜론을 먼저 확인한다. 탭 대신 공백을 사용한다.
-- `ModuleNotFoundError: yaml`이면 위 명령의 Isaac Sim `python.sh`로 준비한다. `--help`는 PyYAML 없이도 실행된다.
-- 카메라/물체가 안 보이면 F로 선택 물체에 초점을 맞추고, 시선 -Z와 단위 cm, clip 범위, transform 순서를 확인한다. 물리를 켠 장면은 초기 겹침 때문에 물체가 튀어나갈 수도 있다.
-- 확장 메뉴가 없으면 Extensions에서 `isaacsim.replicator.object`가 실제로 활성화되었는지 확인한다. RGB 파일이 없으면 오류 로그와 카메라 존재 여부를 확인한다. 창이 떠 있다는 사실은 데이터 생성 성공이 아니다.
-- 같은 seed는 장면 난수 재현을 돕지만 GPU/렌더 모드/자산 버전이 다르면 픽셀의 완전한 일치를 보장하지 않는다.
+앞의 실행을 종료하고 같은 폴더에서 메시 설정을 선택합니다.
 
-bottle은 isaacsim.replicator.object 확장에 포함된 bottle 자원을 사용한다. 확장 설치 없이 병의 변형을 재현할 수 없다. 원문 예제 중 rigidbody가 적힌 병 설정도 있지만 지원 범위 설명에 맞춰 이 패키지는 병에 물리를 부여하지 않는다.
+```bash
+~/isaacsim/python.sh run.py --config mesh.yaml --launch --headless --frames 3
+```
 
-## 포함 파일과 검증 범위
+### 설정에서 볼 부분
 
-- `scene.yaml`: 기본 실습 설정
-- `mesh.yaml`: 위 실습 단계에서 설명한 비교 설정
-- `bottle.yaml`: 위 실습 단계에서 설명한 비교 설정
-- `run.py`: 설정 준비 및 실제 확장 실행. `--help`로 옵션을 본다.
+```yaml
+subject:
+  type: geometry
+  subtype: mesh
+  usd_path: '@PACKAGE@/models/box.usda'
+  tracked: true
+  transform_operators:
+  - translate: [0, 50, 0]
+  - scale: [1, 1.5, 0.7]
+```
 
-YAML 구문과 launcher 준비 동작은 GPU 없이 검사할 수 있다. 실제 RTX 결과, PhysX 접촉, GUI 표시 검증은 별개다. `tutorial.json`의 `verification: not_run`은 이 패키지의 simulator 실행 결과를 아직 검증하지 않았다는 뜻이다.
+`usd_path`는 기존 USD의 형상과 재질을 **참조**합니다. 파일을 Python 모듈처럼 import하는 명령은 아닙니다. `models/box.usda`의 점 좌표는 각 축 -50~50이므로 배율을 적용한 크기는 X 100, Y 150, Z 70 cm입니다.
 
-## 출처
+중심 높이가 50인데 세로 길이는 150이므로 밑부분은 Y=-25까지 내려갑니다. 이 설정은 메시 물리를 지정하지 않았고 물리 시간도 0입니다. 따라서 바닥과 겹친 부분을 자동으로 밀어 올리지 않습니다. 형상과 배치를 직접 설정한 결과를 관찰하는 예입니다.
 
-- [NVIDIA Isaac Sim 5.1 — Geometry](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/geometry.html)
-- [IRO native 실행, embedded interface 및 출력 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html#run-from-the-ui)
+병은 별도 설정으로 실행하세요.
 
-설정과 한국어 실습은 위 문서를 기준으로 새로 작성했다. 설치된 5.1의 `isaacsim.replicator.object` 0.4.13 소스(`description/symbol.py`, `mutables/scene_dev.py`, `ui/object_detection_sdg_window.py`)에서 입력 키·장면 단위·UI 명칭을 대조했다.
+```bash
+~/isaacsim/python.sh run.py --config bottle.yaml --launch --frames 3
+```
+
+새 `configuration:` 경로를 Object SDG에 넣고 초기화·무작위화를 반복합니다. `base_effector`는 0.2~0.7, `neck_effector`·`horizontal_effector`·`vertical_effector`는 0.2~0.8 범위를 사용합니다. 이 값들은 병 모델의 변형 제어값입니다. cm나 배율로 곧바로 읽지 말고, 목·몸통·바닥 형상이 어떻게 바뀌는지 연결해 보세요.
+
+### 실행 결과 확인하기
+
+메시는 RGB와 `models/box.usda` 안의 Mesh 점 좌표·Material 연결을 비교합니다. 병은 `descriptions/`에 남는 네 effector 값과 저장 RGB의 외곽을 비교하세요. 두 비교 설정에는 rigidbody가 없으므로 낙하를 확인 기준으로 삼지 않습니다. 병 표면의 체크무늬는 로컬 `checker.png`를 사용하지만 병 형상 자체는 IRO 확장의 자원입니다.
+
+병에는 별도의 지원 제한도 있습니다. 공식 5.1 문서는 변형된 병 형상의 충돌 검사가 지원되지 않아 **병의 물리 시뮬레이션을 지원하지 않는다**고 명시합니다. 기본 도형에 적용한 `physics: rigidbody`를 병에 그대로 추가해 낙하 실험으로 확장하지 마세요. 이 변형은 네 제어값과 시각적 외곽의 관계를 배우는 데 사용합니다.
+
+## 3. 형상과 물리 설정의 관계 정리
+
+| 질문 | 확인할 설정 |
+|---|---|
+| 어떤 모양을 만들까요? | `subtype: sphere / cube / mesh / bottle` |
+| 기존 모델을 어디서 가져올까요? | 메시의 `usd_path` |
+| 움직임 없이 부딪힐 표면만 필요할까요? | `physics: collision` |
+| 중력과 충돌에 따라 움직여야 할까요? | `physics: rigidbody` |
+| 정답을 수집해야 할까요? | `tracked` |
+
+메시를 크게 만드는 것, 병의 형상을 바꾸는 것, 물체가 물리로 이동하는 것은 서로 다른 변화입니다. 화면을 비교할 때 외곽 형태와 중심 위치를 따로 읽어 보세요.
+
+## 4. 간단한 확인 실험
+
+`scene.yaml`을 `fixed_sphere.yaml`로 복사하고 **빨간 구 `subject`의 `physics`만 `rigidbody`에서 `collision`으로** 바꿉니다.
+
+```bash
+~/isaacsim/python.sh run.py --config fixed_sphere.yaml --launch --headless --frames 3
+```
+
+중력과 물리 시간은 같아도 빨간 구는 초기 높이 180 cm에 남아야 합니다. 파란 큐브는 계속 떨어집니다. 두 물체의 최종 Y 위치를 비교하면 장면에 중력이 있다는 것과 개별 물체가 동적이라는 것이 별개임을 확인할 수 있습니다.
+
+## 실행할 때 막히면
+
+- **녹색 큐브가 떨어지지 않음**: 정적 `collision` 설정의 정상 동작입니다. 낙하 대상은 두 rigidbody입니다.
+- **메시가 바닥에 묻힘**: 세로 배율 1.5와 중심 높이 50 cm를 계산해 보세요. 이 설정에는 겹침을 해소할 물리가 없습니다.
+- **`box.usda`를 찾지 못함**: `models/`를 포함해 폴더 전체를 유지하고 `prepared.yaml`의 절대 `usd_path`를 확인하세요.
+- **병 모델을 불러오지 못함**: `isaacsim.replicator.object` 확장과 포함 자원 로딩 오류를 확인하세요. 체크무늬 파일만으로 병 형상이 만들어지지는 않습니다.
+- **세 프레임이 모두 정착 상태여야 하는지 궁금함**: 각 프레임은 1초 후 촬영합니다. 완전 정지 여부는 추가 관찰이 필요한 별도 조건입니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Geometry](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/geometry.html)에 대응합니다. 기본 도형 물리, 로컬 USD 참조, 병의 형상 제어를 독립 설정으로 나누었습니다. 병에는 물리를 부여하지 않습니다.
+
+치수와 확인 기준은 로컬 YAML·USD 및 IRO 물리 설정 코드를 근거로 설명했습니다. 실제 접촉·병 렌더링 검증 상태는 `tutorial.json`의 `not_run`을 참고하세요.

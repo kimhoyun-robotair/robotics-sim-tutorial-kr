@@ -1,55 +1,138 @@
-# 13. Kit Commands와 Registered Actions: 실행·Undo·Redo
+# 13. 색 변경을 실행하고 Undo로 되돌리기
 
-권장 학습 순서 **13** · Python 실행 환경과 USD 기초 · 출처 ID `t177`
+## 이번에 배우는 것
 
-## 이 실습의 의도
+**큐브를 파랗게 만드는 Action을 호출하고, 그 안의 Command가 색을 어떻게 되돌리는지 확인합니다.**
 
-Cube 색을 바꾸는 작은 작업으로 이름 있는 Action 호출과 되돌릴 수 있는 Command의 역할을 구분한다. 등록한 `make_blue` Action 안에서 `ChangeProperty` Command를 실행하여, 색 변경 뒤 Undo/Redo가 실제 USD 속성을 복원하는지 확인한다. 기본 실행은 빨강→파랑→빨강→파랑을 순서대로 읽어 검사한 뒤 `command_history.json`과 최종 `commands.usda`를 저장한다. Action은 Python 프로세스에 등록되는 기능이고 USD 파일의 일부로 저장되지 않는다.
+버튼을 누르는 것처럼 이름으로 기능을 실행하고 싶을 때는 **Action**을 등록할 수 있습니다. 편집을 취소하고 다시 적용하려면 **Command**의 Undo·Redo 동작이 필요합니다. 이 예제에서는 `make_blue` Action 안에서 `ChangeProperty` Command를 실행해 두 역할을 연결합니다.
 
-## 실행 후 확인할 것
+| 구성 | 이번 실습에서 하는 일 |
+|---|---|
+| `CreateMeshPrimCommand` | 큐브를 만들고 실제 생성 경로 반환 |
+| `make_blue` Action | 이름으로 호출할 색 변경 함수 |
+| `ChangeProperty` Command | 이전 색을 보관하면서 새 색 적용 |
+| `command_history.json` | 빨강 → 파랑 → 빨강 → 파랑의 실제 속성 기록 |
+| `commands.usda` | 마지막 파란 큐브가 담긴 장면 |
 
-- `command_history.json`의 `prim_path`로 실제 생성된 큐브를 찾는다. 생성 명령이 경로를 정하므로 `/World/Cube`라는 고정 경로를 기대하지 않는다.
-- 보고서의 `before`, `after_action`, `after_undo`, `after_redo`가 각각 `[1,0,0]`, `[0,0,1]`, `[1,0,0]`, `[0,0,1]`인지 확인한다. 코드는 각 단계의 속성을 다시 읽고 이 순서가 다르면 오류를 낸다.
-- 화면과 `commands.usda`에서 최종 큐브는 파란색이어야 한다. 네 상태 변경은 표시용 앱 반복문 전에 연속 수행되므로 중간의 빨강·파랑 전환이 눈에 보이지 않아도 정상이다. 중간 상태의 확인 대상은 JSON이다.
-- `--steps` 없는 독립 실행 중 Registered Actions에서 `tutorial.commands.local` / `make_blue`를 찾아본다. 프로세스가 끝나면 해제되며, 저장된 USD만 다시 열어서 Action이 생기지 않는 것이 정상이다.
-- 수동 Undo/Redo 실습에서는 `ChangeProperty`가 색을 복원하는지 관찰한다. 직접 USD 값을 `Set`한 모든 작업이 같은 이력을 남긴다고 일반화하지 않으며, Action 등록만으로 Undo가 제공되는 것도 아니다.
+등록된 Action은 실행 중인 Python 앱의 기능입니다. USD 파일에는 큐브의 최종 상태가 저장되며, Action 등록까지 함께 저장되지는 않습니다.
 
-## 독립 패키지 준비와 실행 규칙
+## 1. 먼저 자동 Undo·Redo 실행하기
 
-이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
+Isaac Sim 5.1과 지원 NVIDIA GPU가 필요합니다. 저장소 루트에서 다음 명령을 실행하세요. 설치 경로가 다르면 `~/isaacsim`을 바꿉니다.
 
-이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI가 유지된다. 양수 `--steps N`을 지정하면 N번 실행 후 종료한다. `--headless`에서 `--steps`를 생략하면 기존 기본값인 120번 실행 후 종료한다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
+```bash
+~/isaacsim/python.sh src/13_python_usd_omniverse_tools/run.py --steps 120
+```
 
-## 순서대로 실습
+네 번의 색 읽기와 결과 저장을 먼저 수행한 뒤 앱 업데이트 120회를 진행하고 종료합니다. 창을 열어 둘 때는 `--steps 120`을 빼세요. `--headless`를 추가하면 창 없이 실행하며, 단계 수를 생략한 Headless 실행은 120회 후 종료합니다.
 
-1. `~/isaacsim/python.sh run.py`을 실행한다. 생성된 Cube는 최종적으로 파란색이며 콘솔/JSON에 네 색 상태가 기록된다.
-2. `omni.kit.commands.execute("CreateMeshPrimCommand", prim_type="Cube")` 반환의 성공 여부와 실제 생성 경로를 확인한다. 자동 생성 이름을 `/World/Cube`로 단정하지 않는다.
-3. 최초 빨강 속성을 만든 후 `get_action_registry()`에 `tutorial.commands.local` / `make_blue` action을 등록한다. action ID는 같은 extension ID 안에서 구분된다.
-4. action callback은 현재 색을 `prev`에 넣고 `ChangeProperty`를 실행한다. USD 속성을 직접 `Set`하는 것과 달리 이 변경은 Kit command history를 통해 되돌릴 수 있다.
-5. `execute_action`, `omni.kit.undo.undo`, `redo` 후 실제 속성을 다시 읽는다. 예상 네 상태와 다르면 코드가 오류를 발생시키므로 단순 성공 문구 출력으로 판정하지 않는다.
-6. 앱 업데이트가 끝나면 `finally`에서 자기 action을 deregister한다. extension에서는 같은 정리를 `on_shutdown`에 둔다.
+결과는 이 폴더의 `output/날짜-시간/`에 저장됩니다. `--output`을 사용하면 존재하지 않는 새 폴더를 지정해야 합니다.
 
-## GUI에서 명령과 action 찾기
+### 코드에서 볼 부분
 
-1. GUI에서 **Window > Commands**를 연 뒤 **Search Commands**를 누른다. `CreateMeshPrimCommand`와 `ChangeProperty`를 검색하고 매개변수 문서를 확인한다.
-2. GUI로 큐브의 색이나 변환을 한 번 바꾸고 Command History에 어떤 명령이 남는지 본다. 모든 직접 USD 변경이 history에 기록되는 것은 아니다.
-3. **Utilities > Registered Actions**를 열어 현재 등록된 action 목록을 살펴본다. 확장에 따라 목록이 달라진다. action을 더블클릭하면 즉시 실행되므로 먼저 이름과 설명을 읽는다.
-4. 이 패키지 action을 GUI에서 수동으로 실행하려면 `--steps` 없이 독립 실행하고 해당 앱 창의 Registered Actions에서 `tutorial.commands.local`을 찾는다. 코드가 종료되면 등록이 해제된다.
-5. 생성된 `commands.usda`를 나중에 다시 열어도 action이 자동으로 재등록되는 것은 아니다. USD 장면 저장과 Python 확장 수명은 별개다.
+Action이 호출하는 함수는 다음과 같습니다.
 
-## API와 개념 해설
+```python
+def make_blue():
+    success, _ = omni.kit.commands.execute(
+        "ChangeProperty",
+        prop_path=color.GetPath(),
+        value=[Gf.Vec3f(0, 0, 1)],
+        prev=color.Get(),
+    )
+```
 
-Command는 `do`/`undo` 동작을 포함할 수 있는 단위 작업이다. Action은 함수 호출에 이름을 붙여 UI 버튼·단축키·메뉴 등에서 실행하게 하는 등록 기능이다. Action 자체가 undo를 보장하지 않으며 내부에서 undo 가능한 command를 사용했는지가 중요하다. 명령과 action 목록은 활성 확장이 등록하므로 설치/활성화 상태에 따라 변한다.
+- `prop_path`: 생성된 큐브의 `primvars:displayColor` 속성 경로입니다.
+- `value`: 적용할 파랑 RGB입니다. 색 성분은 0~1 범위를 사용합니다.
+- `prev`: 호출하는 순간 읽은 이전 색입니다. Undo에서 복원할 값입니다.
 
-`Sdf.Path`는 Prim/속성 경로를 표현한다. `color.GetPath()`는 생성된 Prim의 `primvars:displayColor` 속성 경로이며 `ChangeProperty`가 바로 그 속성을 대상으로 한다. 이 예제의 색은 0~1 선형 RGB 값이다.
+`prev`에 빨강 상수를 넣는 대신 `color.Get()`을 사용하므로, 호출 전에 다른 색을 설정해도 그 색으로 돌아갈 수 있습니다. 최초 빨강은 직접 USD 속성에 작성하고, 이후 색 변경은 Command로 수행합니다.
 
-## 한 가지 변수 실험과 문제 해결
+### 실행 결과 확인하기
 
-`make_blue`의 목표 색만 `(0,1,0)`으로 바꾸면 검증의 기대 순서도 **요구한 초록 동작에 맞게** 함께 바꿔야 한다. 변경 전후의 JSON과 undo 결과를 직접 비교한다. 명령을 찾지 못하면 **Window > Extensions**에서 mesh primitive/command 관련 확장 활성 여부를 확인한다. 액션이 안 보이면 독립 프로세스가 이미 종료했는지 확인한다.
+`command_history.json`에서 다음 네 항목을 읽어보세요.
 
-## 출처와 검증 범위
+| 항목 | 확인할 RGB | 의미 |
+|---|---|---|
+| `before` | `[1, 0, 0]` | Action 호출 전 빨강 |
+| `after_action` | `[0, 0, 1]` | Action이 적용한 파랑 |
+| `after_undo` | `[1, 0, 0]` | Command가 이전 색 복원 |
+| `after_redo` | `[0, 0, 1]` | 같은 변경을 다시 적용 |
 
-- NVIDIA Isaac Sim **5.1.0**, [Commands](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/omniverse_tools.html): 이 패키지가 대응하는 공식 페이지. 문장과 실행 코드는 초심자용으로 재구성했다.
-- 구현 API는 로컬 Isaac Sim 5.1 설치의 해당 `isaacsim`/Kit/USD 소스와 대조했다. 원문의 외부 최신 버전 링크는 5.1 설치와 UI/API가 다를 수 있다.
+코드는 매 단계에서 USD 속성을 다시 읽으며, 이 순서와 다르면 오류를 냅니다. 화면 갱신 반복문은 이 과정 뒤에 시작하므로 **화면에는 최종 파란 큐브만 보일 수 있습니다.** 중간 변화는 JSON으로 확인하세요.
 
-Python 구문 컴파일과 일반 Python의 `--help`는 앱 없이 확인할 수 있다. 이 검사는 GPU, 자산 로딩, GUI 표현, 물리 결과의 실제 실행 검증을 대신하지 않는다. `tutorial.json`의 verification이 `not_run`이면 해당 시뮬레이터 실행은 아직 검증되지 않은 상태다.
+`prim_path`에는 생성 명령이 실제로 반환한 경로가 기록됩니다. 항상 `/World/Cube`라고 가정하지 말고 이 값으로 Stage에서 큐브를 찾으세요.
+
+## 2. 실행 중인 앱에서 Action 찾아보기
+
+앞의 실행이 끝났다면 `--steps` 없이 다시 실행합니다.
+
+```bash
+~/isaacsim/python.sh src/13_python_usd_omniverse_tools/run.py
+```
+
+1. 해당 앱 창에서 **Window > Commands**를 엽니다.
+2. **Search Commands**로 `CreateMeshPrimCommand`와 `ChangeProperty`를 찾아 매개변수를 살펴봅니다.
+3. **Utilities > Registered Actions**에서 `tutorial.commands.local`의 `make_blue`를 찾습니다.
+4. 이름과 설명을 읽은 뒤 Action 이름을 더블클릭해 실행합니다. 이미 파란 상태이므로 바로 눈에 띄는 변화가 없을 수 있습니다.
+
+메뉴가 보이지 않으면 **Window > Extensions**에서 Commands 창은 `omni.kit.window.commands`, Action 목록은 `omni.kit.actions.window`를 활성화하세요. 현재 `run.py`가 실행 중인 창에서 켜야 등록된 `make_blue`를 찾을 수 있습니다.
+
+### 코드에서 볼 부분
+
+```python
+registry.register_action(extension_id, action_id, make_blue)
+omni.kit.actions.core.execute_action(extension_id, action_id)
+omni.kit.undo.undo()
+omni.kit.undo.redo()
+```
+
+`extension_id`는 `tutorial.commands.local`, `action_id`는 `make_blue`입니다. 두 식별자가 어떤 기능을 호출할지 정합니다. Action이 호출되면 Python 함수가 실행되고, 그 함수가 Command를 실행합니다.
+
+앱 관찰을 마치면 `finally`에서 다음 정리를 수행합니다.
+
+```python
+registry.deregister_action(extension_id, action_id)
+```
+
+등록한 기능의 사용 기간이 끝났기 때문에 해제합니다. 저장한 `commands.usda`를 다른 Isaac Sim 창에서 여는 것만으로 Action이 다시 나타나지는 않습니다.
+
+### 실행 결과 확인하기
+
+Registered Actions 목록은 **지금 `run.py`가 실행 중인 앱 창**에서 확인하세요. 별도로 켠 다른 Isaac Sim 창은 별도 등록 목록을 가집니다.
+
+자동 실행 후에 GUI에서 추가로 색을 바꾸거나 Action을 호출해도 이미 저장된 JSON은 갱신되지 않습니다. 수동 변경 결과를 남기려면 화면과 Property 값을 확인하고 장면을 새 이름으로 저장합니다.
+
+## 3. Action과 Command의 역할 정리
+
+```text
+make_blue라는 이름으로 호출
+    → 등록된 Python 함수 실행
+    → ChangeProperty가 현재 색을 보관하고 파랑 적용
+    → Undo는 보관한 색, Redo는 파랑 복원
+```
+
+**Action에 이름을 붙였다고 Undo가 자동으로 생기지는 않습니다.** 이 실습에서 되돌리기가 가능한 이유는 함수 안에서 이전 값을 전달하는 Command를 사용했기 때문입니다. 직접 `color.Set(...)`으로 값을 쓴 모든 작업이 같은 편집 이력을 남긴다고 생각하면 안 됩니다.
+
+## 4. 간단한 확인 실험
+
+창이 열린 상태에서 **Action 호출 전의 색만** 초록으로 바꿔보세요.
+
+1. JSON의 `prim_path`에 해당하는 큐브를 선택하고 Property에서 Display Color를 초록으로 바꿉니다.
+2. Registered Actions에서 `make_blue`를 실행합니다. 큐브가 파랗게 바뀌는지 봅니다.
+3. Undo를 한 번 실행합니다. 이번에는 빨강이 아니라 **호출 직전의 초록**으로 돌아오는지 확인합니다.
+
+이 실험은 `prev=color.Get()`이 고정된 기본색이 아닌 현재 값을 저장한다는 점을 확인합니다. 자동 검사 코드를 바꿀 필요는 없습니다.
+
+## 실행할 때 막히면
+
+- **`CreateMeshPrimCommand failed`**: **Window > Extensions**에서 mesh primitive 관련 확장이 활성화되어 있는지 확인하세요. 큐브 생성이 실패하면 뒤의 색 변경도 진행할 수 없습니다.
+- **Action 목록에 `make_blue`가 없음**: `--steps`로 이미 종료했거나 다른 앱 창을 보고 있는지 확인하세요.
+- **Action을 실행해도 색이 그대로임**: 현재 색이 이미 파랑이면 정상입니다. 확인 실험처럼 시작 색을 바꾸어 보세요.
+- **Undo가 생각한 작업을 되돌리지 않음**: 그사이에 실행한 GUI 편집도 이력에 들어갈 수 있습니다. 색 변경 직후 다른 편집 없이 Undo를 확인하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Commands](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/omniverse_tools.html)에 대응합니다. 등록된 Action에서 색 변경 Command를 실행하는 작은 장면으로 실행·Undo·Redo를 비교합니다.
+
+현재 `tutorial.json`의 검증 상태는 `not_run`입니다. 이번 개정에서는 등록·해제 흐름, 속성 검사와 출력 항목을 코드로 대조했습니다. JSON 기대값과 GUI 관찰은 실제 실행에서 확인할 기준이며, 실행 성공 기록을 뜻하지 않습니다.

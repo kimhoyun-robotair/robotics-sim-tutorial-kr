@@ -1,67 +1,137 @@
-# 177. 메모리에서 바로 학습하는 온라인 합성 데이터
+# 177. 합성 이미지를 저장하지 않고 곧바로 학습에 쓰기
 
-권장 학습 순서 **177** · 사용 중단 문서와 레거시 참고 · 출처 ID `t049`
+## 이번에 배우는 것
 
-Isaac Sim 5.1 공식 **Online Generation** 수업이다. 공식 문서에서 **DEPRECATED**로 표시한 예제라 후속 버전 호환을 전제하지 않는다. 이 패키지는 설치된 공식 `online_generation` 구현을 실행하는 native 실습이다. `run.py`는 ShapeNet 파일을 먼저 검사하고, 학습 횟수와 결과 저장 위치를 제한한다. 다른 로컬 튜토리얼은 필요 없다.
+**새로 렌더링한 영상·상자·마스크를 PyTorch 텐서로 전달해 Mask R-CNN의 학습 단계까지 연결합니다.**
 
-## 이 실습의 의도
+보통 데이터셋은 이미지를 디스크에 저장한 뒤 학습기가 다시 읽습니다. 온라인 생성에서는 학습기가 다음 표본을 요청할 때 시뮬레이터가 새 배치를 만들고 결과를 바로 넘깁니다. 데이터 생성과 학습이 같은 실행 흐름 안에 있는 셈입니다.
 
-ShapeNet 물체를 USD로 변환한 뒤 카메라·조명·물체 자세·텍스처가 매번 바뀌는 영상을 만든다. RGB, bounding box, instance mask가 `IterableDataset`에서 곧바로 Mask R-CNN 학습으로 넘어간다. 학습용 이미지 전체를 디스크에 쌓지 않고, 관찰용 PNG만 저장하는 방식이다. 기본 설정의 짧은 10회 학습은 렌더 결과와 정답이 실제 손실 계산·가중치 갱신까지 연결되는지 확인하는 용도이며 정확도 향상을 보장하지 않는다.
+| 실행 단계 | 입력 | 결과 |
+|---|---|---|
+| `convert` | 사용자가 준비한 ShapeNet OBJ | geometry-only USD |
+| `audit` | 변환된 USD 폴더 | 클래스별 사용 가능 파일 수 |
+| `sample` | USD와 `experiment.json` | 관찰용 PNG, 기본 4장 |
+| `train` | 실시간 합성 표본 | 기본 10회 손실 계산·가중치 갱신과 관찰 이미지 |
 
-## 실행 후 확인할 것
+이 튜토리얼은 공식적으로 사용 중단된 **Isaac Sim 5.1 예제**를 실행합니다. 짧은 학습은 데이터 연결을 확인하는 용도이며 학습 정확도를 보장하지 않습니다.
 
-- **변환·파일 검사:** `convert` 후 원본 옆 `ShapeNetCore_nomat/`에 geometry-only USD가 생기고, `audit`에서 plane·watercraft·rocket의 `size_eligible`이 모두 0보다 큰지 확인한다. 파일 검사 통과만으로 GPU 렌더링과 학습이 확인되는 것은 아니다.
-- **온라인 표본:** `sample`의 `_out_gen_imgs/domain_randomization_test_image_*.png` 기본 4장을 열어 배치·조명·재질 변화와 RGB/마스크 대응을 본다. USD 파일의 synset 번호와 영상의 학습 클래스 이름을 연결해 읽는다.
-- **학습 진행:** `train` 콘솔에 기본 `ITER 0`부터 `ITER 9`까지 실제 loss가 기록되는지 확인한다. loss가 유한한지 보고, 짧은 실행에서 매번 감소하거나 정확한 물체 예측이 나타나야 한다고 요구하지 않는다.
-- **예측 표시:** `_out_train_imgs/`의 입력과 예측 시각화를 비교한다. 초기 모델의 예측이 confidence 기준을 넘지 못하면 overlay가 비어 있을 수 있으므로 이미지 존재와 탐지 품질을 분리해서 읽는다.
-- **저장 범위:** 출력의 `asset_audit.json`, `command.json`으로 클래스와 실행 인수를 확인한다. 이 native 예제는 학습 checkpoint를 저장하지 않으므로 `.pth`가 없는 것이 이 실습의 동작이며, PNG가 배포 가능한 모델을 뜻하지 않는다.
+## 1. 변환·검사·샘플 생성 순서로 실행하기
 
-## 준비와 실행
+Linux, RTX GPU와 Isaac Sim 5.1 전체 설치가 필요합니다. 설치된 online generation 예제가 사용하는 `torch`, `torchvision`, `warp`, `matplotlib`도 준비되어 있어야 합니다. ShapeNet 데이터는 [ShapeNet](https://shapenet.org)의 사용 조건에 맞게 직접 확보하세요. 이 저장소는 해당 데이터셋을 포함하지 않습니다.
 
-Linux, RTX GPU, Isaac Sim **5.1.0** 전체 설치, 설치본의 `torch`, `torchvision`, `warp`, `matplotlib`가 필요하다. `ISAAC_SIM_PATH`는 `python.sh`가 있는 폴더다. ShapeNetCore 데이터는 [ShapeNet](https://shapenet.org)에서 사용 조건에 맞게 직접 확보한다. 이 패키지는 데이터나 모델을 다운로드하지 않는다. 설치된 torchvision의 ResNet backbone 초기화가 사전학습 가중치를 요청할 수 있으므로 네트워크 또는 해당 torch 캐시도 확인한다.
+`/data/ShapeNetCore`에 아래 세 종류의 원본이 있다고 가정합니다.
+
+| 클래스 | 폴더 이름인 synset |
+|---|---|
+| plane | `02691156` |
+| watercraft | `04530566` |
+| rocket | `04099429` |
+
+저장소 루트에서 실행합니다. 설치 위치가 다르면 각 명령에 `--isaac-sim /실제/설치경로`를 추가하세요. 기본은 `~/isaacsim` 또는 `ISAAC_SIM_PATH` 환경변수입니다.
 
 ```bash
-cd src/177_replicator_replicator_online_generation
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-python3 run.py --help
-# /data/ShapeNetCore에는 02691156, 04530566, 04099429 하위 폴더가 있어야 한다.
-python3 run.py convert --root /data/ShapeNetCore --max-models 10 --headless --output output/convert
-python3 run.py audit --root /data/ShapeNetCore_nomat
-python3 run.py sample --root /data/ShapeNetCore_nomat --headless --output output/sample
-python3 run.py train --root /data/ShapeNetCore_nomat --headless --output output/train
+python3 src/177_replicator_replicator_online_generation/run.py convert \
+  --root /data/ShapeNetCore --max-models 10 --headless \
+  --output src/177_replicator_replicator_online_generation/output/convert_first
+python3 src/177_replicator_replicator_online_generation/run.py audit \
+  --root /data/ShapeNetCore_nomat
+python3 src/177_replicator_replicator_online_generation/run.py sample \
+  --root /data/ShapeNetCore_nomat --headless \
+  --output src/177_replicator_replicator_online_generation/output/sample_first
 ```
 
-실행기는 Isaac Sim의 `python.sh`를 자식 프로세스로 호출한다. 변환물은 공식 converter 규약대로 **원본 경로 옆 `ShapeNetCore_nomat/`**에 생긴다. 이미 존재하면 덮어쓰지 않는다. sample/train 결과는 지정한 `output` 아래에 저장하며 새 디렉터리를 사용한다. Windows의 원본 진입점은 `python.bat`이지만 이 패키지 실행기는 Linux 기준이다.
+변환물은 `--output`이 아니라 원본 옆의 **`ShapeNetCore_nomat/`**에 생깁니다. 이는 설치된 converter의 규약입니다. 기존 변환 폴더가 있으면 덮어쓰지 않습니다. `--output`에는 실행 기록과 관찰 결과를 남기며 매번 새 경로를 사용합니다.
 
-`--headless`를 빼고 `--steps`도 생략하면 변환·샘플 생성·학습을 설정한 횟수만큼 완료한 뒤 사용자가 닫을 때까지 Isaac Sim GUI를 유지한다. `--steps 120`은 작업 완료 후 GUI 업데이트를 120회 수행하고 종료한다(`--steps`에는 양의 정수를 지정). `num_test_images`, `training_steps`, `--max-models`는 작업량이며 GUI 대기 시간과 독립적이다. `audit`은 파일 검사만 하므로 창을 열지 않는다. 위 `--headless` 명령은 기존처럼 유한한 작업 후 종료한다.
+`audit`은 일반 Python으로 파일을 읽고 종료합니다. 다른 단계는 Isaac Sim `python.sh`로 설치된 예제를 시작합니다. `--headless`를 빼면 GUI를 볼 수 있고 작업이 끝나도 창이 남습니다. `--steps 120`은 **작업 완료 후** GUI 업데이트 횟수입니다.
 
-## 단계별 실습
+### 설정에서 볼 부분
 
-1. `experiment.json`에서 `categories`와 `synsets`를 함께 읽는다. plane=`02691156`, watercraft=`04530566`, rocket=`04099429`이다. 이름은 표시·학습 클래스, 숫자는 데이터 디렉터리 이름이다.
-2. `convert`로 geometry-only USD를 만든다. 재질 없이 변환하는 이유는 randomizer가 재질을 교체하고, 큰 메시를 여러 번 로드할 때 메모리 부담을 줄이기 위해서다.
-3. `audit` 출력에서 세 클래스 모두 `size_eligible > 0`인지 확인한다. `max_asset_size_mb`는 USD 파일의 크기 한도이며 GPU 총 메모리 한도가 아니다. 원본 dataset은 기본 70%를 학습에 사용하므로 클래스마다 여러 모델을 준비한다.
-4. `sample` 후 `output/sample/_out_gen_imgs/domain_randomization_test_image_*.png` 네 장을 연다. RGB 영상과 마스크에서 같은 물체가 대응하는지, 배경까지 한 물체로 묶이지 않는지 본다.
-5. `train` 콘솔의 `ITER`와 loss를 확인한다. `output/train/_out_train_imgs/`에는 예측 시각화가 생긴다. 공식 학습 예제는 가중치 checkpoint 저장을 구현하지 않으므로 이 결과를 배포 가능한 모델 파일로 오해하지 않는다.
-6. 설치본 `standalone_examples/replicator/online_generation/generate_shapenet.py`의 `__next__`, `setup_replicator`, `_instantiate_category`를 열고 아래 설명과 대응시킨다. 설치본을 수정하지 않고 실험 변수는 로컬 JSON에서 바꾼다.
+`experiment.json`의 주요 값입니다.
 
-## API와 USD 개념
+```text
+"max_asset_size_mb": 10,
+"num_test_images": 4,
+"training_steps": 10,
+"learning_rate": 0.0001
+```
 
-`SimulationApp`이 Kit와 확장을 시작한 뒤 Replicator API를 사용할 수 있다. `rep.randomizer.instantiate(..., mode="reference")`는 USD asset을 reference로 조합한다. **Prim**은 장면 그래프의 물체·카메라·조명 같은 노드이고 **reference**는 다른 USD 파일의 내용을 연결하는 구성 방식이다.
+파일 크기 한도는 USD 하나가 읽을 대상에 포함되는지 판단하는 조건입니다. GPU 총 메모리를 10 MB로 제한하는 설정은 아닙니다. `audit`은 클래스마다 한도 이하 파일이 있는지 확인하지만, 원본 생성기의 학습 분할 이후까지 충분한지는 별도로 살펴봐야 합니다. 각 클래스에 여러 모델을 준비하세요.
 
-`rep.trigger.on_frame()` 안의 그래프가 `rep.orchestrator.step()`마다 실행된다. `get_data(device="cuda")`로 읽은 영상·마스크를 `warp.to_torch`로 PyTorch 텐서로 연결한다. RGB는 alpha를 제외하고 `[H,W,3] → [3,H,W]`, 값은 `0..255 → 0..1`로 바뀐다. box의 `semanticId`를 클래스 번호로 바꾸며 배경은 0, 물체 클래스는 1부터 시작한다. 자식 mesh들의 instance mask는 같은 상위 물체 prim 기준으로 합친다. box 면적이 0이거나 화면 전체인 표본은 제거한다.
+### 실행 결과 확인하기
 
-`DataLoader`의 `collate_fn`은 영상마다 물체 수가 달라도 목록으로 묶어 준다. Kit 한 인스턴스에 묶인 생성기이므로 여러 worker 프로세스를 추가하지 않는다. 학습은 `model(images, targets) → loss → zero_grad → backward → optimizer.step` 순서다. 이 패키지는 원본의 `i > max_iters` 종료 조건을 고려해 정확히 `training_steps`회 업데이트하도록 한도를 전달한다.
+`audit`의 `files`는 검색된 파일 수, `size_eligible`은 크기 조건을 통과한 수입니다. 모든 클래스에서 0보다 커야 다음 단계로 진행할 수 있습니다.
 
-## 하나만 바꿔 보기와 문제 해결
+`output/sample_first/_out_gen_imgs/domain_randomization_test_image_*.png` 기본 4장을 열어 보세요. 물체 자세·조명·재질이 달라지는지, RGB와 마스크가 같은 물체를 가리키는지 확인합니다. 출력의 `asset_audit.json`, `command.json`에는 실제 사용한 파일 수와 외부 실행 인수가 남습니다.
 
-다른 값은 그대로 두고 `max_asset_size_mb`를 10에서 5로 낮춘 뒤 `audit`의 사용 가능 파일 수와 sample 속도를 비교한다. 새 `--output output/sample_5mb`를 쓴다. 분할 뒤 쓸 모델이 없으면 모델 수를 늘리거나 크기 제한을 완화한다. CUDA out-of-memory이면 다른 GPU 앱을 종료하고 학습 횟수·모델 크기를 줄인다. `No module named ...`는 system Python에 설치하라는 뜻이 아니라 `ISAAC_SIM_PATH`와 공식 배포본의 환경을 먼저 점검할 신호다.
+## 2. 렌더링 표본을 학습 텐서로 연결하기
 
-검증 범위: Python 문법·`--help` 확인. ShapeNet 변환, RTX 생성, 실제 학습은 데이터/GPU 조건을 갖춘 환경에서 별도 실행해야 한다.
+샘플이 의도대로 보이면 학습을 실행합니다.
 
-`native_runner.py`는 설치된 예제를 실행하면서 앱 종료만 이 패키지에서 관리한다. 정상적으로 작업을 끝낸 뒤 `app.update()`로 창을 유지하며 학습이나 샘플 생성을 다시 반복하지 않는다. 오류 또는 원본 예제의 조기 `sys.exit()`에서는 GUI 대기를 수행하지 않는다. Isaac Sim 설치 파일은 수정하지 않는다.
+```bash
+python3 src/177_replicator_replicator_online_generation/run.py train \
+  --root /data/ShapeNetCore_nomat --headless \
+  --output src/177_replicator_replicator_online_generation/output/train_first
+```
 
-## 출처
+### 코드에서 볼 부분
 
-- [Isaac Sim 5.1 Online Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_online_generation.html)
-- [Mesh Converter](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_online_generation.html#mesh-converter), [DataLoader core](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_online_generation.html#the-dataloader-core), [Train](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_online_generation.html#train)
-- 구현 근거: Isaac Sim 5.1 배포본 `standalone_examples/replicator/online_generation/{usd_convertor,generate_shapenet,train_shapenet}.py`.
+실제 표본 생성은 설치본의 `standalone_examples/replicator/online_generation/generate_shapenet.py`에 있습니다. `IterableDataset`이 다음 표본을 만들 때 Replicator의 장면을 바꾸고 annotator를 읽습니다.
+
+```python
+gt = {
+    "rgb": self.rgb.get_data(device="cuda"),
+    "boundingBox2DTight": self.bbox_2d_tight.get_data(device="cpu"),
+    "instanceSegmentation": self.instance_seg.get_data(device="cuda"),
+}
+```
+
+RGB와 마스크는 CUDA 데이터에서 `warp.to_torch`로 연결합니다. RGB는 alpha를 제외하고 `[높이,너비,3]`에서 `[3,높이,너비]`로 축을 바꾸며 값 범위를 `0..255`에서 `0..1`로 맞춥니다. 상자의 semantic ID는 배경 0, 대상 클래스 1부터의 학습 번호로 바꿉니다. 자식 mesh의 instance mask를 같은 상위 물체로 묶는 작업도 필요합니다.
+
+영상마다 보이는 물체 수가 다르므로 정답 상자·마스크 수가 다릅니다. DataLoader의 `collate_fn`은 이런 표본을 같은 크기의 고정 배열로 억지로 합치지 않고 목록으로 전달합니다. 생성기는 Kit 인스턴스에 연결되어 있으므로 임의로 여러 worker 프로세스를 추가하지 않습니다.
+
+설치본 `train_shapenet.py`의 학습 순서는 다음과 같습니다.
+
+```python
+loss_dict = model(images, targets)
+loss = sum(loss for loss in loss_dict.values())
+optimizer.zero_grad()
+loss.backward()
+optimizer.step()
+```
+
+모델은 영상과 정답으로 손실을 계산하고, 역전파로 기울기를 얻은 뒤 가중치를 갱신합니다. 로컬 실행기는 원본 종료 조건 `i > max_iters`를 고려해 `training_steps - 1`을 넘깁니다. 기본 10회이면 `ITER 0`부터 `ITER 9`까지 실제 갱신합니다.
+
+### 실행 결과 확인하기
+
+콘솔의 loss가 유한한 값인지 확인하고 `_out_train_imgs/`의 입력·예측 시각화를 살펴보세요. 설치본은 10회 간격으로 예측을 시각화하므로 기본 10회 학습에서 매번 PNG가 생기는 것은 아닙니다. 초기에는 confidence 기준을 넘는 예측이 없어 overlay가 비어 있을 수 있습니다.
+
+이 예제에는 **학습 checkpoint 저장이 구현되어 있지 않습니다.** PNG와 loss 로그는 학습 연결을 관찰하는 결과이며 배포할 `.pth` 모델 파일이 아닙니다. torchvision의 backbone 초기화가 사전학습 가중치를 요청할 수 있으므로 네트워크 또는 해당 환경의 torch 캐시도 확인하세요.
+
+## 3. 디스크 데이터셋과 온라인 생성의 차이 정리
+
+```text
+디스크 방식: 생성 → 전체 이미지·정답 저장 → 학습기가 다시 읽기
+온라인 방식: 학습기의 다음 표본 요청 → 장면 생성·렌더링 → 텐서 → 손실·갱신
+```
+
+온라인 방식에서도 원본 USD 자산은 디스크에서 읽습니다. 저장하지 않는 것은 매번 만들어지는 학습 영상 전체입니다. 이 실습의 PNG는 중간 결과를 눈으로 점검하기 위한 일부 관찰 자료입니다.
+
+## 4. 간단한 확인 실험
+
+`experiment.json`을 복사하고 `max_asset_size_mb`만 **10 → 5**로 바꾼 뒤 `--config`로 전달하세요. 먼저 `audit`을 실행하고 기존 결과와 `size_eligible`을 비교합니다.
+
+통과 파일 수는 같거나 줄어야 합니다. 그다음 새 출력에서 `sample`을 실행해 사용할 수 있는 모델과 생성 시간을 비교하세요. 파일 크기가 작다고 모든 모델의 렌더 시간이 일정 비율로 줄지는 않습니다. 클래스별 파일이 없어지면 그것도 크기 제한의 관찰 결과입니다.
+
+## 실행할 때 막히면
+
+- **변환 뒤에도 USD를 찾지 못함**: sample/train의 `--root`가 원본 OBJ 폴더가 아닌 `_nomat` 폴더인지 확인하세요.
+- **특정 클래스의 사용 가능 파일이 0개**: synset 경로, 변환 결과, 크기 제한을 대조하세요.
+- **분할 뒤 사용할 모델이 없음**: 클래스마다 여러 모델을 준비하거나 파일 크기 제한을 완화하세요. audit 통과만으로 분할 후 수량이 보장되지는 않습니다.
+- **CUDA 메모리 부족**: 다른 GPU 앱을 종료하고 자산 크기와 실제 학습 배치·모델 부하를 확인하세요. 반복 횟수만 줄여도 한 단계의 최대 메모리는 그대로일 수 있습니다.
+- **모델 파일이 없음**: 원본은 checkpoint를 저장하지 않습니다. 관찰 이미지를 가중치 파일로 해석하지 않습니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Online Generation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_online_generation.html)에 대응합니다. 설치된 converter·generator·trainer를 로컬 설정으로 실행하는 사용 중단 예제입니다.
+
+문서에서는 로컬 wrapper와 설치본의 텐서 변환·학습 루프를 대조했습니다. ShapeNet 변환, RTX 표본 생성과 실제 학습은 이번 개정에서 실행하지 않았으며 `tutorial.json`은 `not_run`입니다.

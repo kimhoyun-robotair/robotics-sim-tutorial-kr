@@ -1,92 +1,151 @@
-# 105. TurtleBot: Twist에서 바퀴 속도까지
+# 105. 차체 속도 명령이 두 바퀴의 회전으로 바뀌는 과정
 
-권장 학습 순서 **105** · ROS 2 연결과 기본 통신 · 출처 ID `t008`
+## 이번에 배우는 것
 
-예상 결과는 외부 `/cmd_vel` 메시지에 따라 TurtleBot이 바닥 위에서 이동하고, 0 명령을 보내면 정지하는 것이다. `run.py`는 공식 TurtleBot3 asset과 같은 제어 노드로 평평한 테스트 장면을 만든다. 공식 Simple Room 환경 대신 평면을 사용하여 제어 연결을 보기 쉽게 한 변형이다.
+**ROS 2의 Twist 메시지로 TurtleBot을 움직이고, 전진·회전 명령이 좌우 바퀴 각속도로 변환되는 과정을 확인합니다.**
 
-## 이 실습의 의도
+로봇에게 “왼쪽 바퀴를 몇 번 돌리세요”보다 “초당 0.2 m로 전진하세요”라고 명령하는 편이 자연스럽습니다. 두 바퀴로 움직이는 로봇에서는 차체의 선속도와 각속도를 각각의 바퀴 속도로 바꾸는 차동 구동 제어기가 필요합니다.
 
-차체의 전진·회전 속도인 `Twist.linear.x`와 `angular.z`가 좌우 바퀴의 각속도로 바뀌고 실제 이동으로 이어지는 과정을 확인한다. 평평한 바닥은 바퀴 제어와 접지 결과를 쉽게 비교하기 위한 구성이다. 기본 실행은 `/cmd_vel` 수신과 제어 그래프를 준비하며, 주행 명령은 외부 ROS 터미널에서 보내야 한다.
+| 단계 | 이 실습의 데이터 | 단위 |
+|---|---|---|
+| ROS 입력 | `/cmd_vel`의 `linear.x`, `angular.z` | m/s, rad/s |
+| 차동 구동 변환 | `DifferentialController` | 바퀴 각속도 rad/s |
+| 관절 명령 | 왼쪽·오른쪽 wheel joint | rad/s |
+| 물리 결과 | 콘솔 `position_m`와 화면 | 위치 m와 차체 방향 |
 
-## 실행 후 확인할 것
+`run.py`는 수신 그래프를 만들지만 주행 명령을 자체 생성하지 않습니다. 명령은 별도 ROS 터미널에서 보냅니다.
 
-- `/DriveGraph`에서 `Twist → Linear/Angular → Differential → Actuator`를 따라가고, `ros2 topic info /cmd_vel -v`에서 `geometry_msgs/msg/Twist`를 받는 subscriber를 확인한다. 토픽 연결과 실제 주행을 각각 확인한다.
-- 아래의 10 Hz 전진 명령 `linear.x=0.2`, `angular.z=0`을 보내면 콘솔 `wheel_commands_rad_s`의 두 값이 약 8 rad/s로 같고, `position_m`과 viewport의 로봇 위치가 변해야 한다. 바퀴 명령과 차체 이동이 함께 보이는 것이 적용 확인이다.
-- 제자리 회전 명령 `linear.x=0`, `angular.z=0.5`에서는 좌우 바퀴 명령이 반대 부호가 되고 차체 방향이 바뀌어야 한다. 접지 과도응답 때문에 위치가 한 점에 정확히 고정될 필요는 없다.
-- 송신기를 Ctrl+C로 끝내도 마지막 속도로 계속 움직이는 것은 watchdog이 없는 이 그래프의 의도된 동작이다. 선속도·각속도가 모두 0인 메시지를 보낸 뒤 바퀴 명령이 0으로 바뀌고 로봇이 멈추는지 확인한다.
-- 물리·렌더 간격은 1/60초이고 제어는 매 playback tick에 실행된다. 콘솔은 120스텝마다 출력하므로 로그 빈도를 `/cmd_vel` 송신 빈도나 제어 빈도로 해석하지 않는다.
+## 1. 두 터미널에서 로봇과 명령 준비하기
 
-**실행 종료:** `--steps`를 생략한 GUI 실행은 창을 직접 닫을 때까지 물리와 ROS 통신을 계속합니다. `--steps 1200`처럼 양수를 명시하면 해당 스텝 뒤 종료합니다. `--headless`만 지정하면 기존 기본값 3600스텝으로 종료하며, `--steps 0`과 음수는 허용하지 않습니다.
+기본 환경은 Ubuntu 24.04, ROS 2 Jazzy, Isaac Sim 5.1과 지원 NVIDIA RTX GPU입니다. Ubuntu 22.04에서는 아래 `jazzy`를 `humble`로 바꿉니다. 두 프로세스가 같은 컴퓨터에서 통신하는 실습입니다.
 
-## 이 폴더에서 시작하기
-
-다른 로컬 튜토리얼을 먼저 읽거나 `tutorial_common`을 설치할 필요가 없다. 이 폴더를 통째로 복사해도 된다. 아래 명령은 이 폴더에서 실행한다. Isaac Sim 5.1.0과 지원되는 NVIDIA GPU/드라이버가 필요하다. ROS 2는 Ubuntu 22.04의 Humble 또는 Ubuntu 24.04의 Jazzy를 사용한다. ROS 패키지가 아직 없다면 [5.1 ROS 설치 문서](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)대로 준비한다. 이 실습은 패키지 설치를 자동 실행하지 않는다.
-
-Bash 터미널 A와 ROS 명령을 실행할 터미널 B 각각에서 같은 설정을 적용한다.
+**터미널 A**는 시스템 ROS를 source하지 않은 새 터미널로 준비합니다. 저장소 루트에서 Isaac Sim 내부 ROS 라이브러리를 지정하고 실행하세요. 라이브러리 경로 설정은 이 터미널에서 한 번만 합니다.
 
 ```bash
-source /opt/ros/humble/setup.bash
-# Ubuntu 24.04에서는 위 한 줄 대신 source /opt/ros/jazzy/setup.bash
+export ISAAC_SIM="$HOME/isaacsim"
+export ROS_DISTRO=jazzy
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export ISAAC_SIM="$HOME/isaacsim"
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$ISAAC_SIM/exts/isaacsim.ros2.bridge/jazzy/lib"
+"$ISAAC_SIM/python.sh" src/105_ros2_ros2_drive_turtlebot/run.py
 ```
 
-`ISAAC_SIM`은 실제 5.1.0 설치 경로로 바꾼다. ROS_DOMAIN_ID는 DDS 통신 그룹 번호이므로 두 프로세스가 같아야 한다. GUI 사용 시 터미널 A에서 `"$ISAAC_SIM/isaac-sim.sh"`를 실행하고 **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화한다. Standalone `run.py`는 이 확장을 직접 활성화한다. 외부 ROS 노드는 시스템 `python3`, 시뮬레이터 스크립트는 `"$ISAAC_SIM/python.sh"`를 쓴다. 여러 컴퓨터를 연결할 때에는 양쪽의 `FASTRTPS_DEFAULT_PROFILES_FILE`을 5.1 설치 문서에 맞게 지정한다.
+기본 TurtleBot USD는 `Isaac/Robots/Turtlebot/Turtlebot3/turtlebot3_burger.usd`입니다. 공식 자산에 접근할 수 있어야 합니다. 준비한 로컬 USD를 쓰려면 `--robot-usd /절대/경로/turtlebot.usd`를 추가합니다. 그 로봇에도 같은 두 바퀴 관절 이름이 필요합니다.
 
-Stage는 현재 열어 둔 USD 장면이고, prim은 `/World/Robot`처럼 경로로 찾는 장면 객체이다. Action Graph는 prim으로 저장되는 실행 그래프다. `execIn/execOut` 연결은 **언제 실행하는가**, 숫자·문자열 연결은 **무슨 데이터를 전달하는가**를 결정한다. 메시지 발행 여부는 아래 ROS 명령으로 직접 확인한다. 코드 생성과 실제 DDS 수신은 서로 다른 확인 단계이다.
+**터미널 B**는 시스템 ROS를 사용하는 Bash 터미널입니다.
 
-## 실행
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ros2 topic info /cmd_vel -v
+ros2 topic pub --rate 10 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.2}, angular: {z: 0.0}}'
+```
 
-이 실습에는 Isaac 5.1 asset root의 `Isaac/Robots/Turtlebot/Turtlebot3/turtlebot3_burger.usd`가 필요하다. 인터넷 또는 설치한 로컬 asset pack에서 접근할 수 있어야 한다. 직접 가져온 로봇은 `--robot-usd /absolute/path/turtlebot.usd`로 넣을 수 있다. 이 경우 이름이 `wheel_left_joint`, `wheel_right_joint`인 두 바퀴를 가지고 있어야 한다.
+`ROS_DOMAIN_ID`는 통신 그룹 번호입니다. A와 B가 같아야 합니다. 외부 ROS의 Python 환경을 Isaac Sim에 섞지 않아도 두 프로세스는 DDS 메시지로 통신합니다.
 
-1. 터미널 A에서 `"$ISAAC_SIM/python.sh" run.py`을 실행한다. 바닥과 로봇을 보고 콘솔의 실제 joint names를 확인한다.
-2. 터미널 B에서 `ros2 topic info /cmd_vel -v`로 Isaac의 subscriber를 확인한다.
-3. 전진 명령을 반복 발행한다.
+### 실행 결과 확인하기
 
-   ```bash
-   ros2 topic pub --rate 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2}, angular: {z: 0.0}}"
-   ```
+A의 콘솔에서 `actual_joint_names`에 `wheel_left_joint`, `wheel_right_joint`가 있는지 먼저 봅니다. 전진 명령 뒤에는 다음 두 관찰을 연결합니다.
 
-4. Ctrl+C로 위 발행을 끝내도 마지막 속도가 유지된다. 다음 명령으로 정지시킨다.
+- `wheel_commands_rad_s`의 두 값이 약 8 rad/s로 같아집니다.
+- `position_m`과 화면에서 차체 위치가 변합니다.
 
-   ```bash
-   ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.0}}"
-   ```
+명령 발행을 Ctrl+C로 끝낸 뒤 **반드시 0 속도 메시지를 따로 보내** 정지 반응도 확인하세요.
 
-5. 제자리 회전을 보려면 `linear.x=0.0`, `angular.z=0.5`로 바꾼다. 콘솔의 `wheel_commands_rad_s`가 좌우 반대 부호이고 `position_m`은 대체로 유지되는지 확인한다. 실물 제어용 watchdog은 이 교육 그래프에 없으며 마지막 명령 유지가 공식 실습의 동작이다.
+```bash
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0}, angular: {z: 0.0}}'
+```
 
-## GUI로 노드 연결을 직접 보기
+이 그래프는 송신이 끊겼을 때 자동 정지시키는 시간 감시 기능이 없습니다. 새 메시지가 없으면 마지막 명령을 유지합니다.
 
-`run.py` 실행 창에서 **Window > Graph Editors > Action Graph**를 열고 `/DriveGraph`를 선택한다. 직접 구성하려면 새 Stage에 위 TurtleBot USD와 **Create > Physics > Ground Plane**, Physics Scene, 조명을 추가하고 아래 표대로 연결한다.
+GUI 실행은 창을 닫으면 종료합니다. `--steps 1200`처럼 한도를 지정할 수 있고, `--headless`만 쓰면 기본 3600단계에서 끝납니다.
 
-| 출발 출력 | 도착 입력 | 이유 |
+## 2. Twist에서 관절 명령까지 그래프 따라가기
+
+A의 실행 창에서 **Window > Graph Editors > Action Graph**를 열고 `/DriveGraph`를 선택하세요.
+
+```text
+ROS2 Subscribe Twist
+    ├─ linearVelocity → BreakVector3.x ─┐
+    └─ angularVelocity → BreakVector3.z ┤
+                               DifferentialController
+                                        ↓ velocityCommand
+                               ArticulationController
+                                        ↓
+                              왼쪽·오른쪽 바퀴 관절
+```
+
+### 코드에서 볼 부분
+
+제어기에 들어가는 실제 설정은 다음과 같습니다.
+
+| 설정 | 값 | 의미 |
 |---|---|---|
-| Tick.tick | Twist.execIn, Differential.execIn, Actuator.execIn | 새 메시지가 없어도 마지막 명령으로 매 프레임 제어 |
-| Context.context | Twist.context | 같은 DDS 도메인 사용 |
-| Twist.linearVelocity | BreakVector3(tuple) → x → Differential.linearVelocity | 전진 속도 m/s 추출 |
-| Twist.angularVelocity | BreakVector3(tuple) → z → Differential.angularVelocity | 회전 속도 rad/s 추출 |
-| Differential.velocityCommand | Actuator.velocityCommand | 두 바퀴의 각속도를 joint drive에 전달 |
+| `wheelRadius` | `0.025` m | 명령 변환에 사용할 바퀴 반지름 |
+| `wheelDistance` | `0.16` m | 좌우 바퀴 사이 거리 |
+| `maxLinearSpeed` | `0.22` m/s | 차체 선속도 제한 |
+| `maxAngularSpeed` | `1.0` rad/s | 차체 회전 속도 제한 |
+| `jointNames` | `[wheel_left_joint, wheel_right_joint]` | 속도 배열을 적용할 순서 |
 
-Differential의 wheelRadius=0.025m, wheelDistance=0.16m, maxLinearSpeed=0.22m/s, maxAngularSpeed=1rad/s다. Actuator는 `robotPath=/World/turtlebot3_burger`, `jointNames=[wheel_left_joint, wheel_right_joint]`이다. GUI에서 이름 배열은 **Constant Token** 두 개와 **Make Array**로 만들 수 있다. Constant String은 token 배열 대신 쓸 수 없다.
+이 값들은 현재 코드의 제어기 설정입니다. 다른 TurtleBot 모델이나 직접 가져온 USD를 쓰면 실제 치수도 일치하는지 확인해야 합니다. 예를 들어 104번에서 사용하는 [Jazzy Burger URDF](https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/jazzy/turtlebot3_description/urdf/turtlebot3_burger.urdf)의 바퀴 충돌 반지름은 0.033 m로, 여기의 0.025 m와 다릅니다. 그 USD를 `--robot-usd`로 넣었다면 바퀴 명령 8 rad/s가 계산되는 것과 차체가 실제로 0.2 m/s로 가는 것을 같은 결과로 보지 마세요. 치수를 맞추려면 제어기 설정도 별도로 조정해야 합니다.
 
-Articulation Root는 로봇의 링크·관절을 하나의 물리 계통으로 묶는 API다. 이 코드는 공식 절차처럼 `/World/turtlebot3_burger`에 하나만 둔다. 직접 가져온 asset에 `/base_footprint` Root가 있다면 그곳의 **Physics > Articulation Root**를 제거하고 부모 로봇에 추가한다. 원본 asset을 고치는 대신 현재 Stage의 reference 위에 수정값을 기록한다.
+Tick 연결은 **언제 실행할지**, 숫자 데이터 연결은 **어떤 값을 전달할지**를 정합니다. 여기서는 Tick이 수신기뿐 아니라 Differential과 Actuator에도 연결되어 마지막 명령을 매 재생 tick에 적용합니다.
 
-## 계산과 API 해설
+코드는 로봇 아래 기존 Articulation Root API를 찾아 제거한 뒤 `/World/turtlebot3_burger`에 하나를 둡니다. 그 경로를 `robotPath`에 사용합니다. 이는 현재 Stage에서 하는 수정이며 외부 원본 USD 파일을 덮어쓰는 작업이 아닙니다.
 
-왼쪽 바퀴는 `(v - ω·L/2)/r`, 오른쪽은 `(v + ω·L/2)/r`이다. 예를 들어 v=0.2, ω=0이면 두 바퀴 모두 약 8rad/s다. 메시지의 x·z를 잘못 연결하면 이 대칭이 깨진다. `DifferentialController`는 이 변환과 속도 제한을 처리하고 `IsaacArticulationController`는 실제 joint drive에 명령한다. `SingleArticulation.get_world_pose()`는 물리 시뮬레이션 결과를 읽는다.
+같은 그래프를 GUI로 직접 구성하려면 독립 실행을 종료하고 A의 같은 환경에서 `"$ISAAC_SIM/isaac-sim.sh"`로 새 앱을 엽니다. **Window > Extensions**에서 `isaacsim.ros2.bridge`를 활성화하고 거리 단위가 1 m인 새 Stage에 같은 TurtleBot USD를 `/World/turtlebot3_burger`로 추가하세요. **Create > Physics**에서 Ground Plane과 Physics Scene을, **Create > Light**에서 조명을 추가합니다.
 
-이 Stage의 단위는 1m이므로 입력에 추가 단위 변환이 없다. cm 단위 Stage를 사용한다면 공식 **Scale To/From Stage Unit** 노드를 linear 쪽에 추가한다. 각속도는 rad/s이며 GUI USD 각도 표시는 degree일 수 있다.
+직접 가져온 로봇의 `/base_footprint` 등에 Articulation Root가 이미 있다면 해당 Prim의 Property에서 **Physics > Articulation Root**를 제거하고 부모 `/World/turtlebot3_burger`에 추가하세요. 하나의 로봇에 Root를 중복해서 두지 않습니다. 준비가 끝나면 **Window > Graph Editors > Action Graph > New Action Graph**에서 다음 순서로 연결합니다.
 
-## 하나만 바꾸기·문제 해결
+1. On Playback Tick, ROS2 Context, ROS2 Subscribe Twist, Break Vector3 두 개, Differential Controller, Articulation Controller를 추가합니다.
+2. Tick을 수신기·차동 제어기·관절 제어기의 `execIn`에 연결하고, Context 출력을 수신기의 `context`에 연결합니다. Context의 `useDomainIDEnvVar`를 켜서 A에 설정한 domain을 사용합니다.
+3. Twist의 `linearVelocity`·`angularVelocity`를 각각 Break Vector3의 `tuple`에 연결합니다. 선속도의 `x`, 각속도의 `z`를 차동 제어기의 입력으로 사용하세요.
+4. `velocityCommand`를 관절 제어기로 연결하고 위 표의 치수·제한·로봇 경로·관절 이름을 입력합니다. 이름 배열을 노드로 만들 때는 Constant Token 두 개와 Make Array를 사용합니다. Constant String 배열은 필요한 token 배열과 타입이 다릅니다.
+5. 수신 토픽을 `/cmd_vel`로 맞추고 Play한 뒤 터미널 B에서 같은 명령을 보냅니다. 이 장면은 1 m 단위이므로 선속도를 그대로 쓰며, 다른 거리 단위에서는 Scale To/From Stage Unit 변환도 필요합니다.
 
-`angular.z`만 0에서 0.5로 바꾸어 바퀴 속도 차이를 확인한다. 로봇이 움직이지 않으면 Play, 실제 관절 이름, Articulation Root, 바퀴 접지와 마찰을 순서대로 본다. 속도 drive는 stiffness=0, damping>0이어야 한다. 테이블 위보다 바닥에서 실험한다. 키보드 패키지가 준비되어 있으면 `ros2 run teleop_twist_keyboard teleop_twist_keyboard`로 같은 `/cmd_vel`을 조작할 수 있다. asset을 못 읽는 오류는 로컬 USD 경로로 해결하고, 에셋 접근 실패를 DDS 문제로 혼동하지 않는다.
+### 실행 결과 확인하기
 
-## 출처와 검증 범위
+제자리 회전을 확인하려면 전진 송신을 끝내고 다음 명령을 보냅니다.
 
-- [공식 5.1 제어 개념](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html#driving-the-robot)
-- [공식 5.1 그래프](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html#building-the-graph)
-- [공식 5.1 노드 해설](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html#graph-explained)
-- [공식 5.1 ROS 확인](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html#verifying-ros-connections)
+```bash
+ros2 topic pub --rate 10 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.0}, angular: {z: 0.5}}'
+```
 
-공식 절차를 바탕으로 이 패키지의 설명과 보조 코드를 독립적으로 작성했다. `tutorial.json`의 `verification: not_run`은 GPU·GUI·외부 ROS 통신의 통합 실행을 아직 확인하지 않았다는 뜻이다. 위의 확인 항목을 실제 환경에서 관찰해야 완료한 것이다.
+좌우 명령이 반대 부호가 되고 차체 방향이 바뀌는지 보세요. 콘솔의 위치만으로는 제자리 회전 각도를 읽을 수 없으므로 화면의 방향도 확인합니다. 접지 과도응답 때문에 위치가 완전히 한 점에 고정될 필요는 없습니다. 관찰 후 송신을 끝내고 앞의 0 속도 명령을 보냅니다.
+
+## 3. 차체 속도와 바퀴 속도의 관계 정리
+
+차체 선속도를 `v`, 각속도를 `ω`, 바퀴 간 거리를 `L`, 반지름을 `r`이라 하면 다음과 같습니다.
+
+```text
+왼쪽 바퀴 각속도  = (v - ωL/2) / r
+오른쪽 바퀴 각속도 = (v + ωL/2) / r
+```
+
+`v=0.2`, `ω=0`이면 `0.2/0.025=8` rad/s로 두 바퀴가 같습니다. `v=0`, `ω=0.5`이면 왼쪽 -1.6, 오른쪽 +1.6 rad/s입니다. 서로 다른 두 관찰을 같은 계산으로 설명할 수 있습니다.
+
+물리·렌더 간격은 1/60초, 콘솔 출력은 120단계마다입니다. 이 로그 간격을 `/cmd_vel`의 10 Hz 송신률이나 제어 빈도로 해석하지 마세요.
+
+## 4. 간단한 확인 실험
+
+전진 명령의 `linear.x=0.2`는 유지하고 **`angular.z`만 0에서 0.5로** 바꿔 보세요.
+
+```bash
+ros2 topic pub --rate 10 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.2}, angular: {z: 0.5}}'
+```
+
+코드의 치수로 계산하면 왼쪽 약 6.4, 오른쪽 약 9.6 rad/s입니다. 양쪽 모두 앞으로 돌되 오른쪽이 더 빨라 곡선으로 이동해야 합니다. 제자리 회전과 달리 차체 위치도 계속 변합니다. 실험 뒤 0 속도를 보내세요.
+
+## 실행할 때 막히면
+
+- **`/cmd_vel` 구독자가 없음**: Bridge 로딩, A/B의 domain과 RMW 설정을 확인하세요. 시스템 ROS와 내부 ROS 환경이 섞였다면 A를 새로 준비합니다.
+- **바퀴 명령은 나오지만 몸체가 움직이지 않음**: 실제 관절 이름, 이동 가능한 base, 바퀴 접지와 drive를 확인하세요.
+- **로봇 자산 로딩 오류**: 공식 자산 접근 또는 `--robot-usd` 경로부터 확인합니다. 자산 실패와 ROS 수신 실패는 별도 문제입니다.
+- **Ctrl+C 후에도 계속 주행함**: 마지막 명령을 유지하는 구조입니다. 두 속도가 0인 메시지를 보내세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Driving TurtleBot using ROS 2 Messages](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html)에 대응합니다. 공식 GUI 그래프를 Python으로 구성하고, 주행 확인을 쉽게 하려고 Simple Room 대신 평평한 바닥을 사용합니다. 환경 분리는 [5.1 ROS 2 Installation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_ros.html)을 따릅니다.
+
+바퀴 명령과 실제 차체 이동, 0 명령 후 정지를 각각 확인하세요. `tutorial.json`의 검증 상태는 `not_run`이며 GPU 주행·외부 ROS 통합 성공을 기록한 자료는 없습니다.

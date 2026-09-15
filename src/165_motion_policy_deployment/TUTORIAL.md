@@ -1,82 +1,146 @@
-# 165. t003 · 학습된 H1 정책을 Isaac Sim으로 옮기기
+# 165. H1 정책의 입력 69개와 출력 19개는 무엇일까요?
 
-권장 학습 순서 **165** · 병렬 환경과 학습 정책 활용 · 출처 ID `t003`
+## 이번에 배우는 것
 
-이 패키지는 Isaac Sim **5.1.0**에 설치된 `H1FlatTerrainPolicy`로 실제 추론을 실행하고, 입력 관측값·관절 순서·출력 행동·월드 위치를 기록한다. 정책 학습을 흉내 내지 않는다. 공식 문서의 배포 과정을 재현 가능한 단일 로봇 실험으로 구성했다. 다른 로컬 패키지의 코드나 설명을 먼저 읽을 필요가 없다.
+**H1 정책이 실제로 받은 첫 관측과 마지막 행동을 기록하고, 학습된 정책을 옮길 때 맞춰야 할 입출력 조건을 이해합니다.**
 
-## 이 실습의 의도
+정책 파일을 불러오는 것만으로 배포가 끝나지는 않습니다. 같은 숫자 19개라도 관절 순서가 다르면 무릎을 움직일 값이 팔에 전달될 수 있습니다. 이번에는 평평한 바닥과 일정한 전진 명령을 사용해 장면 복잡도보다 관측 배열·관절 순서·제어 주기에 집중합니다.
 
-학습된 H1 보행 정책이 관측 배열을 받아 관절 목표 위치를 내보내는 과정을 단일 로봇에서 확인한다. 평평한 바닥과 일정한 전진 명령을 사용하는 이유는 장면 복잡도보다 관절 순서·관측 구성·제어 주기가 학습 당시 계약과 맞는지 살펴보기 위해서다. 기본 실행은 설치된 정책의 추론과 실제 위치 기록까지 수행하며, 새 정책을 학습하지 않는다.
+| 파일 | 담는 내용 | 확인하는 질문 |
+|---|---|---|
+| `trace.csv` | 단계별 몸통 위치와 속도 명령 | 로봇이 실제로 어떻게 움직였나요? |
+| `contract.json` | 관절 이름, 관측, 행동, 제어 주기 | 정책이 기대한 형식과 맞나요? |
+| 외부 `policy.pt` | 선택한 TorchScript 정책 | 어떤 학습된 함수를 실행하나요? |
+| 외부 `env.yaml` | 선택한 환경·제어 설정 | 어떤 기본 자세와 주기를 사용하나요? |
 
-## 실행 후 확인할 것
+기본 실행은 설치된 H1 정책을 사용합니다. 새 정책을 훈련하거나 다른 로봇의 관측 형식을 자동 변환하지 않습니다.
 
-- **H1 자세와 이동:** GUI에서 `/World/H1`이 바닥에 지지된 채 기본 전진 명령 0.5 m/s에 반응하는지 본다. 종료 후 `trace.csv`의 `x_m`, `y_m`, `z_m`을 함께 읽는다. X 이동만 있어도 넘어져 미끄러진 결과일 수 있으므로 몸통 높이와 화면을 함께 판단한다.
-- **입출력 계약:** `contract.json`의 `joint_names`와 `last_action`이 각각 19개, `first_observation`이 69개인지 확인한다. `first_observation[9:12]`는 기본 `[0.5, 0, 0]` 명령이며, 관절 이름은 개수뿐 아니라 순서까지 학습 설정과 대조한다.
-- **정책 주기:** 같은 파일의 `physics_dt`, `decimation`, `policy_hz`가 `1 / (physics_dt × decimation)` 관계인지 확인한다. GUI 렌더 속도와 정책 추론 빈도는 별개다.
-- **기록 완료 시점:** `trace.csv`는 실행 중 작성하고 `contract.json`은 시뮬레이션 루프가 끝난 뒤 작성한다. GUI를 닫거나 `--steps`만큼 실행한 후 최종 보고서를 확인하며, 첫 추론 전에 닫았다면 CSV만 남을 수 있다. 파일 생성이나 유한 횟수 종료 자체는 안정 보행의 판정이 아니다.
+## 1. 기본 H1 정책 실행하기
 
-## 준비와 실행
-
-RTX GPU/드라이버, Isaac Sim 5.1 워크스테이션 설치, 5.1 Isaac 자산 접근이 필요하다. 이하 `ISAAC_SIM`은 자신의 설치 디렉터리다. 일반 Python은 `--help`만 실행할 수 있다. 자산 서버 대신 로컬 자산 팩을 사용하는 경우 Isaac Sim의 자산 루트를 먼저 설정한다. 런타임이 사용하는 자산은 `/Isaac/Robots/Unitree/H1/h1.usd`, `/Isaac/Samples/Policies/H1_Policies/h1_policy.pt`, 같은 디렉터리의 `h1_env.yaml`이다.
+Isaac Sim 5.1, RTX GPU와 드라이버, 5.1 H1 USD·정책 자산 접근이 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-export ISAAC_SIM=/home/hoyunkim/isaacsim
-cd src/165_motion_policy_deployment
-"$ISAAC_SIM/python.sh" run.py --speed 0.5
-# 화면 없이 별도 결과에 기록
-"$ISAAC_SIM/python.sh" run.py --headless --steps 1200 --output output/headless
+~/isaacsim/python.sh src/165_motion_policy_deployment/run.py --speed 0.5 --steps 1200 --output src/165_motion_policy_deployment/output/base_01
 ```
 
-`output/trace.csv`는 실제 월드 위치를 기록하고 `contract.json`은 첫 관측과 마지막 행동, 기본 관절 위치를 기록한다. 기존 결과 파일은 덮어쓰지 않는다. 1,200 physics step은 기본 설정에서 6초이며 렌더 프레임 수와 다르다.
+1200번 물리를 진행한 뒤 종료합니다. 기본 H1 물리 간격 0.005초에서 6초입니다. 이 실행기는 `world.step(render=False)`로 물리를 한 단계 진행하고 GUI에서는 8단계마다 `world.render()`를 별도로 호출합니다. 화면 갱신 동안 추가 물리를 진행하지 않으므로 GUI 렌더 간격과 정책 시간 간격을 혼동하지 마세요. 외부 환경 파일을 선택했다면 전체 물리 시간은 `1200 × contract.json의 physics_dt`로 계산합니다. `--steps`를 빼면 창을 닫을 때까지 진행하고, `--headless`에서는 생략 시 1200스텝으로 제한합니다.
 
-`--steps`를 생략하면 GUI에서 사용자가 창을 닫을 때까지 시뮬레이션을 계속합니다. `--steps 1200`처럼 횟수를 지정하면 자동 종료합니다. `--headless` 실행에서 생략하면 1200회로 제한됩니다.
+`trace.csv`는 실행 중, `contract.json`은 루프가 끝난 뒤 씁니다. 기존 두 결과 파일 중 하나라도 있으면 새 `--output` 폴더를 선택해야 합니다. 첫 추론 전에 창을 닫으면 trace만 남을 수 있습니다.
 
+### 코드에서 볼 부분
 
-## 직접 해보기
+실습의 `InspectedH1`은 관측 계산을 새로 구현하지 않고 설치된 H1 클래스의 결과를 복사합니다.
 
-1. 기본 명령을 실행한다. 바닥 위 H1이 +X 방향으로 움직이는지 관찰한다. 마지막 자세가 출력되어도 보행 성공이 자동 보장되지는 않는다. 넘어짐은 CSV의 몸통 `z_m`와 화면에서 함께 판단한다.
-2. `contract.json`의 `joint_names`가 19개이고 `first_observation`이 69개인지 확인한다. 관절 이름의 **순서까지** 학습 시 순서와 같아야 한다.
-3. 관측 배열을 `[0:3]` 몸체 좌표 선속도, `[3:6]` 각속도, `[6:9]` 몸체 좌표 중력 방향, `[9:12]` 명령, `[12:31]` 기본 자세 대비 관절 위치, `[31:50]` 관절 속도, `[50:69]` 이전 행동으로 나누어 읽는다. 중력 방향은 정규화된 벡터이며 `-9.81` 가속도 값 자체가 아니다.
-4. `physics_dt`, `decimation`, `policy_hz`를 비교한다. 물리가 200 Hz이고 decimation이 4이면 추론은 50 Hz다. 정확한 값은 실제로 읽힌 환경 파일을 따른다.
-5. `--speed 0.2 --output output/slow`만 바꿔 같은 step 수로 실행한다. 이동 거리를 비교한다. 다른 joint gain이나 물리 주기를 동시에 바꾸지 않는다.
+```python
+observation = super()._compute_observation(command)
+if self.first_observation is None:
+    self.first_observation = observation.copy()
+return observation
+```
 
-## Isaac Lab 학습 결과를 사용하는 선택 실습
+따라서 기록된 첫 관측은 실제 추론에 전달한 값입니다. 이후에는 물리 콜백의 `controller.forward(dt, command)`가 관측·추론·관절 목표 적용을 진행합니다. 첫 콜백은 `initialize()`에 사용하므로 첫 물리 단계부터 이미 정책이 계산되었다고 가정하지 않습니다.
 
-학습에는 별도 Isaac Lab 환경이 필요하다. 공식 5.1 문서가 제시한 **Isaac Lab 2.0 명령 예시**는 다음과 같다. 이를 현재 Isaac Lab 전체 버전의 공통 명령으로 간주하지 않는다. 훈련은 많은 GPU 시간을 사용하므로 여기서 자동 실행하지 않는다.
+### 실행 결과 확인하기
+
+`trace.csv`의 `x_m`, `y_m`, `z_m`을 함께 읽으세요. `command_vx_m_s`는 목표 전진 속도이고 나머지 세 값은 실제 월드 위치입니다. `physics_step`은 0부터 시작하는 반복문 인덱스이며 각 행의 위치는 그 물리 진행 후 읽습니다.
+
+H1이 몸통을 지지한 채 이동하는지 화면과 Z를 함께 확인합니다. X가 변해도 넘어진 로봇의 미끄러짐일 수 있습니다. `contract.json`의 다음 항목도 확인하세요.
+
+- `joint_names`: 19개 관절 이름과 순서
+- `first_observation`: 69개 입력값
+- `last_action`: 19개 정책 출력
+- `default_joint_positions`: 행동을 더할 기준 자세
+- `physics_dt`, `decimation`, `policy_hz`: 물리와 추론의 주기
+
+## 2. 관측 배열과 관절 목표 해석하기
+
+### 코드에서 볼 부분
+
+설치된 H1의 관측 배열은 다음 순서입니다.
+
+| 슬라이스 | 개수 | 의미 |
+|---|---|---|
+| `[0:3]` | 3 | 몸체 좌표계 선속도(m/s) |
+| `[3:6]` | 3 | 몸체 좌표계 각속도(rad/s) |
+| `[6:9]` | 3 | 몸체에서 본 중력 방향 |
+| `[9:12]` | 3 | 전진·측면·회전 명령 |
+| `[12:31]` | 19 | 기준 자세 대비 관절 위치(rad) |
+| `[31:50]` | 19 | 관절 속도(rad/s) |
+| `[50:69]` | 19 | 이전 정책 행동 |
+
+합은 `3 + 3 + 3 + 3 + 19 + 19 + 19 = 69`입니다. 기본 명령은 `[0.5, 0, 0]`이므로 관측의 `[9:12]`에서 그대로 확인할 수 있습니다. 중력 입력은 방향 벡터이며 `-9.81`이라는 가속도 크기 자체가 아닙니다.
+
+관절 위치는 절대 각도가 아니라 `현재 위치 - default_pos`입니다. 예를 들어 기준 무릎 각도가 0.79 rad이고 현재도 0.79 rad라면 해당 관측은 0에 가깝습니다. 기준 자세의 의미를 바꾸면 같은 실제 자세도 다른 입력이 됩니다.
+
+설치된 H1은 정책 출력을 다음 위치 목표로 바꿉니다.
+
+```python
+ArticulationAction(joint_positions=self.default_pos + self.action * 0.5)
+```
+
+`action=0.2`라면 해당 관절의 기준 위치에 0.1 rad를 더한 목표입니다. 이는 관절을 그 위치로 즉시 옮기는 명령이 아니라 관절 drive가 추종할 목표입니다. 위치 목표를 torque 값으로 그대로 사용해서는 안 됩니다.
+
+### 실행 결과 확인하기
+
+추론 빈도는 다음 관계로 읽습니다.
+
+```text
+policy_hz = 1 / (physics_dt × decimation)
+```
+
+물리가 0.005초 간격이고 decimation이 4이면 네 물리 단계마다 추론하므로 50 Hz입니다. 그 사이에는 마지막 행동을 유지합니다. 정확한 값은 실행 결과에 기록된 환경 설정을 따르세요. GUI 렌더 빈도는 이 계산과 별개입니다.
+
+### 학습한 정책을 연결하는 경우
+
+사용자 정책에는 같은 학습 실행에서 나온 TorchScript와 환경 YAML이 필요합니다. Isaac Lab에서 먼저 정책을 재생해 확인한 뒤 **같은 H1의 69입력·19출력과 action scale 0.5 조건**인 경우 다음처럼 전달합니다.
 
 ```bash
-# Isaac Lab 작업 디렉터리에서
+~/isaacsim/python.sh src/165_motion_policy_deployment/run.py --policy /절대경로/exported/policy.pt --environment /절대경로/params/env.yaml --steps 1200 --output src/165_motion_policy_deployment/output/custom_01
+```
+
+두 인수는 함께 지정해야 합니다. 실행기는 환경 파일의 dt를 읽지만 로봇 USD와 관측 구성, H1의 행동 배율은 유지합니다. 다른 로봇·관절 수·정규화 규칙을 가진 정책은 파일 경로 교체만으로 호환되지 않습니다.
+
+정책 파일을 아직 만들지 않았다면 별도 Isaac Lab 환경이 필요합니다. 공식 5.1 문서가 제시하는 **Isaac Lab 2.0 기준** 예시는 다음과 같습니다. 다른 Lab 버전에서는 해당 버전의 task·export 절차를 확인하세요.
+
+```bash
+# Isaac Lab 작업 디렉터리에서 실행합니다.
 ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Velocity-Flat-H1-v0 --headless
 ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/play.py --task Isaac-Velocity-Flat-H1-v0 --num_envs 32
 ```
 
-생성된 `logs/rsl_rl/<task>/<time>/params/env.yaml`과 내보낸 `exported/policy.pt`를 찾는다. `agent.yaml`은 네트워크 설정, `env.yaml`은 물리 주기·로봇 초기 자세·actuator gain/limit·관측 scale·행동 scale/offset·허용 명령 범위를 설명한다. 먼저 Lab의 `play.py`에서 정책이 정상인지 확인한 뒤 다음처럼 **H1의 동일한 69입력/19출력과 0.5 action scale 계약**을 가진 파일만 전달한다.
+학습 결과의 `logs/rsl_rl/<작업>/<실행시각>/params/env.yaml`과 play/export에서 만든 `exported/policy.pt`를 찾습니다. 같은 실행의 파일을 짝지어 Lab 재생 결과부터 확인하세요. `agent.yaml`은 학습 알고리즘·네트워크 설정이고, 이 실행기의 `--environment`에는 로봇·물리·제어 설정을 담은 `env.yaml`을 전달합니다. 이 폴더 자체에는 학습 실행기를 포함하지 않습니다. 관절 이름 순서, 기본 자세, gain·limit, 관측·행동 배율을 학습 설정과 대조한 뒤 연결하세요.
 
-```bash
-"$ISAAC_SIM/python.sh" run.py --policy /absolute/exported/policy.pt --environment /absolute/params/env.yaml --output output/custom
+## 3. 정책 배포의 연결 조건 정리
+
+```text
+실제 로봇 상태
+    → 학습 때와 같은 좌표계·관절 순서의 69개 관측
+    → 정책의 19개 행동
+    → 기준 자세 + 행동 배율
+    → 관절 위치 목표
+    → 물리·접촉 → 다음 상태
 ```
 
-새 로봇이나 다른 관측 계약은 이 H1 어댑터로 자동 변환되지 않는다. 해당 로봇 클래스의 `_compute_observation()`과 `forward()`를 학습 계약에 맞게 구현해야 한다. `--environment`에서 dt는 읽지만 로봇 모델·관측 layout·행동 scale은 H1 구현을 유지한다.
+파일 로딩 성공은 가운데 신경망을 읽었다는 뜻입니다. 그 앞의 관측과 뒤의 제어가 맞아야 로봇 행동으로 이어집니다. `contract.json`은 이 연결을 조사할 자료이고 `trace.csv`와 화면은 실제 반응을 보여 줍니다.
 
-## API와 USD를 이해하기
+## 4. 간단한 확인 실험
 
-`SimulationApp`은 Kit 런타임을 열므로 `omni` 또는 로봇 API보다 먼저 만든다. USD의 **prim**은 `/World/H1` 같은 경로를 갖는 장면 객체다. USD reference는 로봇의 링크·관절·물리 속성을 장면에 합성한다. **articulation**은 이 관절들을 하나의 동역학 구조로 묶는다.
+`--speed 0.5`만 `--speed 0.2`로 바꾸고 새 출력에 같은 1200스텝을 기록하세요.
 
-`initialize()`는 물리가 시작된 뒤 articulation handle, drive mode, gain, effort/velocity limit와 기본 자세를 설정한다. `load_policy()`는 TorchScript와 환경 설정을 읽는다. 본 실습의 하위 클래스는 최초 `_compute_observation()` 결과를 복사할 뿐 실제 계산은 설치된 H1 클래스를 호출한다. `_compute_action()`이 추론하고 `forward()`가 `default_pos + 0.5 * action`을 `ArticulationAction(joint_positions=...)`으로 보낸다. 이는 관절 모터의 **목표 위치**다. 매 step `set_joint_positions()`로 순간 이동시키면 정책이 학습한 물리 제어와 달라진다.
+- 첫 관측의 `[9:12]`가 `[0.2, 0, 0]`으로 달라지는지 확인합니다.
+- 몸통 높이를 유지한 구간에서 시작·끝 위치의 차이를 비교합니다.
+- 이동 거리가 줄어드는지 관찰하되 정확히 0.4배를 요구하지 않습니다. 가속과 자세 제어의 과도 구간도 포함되어 있습니다.
 
-위치 정책을 torque 제어 로봇에 배포할 때는 별도 actuator 모델이 필요하다. 공식 ANYmal 경로는 `utils/actuator_network.py`의 `LstmSeaNetwork`, `/Isaac/Samples/Policies/Anymal_Policies/sea_net_jit2.pt`이다. `setup()`과 `reset()` 후 실제 관절 위치·속도·목표 offset을 `compute_torques()`에 전달하고 effort mode에서 torque를 적용한다. H1의 위치 명령을 그대로 torque 값으로 사용하면 안 된다. 이 패키지의 실행기는 H1 위치 제어이며 ANYmal actuator 네트워크 실행을 주장하지 않는다.
+## 실행할 때 막히면
 
-## 문제 해결과 확인 범위
+- **모델 로딩 실패**: 5.1 Assets의 `/Isaac/Robots/Unitree/H1/h1.usd`와 `H1_Policies/h1_policy.pt`, `h1_env.yaml` 접근을 확인하세요.
+- **입력 shape 오류**: policy와 env가 같은 학습 실행의 파일인지, 69/19 조건인지 확인하세요.
+- **발끝 보행·넘어짐**: 관절 이름 순서, 발목 기준 자세, gain과 effort limit를 학습 설정과 대조하세요.
+- **진동하거나 반응이 느림**: `physics_dt`와 `decimation`을 확인하세요. 렌더 FPS로 정책 빈도를 추측하지 않습니다.
+- **contract가 없음**: 첫 추론까지 진행했는지와 루프가 정상 종료했는지 확인하세요. CSV 파일 존재만으로 추론을 증명할 수는 없습니다.
 
-- `No module named isaacsim`: 시스템 Python 대신 설치 폴더의 `python.sh`를 사용한다.
-- 모델/정책 로딩 실패: 5.1 자산 루트와 위 세 파일의 접근성을 확인한다.
-- 발끝 보행/몸통 붕괴: `joint_names` 순서, 기본 발목 위치, gain과 effort limit를 Lab의 env와 비교한다.
-- 매우 느리거나 진동하는 보행: 200 Hz 물리와 decimation을 확인한다. 렌더링 FPS를 물리 주기로 착각하지 않는다.
-- 입력 shape 오류: policy.pt와 env.yaml이 같은 훈련 run에서 나온 파일인지 확인한다.
+## 공식 문서와 실습 범위
 
-소스 정적 검사와 CLI 도움말만 확인했으며 GPU 보행은 미실행 상태다. 실물 배포는 이 시뮬레이터 실습 범위 밖이다.
+이 폴더는 Isaac Sim **5.1.0**의 [Deploying Policies in Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_policy_deployment.html)에 대응합니다. 설치본 `H1FlatTerrainPolicy`와 `PolicyController`를 사용해 관측·행동·주기를 기록합니다.
 
-## 출처
-
-- [Isaac Sim 5.1 정책 배포 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_policy_deployment.html), 특히 [관측/행동과 controller](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_policy_deployment.html#policy-controller-class), [debugging](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_policy_deployment.html#debugging-tips).
-- 설치된 5.1 구현: `exts/isaacsim.robot.policy.examples/isaacsim/robot/policy/examples/robots/h1.py`, `controllers/policy_controller.py`, `utils/actuator_network.py`.
+`tutorial.json`은 `not_run`입니다. 이 문서는 시뮬레이터 안의 H1 위치 제어를 다루며, 새 정책 학습·ANYmal actuator 네트워크·실물 로봇 배포의 실행 검증을 포함하지 않습니다.

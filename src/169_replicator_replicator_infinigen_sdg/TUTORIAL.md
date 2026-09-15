@@ -1,100 +1,137 @@
-# 169. t040 · Infinigen 식당에서 물체 데이터셋 만들기
+# 169. 식당 배경이 바뀌어도 같은 물체를 알아보게 하려면?
 
-권장 학습 순서 **169** · 고급 데이터 생성과 외부 시스템 통합 · 출처 ID `t040`
+## 이번에 배우는 것
 
-식탁이 있는 방을 바꾸면서 공중에 있는 물체와 바닥에 놓인 물체를 두 카메라로 촬영한다. 같은 장면에서 RGB/의미 분할과 경계 상자 시각화를 함께 저장한다. 방을 만드는 Infinigen과 촬영하는 Isaac Sim은 별도 프로그램이며, 둘 사이의 파일 계약은 **USD 환경과 그 텍스처**이다.
+**Infinigen 식당에서 물체를 배치하고, 공중에 있는 상태와 떨어진 상태를 두 카메라로 촬영합니다.**
 
-이 패키지는 공식 설치본의 `standalone_examples/replicator/infinigen/infinigen_sdg.py`를 실행하는 **native workflow**다. `run.py`가 설정·경로를 검사하고 이 패키지의 `sdg_config.json`을 전달한다. 원본의 복잡한 충돌 처리, 단위 조정, 카메라 무작위화 코드를 다른 로컬 튜토리얼에 의존하지 않고 사용할 수 있다. 사용자 저장소의 공통 모듈은 사용하지 않는다. Infinigen 생성기나 NVIDIA 샘플 자산을 패키지에 포함한 것은 아니다.
+물체의 생김새만 다양한 데이터로는 새로운 방이나 가려진 상황을 충분히 설명하기 어렵습니다. 이번에는 방·카메라·조명·소품을 바꾸면서 대상 물체의 영상과 정답 라벨을 함께 만듭니다. 방을 생성하는 Infinigen과 촬영하는 Isaac Sim 사이에는 USD 장면과 텍스처 파일이 전달됩니다.
 
-## 이 실습의 의도
-
-식탁이 있는 방과 카메라 배치를 바꾸면서, 학습 대상의 위치·조명·배경 변화가 RGB와 정답 라벨에 어떻게 함께 반영되는지 익힌다. 부유 상태 촬영과 물리 낙하 후 촬영을 나누고 라벨이 있는 wood block·pudding box에 라벨 없는 도형·책을 섞어, 보이는 물체와 학습 대상의 차이를 비교한다. 기본 실행은 제공된 Infinigen 방을 읽어 6회 촬영하며, 방 자체를 새로 생성하는 작업은 `generate_rooms.py`를 별도 실행할 때 수행한다.
-
-## 실행 후 확인할 것
-
-- **촬영 단위:** `resolved_config.json`에서 `total_captures=6`, `num_cameras=2`를 확인한다. 정상 저장을 마치면 `00_BasicWriter`의 카메라별 RGB 합계는 12장이며, segmentation·시각화까지 센 전체 파일 수와 구분한다.
-- **방과 물리 단계:** 콘솔의 `Loading environment`, floating/dropped 진행과 이미지를 비교한다. 기본은 방 배치마다 부유 촬영 1회와 낙하 후 촬영 2회이며, 방을 하나만 공급했다면 같은 방 재사용이 정상이다.
-- **부유 물체:** `gravity_disabled_chance=0.25` 때문에 일부 물체는 낙하 단계 후에도 공중에 남을 수 있다. 모든 물체가 식탁에 내려앉는 것을 성공 조건으로 삼지 않고, 같은 카메라에서 낙하 가능한 물체의 배치 변화를 본다.
-- **라벨과 시각화:** RGB와 semantic segmentation에서 `wood_block`, `pudding_box`를 연결하고, `01_DataVisualizationWriter`의 2D/3D 상자가 해당 대상과 맞는지 살펴본다. 방해 도형·책에는 target class를 붙이지 않는 설정이다.
-- **관찰 뷰:** Stage의 `/Environment`, `/Cameras/cam_0`, `/Cameras/cam_1`을 확인한다. debug 뷰에서 천장이 가려지는 것은 관찰 편의 설정이며, 자유 viewport와 저장용 카메라 영상은 서로 다른 시점이다.
-
-## 준비
-
-- Linux의 Isaac Sim **5.1.0** 설치 경로에 `python.sh`와 위 standalone example 및 `infinigen_sdg_utils.py`가 있어야 한다. RTX GPU와 지원 드라이버, GUI 표시 환경이 필요하다. 공식 예제는 창을 생성한다.
-- Isaac Sim asset root에서 `/Isaac/Samples/Replicator/Infinigen/dining_rooms/`, YCB 소품, Office 소품을 읽을 수 있어야 한다. 첫 실행 시 원격 자산을 불러올 수 있다. 에셋을 로컬로 준비했다면 Isaac Sim의 asset root 설정으로 연결한다.
-- 처음에는 NVIDIA가 제공한 Infinigen 방으로 실행하면 된다. 방을 직접 만들 때만 Infinigen 별도 설치가 필요하다. [공식 설치 안내](https://github.com/princeton-vl/infinigen/blob/main/docs/Installation.md)의 환경을 만들고 [Hello Room](https://github.com/princeton-vl/infinigen/blob/main/docs/HelloRoom.md)에서 요구하는 리소스를 준비한다. 이 외부 프로젝트의 `main`은 5.1 문서의 시점에 고정된 버전이 아니므로 사용한 checkout commit을 함께 기록한다.
-
-## 실행
-
-이 디렉터리만 원하는 곳에 복사해도 같은 명령을 쓸 수 있다. 아래에서 Isaac Sim 경로만 자신의 설치에 맞춘다.
-
-```bash
-cd /path/to/169_replicator_replicator_infinigen_sdg
-python3 run.py --help
-python3 run.py --isaac-root "$HOME/isaacsim" --check
-python3 run.py --isaac-root "$HOME/isaacsim" --output output/first
-```
-
-`--check`는 JSON·설치 파일 검사다. GPU와 원격 자산 접근 성공을 의미하지 않는다. 마지막 명령은 실제 GPU 작업을 시작한다. 이미 존재하는 출력 경로는 거부한다. 실행 설정의 완전한 사본을 `output/first/resolved_config.json`에 남기며 writer 별 디렉터리를 분리한다. `--steps`를 생략하면 설정한 촬영과 파일 저장을 끝낸 뒤 사용자가 닫을 때까지 GUI를 유지한다. `--steps 120`은 저장 후 GUI를 120회 업데이트하고 종료한다. `--steps`에는 양의 정수를 지정한다. 촬영 수는 `--captures`로 별도 지정하므로 창을 오래 열어도 이미지가 계속 생성되지 않는다. `--headless`는 창 없이 설정한 촬영만 끝내고 종료한다. 기존 `--keep-open`은 호환용으로 남아 있으며 명시한 `--steps`가 우선한다.
-
-## 단계별 실습
-
-1. `sdg_config.json`을 열고 `capture.total_captures=6`, `num_cameras=2`를 확인한다. 하나의 capture는 모든 카메라가 같은 장면을 촬영하는 작업이다. 따라서 카메라별 RGB는 합계 12장이 예상된다. segmentation 및 시각화 이미지를 포함한 전체 파일 개수와 혼동하지 않는다.
-2. `num_floating_captures_per_env=1`, `num_dropped_captures_per_env=2`이므로 방 하나당 세 번 촬영하고 다음 방으로 넘어간다. 콘솔의 `Loading environment`와 floating/dropped 진행을 읽는다. 6 capture라면 두 번의 방 배치가 필요하다. 동일한 방만 공급하면 그 방을 순환 재사용한다.
-3. `labeled_assets.auto_label`의 `036_wood_block.usd`는 정규식 `^\d+_`가 숫자 접두사를 제거하여 `wood_block` 클래스를 만든다. `manual_label`의 pudding box는 지정한 `pudding_box` 클래스를 쓴다. 이는 파일 이름/클래스 이름을 구분하는 실습이다.
-4. `shape_distractors`는 구·원뿔 등 기하 도형, `mesh_distractors`는 책 USD를 배치한다. distractor는 배경 방해물이며 target class를 붙이지 않는다. 이미지에 물체가 보인다고 모두 정답 객체가 되는 것은 아니다.
-5. 출력의 `00_BasicWriter`에서 RGB와 colorized semantic segmentation을 비교한다. `01_DataVisualizationWriter`에서는 RGB 위 2D 상자와 normal 이미지 위 3D 상자를 비교한다. 카메라별 하위 구조는 writer가 결정하므로 파일 이름의 카메라 구분도 확인한다.
-6. `--steps`를 생략한 GUI 실행에서는 Stage 창의 `/Environment`, `/Cameras/cam_0`, `/Cameras/cam_1`을 선택한다. `debug_mode=true`는 천장 일부를 가리고 위에서 장면을 관찰하기 쉽게 한다. 저장된 카메라 영상은 viewport의 자유 카메라와 다를 수 있다.
-
-## 방 직접 생성 및 연결
-
-`generate_rooms.py`는 실제 Infinigen 환경의 Python으로 `generate_indoors`와 `infinigen.tools.export`를 차례로 실행한다. 기존 출력은 덮어쓰지 않는다. Isaac Sim Python 환경에서 Blender/Infinigen을 가져오려고 하지 않는다.
-
-```bash
-python3 generate_rooms.py --infinigen-root /path/to/infinigen \
-  --python /path/to/infinigen-environment/bin/python --seeds 1 2 --output rooms/run1
-```
-
-생성 단계는 seed, `coarse`, `fast_solve.gin`, `singleroom.gin`, `DiningRoom` 제한을 사용한다. export 단계의 `-f usdc -r 1024 --omniverse`는 binary USD와 1024 해상도 텍스처, Omniverse 호환 출력을 요구한다. 출력되는 USDC 목록에서 방 전체를 담은 루트 stage를 선택한다. 개별 가구 파일을 방으로 지정하지 않는다. 전체 export 폴더를 보관해야 texture reference가 유지된다.
-
-```bash
-python3 run.py --isaac-root "$HOME/isaacsim" \
-  --environment /absolute/path/to/exported-room-root.usdc --output output/custom-room
-```
-
-`--environment`를 반복하면 여러 방을 공급한다. 실행기는 로컬 절대 경로를 `file://` URI로 변환한다. 설치본 helper는 URL scheme이 없는 경로를 NVIDIA asset root에 붙이므로 이 변환이 필요하다. 원본은 `/Environment` 아래 이름에 `TableDining`이 들어가는 prim에서 작업 영역을 찾는다. 생성된 방의 Stage 트리에서 그 prim이 존재하는지 확인한다. 임의의 빈 USD나 다른 종류의 방을 넣으면 식탁을 중심으로 한 촬영 조건이 성립하지 않는다.
-
-## API와 장면 개념
-
-| 코드/설정 | 의미와 이 실습에서의 역할 |
+| 파일 또는 구성 | 역할 |
 |---|---|
-| USD Stage / Prim | Stage는 전체 장면, prim은 장면 트리의 객체다. USD reference는 환경/소품을 합성해 불러온다. |
-| Collision / Rigid Body | collider는 접촉 형태, rigid body는 물리 운동 대상이다. 중력 확률 0.25는 해당 자산 일부를 부유 상태로 유지한다. |
-| `get_usd_paths`, `load_env` | 설치본 helper가 폴더/파일에서 USD를 수집하고 `/Environment`에 다음 방을 불러온다. |
-| `get_matching_prim_location` | `TableDining` 위치를 찾아 물체 배치와 조명의 기준점으로 쓴다. |
-| `rep.create.render_product` | Camera prim과 해상도를 연결하는 렌더 출력이다. Writer는 camera 자체가 아니라 render product에 연결된다. |
-| `BasicWriter`, `DataVisualizationWriter` | 첫 writer는 실제 학습용 이미지/라벨을, 둘째는 경계 상자 검토 이미지를 저장한다. |
-| `rep.utils.send_og_event` | 설치본 5.1은 dome light와 distractor 색상 randomizer의 custom OmniGraph event를 보낸다. 장면 변화 시점과 파일 저장 시점을 분리한다. |
-| `run_simulation(4)` / `(200)` | 첫 짧은 물리는 겹침을 완화하고, 뒤의 긴 물리는 물체가 떨어져 정착하도록 한다. |
-| `rep.orchestrator.step(delta_time=0.0)` | 물리 시간을 진행하지 않고 현재 배치를 촬영한다. `rt_subframes`는 렌더 안정화를 위한 반복이며 새 물리 표본 수가 아니다. |
-| `wait_until_complete()` | 비동기 저장이 끝날 때까지 기다려 종료 시 파일 누락을 방지한다. |
+| `sdg_config.json` | 방 목록, 촬영 횟수, 대상과 방해 물체를 정합니다. |
+| `run.py` | 설정을 검사하고 설치된 5.1 Infinigen 예제를 실행합니다. |
+| `native_runner.py` | 촬영을 마친 뒤 GUI를 관찰할 시간을 제공합니다. |
+| `generate_rooms.py` | 별도 Infinigen 환경에서 방 생성과 USDC export를 실행합니다. |
+| 두 writer | RGB·의미 분할과 경계 상자 검토 이미지를 각각 저장합니다. |
 
-5.1 문서 설명 일부의 helper 이름/trigger 예시는 설치본과 차이가 있다. 이 패키지는 위에 명시한 설치본 실행 경로와 실제 `send_og_event` 흐름을 기준으로 실행한다. `config.update()`는 최상위 사전을 교체하므로 일부 키만 남긴 `capture` 블록을 넣으면 원본의 내부 fallback이 적용된다. 제공한 완전한 설정에서 값을 하나씩 바꾸는 편이 관찰하기 쉽다.
+처음에는 NVIDIA가 제공하는 방을 사용합니다. 이 경로에서는 Infinigen을 따로 설치하거나 방을 새로 만들 필요가 없습니다.
 
-## 한 변수 실험과 문제 해결
+## 1. 제공된 방에서 첫 데이터 만들기
 
-`capture.path_tracing`만 `true`로 바꾸고 새 출력 경로에 재실행한다. RGB의 간접광/그림자와 촬영 시간을 비교한다. 카메라 수·해상도·물체 수를 동시에 바꾸지 않는다. `debug_mode=true`에서는 설치본이 난수 seed를 10으로 설정하므로 비교의 무작위성이 줄어든다.
+Linux용 Isaac Sim 5.1과 RTX GPU, 지원 드라이버를 준비하세요. 설치 폴더에는 `standalone_examples/replicator/infinigen/infinigen_sdg.py`와 `infinigen_sdg_utils.py`가 있어야 합니다. 자산 루트에서는 Infinigen dining rooms, YCB 물체, Office 소품을 읽을 수 있어야 합니다.
 
-- `StopIteration` 또는 환경 목록이 비었으면 asset root 접근과 Infinigen 폴더를 확인한다. 로컬 방 사용 시 `--environment`는 실제 루트 USD여야 한다.
-- 식탁 밖을 찍으면 `TableDining` prim 이름·위치와 USD 단위를 확인한다. 설치본의 metrics assembler는 센티미터/미터 차이를 처리하지만 모든 사용자 export 구조를 보장하지 않는다.
-- 검은 이미지/재질 누락은 USD 옆 텍스처 누락 또는 asset 연결 문제부터 확인한다. subframe 증가가 깨진 파일 경로를 고치지는 않는다.
-- 물체가 계속 떠 있으면 `gravity_disabled_chance`를 확인한다. 모든 물체가 떨어지는 비교는 해당 값을 0으로 바꿔서 한다.
-- `--help`, compile, `--check`만 통과한 상태는 데이터 생성 검증이 아니다. 이 패키지 작성 시 GPU 캡처와 Infinigen 외부 생성은 실행하지 않았다.
+저장소 루트에서 먼저 로컬 입력을 검사합니다.
 
-`native_runner.py`는 이 패키지 안에서만 사용하는 실행 어댑터다. 설치된 예제의 `SimulationApp.close()` 요청을 잠시 보류해, 유한한 생성 작업과 저장이 성공한 뒤 창을 관찰할 시간을 제공한다. 기본 `headless=False`를 명시하며 `--headless`로만 창을 끈다. 작업 중 오류가 발생하면 관찰 대기 없이 정리하고 오류를 전달한다. Isaac Sim 설치 파일은 수정하지 않는다.
+```bash
+python3 src/169_replicator_replicator_infinigen_sdg/run.py \
+  --isaac-root "$HOME/isaacsim" --check
+```
 
-## 출처
+이 검사는 설치 파일과 설정을 읽습니다. 원격 자산의 다운로드나 GPU 렌더링은 시작하지 않습니다. 실제 촬영은 다음 명령입니다.
 
-- [Isaac Sim 5.1 · 원본 튜토리얼](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_infinigen_sdg.html)
-- [환경 생성](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_infinigen_sdg.html#generating-infinigen-environments), [설정 파라미터](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_infinigen_sdg.html#configuration-parameters), [물리와 촬영](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_infinigen_sdg.html#running-physics-simulation)
-- API 대조: Isaac Sim 5.1 설치본 `standalone_examples/replicator/infinigen/infinigen_sdg.py`, `infinigen_sdg_utils.py`. 이 문서는 해당 흐름을 독립적으로 설명한 한국어 실습이며 공식 문서 전체 복제본이 아니다.
+```bash
+python3 src/169_replicator_replicator_infinigen_sdg/run.py \
+  --isaac-root "$HOME/isaacsim" --headless \
+  --output src/169_replicator_replicator_infinigen_sdg/output/first
+```
+
+`run.py`는 일반 Python으로 시작하지만, 실제 생성기는 지정한 설치본의 `python.sh`로 실행합니다. 기존 출력 폴더는 거부하므로 새 경로를 사용하세요. GUI를 보려면 `--headless`를 빼세요. 촬영이 끝나도 창은 남습니다. `--steps 120`은 **촬영 완료 후** GUI 업데이트를 120회 수행한 뒤 종료한다는 뜻입니다. 촬영량은 `--captures` 또는 설정의 `total_captures`가 정합니다.
+
+### 설정에서 볼 부분
+
+`sdg_config.json`의 capture 설정을 읽어 보세요.
+
+```text
+"total_captures": 6,
+"num_floating_captures_per_env": 1,
+"num_dropped_captures_per_env": 2,
+"num_cameras": 2,
+"resolution": [640, 480]
+```
+
+한 capture는 두 카메라가 현재 배치를 촬영하는 작업입니다. 따라서 정상 저장 시 RGB 수는 **6 capture × 2 camera = 12장**입니다. 하나의 방 배치에서 공중 상태를 1회, 낙하 이후를 2회 촬영하므로 총 6회에는 두 번의 방 배치가 필요합니다. 공급한 방이 하나뿐이라면 같은 방을 다시 사용하는 것이 정상입니다.
+
+### 실행 결과 확인하기
+
+출력 폴더에서 다음 항목을 연결해 읽으세요.
+
+| 결과 | 확인할 내용 |
+|---|---|
+| `resolved_config.json` | 실제 적용된 촬영량과 writer 출력 경로 |
+| `00_BasicWriter/` | 카메라별 RGB와 색으로 표시한 semantic segmentation |
+| `01_DataVisualizationWriter/` | RGB 위의 2D 상자, normal 이미지 위의 3D 상자 |
+| 콘솔의 방 로딩·floating/dropped 진행 | 저장 영상이 어느 배치 단계에서 나온 것인지 |
+
+이미지 파일 전체 개수에는 분할과 시각화도 포함됩니다. RGB만 골라 12장인지 확인한 뒤 같은 카메라·프레임의 라벨을 비교하세요. GUI의 자유 카메라는 저장 카메라와 다릅니다. 저장 시점은 `/Cameras/cam_0`, `/Cameras/cam_1`에서 확인할 수 있습니다.
+
+## 2. 보이는 물체와 정답 물체를 구분하기
+
+이번 설정에는 나무 블록 3개, pudding box 2개와 방해 도형 8개, 책 2개가 들어 있습니다. 이들이 모두 같은 종류의 정답을 만드는 것은 아닙니다.
+
+### 설정에서 볼 부분
+
+자동 라벨 설정은 파일 이름의 숫자 접두사를 제거합니다.
+
+```text
+"files": ["/Isaac/Props/YCB/Axis_Aligned/036_wood_block.usd"],
+"regex_replace_pattern": "^\\d+_",
+"regex_replace_repl": ""
+```
+
+그래서 `036_wood_block`은 `wood_block` 클래스가 됩니다. pudding box는 `manual_label`에서 `pudding_box`라는 이름을 직접 지정합니다. 도형과 책은 시야를 복잡하게 만드는 방해 물체이며, 이 설정에서 대상 클래스 라벨을 붙이지 않습니다. **RGB에 보이는 개수와 학습 정답 객체 수가 다른 이유**입니다.
+
+또한 각 자산 그룹의 `gravity_disabled_chance=0.25`는 일부 물체의 중력을 끕니다. 낙하 후 촬영에서도 떠 있는 물체가 있을 수 있습니다. 모든 물체가 식탁에 내려앉아야 한다고 판단하기보다, 같은 카메라에서 중력이 적용된 물체의 배치 변화를 확인하세요.
+
+설치된 생성기는 방의 `TableDining` 이름을 포함하는 prim에서 식탁 위치를 찾아 배치 기준으로 씁니다. 짧은 물리 진행으로 초기 겹침을 완화하고, 더 긴 물리 진행으로 낙하를 계산한 뒤 촬영합니다. `rep.orchestrator.step(delta_time=0.0)`은 그 순간의 배치를 촬영하고, `rt_subframes=8`은 렌더 안정화를 돕습니다. subframe 8회가 서로 다른 물리 장면 8개를 의미하지는 않습니다.
+
+### 직접 만든 방을 연결하려면
+
+별도 [Infinigen 설치 안내](https://github.com/princeton-vl/infinigen/blob/main/docs/Installation.md)와 [Hello Room](https://github.com/princeton-vl/infinigen/blob/main/docs/HelloRoom.md)에 맞는 환경을 준비한 뒤 실행하세요. 외부 프로젝트의 `main`은 5.1에 고정된 버전이 아니므로 사용한 revision을 기록합니다.
+
+```bash
+python3 src/169_replicator_replicator_infinigen_sdg/generate_rooms.py \
+  --infinigen-root /data/infinigen --python /data/infinigen-env/bin/python \
+  --seeds 1 2 --output /data/generated-dining-rooms
+```
+
+이 도구는 DiningRoom으로 제한한 방을 생성한 뒤 USDC와 1024 해상도 텍스처를 export합니다. 출력 목록에서 방 전체의 루트 USD를 선택하고 텍스처가 있는 전체 폴더를 유지하세요.
+
+```bash
+python3 src/169_replicator_replicator_infinigen_sdg/run.py \
+  --isaac-root "$HOME/isaacsim" --environment /data/exported-room/root.usdc \
+  --headless --output src/169_replicator_replicator_infinigen_sdg/output/custom
+```
+
+`--environment`는 실제 파일 경로로 바꿔야 합니다. 여러 번 지정하면 여러 방을 공급합니다. 실행기는 로컬 경로를 `file://` URI로 변환해 설치본 helper가 원격 자산 경로로 오해하지 않도록 합니다. 식탁을 찾는 `TableDining` 구조도 유지되어야 하므로 임의의 가구 USD 하나를 방 입력으로 사용하지 않습니다.
+
+## 3. 배경·물리·라벨의 관계 정리
+
+```text
+방 USD → 식탁 위치 찾기 → 대상과 방해 물체 배치
+                                  ↓
+                       공중 촬영 → 물리 낙하 → 추가 촬영
+                                  ↓
+                    같은 카메라의 RGB + 대상 라벨 + 검토 영상
+```
+
+방은 물체를 놓는 맥락을, 물리는 가능한 배치를, semantic label은 학습할 대상을 정합니다. 이 셋을 구분하면 “영상에 책이 있는데 라벨에는 없다”거나 “낙하 단계인데 블록이 떠 있다”는 결과를 설정과 연결해 설명할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`sdg_config.json`을 복사한 뒤 `capture.path_tracing`만 **false → true**로 바꾸고 `--config`로 전달하세요. 같은 촬영량과 카메라 수를 유지하고 새 출력 경로를 사용합니다.
+
+두 실행의 RGB에서 간접광·그림자와 촬영에 걸린 시간을 비교하세요. 기본 `debug_mode=true`는 설치본에서 난수 seed를 10으로 맞추므로 무작위 배치 차이를 줄이는 데 도움이 됩니다. 렌더 방식이 바뀌어도 정답 클래스가 새로 생기는 것은 아닙니다.
+
+## 실행할 때 막히면
+
+- **환경 목록이 비거나 `StopIteration` 발생**: 자산 루트의 dining rooms 폴더에 접근할 수 있는지 확인하세요. `--check`는 이 접근까지 검사하지 않습니다.
+- **카메라가 식탁 밖을 촬영함**: 사용자 방의 `TableDining` prim 위치와 장면 단위를 확인하세요.
+- **재질이 검거나 빠짐**: export된 텍스처와 상대 경로를 확인하세요. `rt_subframes`를 늘려도 없는 텍스처는 복구되지 않습니다.
+- **일부 물체가 계속 떠 있음**: `gravity_disabled_chance`에 따른 결과인지 먼저 확인하세요.
+- **창은 열렸는데 데이터가 없음**: GUI 시작 이후의 자산·writer 오류를 확인하세요. 앱 생성만으로 촬영 완료를 판단하지 않습니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Environment Based Synthetic Dataset Generation with Infinigen](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_infinigen_sdg.html)에 대응합니다. 로컬 실행기는 설치본의 생성 알고리즘을 사용하고, 이 폴더의 완전한 설정과 출력 기록을 전달합니다.
+
+문서 개정에서는 로컬 실행기·설정과 설치 예제의 역할을 확인했습니다. 실제 RTX 촬영과 외부 Infinigen 생성은 새로 실행하지 않았으며, `tutorial.json`의 검증 상태는 `not_run`입니다.

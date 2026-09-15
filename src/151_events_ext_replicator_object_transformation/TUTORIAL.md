@@ -1,80 +1,128 @@
-# 151. Transformation — 한국어 실습
+# 151. 회전 뒤의 이동은 왜 물체 주위를 돌게 만들까요?
 
-권장 학습 순서 **151** · 물체 시뮬레이션과 YAML 무작위화 · 출처 ID `t065`
+## 이번에 배우는 것
 
-회전 이후 로컬 이동을 연결하여 카메라가 물체 주위를 돌게 만들고, 동일한 원리로 작은 큐브들을 구면 일부에 배치한다.
+**변환 순서로 카메라의 궤도와 큐브의 곡면 배치를 만들고, 이동과 회전의 순서를 바꿨을 때 결과를 예상합니다.**
 
-## 이 실습의 의도
+카메라를 뒤로 물린 다음 회전시키는 구성은 관측 중심 주위의 여러 시점을 만들 수 있습니다. 반대로 같은 이동을 더 바깥쪽 변환으로 두면 위치는 고정되고 자세만 바뀔 수 있습니다. IRO의 `transform_operators`는 이런 관계를 순서 있는 목록으로 표현합니다.
 
-이동과 회전의 순서가 위치를 결정한다는 점을 카메라 궤도와 큐브의 구면 배치로 비교합니다. 기본 장면은 중심이 `(0,50,0)`인 비대칭 직육면체를 고정하고 카메라의 Y 회전만 샘플링하며, `shell.yaml`은 같은 변환 원리로 큐브 60개를 반지름 220인 곡면 일부에 배치합니다. `run.py`의 기본 호출은 YAML 준비까지이며 실제 장면은 Object SDG에서 생성해야 하고, 회전은 시간에 따라 연속 재생되는 궤도 애니메이션이 아니라 프레임별 무작위 시점입니다.
+| 설정 | 고정하는 것 | 무작위로 바꾸는 것 |
+|---|---|---|
+| `scene.yaml` | 직육면체, 관측 중심, 카메라 거리 700 cm | 카메라의 Y 회전 |
+| `shell.yaml` | 큐브 중심 반지름 220 cm, 개체 크기 | 두 배치 각도와 각 큐브의 자세 |
 
-## 실행 후 확인할 것
+두 설정 모두 중력과 물리 시간이 0입니다. 프레임마다 다른 배치를 만드는 실습이며 시간에 따라 연속으로 도는 애니메이션은 아닙니다.
 
-- **준비와 생성 구분:** `prepared.yaml`의 `default_camera.transform_operators`에 `translate_global → rotateY → rotateX → translate_local` 순서가 유지되는지 봅니다. 영상·해석된 값은 **Simulate** 또는 `--launch --headless` 후 `images/`, `descriptions/`에서 확인합니다.
-- **기본 카메라:** **Randomize scene**을 반복하거나 저장 프레임을 비교하면 빨간 직육면체의 보이는 면이 달라져야 합니다. description의 Y 회전은 -60..60도이고, 관측 중심으로부터 로컬 +Z 이동 700과 X 기울기 -20도는 유지됩니다.
-- **shell의 위치와 자세:** 비교 설정에서 큐브 중심은 원점으로부터 거리 220(cm)를 유지하면서 Y -70..70도, X -30..30도 범위의 곡면 일부를 따라 배치되어야 합니다. 뒤쪽 `rotateXYZ`는 개별 큐브의 자세를 바꾸므로 중심 위치 분포와 구분해 봅니다.
-- **변환 순서의 효과:** Stage의 `xformOpOrder`와 YAML 순서를 대조합니다. 두 설정은 `gravity=0`, `simulation_time=0`이므로 공중의 큐브나 바닥과 겹친 직육면체가 낙하·접촉으로 정리되지 않는 것이 정상입니다.
+## 1. 직육면체를 여러 시점에서 보기
 
-## 준비와 실행 방식
-
-Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
-
-이 학습은 공식 **IRO 확장의 native YAML workflow**다. `run.py`는 전체 설정을 가진 로컬 YAML의 경로를 정리하고 실제 Isaac Sim을 실행하는 도구다. 렌더러나 물리를 자체적으로 흉내 내지 않는다. `@PACKAGE@`와 `@OUTPUT@`는 준비 단계의 경로 표식이고, `$[...]`는 실행 시 IRO가 처리하는 매크로다. 원본 `scene.yaml` 대신 준비된 `prepared.yaml`을 IRO에 입력한다.
+Isaac Sim 5.1과 RTX GPU 환경에서 저장소 루트부터 실행하세요.
 
 ```bash
-cd src/151_events_ext_replicator_object_transformation  # 저장소 루트에서 실행; 폴더를 복사했다면 그 위치로 이동
-ISAAC_ROOT="$HOME/isaacsim"
-"$ISAAC_ROOT/python.sh" run.py --frames 3
-# GUI 실행: configuration: 뒤의 절대 경로를 복사한다.
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch
-# 파일로 생성하고 끝내는 native 실행:
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch --headless --frames 3
+cd src/151_events_ext_replicator_object_transformation
+~/isaacsim/python.sh run.py --launch --frames 3
 ```
 
-`--config shell.yaml`처럼 이 폴더의 다른 설정을 선택할 수 있다(아래 파일 목록 참조). 기본 출력은 이 폴더의 `output/<UTC시간>-<고유값>/`이다. `--output /절대/새폴더`로 지정할 수 있으며 기존 경로를 덮어쓰지 않는다. 출력 폴더 안 `prepared.yaml`은 사용한 설정이고, `images/`, `labels/`, `3d_labels/`, `segmentation/`, `descriptions/` 등이 IRO 결과다. 비활성화한 스위치의 데이터는 생성되지 않는다.
+**Tools > Action and Event Data Generation > Object SDG**에서 콘솔의 `configuration:` 경로를 **Description File**에 입력하고 초기화합니다. 작업 중인 stage는 먼저 저장하세요. **Randomize scene**으로 시점을 바꾸고 **Simulate**로 결과를 저장합니다.
 
-GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action and Event Data Generation > Object SDG**로 간다. 공식 5.1 문서에는 이 패널이 **Object Detection SDG**로 표시되어 있지만 5.1에 설치된 0.4.13 확장 메뉴 이름은 Object SDG다. **Description File**에 `configuration:` 경로를 넣는다. **Initialize scene randomization**과 **Randomize scene**은 미리보기, **Simulate**는 결과 저장이다. 데이터 생성은 현재 stage를 새 장면으로 바꾸므로 작업 중인 stage는 먼저 별도로 저장한다.
+`run.py`는 매 호출 새 `output/<UTC시간>-<고유값>/prepared.yaml`을 준비합니다. `--launch`가 없는 호출은 여기서 끝나며, 실제 데이터 생성은 IRO가 수행합니다. GUI는 생성 후에도 열려 있습니다. 자동 생성·종료는 `--launch --headless --frames 3`을 사용하세요. 설치 위치를 바꾸면 `--isaac-root`도 맞춥니다.
 
-`--steps`를 생략한 `--launch` GUI 실행은 데이터 생성이 끝나도 사용자가 창을 닫을 때까지 유지됩니다. `--frames`는 저장할 데이터 프레임 수이며 창의 수명과 별개입니다. `--steps 600`처럼 지정하면 native Kit 업데이트 600회 후 종료합니다. 시작·장면 로딩도 이 횟수에 포함되므로 짧게 제한하면 생성이 끝나기 전에 종료될 수 있습니다. `--headless`는 기존처럼 정해진 데이터 생성 후 종료합니다. 이 설정은 Kit의 공식 [`/app/quitAfter`](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html#app-quitafter-default-1)를 사용합니다.
+### 설정에서 볼 부분
 
-## 실습
+```yaml
+transform_operators:
+- translate_global: [0, 50, 0]
+- rotateY:
+    distribution_type: range
+    start: -60
+    end: 60
+- rotateX: -20
+- translate_local: [0, 0, 700]
+```
 
-1. scene.yaml의 변환을 위에서 아래로 읽는다: 관측 중심으로 이동 → Y 회전 → X 기울임 → 카메라 로컬 +Z로 뒤로 물러남이다.
-2. Randomize scene을 누르면 카메라가 주위를 돌아도 중앙의 비대칭 직육면체를 향하는지 본다.
-3. --config shell.yaml을 실행한다. 회전 두 개 다음에 translate가 있으므로 위치가 직육면체가 아닌 반지름 220의 구면 일부를 따른다.
-4. Stage에서 물체의 xformOpOrder를 확인하고 YAML의 순서와 비교한다.
+목록의 위쪽은 바깥 기준, 아래쪽은 그 안의 로컬 변환으로 읽으면 이해하기 쉽습니다. 관측 중심 `(0,50,0)`에 기준을 놓고, Y 회전과 X 기울기를 적용한 축을 따라 +Z로 700 cm 물러납니다. 카메라는 로컬 -Z를 보므로 이 배치는 다시 관측 중심 쪽을 향합니다.
 
-## 개념과 사용한 설정
+`translate_global`과 `translate_local`의 접미사는 두 이동 연산에 서로 다른 이름을 붙입니다. **`global`이라는 글자 자체가 좌표계를 강제로 정하는 것은 아닙니다.** 설치 IRO는 이름의 `_`를 USD 연산 접미사 구분자 `:`로 바꾸며, 실제 합성 관계는 목록 순서로 정합니다.
 
-USD xformOps는 교환법칙이 성립하지 않는다. R×T와 T×R은 결과가 다르다. IRO 리스트는 위쪽이 전역, 아래쪽이 로컬이며 반복 이동에는 translate_global/translate_local처럼 접미사를 붙여 이름 충돌을 피한다. rotateX/Y/Z는 도 단위이고 orient는 [w,x,y,z] quaternion이다. transform은 4×4 행렬, scale은 일반적으로 리스트 끝에 둔다. rotateXYZ의 X는 Y보다 로컬, Y는 Z보다 로컬이다.
+### 실행 결과 확인하기
 
-IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
+프레임마다 빨간 직육면체에서 보이는 옆면이 달라지는지 살펴보세요. 직육면체는 배율 `[1,1.7,0.5]`라 축별 길이가 다르므로 시점 차이를 알아보기 쉽습니다. 카메라 Y 회전 범위는 -60~60도이고 X 기울기는 -20도로 유지됩니다.
 
-## 한 변수 실험
+Stage에서 카메라의 `xformOpOrder`를 확인하면 두 이동과 두 회전의 합성 순서를 볼 수 있습니다. 설치 IRO가 기본 이동·회전·배율 연산도 추가하므로 목록의 모든 줄이 YAML과 일대일로 같지는 않습니다. 먼저 `translate:global`, `rotateY`, `rotateX`, `translate:local`에 대응하는 연산을 찾아보세요.
 
-shell.yaml에서 translate 한 항목만 rotateY 앞쪽으로 이동한다. 객체 중심이 한 위치에 모이고 회전만 달라지는 이유를 변환 순서로 설명한다.
+저장된 description에서는 원래 연산이 단일 최종 행렬로 바뀝니다. 따라서 순서는 **초기화한 Stage와 `prepared.yaml`**, 촬영 시 위치는 **description의 `global_transform`**에서 확인하세요.
 
-## 문제 해결
+## 2. 같은 원리로 큐브를 곡면에 배치하기
 
-- `mapping values are not allowed here`는 YAML 들여쓰기/콜론을 먼저 확인한다. 탭 대신 공백을 사용한다.
-- `ModuleNotFoundError: yaml`이면 위 명령의 Isaac Sim `python.sh`로 준비한다. `--help`는 PyYAML 없이도 실행된다.
-- 카메라/물체가 안 보이면 F로 선택 물체에 초점을 맞추고, 시선 -Z와 단위 cm, clip 범위, transform 순서를 확인한다. 물리를 켠 장면은 초기 겹침 때문에 물체가 튀어나갈 수도 있다.
-- 확장 메뉴가 없으면 Extensions에서 `isaacsim.replicator.object`가 실제로 활성화되었는지 확인한다. RGB 파일이 없으면 오류 로그와 카메라 존재 여부를 확인한다. 창이 떠 있다는 사실은 데이터 생성 성공이 아니다.
-- 같은 seed는 장면 난수 재현을 돕지만 GPU/렌더 모드/자산 버전이 다르면 픽셀의 완전한 일치를 보장하지 않는다.
+앞의 GUI를 닫은 뒤 비교 설정을 실행합니다.
 
+```bash
+~/isaacsim/python.sh run.py --config shell.yaml --launch --headless --frames 3
+```
 
+### 설정에서 볼 부분
 
-## 포함 파일과 검증 범위
+`subject`의 첫 세 연산입니다.
 
-- `scene.yaml`: 기본 실습 설정
-- `shell.yaml`: 위 실습 단계에서 설명한 비교 설정
-- `run.py`: 설정 준비 및 실제 확장 실행. `--help`로 옵션을 본다.
+```yaml
+- rotateY:
+    distribution_type: range
+    start: -70
+    end: 70
+- rotateX:
+    distribution_type: range
+    start: -30
+    end: 30
+- translate: [0, 0, 220]
+```
 
-YAML 구문과 launcher 준비 동작은 GPU 없이 검사할 수 있다. 실제 RTX 결과, PhysX 접촉, GUI 표시 검증은 별개다. `tutorial.json`의 `verification: not_run`은 이 패키지의 simulator 실행 결과를 아직 검증하지 않았다는 뜻이다.
+두 회전이 정한 방향으로 220 cm 이동하므로 중심은 직육면체 공간 전체가 아니라 **반지름 220 cm인 구면 일부**에 놓입니다. `count: 60`으로 이 배치를 60개 만듭니다.
 
-## 출처
+뒤에는 개체별 `rotateXYZ`와 `scale: [0.15,0.15,0.15]`가 있습니다. 이 회전은 각 큐브의 자세를 바꾸고 배율은 한 변을 15 cm로 만듭니다. 두 연산이 이동보다 안쪽에 있으므로 이미 정한 큐브 중심 반지름을 바꾸지 않습니다.
 
-- [NVIDIA Isaac Sim 5.1 — Transformation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/transformation.html)
-- [IRO native 실행, embedded interface 및 출력 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html#run-from-the-ui)
+### 실행 결과 확인하기
 
-설정과 한국어 실습은 위 문서를 기준으로 새로 작성했다. 설치된 5.1의 `isaacsim.replicator.object` 0.4.13 소스(`description/symbol.py`, `mutables/scene_dev.py`, `ui/object_detection_sdg_window.py`)에서 입력 키·장면 단위·UI 명칭을 대조했다.
+`images/`에서는 작은 큐브 무리가 곡면을 따라 놓이는지 확인합니다. IRO는 Y-up·cm 단위입니다. `shell.yaml`에는 바닥이 없지만 일부 큐브가 다른 큐브에 가려질 수 있습니다. 시야 안에서 보이는 개수와 생성된 개수 60을 같다고 요구하지 마세요.
+
+저장 description에서 임의의 subject의 `global_transform` 마지막 행을 읽어 중심 `(x,y,z)`를 얻습니다. 다음 값이 약 220인지 계산해 보세요.
+
+```text
+원점에서 중심까지 거리 = sqrt(x² + y² + z²)
+```
+
+이 거리는 큐브 표면까지의 거리가 아닙니다. 개별 큐브의 자세가 달라도 중심 반지름이 유지되는지 보는 검사입니다.
+
+## 3. 변환 순서의 효과 정리
+
+```text
+회전 → 이동 → 개체 회전 → 배율
+방향 선택 → 그 방향으로 중심 배치 → 중심에서 자세 변경 → 크기 변경
+
+이동 → 회전 → 개체 회전 → 배율
+중심 위치 고정 → 그 자리에서 방향 변경 → 자세 변경 → 크기 변경
+```
+
+이 목록은 Python 코드처럼 물체를 한 번씩 움직이는 명령 이력이 아니라 합성할 좌표 변환의 순서입니다. 위쪽 변환이 아래쪽 변환의 기준을 정하기 때문에 두 연산을 교환하면 월드 위치가 달라집니다.
+
+## 4. 간단한 확인 실험
+
+`shell.yaml`을 `one_center.yaml`로 복사하고 **`translate: [0,0,220]` 항목을 `rotateY`보다 앞쪽으로** 옮기세요. 수치와 개수는 그대로 둡니다.
+
+```bash
+~/isaacsim/python.sh run.py --config one_center.yaml --launch --headless --frames 3
+```
+
+모든 큐브 중심이 `(0,0,220)`에 모이고 자세만 달라져 겹친 모습이 예상됩니다. RGB만으로는 큐브 수를 셀 수 없으므로 description의 개체별 중심을 확인하세요. 회전이 없어져서 모인 것이 아니라 이동에 적용되던 회전 관계가 달라진 것입니다.
+
+## 실행할 때 막히면
+
+- **카메라가 물체를 바라보지 않음**: 두 이동과 회전의 순서를 확인하세요. 카메라 전방은 -Z이고 마지막 이동은 로컬 +Z 방향입니다.
+- **`duplicate op` 오류**: 같은 이름의 이동 두 개를 쓰지 않았는지 확인하세요. 제공 파일처럼 서로 다른 접미사를 사용합니다.
+- **description에 `rotateY`가 없음**: 저장 과정에서 최종 행렬로 합쳐집니다. 원래 순서는 준비 YAML 또는 초기화 Stage에서 확인하세요.
+- **직육면체가 바닥과 겹침**: 높이 170 cm인 물체의 중심이 50 cm입니다. 물리로 배치를 정리하지 않는 설정의 결과입니다.
+- **카메라가 계속 도는 애니메이션이 안 나옴**: 각 프레임에 무작위 시점을 선택합니다. 연속 회전 동작은 이 설정에 없습니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Transformation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/transformation.html)에 대응합니다. 카메라 궤도와 큐브 구면 배치를 통해 순서의 의미를 비교합니다. 모든 회전 표현과 행렬 입력을 나열하기보다 실제 사용하는 연산에 집중합니다.
+
+접미사와 연산 순서는 설치 IRO 0.4.13의 `mutable.py`·`utility/xform.py`를 대조했습니다. 실제 장면 검증 상태는 `tutorial.json`의 `not_run`을 참고하세요.

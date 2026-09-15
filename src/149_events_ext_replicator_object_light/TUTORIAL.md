@@ -1,81 +1,135 @@
-# 149. Light — 한국어 실습
+# 149. 물체는 그대로인데 조명만 바꾸면 무엇이 달라질까요?
 
-권장 학습 순서 **149** · 물체 시뮬레이션과 YAML 무작위화 · 출처 ID `t063`
+## 이번에 배우는 것
 
-방향광의 각도·세기·색 변화와 모든 방향에서 비추는 dome 조명을 비교한다. sky.png은 이 패키지가 만든 작은 equirectangular 테스트 이미지다.
+**방향광의 세기·방향·색을 바꾸고, 환경 텍스처를 쓰는 dome 조명과 영상 차이를 비교합니다.**
 
-## 이 실습의 의도
+같은 빨간 큐브라도 빛이 들어오는 방향에 따라 밝은 면과 그림자가 달라집니다. 이번 장면은 카메라·큐브·바닥을 고정해 그 차이를 조명 설정과 연결합니다. 물리 시간은 0이므로 물체가 떨어져서 그림자가 바뀌는 실험은 아닙니다.
 
-물체와 카메라를 고정한 상태에서 조명 방향·세기·색만 바꿔 영상과 그림자가 달라지는 이유를 배우는 실습이다. 기본 `scene.yaml`은 약한 dome에 무작위 distant 조명을 더하고, 별도 `dome.yaml`은 로컬 하늘 텍스처를 사용하는 dome만 남겨 두 조명 구성을 비교한다. 기본 `run.py`는 3프레임 YAML을 준비하며, 실제 비교용 이미지는 native 실행 또는 GUI Simulate를 마친 뒤 확인한다.
+| 설정 | `scene.yaml` | `dome.yaml` |
+|---|---|---|
+| 주변 조명 | 세기 100의 약한 dome | 세기 1200의 dome |
+| 방향광 `key_light` | 세기·Y 회전·색 무작위화 | 없음 |
+| 환경 텍스처 | 없음 | 로컬 `sky.png` |
+| 프레임별 난수 | 방향광에 있음 | 없음 |
 
-## 실행 후 확인할 것
+## 1. 방향광이 바뀌는 세 장면 만들기
 
-- **기본 장면의 고정 요소:** `scene.yaml` 생성 RGB와 description에서 빨간 큐브·회색 바닥·카메라 배치가 유지되는지 확인한다. `simulation_time=0`이므로 그림자의 변화는 물체 낙하에 따른 것이 아니다.
-- **조명 난수 범위:** `key_light`의 세기는 300·1200·2400 중 하나, Y 회전은 -70–70도, 색은 따뜻한 `(1,0.7,0.5)` 또는 차가운 `(0.5,0.7,1)`이어야 한다. 세 프레임에서 모든 선택지가 한 번씩 나오거나 서로 다른 세기가 선택될 필요는 없다.
-- **영상과 속성 연결:** 기본 640×480 RGB 3장과 대응 description을 열어 빛의 색·그림자 방향을 선택된 값과 대조한다. 픽셀 밝기가 intensity 비율과 정확히 같아야 한다는 기준은 두지 않는다.
-- **dome 비교:** 새 출력으로 `dome.yaml`을 생성한 뒤 `key_light`가 없고 dome intensity=1200, color=(1,1,1), 로컬 `sky.png` 참조가 적용되었는지 본다. 이 YAML에는 난수 항목이 없어 연속 프레임의 배경·조명이 같아도 정상이다.
-- **준비와 렌더 구분:** `prepared.yaml`의 `texture_path`가 절대경로로 바뀐 것은 준비 완료이며, 실제 배경·주변광은 RGB에서 확인한다. `sky.png`는 작은 LDR 테스트 이미지이므로 HDRI 광량 재현이나 실물 조명 보정의 성공 기준으로 삼지 않는다.
-
-## 준비와 실행 방식
-
-Isaac Sim **5.1.0**, NVIDIA RTX 지원 GPU/드라이버, `isaacsim.replicator.object` 확장이 필요하다. Linux 설치 경로를 아래 `ISAAC_ROOT`에 지정한다. YAML 준비 도구는 Isaac Sim에 포함된 PyYAML을 사용하며 GPU를 시작하지 않는다. 일반 Python에 PyYAML이 이미 있으면 `python3 run.py`도 된다. 다른 튜토리얼 패키지나 공통 Python 모듈은 필요 없다. 이 폴더 전체만 복사해 사용할 수 있다.
-
-이 학습은 공식 **IRO 확장의 native YAML workflow**다. `run.py`는 전체 설정을 가진 로컬 YAML의 경로를 정리하고 실제 Isaac Sim을 실행하는 도구다. 렌더러나 물리를 자체적으로 흉내 내지 않는다. `@PACKAGE@`와 `@OUTPUT@`는 준비 단계의 경로 표식이고, `$[...]`는 실행 시 IRO가 처리하는 매크로다. 원본 `scene.yaml` 대신 준비된 `prepared.yaml`을 IRO에 입력한다.
+Isaac Sim 5.1, IRO 확장과 RTX GPU 환경에서 실행합니다. 저장소 루트에서 다음 폴더로 이동하세요.
 
 ```bash
-cd src/149_events_ext_replicator_object_light  # 저장소 루트에서 실행; 폴더를 복사했다면 그 위치로 이동
-ISAAC_ROOT="$HOME/isaacsim"
-"$ISAAC_ROOT/python.sh" run.py --frames 3
-# GUI 실행: configuration: 뒤의 절대 경로를 복사한다.
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch
-# 파일로 생성하고 끝내는 native 실행:
-"$ISAAC_ROOT/python.sh" run.py --isaac-root "$ISAAC_ROOT" --launch --headless --frames 3
+cd src/149_events_ext_replicator_object_light
+~/isaacsim/python.sh run.py --launch --headless --frames 3
 ```
 
-`--config dome.yaml`처럼 이 폴더의 다른 설정을 선택할 수 있다(아래 파일 목록 참조). 기본 출력은 이 폴더의 `output/<UTC시간>-<고유값>/`이다. `--output /절대/새폴더`로 지정할 수 있으며 기존 경로를 덮어쓰지 않는다. 출력 폴더 안 `prepared.yaml`은 사용한 설정이고, `images/`, `labels/`, `3d_labels/`, `segmentation/`, `descriptions/` 등이 IRO 결과다. 비활성화한 스위치의 데이터는 생성되지 않는다.
+콘솔의 `output:` 폴더에 결과가 저장되고 생성 후 종료합니다. `--launch`를 빼면 `prepared.yaml`만 준비하므로 아직 조명 효과를 관찰한 것이 아닙니다. 설치 경로가 다르면 Python 경로와 `--isaac-root /설치/경로`를 함께 지정하세요.
 
-GUI에서 **Window > Extensions**를 열어 확장을 켠 후 **Tools > Action and Event Data Generation > Object SDG**로 간다. 공식 5.1 문서에는 이 패널이 **Object Detection SDG**로 표시되어 있지만 5.1에 설치된 0.4.13 확장 메뉴 이름은 Object SDG다. **Description File**에 `configuration:` 경로를 넣는다. **Initialize scene randomization**과 **Randomize scene**은 미리보기, **Simulate**는 결과 저장이다. 데이터 생성은 현재 stage를 새 장면으로 바꾸므로 작업 중인 stage는 먼저 별도로 저장한다.
+### 설정에서 볼 부분
 
-`--steps`를 생략한 `--launch` GUI 실행은 데이터 생성이 끝나도 사용자가 창을 닫을 때까지 유지됩니다. `--frames`는 저장할 데이터 프레임 수이며 창의 수명과 별개입니다. `--steps 600`처럼 지정하면 native Kit 업데이트 600회 후 종료합니다. 시작·장면 로딩도 이 횟수에 포함되므로 짧게 제한하면 생성이 끝나기 전에 종료될 수 있습니다. `--headless`는 기존처럼 정해진 데이터 생성 후 종료합니다. 이 설정은 Kit의 공식 [`/app/quitAfter`](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html#app-quitafter-default-1)를 사용합니다.
+`key_light`에서 세기와 색 설정을 찾아보세요.
 
-## 실습
+```yaml
+type: light
+subtype: distant
+intensity:
+  distribution_type: set
+  values: [300, 1200, 2400]
+color:
+  distribution_type: set
+  values:
+  - [1, 0.7, 0.5]
+  - [0.5, 0.7, 1]
+```
 
-1. scene.yaml을 초기화하고 Randomize scene을 반복하여 그림자 방향과 색 변화를 본다.
-2. key_light의 subtype은 distant다. 공식 문서의 direct/directional light에 대응하는 설치된 IRO 입력 이름이다.
-3. --config dome.yaml을 실행한다. key_light 없이 texture_path가 있는 dome_light만 사용한다.
-4. dome_light에 transform_operators: [{rotateY: 90}]를 추가하여 배경 텍스처 방향이 바뀌는지 관찰한다.
+`set`은 목록에서 하나를 고릅니다. 세 장을 촬영한다고 세기 세 가지를 차례로 한 번씩 사용하는 것은 아닙니다. 같은 세기를 연속으로 선택할 수도 있습니다. 색 목록은 따뜻한 계열과 차가운 계열의 RGB 색조입니다.
 
-## 개념과 사용한 설정
+변환에는 `rotateX: -45`와 -70~70도의 무작위 `rotateY`가 있습니다. `distant`는 멀리서 들어오는 평행광입니다. 기본 -Z 방향을 회전시켜 입사 방향을 정하므로, 광원의 위치를 옮기는 것보다 회전이 그림자 방향을 결정하는 핵심입니다.
 
-DistantLight는 멀리 있는 평행광으로 기본적으로 -Z 방향을 비춘다. 회전으로 입사 방향을 정하며 위치 이동으로 방향을 바꾸지 않는다. DomeLight는 구면 텍스처의 각 방향에서 빛을 받는다. intensity는 광 세기 배수, color는 RGB 색조다. 이 값은 카메라 영상 픽셀 밝기와 일대일이 아니며 재질과 노출도 영향을 준다. texture_path는 USD asset 입력이다.
+이 장면은 Y-up·cm 단위이며 큐브 중심은 `(0,50,0)`, 한 변은 100 cm입니다. 큐브와 카메라가 고정되어 있어 서로 다른 프레임의 같은 면을 비교하기 쉽습니다.
 
-IRO는 자체 장면에서 **Y-up, 1 단위 = 1 cm**를 사용한다. 일반적인 Isaac Sim 로봇 예제의 Z-up/미터 값을 그대로 가져오지 않는다. 기본 cube의 변 길이는 100 단위이며 scale 0.6이면 60 cm다. 중력 981은 이 좌표 단위에서 9.81 m/s²에 해당한다. 카메라 기본 시선은 -Z, 영상의 위는 +Y다. `tracked`는 라벨 대상이며 보이는 물체 모두가 자동으로 라벨 대상이 되는 것은 아니다.
+### 실행 결과 확인하기
 
-## 한 변수만 바꾸는 실험
+`images/`의 640×480 RGB를 열고 밝은 면, 그림자 방향, 전체 색조를 비교합니다. 같은 seed의 `descriptions/`에서 `key_light.intensity`와 `color`를 찾아 실제 선택과 연결하세요.
 
-key_light intensity 분포만 [300,1200,2400]에서 [1200]으로 바꾸어 각도·색 무작위화는 유지되지만 세기는 고정되는지 비교한다.
+회전은 저장 description에서 최종 `global_transform` 행렬로 합쳐집니다. 원래 `rotateY` 숫자를 찾는 대신 준비 YAML에서 난수 범위를 읽고, 방향은 초기화 화면의 광원 속성이나 최종 변환으로 확인합니다.
 
-## 문제 해결
+세기 2400이 1200의 두 배여도 RGB 픽셀값이 정확히 두 배가 되지는 않습니다. 조명·재질의 상호작용, 카메라 노출과 영상의 색 변환을 거친 결과이기 때문입니다. 그림자 방향과 밝은 면의 변화부터 비교해 보세요.
 
-- `mapping values are not allowed here`는 YAML 들여쓰기/콜론을 먼저 확인한다. 탭 대신 공백을 사용한다.
-- `ModuleNotFoundError: yaml`이면 위 명령의 Isaac Sim `python.sh`로 준비한다. `--help`는 PyYAML 없이도 실행된다.
-- 카메라/물체가 안 보이면 F로 선택 물체에 초점을 맞추고, 시선 -Z와 단위 cm, clip 범위, transform 순서를 확인한다. 물리를 켠 장면은 초기 겹침 때문에 물체가 튀어나갈 수도 있다.
-- 확장 메뉴가 없으면 Extensions에서 `isaacsim.replicator.object`가 실제로 활성화되었는지 확인한다. RGB 파일이 없으면 오류 로그와 카메라 존재 여부를 확인한다. 창이 떠 있다는 사실은 데이터 생성 성공이 아니다.
-- 같은 seed는 장면 난수 재현을 돕지만 GPU/렌더 모드/자산 버전이 다르면 픽셀의 완전한 일치를 보장하지 않는다.
+## 2. 하늘 텍스처를 사용하는 dome과 비교하기
 
-sky.png은 저해상도 LDR 학습 자원으로 실제 HDRI의 넓은 휘도 범위를 대체하지 않는다. HDRI 비교를 원하면 같은 texture_path에 사용자가 보유한 equirectangular .hdr의 절대 경로를 지정한다.
+같은 폴더에서 다음 설정을 실행합니다.
 
-## 포함 파일과 검증 범위
+```bash
+~/isaacsim/python.sh run.py --config dome.yaml --launch --headless --frames 3
+```
 
-- `scene.yaml`: 기본 실습 설정
-- `dome.yaml`: 위 실습 단계에서 설명한 비교 설정
-- `run.py`: 설정 준비 및 실제 확장 실행. `--help`로 옵션을 본다.
+### 설정에서 볼 부분
 
-YAML 구문과 launcher 준비 동작은 GPU 없이 검사할 수 있다. 실제 RTX 결과, PhysX 접촉, GUI 표시 검증은 별개다. `tutorial.json`의 `verification: not_run`은 이 패키지의 simulator 실행 결과를 아직 검증하지 않았다는 뜻이다.
+```yaml
+dome_light:
+  type: light
+  subtype: dome
+  intensity: 1200
+  color: [1, 1, 1]
+  texture_path: '@PACKAGE@/sky.png'
+```
 
-## 출처
+dome은 장면을 둘러싼 방향별 환경광을 표현합니다. `texture_path`는 그 환경에 사용할 이미지를 지정합니다. `run.py`는 `@PACKAGE@`를 이 폴더의 절대 경로로 바꿉니다. 이 치환이 성공했다는 것과 렌더러가 텍스처를 읽어 조명에 사용했다는 것은 별도 확인입니다.
 
-- [NVIDIA Isaac Sim 5.1 — Light](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/light.html)
-- [IRO native 실행, embedded interface 및 출력 설명](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html#run-from-the-ui)
+`dome.yaml`에는 `key_light`가 없습니다. 따라서 기본 실행과 비교하면 **방향광이 포함된 구성과 텍스처 dome만 있는 구성**의 차이를 보게 됩니다. 두 설정의 전체 밝기 차이를 텍스처 하나의 효과로만 설명하지 마세요. 광원 구성과 세기도 함께 다릅니다.
 
-설정과 한국어 실습은 위 문서를 기준으로 새로 작성했다. 설치된 5.1의 `isaacsim.replicator.object` 0.4.13 소스(`description/symbol.py`, `mutables/scene_dev.py`, `ui/object_detection_sdg_window.py`)에서 입력 키·장면 단위·UI 명칭을 대조했다.
+### 실행 결과 확인하기
+
+새 출력의 description에서 dome 세기 1200, 흰색 color, 해소된 `texture_path`를 확인합니다. RGB에서는 환경 배경과 큐브 면의 조명 차이를 봅니다. 이 파일에는 무작위 조명 항목이 없으므로 세 프레임의 조명이 같아도 정상입니다.
+
+제공된 `sky.png`는 작은 LDR 학습 이미지입니다. 밝기를 제한된 범위로 저장한 이미지이므로 실제 하늘의 넓은 광량 범위를 기록한 HDRI와 같은 보정 자료로 해석하지 않습니다. 이 실습의 목적은 텍스처가 환경 조명으로 연결되는 경로를 이해하는 것입니다.
+
+환경의 방향만 바꾸는 비교도 해 보세요. `dome.yaml`을 `dome_rotated.yaml`로 복사하고 `dome_light`에 아래 변환만 추가합니다. `intensity`와 텍스처 경로는 유지합니다.
+
+```yaml
+  transform_operators:
+  - rotateY: 90
+```
+
+```bash
+~/isaacsim/python.sh run.py --config dome_rotated.yaml --launch --headless --frames 3
+```
+
+이 연산은 큐브가 아니라 환경광을 Y축 주위로 90도 돌립니다. 원래 dome 실행과 같은 seed의 RGB에서 하늘 무늬 방향과 큐브 면의 조명 차이를 비교하세요. 제공 텍스처가 작아 표면 밝기의 차이는 미묘할 수 있으므로, 배경 무늬와 description의 dome 변환도 함께 확인합니다. 이렇게 광원 세기·색·텍스처를 고정하면 환경 방향의 효과를 따로 읽을 수 있습니다.
+
+GUI로 보고 싶다면 `--headless`를 빼고 실행한 뒤 **Tools > Action and Event Data Generation > Object SDG**에서 이번 `configuration:`을 **Description File**에 넣으세요. 초기화와 **Randomize scene**은 미리보기이며 **Simulate**가 저장합니다. 초기화 전 작업 중인 stage를 저장하고, 생성 후 유지되는 GUI는 직접 닫습니다.
+
+## 3. 조명 속성과 영상 변화 정리
+
+| 바꾸는 값 | 먼저 관찰할 부분 |
+|---|---|
+| distant의 회전 | 어느 면이 빛을 받고 그림자가 어느 쪽으로 생기는지 |
+| `intensity` | 표면 밝기가 어떻게 달라지는지 |
+| `color` | 조명이 표면 색에 어떤 색조를 더하는지 |
+| dome의 `texture_path` | 환경 배경과 방향별 주변 조명 |
+
+RGB는 최종 관측값이고 YAML의 light 속성은 그 관측을 만드는 입력입니다. 둘을 함께 보면 데이터의 조명 다양성이 어떤 규칙에서 나왔는지 설명할 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`scene.yaml`을 `fixed_intensity.yaml`로 복사하고 **`key_light.intensity.values`만 `[1200]`으로** 바꾸세요.
+
+```bash
+~/isaacsim/python.sh run.py --config fixed_intensity.yaml --launch --headless --frames 3
+```
+
+description의 세기는 모든 프레임에서 1200이어야 합니다. 그림자 방향과 색조는 계속 달라질 수 있습니다. 세기를 고정했다고 영상 전체가 동일해지는 것은 아니라는 점을 확인해 보세요.
+
+## 실행할 때 막히면
+
+- **세 프레임에 300·1200·2400이 한 번씩 안 나옴**: `set`은 순회 목록이 아니라 무작위 선택입니다. 선택값이 목록 안에 있는지 확인하세요.
+- **광원을 이동했는데 그림자 방향이 그대로임**: distant 조명의 방향은 회전으로 정합니다. `transform_operators`의 회전을 확인하세요.
+- **dome 텍스처를 찾지 못함**: `sky.png`와 `prepared.yaml`의 절대 경로를 확인하세요. 다른 위치로 옮길 때 파일 전체를 유지합니다.
+- **빨간 큐브가 푸른 조명 아래 다르게 보임**: 재질 색과 광원 색이 함께 영상에 영향을 줍니다. 큐브의 `color`가 바뀌었는지 description과 대조하세요.
+- **창은 떴는데 출력이 없음**: GUI에서 Description File을 지정하고 **Simulate**를 눌렀는지 확인하세요. `--steps`는 생성을 끝내는 기준이 아닙니다.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Light](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/light.html)에 대응합니다. 원문의 방향광 설명에 해당하는 설치 IRO 입력 이름은 `distant`이며, 로컬 `sky.png`로 dome 텍스처 연결을 실습합니다.
+
+이 자료는 광량 보정이나 실제 HDRI 측정 실험을 포함하지 않습니다. 실제 렌더링 검증 상태는 `tutorial.json`의 `not_run`을 참고하세요.

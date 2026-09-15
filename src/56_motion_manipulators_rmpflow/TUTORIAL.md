@@ -1,73 +1,127 @@
-# 56. Lula RMPflow: 동적 목표와 장애물
+# 56. 움직이는 목표를 따라가며 장애물에 반응하기
 
-권장 학습 순서 **56** · 로봇 제어와 동작 계획 · 출처 ID `t136`
+## 이번에 배우는 것
 
-Franka가 빨간 목표를 향해 움직이며 파란 장애물을 회피하도록 RMPflow를 연결합니다. 목표/세계 상태 갱신, 기본 설정 로딩, collision sphere 시각화와 내부 rollout 디버깅을 각각 실습합니다.
+**목표로 접근하는 반응과 장애물을 피하는 반응을 RMPflow로 연결하고, 정책의 계산과 실제 로봇 움직임을 비교합니다.**
 
-## 이 실습의 의도
+미리 만든 궤적을 재생하는 동안 목표가 옮겨지면 어떻게 해야 할까요? 이번 실습은 현재 목표와 장애물 위치를 읽어 매 단계 새 관절 목표를 만듭니다. RMPflow는 이런 반응을 조합하는 모션 정책입니다.
 
-Franka가 목표에 접근하는 반응과 등록한 장애물을 피하는 반응을 RMPflow로 조합하고 실제 물리 관절에 전달합니다. 빨간 목표는 추종 위치를 표시하고 파란 고정 박스는 물리 충돌체이면서 정책에 명시적으로 등록한 장애물입니다. 기본 목표와 장애물은 정지해 있지만 매 스텝 pose를 갱신하므로 GUI에서 옮긴 위치에도 대응하며, 위치 추종 결과를 실제 관절 상태의 FK로 기록합니다.
+| 장면 요소 | 경로·기본 설정 | 역할 |
+|---|---|---|
+| Franka | `/World/panda` | 정책 명령을 실제 물리로 실행 |
+| 빨간 목표 | `/World/target`, `(0.5, 0, 0.7)` m | 말단이 접근할 위치 표시 |
+| 파란 박스 | `/World/obstacle`, `(0.4, 0.15, 0.4)` m | 정책에 등록한 장애물이자 물리 충돌체 |
+| 충돌 구 | `--debug-spheres` | 정책이 보는 로봇 근사 형상 |
+| 추종 기록 | `tracking.json` | 실제 관절 상태로 계산한 말단 위치와 오차 |
 
-## 실행 후 확인할 것
+빨간 목표는 잡을 물체가 아닙니다. 이번 코드는 위치만 지정하므로 손의 방향이나 그리퍼 개폐는 별도 목표가 없습니다.
 
-- GUI에서 `/World/panda`, 빨간 `/World/target`, 파란 `/World/obstacle`을 확인합니다. 기본 `(0.5, 0, 0.7)` m 목표 쪽으로 말단이 접근하는지 보되, 빨간 marker를 잡거나 손의 방향까지 맞추는 동작을 기대하지 않습니다.
-- `tracking.json`에서 30스텝 간격의 `target_m`, `end_effector_m`, `position_error_m`를 비교합니다. 정지한 도달 가능 목표에서 실제 FK 오차가 전반적으로 줄어드는지 확인하고, 마지막 표본의 값을 고정된 합격 수치로 사용하지 않습니다.
-- GUI Move 도구로 target을 옮기면 추종 위치가 바뀌는지, obstacle을 옮기거나 `--obstacle-y` 부호를 바꾸면 접근 경로가 어떻게 달라지는지 확인합니다. 바닥 등 장면에 보이는 모든 물체가 자동으로 정책에 등록되는 것은 아닙니다.
-- `--debug-spheres`에서 collision sphere와 실제 로봇 외곽을 함께 살펴보고 장애물 근처의 여유를 관찰합니다. `tracking.json`에는 접촉이나 최소 충돌 거리가 없으므로 작은 위치 오차만으로 충돌 회피까지 판정하지 않습니다.
-- `--ignore-state --debug-spheres`를 함께 사용하면 내부 rollout 시각화가 실제 로봇보다 앞서거나 달라질 수 있습니다. 이는 정책이 실제 상태 갱신을 무시하는 비교 모드의 의도이며, 실제 추종은 여전히 FK 기록으로 확인합니다. 막힌 배치에서 정체할 수도 있으므로 전역 경로 탐색 성공을 보장하는 실습으로 해석하지 않습니다.
+## 1. 먼저 정지한 목표에 접근하기
 
-## 준비와 실행
+Isaac Sim 5.1과 5.1 Assets의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`가 필요합니다. RMPflow 설정은 설치된 motion generation 확장의 Franka 구성을 사용합니다.
 
-이 폴더 하나를 다른 위치에 복사해도 실행할 수 있습니다. 다른 로컬 튜토리얼이나 공용 모듈을 먼저 읽을 필요가 없습니다. Isaac Sim **5.1.0** 설치, 지원 NVIDIA GPU/드라이버가 필요합니다. 일반 Python은 `--help` 확인에만 사용하고 시뮬레이션은 설치에 포함된 `python.sh`로 실행합니다. GUI 실행은 화면 세션이 필요하며 창 없이 실행하려면 `--headless`를 붙입니다.
-
-Isaac Sim 5.1 Assets의 `Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`가 필요합니다. `get_assets_root_path()`가 반환하는 asset 서버 또는 로컬 asset 팩에서 읽습니다. 첫 로딩에는 네트워크가 필요할 수 있습니다. 이 로봇 USD와 해당 재질/mesh 참조를 함께 사용할 수 있어야 합니다.
-
-터미널에서 이 패키지 폴더(`56_motion_manipulators_rmpflow`)로 이동한 뒤 아래를 실행합니다. 설치 위치가 다르면 첫 줄만 바꿉니다. Windows에서는 설치 폴더의 `python.bat`에 동일한 인수를 전달합니다.
+아래 명령은 **저장소 루트** 기준입니다. 설치 위치가 다르면 `~/isaacsim`을 바꾸세요.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --debug-spheres
-"$ISAAC_SIM_ROOT/python.sh" run.py --headless --target 0.5 -0.2 0.6
-"$ISAAC_SIM_ROOT/python.sh" run.py --debug-spheres --ignore-state
+~/isaacsim/python.sh src/56_motion_manipulators_rmpflow/run.py \
+  --debug-spheres --steps 180
 ```
 
-`--steps`를 생략하면 사용자가 창을 닫을 때까지 GUI와 물리·제어 루프가 계속 실행됩니다. `--steps 600`처럼 양수를 지정하면 그 물리 스텝 수까지 실행하고 종료합니다. GUI의 `--steps 0`도 무제한이며, `--headless`에서 생략하면 기존 기본값인 600스텝을 실행합니다. headless의 0과 음수는 허용하지 않습니다. 창을 닫거나 지정한 스텝에 도달하면 실행 결과가 이 폴더의 새 `output/run_*` 디렉터리에 저장됩니다. `--output /절대경로/새폴더`를 지정할 수도 있지만 기존 폴더를 덮어쓰지 않습니다. 코드는 `SimulationApp`을 만든 뒤 Isaac/Omni/USD 모듈을 가져오고 마지막에 `close()`로 종료합니다.
+180단계, 물리 시간 3초 동안 실행한 뒤 종료합니다. 로봇을 둘러싼 구와 빨간 목표, 파란 박스를 함께 살펴보세요. 창 없이 기록만 만들려면 `--headless`를 추가합니다. 결과는 이 폴더의 새 `output/run_*/tracking.json`입니다.
 
-## 단계별 실습
+### 코드에서 볼 부분
 
-1. 기본 실행에서 `/World/panda`, `/World/target`, `/World/obstacle`을 확인합니다. GUI Move 도구로 target을 움직이면 다음 물리 스텝에서 새로운 월드 위치를 읽습니다.
-2. `RmpFlow` 설정을 읽는 줄을 확인합니다. `load_supported_motion_policy_config('Franka','RMPflow')`가 robot description YAML, URDF, RMPflow parameter YAML, end-effector frame, 내부 substep 설정을 반환합니다. 이 파일은 `isaacsim.robot_motion.motion_generation/motion_policy_configs/franka/` 아래 설치되어 있습니다.
-3. `policy.add_obstacle(obstacle)`은 보이는 물체를 정책의 장애물로 등록합니다. USD 장면에 보이는 것만으로 Lula의 world 모델에 자동 등록되는 것은 아닙니다. 매 스텝 `update_world()`로 등록한 물체의 pose를 갱신합니다.
-4. `--obstacle-y 0.15`와 `--obstacle-y -0.15`를 별도로 실행해 회피 경로가 어떻게 달라지는지 관찰합니다. GUI에서 obstacle을 움직였을 때도 world 갱신으로 반영됩니다.
-5. `--debug-spheres`로 로봇을 감싼 collision sphere와 end-effector 시각화를 켭니다. 구가 실제 mesh를 충분히 감싸는지 확인합니다.
-6. `--ignore-state`를 추가합니다. 이 모드는 실제 관절 상태를 다음 계산에 반영하지 않고 정책 내부에서 이상적으로 추종한다고 가정하여 rollout합니다. 시각화가 로봇보다 앞서 갈 때는 정책 경로와 실제 drive 성능을 나누어 살펴볼 수 있습니다. 기본 제어에는 이 옵션을 끕니다.
+```python
+config = interface_config_loader.load_supported_motion_policy_config('Franka', 'RMPflow')
+policy = RmpFlow(**config)
+policy.add_obstacle(obstacle)
+```
 
-## RMPflow와 물리 제어의 역할
+설정에는 로봇의 운동학 URDF, 제어 관절과 충돌 구를 담은 description, 반응의 강도 등을 담은 RMPflow YAML이 연결됩니다. 보이는 박스를 만드는 코드와 `add_obstacle()` 호출은 역할이 다릅니다. **장면에 물체를 추가하는 것만으로 정책이 그 물체를 아는 것은 아닙니다.**
 
-RMPflow는 task-space target을 향한 가속과 충돌/관절 한계 등 여러 반응을 조합하는 reactive motion policy입니다. 전역 경로 탐색과 같지 않으며 막힌 환경에서는 local minimum에 머물 수 있습니다. 이 실습은 위치 목표만 지정하므로 orientation 목표는 강제하지 않습니다.
+```python
+policy.set_robot_base_pose(*robot.get_world_pose())
+policy.set_end_effector_target(position)
+policy.update_world()
+robot.apply_action(motion.get_next_articulation_action())
+world.step(render=not args.headless)
+```
 
-`set_end_effector_target()`은 목표를 지정하고 `ArticulationMotionPolicy.get_next_articulation_action()`은 로봇 관절 순서에 맞는 action을 만듭니다. `robot.apply_action()`이 drive 목표로 전달한 뒤 `world.step()`이 물리 상태를 계산합니다. 내부 최대 integration substep과 바깥 물리 시간간격 1/60 s는 서로 다릅니다.
+base pose와 목표를 월드 좌표로 맞추고, 등록된 장애물의 최신 위치를 읽은 뒤 다음 action을 만듭니다. `ArticulationMotionPolicy`가 정책의 결과를 로봇 관절 순서에 맞는 action으로 바꿉니다. 바깥 물리 간격은 1/60초이며, 정책 내부 계산의 작은 적분 간격과는 구분합니다.
 
-USD articulation과 Lula URDF는 같은 조립 구조를 표현해야 합니다. 그리퍼를 추가했다면 URDF의 link/frame 및 robot description도 맞춰야 합니다. 로봇 base를 움직였을 때는 `set_robot_base_pose()`에 현재 월드 pose를 넘겨야 target과 collision 위치가 같은 좌표계가 됩니다. 이 코드에서는 매 스텝 갱신합니다.
+### 실행 결과 확인하기
 
-## 관찰 기준과 한 변수 실험
+`tracking.json`은 배열이며 각 행에 다음 값이 들어 있습니다.
 
-`tracking.json`은 30스텝마다 목표, 실제 관절 상태로 계산한 end-effector FK, 거리 오차를 기록합니다. 목표가 정지한 도달 가능 위치라면 오차가 줄어드는지 봅니다. sphere가 장애물과 겹치지 않는지 화면도 확인하지만, 샘플 위치만으로 연속 시간 충돌 부재를 증명하지는 않습니다. `--obstacle-y`만 바꾸어 같은 목표에서 경로 차이를 비교합니다.
+| 항목 | 의미 |
+|---|---|
+| `step` | 반복문 인덱스, 0부터 30단계 간격 |
+| `target_m` | 그때 읽은 목표의 월드 위치 |
+| `end_effector_m` | 실제 관절값으로 계산한 `right_gripper` 위치 |
+| `position_error_m` | 목표와 실제 말단의 거리(m) |
 
-## 문제 해결
+정지한 도달 가능 목표에서 오차가 전반적으로 줄어드는지 확인하세요. 각 표본은 물리 계산 뒤 기록되므로 `step=0`도 첫 단계 이후 상태입니다. 180단계 실행의 마지막 기록은 `step=150`이며 종료 직전 측정값은 아닙니다.
 
-목표를 따라가지 않으면 먼저 target이 작업영역 안인지, base pose가 맞는지, 실제 end-effector frame이 `right_gripper`인지 확인합니다. 로봇이 sphere와 달리 늦게 움직이면 joint drive gain과 physics timestep을 살펴봅니다. 빠른 움직임의 overshoot를 RMPflow 파라미터 문제라고 단정하지 않습니다. 지원 config를 못 찾으면 5.1 motion generation extension의 설치/활성 상태를 확인합니다.
+작은 위치 오차는 목표 추종의 근거입니다. 이 JSON에는 접촉 수나 최소 충돌 거리가 없으므로 충돌 회피 성공까지 숫자 하나로 판단할 수는 없습니다. 구와 링크가 파란 박스 주변에서 어떻게 지나가는지도 관찰하세요.
 
-## 검증 범위
+## 2. 목표를 옮기고 정책의 내부 상태 보기
 
-이 패키지의 `tutorial.json`에 적힌 `verification`은 실제 시뮬레이터 실행 여부를 나타냅니다. Python 문법 검사와 `--help` 성공만으로 GPU 실행, 물리 동작, 충돌 회피 성능을 검증했다고 보지 않습니다. 실행 후 아래 관찰 기준으로 직접 결과를 확인합니다.
+이번에는 종료 한도를 생략해 창을 유지합니다.
 
-## 출처
+```bash
+~/isaacsim/python.sh src/56_motion_manipulators_rmpflow/run.py --debug-spheres
+```
 
-- [NVIDIA Isaac Sim 5.1.0 — Lula RMPflow](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_rmpflow.html)
-- 원문의 학습 목적과 API를 유지하면서 한국어 설명, 명령행 옵션, 실행 길이 선택과 실제 상태 기록을 추가한 독립 예제입니다. 원문 전체를 복제한 문서가 아닙니다.
+1. Stage에서 `/World/target`을 선택하고 Move 도구로 도달 가능한 범위 안에서 조금씩 옮기세요.
+2. 로봇이 새 위치를 향해 방향을 바꾸는지 봅니다. 목표가 바뀌는 순간 거리 오차가 다시 커지는 것은 자연스럽습니다.
+3. `/World/obstacle`을 조금 옮겨 접근 경로가 어떻게 달라지는지 살펴보세요. 코드가 매 단계 `update_world()`를 호출해 등록된 장애물 위치를 반영합니다.
+4. 창을 닫고 저장된 `target_m`의 변화를 확인하세요. 목표가 계속 움직인 실행과 정지 목표 실행을 같은 수렴 조건으로 비교하지 않습니다.
 
-## 실제 실행 기록
+### 코드에서 볼 부분
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+정책의 이상적인 움직임과 실제 로봇을 비교하는 옵션도 있습니다.
+
+```bash
+~/isaacsim/python.sh src/56_motion_manipulators_rmpflow/run.py \
+  --debug-spheres --ignore-state
+```
+
+`policy.set_ignore_state_updates(True)`를 사용하면 실제 관절 상태를 계속 반영하는 대신 내부에서 자신의 상태를 진행합니다. 이를 **내부 rollout**이라고 합니다. 계획한 대로 움직였다고 가정하며 다음 상태를 계산해 보는 것입니다.
+
+### 실행 결과 확인하기
+
+충돌 구 시각화가 실제 링크보다 앞서거나 다른 위치에 나타나는지 보세요. 내부 계산은 잘 진행되는데 실제 팔이 늦게 따라온다면 관절 drive와 물리 접촉을 살펴볼 단서가 됩니다. 기본 제어에서는 `--ignore-state`를 끕니다.
+
+이 옵션을 켜도 `tracking.json`의 말단 위치는 실제 articulation의 FK에서 읽습니다. 화면의 정책 구가 목표에 도착했다는 사실과 실제 로봇이 도착했다는 사실을 나누어 보세요. 이 디버깅 방식은 [공식 Lula RMPflow](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_rmpflow.html)에서도 다룹니다.
+
+## 3. 정책, 장애물 모델, 물리 추종 정리
+
+```text
+목표로 끌어당기는 반응 + 등록한 장애물을 피하는 반응
+    → RMPflow 관절 목표 → 물리 drive → 실제 로봇
+          ↑                                  │
+          └──────── 실제 관절 상태 ──────────┘
+```
+
+기본 실행은 이 되먹임을 사용합니다. RMPflow는 현재 주변 조건에 반응하므로 매번 전체 우회 경로를 검색하는 계획기와 성격이 다릅니다. 좁거나 막힌 배치에서는 서로 다른 반응이 균형을 이뤄 멈출 수 있습니다.
+
+또한 코드가 정책에 등록한 외부 장애물은 파란 박스입니다. 바닥 등 다른 장면 물체가 모두 자동 등록되지는 않습니다. 정책의 충돌 구와 PhysX collider도 서로 다른 형상이므로 로봇을 변경했다면 두 모델의 위치와 크기를 함께 맞춰야 합니다.
+
+## 4. 간단한 확인 실험
+
+1절의 명령에 **`--obstacle-y -0.15`**를 추가하세요. 목표와 실행 길이는 그대로 두고 박스의 y만 +0.15에서 −0.15 m로 옮깁니다.
+
+두 실행에서 말단의 접근 경로와 `end_effector_m` 표본을 비교하세요. 박스가 반대편으로 옮겨졌다고 관절 경로가 완벽히 좌우 대칭이 될 필요는 없습니다. 초기 자세와 로봇 형상도 반응에 영향을 줍니다. 마지막 오차뿐 아니라 장애물 근처에서 접근이 느려지는 구간을 찾아보세요.
+
+## 실행할 때 막히면
+
+- **RMPflow 설정을 찾지 못함**: Isaac Sim 5.1의 motion generation 확장이 설치되어 있고 지원 Franka 설정을 읽는지 확인하세요.
+- **목표에 가까이 가다 멈춤**: 목표가 도달 가능하며 장애물 근처에 놓이지 않았는지 확인하세요. 다른 배치에서 움직인다면 반응 간 경쟁을 살펴봅니다.
+- **구는 움직이는데 실제 팔은 뒤처짐**: `--ignore-state` 여부를 확인하고 실제 drive gain, 접촉, 시간 간격을 살펴보세요.
+- **새 물체를 추가했는데 피하지 않음**: USD 추가와 정책의 `add_obstacle()` 등록은 별개입니다. 등록과 `update_world()` 경로를 확인하세요.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Lula RMPflow](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_rmpflow.html)에 대응합니다. 위치 추종, 장애물 갱신, 충돌 구와 내부 상태 비교를 독립 실행으로 구성했습니다.
+
+기존 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)에는 기본 목표를 headless 180단계 실행했을 때 마지막 저장 위치 오차가 약 **0.00224 m**였던 관찰이 있습니다. 과거 기본 추종의 기록이며 현재 코드 재실행, 충돌 거리, GUI 이동·ignore-state 모드의 결과는 아닙니다. 작은 목표 오차와 장애물 주변의 실제 통과 상태를 함께 확인하세요.

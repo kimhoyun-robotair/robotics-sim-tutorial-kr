@@ -1,70 +1,181 @@
-# 17. 유틸리티: Points, Instancer, DebugDraw와 카메라
+# 17. 같은 점들을 세 방식으로 그리고 저장 결과 비교하기
 
-권장 학습 순서 **17** · Python 실행 환경과 USD 기초 · 출처 ID `t096`
+## 이번에 배우는 것
 
-## 이 실습의 의도
+**같은 위치 데이터를 Points·PointInstancer·DebugDraw로 표현하고, 어떤 표현이 USD 파일에 남는지 확인합니다.**
 
-같은 난수 시드로 만든 위치들을 USD Points, Cube PointInstancer, viewport DebugDraw로 표현해 **화면에 보이는 것과 USD에 저장되는 것**의 차이를 비교합니다. 기본 `points` 모드는 200개 점을 사인파로 움직이고 최초 120프레임 구간의 마지막 위치를 저장하며, 중력이나 충돌에 의한 움직임을 만들지는 않습니다. 계산용 카메라의 내부 파라미터와 별도 비동기 예제를 통해 렌더링 설정·앱 업데이트도 물리 상태와 구분합니다.
+점처럼 보이는 물체라고 해서 모두 같은 데이터는 아닙니다. 렌더러가 읽는 USD 점을 만들 수도 있고, 작은 큐브를 여러 곳에 배치할 수도 있으며, 뷰포트에 진단용 점만 그릴 수도 있습니다. 이번에는 난수 시드를 고정해 같은 위치 목록을 세 방식으로 그립니다.
 
-## 실행 후 확인할 것
+| `--mode` | 화면에 그리는 것 | `geometry.usda`에 남는 것 |
+|---|---|---|
+| `points` | 자홍색 USD Points | 점 위치·너비·색 |
+| `instancer` | 청록색 작은 큐브들 | 원형 큐브와 인스턴스 위치 |
+| `debug` | 주황색 진단용 점 | DebugDraw 점 자체는 저장되지 않음 |
 
-- GUI에서 기본 `points`는 자홍색 점, `instancer`는 청록색 작은 큐브, `debug`는 주황색 점으로 나타나며 높이가 주기적으로 변하는지 봅니다. 동일한 `--count`와 실행 길이로 비교하면 같은 위치 데이터를 서로 다른 방식으로 그리는 실험이 됩니다.
-- `rendering.json`의 `mode`, `point_count`, `final_positions`를 확인합니다. 위치 수는 지정한 count와 같아야 하며, GUI를 계속 켜 두어도 저장한 최초 구간 이후의 움직임이 이 파일에 추가되지는 않습니다.
-- `geometry.usda`를 다시 열면 Points/Instancer의 저장된 점·큐브 위치는 남지만 DebugDraw 점은 없어야 합니다. DebugDraw의 점은 USD geometry가 아니므로 이 차이는 의도된 결과이며 `--mode debug --headless`는 지원하지 않습니다.
-- `focal_x_px`, `focal_y_px`, `principal_point_px`는 `/World/CalibrationCamera` 속성과 가정한 960×640 해상도의 계산 결과인지 확인합니다. 현재 viewport에서 촬영한 영상의 보정 결과나 자동 성능 측정값으로 읽지 않습니다.
-- 별도 `pause_after_update.py`를 Script Editor에서 실행하면 Play 후 Pause되고 `Paused after one application update`가 출력되는지 봅니다. 기다린 대상은 앱 업데이트 한 번이며 정확히 물리 한 스텝을 실행했다는 판정은 아닙니다.
+점의 높이는 사인 함수로 직접 바꿉니다. 중력이나 충돌 때문에 움직이는 장면이 아니므로 물리 시간 대신 **앱 업데이트 인덱스**가 애니메이션의 입력입니다.
 
-## 독립 패키지 준비와 실행 규칙
+## 1. 먼저 Points로 실행하기
 
-이 폴더 하나만 복사해도 실행되도록 작성했다. 다른 튜토리얼, 공통 Python 모듈, 저장소 루트 자산을 가져오지 않는다. Isaac Sim **5.1.0**과 지원 NVIDIA GPU/드라이버가 필요하다. 아래 Linux 명령의 `~/isaacsim`을 실제 설치 경로로 바꾼다. Windows에서는 설치 폴더의 `python.bat`을 사용한다.
-
-이 패키지 폴더에서 `python3 run.py --help`로 옵션을 확인한다. 실제 실행은 `~/isaacsim/python.sh run.py`로 한다. 기본 출력은 이 폴더의 `output/날짜-시간/`이다. `--output /새/폴더`로 지정할 수 있고 기존 경로를 덮어쓰지 않는다. `--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지됩니다. 양수 `--steps N`을 지정하면 최대 N단계 실행 후 종료합니다. `--headless`에서 생략하면 기존 기본값 120단계를 사용합니다. 기본 120프레임의 위치와 USD를 저장한 뒤에도 점 애니메이션은 계속 움직입니다. 저장 파일은 최초 관찰 구간의 스냅샷입니다. `--headless`는 창을 숨기며 GPU가 필요 없다는 뜻은 아니다.
-
-## 순서대로 실습
+Isaac Sim 5.1과 지원 NVIDIA GPU가 있는 환경에서 저장소 루트 기준으로 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-~/isaacsim/python.sh run.py --mode points --count 200
-~/isaacsim/python.sh run.py --mode instancer --count 200
-~/isaacsim/python.sh run.py --mode debug --count 200
+~/isaacsim/python.sh src/17_python_usd_util_snippets/run.py --mode points --count 200 --steps 120
 ```
 
-1. 같은 난수 시드 7로 위치 200개를 만든다. 각 업데이트에서 Z에 작은 사인파 변화를 주어 움직임을 관찰한다.
-2. Points 모드의 `CreatePointsAttr`, `CreateWidthsAttr`를 읽는다. 점이 renderer가 읽는 USD geometry가 된다.
-3. Instancer 모드의 `prototypes`, `protoIndices`, `positions`를 읽는다. 하나의 Cube prototype을 여러 위치에 인스턴싱한다. 이 실습은 geometry 갱신에 집중하므로 강체/충돌 스키마를 추가하지 않았다. PointInstancer를 썼다는 이유만으로 물리가 생기지는 않는다.
-4. Debug 모드는 `isaacsim.util.debug_draw` 확장을 활성화하고 매번 `clear_points` 후 다시 그린다. USD geometry가 아니므로 파일에 그 점들이 저장되지 않는다. GUI viewport에서만 확인하며 `--headless` 조합은 거부한다.
-5. Points와 Instancer의 `geometry.usda`를 새 GUI에서 연다. Debug 모드의 파일에는 debug 점이 없음을 비교한다. `finally`는 이 스크립트가 남긴 debug 점을 정리한다.
-6. `/World/CalibrationCamera`는 focalLength=35, horizontalAperture=36, verticalAperture=24인 별도 계산용 카메라다. 해상도를 960×640으로 가정한 결과에서 `fx=width*focal/aperture_x`, `fy=height*focal/aperture_y`를 확인한다. **실제 viewport나 센서 프레임에서 추정한 값은 아니다.**
+점 200개의 위치를 120회 갱신한 뒤 마지막 위치와 USD를 저장하고 종료합니다. 창을 계속 보려면 `--steps 120`을 빼세요. 첫 120회의 결과를 저장한 뒤에도 애니메이션은 이어지지만 저장 파일은 더 갱신하지 않습니다.
 
-## 현재 viewport 카메라 읽기
+Points와 Instancer는 `--headless`도 사용할 수 있으며, 단계 수 생략 시 120회 후 종료합니다. DebugDraw는 보이는 뷰포트가 필요하므로 `--headless`와 함께 사용할 수 없습니다.
 
-GUI **Window > Script Editor**에서 아래를 실행한다. viewport를 선택하고 해상도가 변경될 다음 앱 프레임까지 기다린 후 다시 읽으면 카메라 속성과 픽셀 크기를 연결할 수 있다.
+출력은 이 폴더의 `output/날짜-시간/`에 생깁니다. `--output`을 사용할 때는 새 폴더를 지정하세요.
+
+### 코드에서 볼 부분
+
+위치는 난수 시드 7로 만들고 각 업데이트에서 다음 높이를 사용합니다.
 
 ```python
-from omni.kit.viewport.utility import get_active_viewport
-import omni.usd
-from pxr import UsdGeom
-viewport = get_active_viewport()
-viewport.set_texture_resolution((960, 640))
-print(viewport.get_texture_resolution(), viewport.camera_path)
-camera = UsdGeom.Camera(omni.usd.get_context().get_stage().GetPrimAtPath(viewport.camera_path))
-print(camera.GetFocalLengthAttr().Get(), camera.GetHorizontalApertureAttr().Get(), camera.GetVerticalApertureAttr().Get(), camera.GetClippingRangeAttr().Get())
+samples = [
+    Gf.Vec3f(x, y, z + 0.2 * math.sin(frame / 15 + x))
+    for x, y, z in base
+]
+positions.Set(samples)
+app.update()
 ```
 
-USD camera focal length와 aperture는 동일한 단위 체계이므로 비율로 FOV를 계산한다. 중심점 `(width/2,height/2)`는 offset이 없는 카메라 가정이다. 원문의 예제처럼 width/height를 뒤섞지 말고 축에 대응시키며, 비정사각 픽셀이나 aperture offset이 있으면 별도로 반영한다.
+`base`는 움직이기 전 위치 목록입니다. X와 Y는 유지하고 Z에 최대 ±0.2 m 변화를 더합니다. `+ x` 때문에 X 위치에 따라 위아래 움직임의 위상이 달라집니다. 매번 이전 높이에 더하는 것이 아니라 **같은 기준 높이에서 다시 계산**하므로 오차가 누적되는 구조가 아닙니다.
 
-## 비동기 task와 렌더 지연
+`frame`은 0부터 시작합니다. `--steps 120`의 저장 위치는 마지막 `frame=119`로 계산한 결과입니다. `frame / 15`는 애니메이션 위상을 정하는 식이며 시뮬레이션 시간(초)이라는 뜻은 아닙니다.
 
-새 GUI의 Script Editor에서 `pause_after_update.py`를 실행한다. 타임라인을 Play하고 **앱 업데이트 한 번**을 기다린 뒤 Pause한다. 앱 업데이트와 물리 스텝을 같은 것으로 단정하지 않는다.
+### 실행 결과 확인하기
 
-`~/isaacsim/python.sh run.py --mode points --zero-delay`는 원문이 제시한 `waitIdle`, Hydra 완료 대기, ROS 2 bridge 발행 threading 설정을 앱 시작 인자로 전달한다. 원문의 오래된 경험 파일 이름 대신 설정값을 명시했다. 이 옵션을 실행했다고 카메라 동기화가 측정·검증된 것은 아니며 처리량과 최신 프레임 대응 사이의 영향을 실제 센서 출력으로 별도 비교해야 한다.
+`rendering.json`에서 `mode=points`, `point_count=200`인지 확인하세요. `final_positions`에도 200개의 `[x, y, z]`가 있어야 합니다.
 
-## 한 가지 변수 실험과 문제 해결
+저장한 `geometry.usda`를 새 GUI에서 열면 점의 마지막 배치가 보입니다. 이 코드는 위치를 기본 속성 값으로 갱신하므로, 저장된 파일은 120프레임 애니메이션 전체가 아닌 **마지막 배치의 스냅샷**입니다.
 
-`--count`만 200에서 2000으로 바꾸고 화면 반응을 비교한다. 본 패키지는 벤치마크 FPS를 자동으로 측정하지 않는다. Debug 점이 저장 파일에서 안 보이는 것은 의도된 차이다. 검은 화면은 조명과 카메라를 확인한다. 뷰포트가 없는 headless 환경에서는 viewport API 자체가 없을 수 있다.
+## 2. Instancer·DebugDraw와 카메라 계산 살펴보기
 
-## 출처와 검증 범위
+앞의 실행이 끝난 뒤 같은 개수와 길이로 차례로 실행합니다.
 
-- NVIDIA Isaac Sim **5.1.0**, [Util Snippets](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/util_snippets.html): 이 패키지가 대응하는 공식 페이지. 문장과 실행 코드는 초심자용으로 재구성했다.
-- 구현 API는 로컬 Isaac Sim 5.1 설치의 해당 `isaacsim`/Kit/USD 소스와 대조했다. 원문의 외부 최신 버전 링크는 5.1 설치와 UI/API가 다를 수 있다.
+```bash
+~/isaacsim/python.sh src/17_python_usd_util_snippets/run.py --mode instancer --count 200 --steps 120
+~/isaacsim/python.sh src/17_python_usd_util_snippets/run.py --mode debug --count 200 --steps 120
+```
 
-Python 구문 컴파일과 일반 Python의 `--help`는 앱 없이 확인할 수 있다. 이 검사는 GPU, 자산 로딩, GUI 표현, 물리 결과의 실제 실행 검증을 대신하지 않는다. `tutorial.json`의 verification이 `not_run`이면 해당 시뮬레이터 실행은 아직 검증되지 않은 상태다.
+### 코드에서 볼 부분
+
+Instancer는 큐브 원형 하나와 각 위치에서 사용할 원형 번호를 연결합니다.
+
+```python
+geometry.CreatePrototypesRel().SetTargets([prototype.GetPath()])
+geometry.CreateProtoIndicesAttr([0] * args.count)
+positions = geometry.CreatePositionsAttr(base)
+```
+
+원형 목록의 0번이 작은 큐브이므로 모든 인스턴스가 같은 큐브 모양을 사용합니다. 개별 위치는 따로 갖지만 이 실습에서는 강체·충돌 스키마를 추가하지 않습니다.
+
+DebugDraw는 갱신할 때마다 이전 점을 지우고 새 점을 그립니다.
+
+```python
+draw.clear_points()
+draw.draw_points(
+    [tuple(p) for p in samples],
+    [(1, 0.3, 0, 1)] * args.count,
+    [5.0] * args.count,
+)
+```
+
+이 점들은 USD Prim으로 만들어지지 않습니다. 그래서 현재 뷰포트에서 보이더라도 USD 저장 대상은 아닙니다. DebugDraw의 크기 인자를 Points의 월드 너비와 같은 단위로 비교하지 마세요.
+
+### 실행 결과 확인하기
+
+각 실행의 `geometry.usda`를 따로 열어보세요. Points와 Instancer는 마지막 배치가 남지만 Debug 모드의 주황색 점은 나타나지 않아야 합니다. Debug 모드도 `rendering.json`에는 최종 위치를 남기므로 **저장된 숫자와 저장된 화면 요소의 차이**를 확인할 수 있습니다.
+
+보고서에는 카메라 값도 들어 있습니다. 코드는 관찰용 뷰포트와 별도로 `/World/CalibrationCamera`를 만들고 초점거리 35, 가로 aperture 36, 세로 aperture 24를 지정합니다. 가정한 해상도는 960×640입니다.
+
+```text
+fx = 960 × 35 / 36 ≈ 933.33 px
+fy = 640 × 35 / 24 ≈ 933.33 px
+주점 = (960/2, 640/2) = (480, 320) px
+```
+
+`focal_x_px`, `focal_y_px`, `principal_point_px`를 위 값과 비교해 보세요. 초점거리와 aperture는 같은 단위 체계이므로 비율을 픽셀 수에 곱합니다. 이 계산은 offset 없는 카메라를 가정합니다. **실제 뷰포트 영상에서 보정값을 추정하거나 센서 프레임을 촬영한 결과는 아닙니다.**
+
+### 현재 뷰포트 카메라와 대조하기
+
+계산용 카메라와 지금 보는 화면의 차이는 GUI의 Script Editor에서 직접 확인할 수 있습니다. 다음 코드는 활성 뷰포트의 해상도를 지정하고 앱 업데이트를 기다린 뒤 실제 카메라 경로와 속성을 읽습니다.
+
+```python
+import asyncio
+import omni.kit.app
+import omni.usd
+from omni.kit.viewport.utility import get_active_viewport
+from pxr import UsdGeom
+
+async def inspect_viewport():
+    viewport = get_active_viewport()
+    if viewport is None:
+        raise RuntimeError("먼저 GUI 뷰포트를 여세요.")
+    viewport.set_texture_resolution((960, 640))
+    await omni.kit.app.get_app().next_update_async()
+    camera = UsdGeom.Camera(
+        omni.usd.get_context().get_stage().GetPrimAtPath(viewport.camera_path)
+    )
+    print("viewport:", viewport.get_texture_resolution(), viewport.camera_path)
+    print("lens:", camera.GetFocalLengthAttr().Get(),
+          camera.GetHorizontalApertureAttr().Get(), camera.GetVerticalApertureAttr().Get())
+    print("clipping:", camera.GetClippingRangeAttr().Get())
+
+viewport_task = asyncio.ensure_future(inspect_viewport())
+viewport_task.add_done_callback(lambda task: task.result())
+```
+
+출력 카메라가 `/World/CalibrationCamera`와 다르면 `rendering.json`과 렌즈 값이 달라도 정상입니다. 같은 960×640 크기를 지정했더라도 초점거리와 aperture가 다르면 화각이 달라집니다. 이 단계도 카메라 속성을 읽는 작업이며 촬영 영상으로 보정 오차를 추정하는 작업은 아닙니다.
+
+### 앱 업데이트를 기다리는 별도 예제
+
+새 Isaac Sim 창의 **Window > Script Editor**에서 `pause_after_update.py` 전체를 실행해 보세요.
+
+```python
+timeline.play()
+await omni.kit.app.get_app().next_update_async()
+timeline.pause()
+```
+
+Play 후 내 작업을 잠시 양보하고 앱 업데이트를 기다린 뒤 Pause합니다. 출력의 `Paused after one application update`와 현재 타임라인 시간을 확인하세요. 앱 업데이트 한 번이 항상 물리 한 단계인 것은 아닙니다.
+
+`run.py`의 `--zero-delay`는 렌더 완료 대기와 ROS 2 발행 관련 설정을 앱 시작에 전달하는 옵션입니다. 보고서의 `zero_delay_requested`는 이 옵션을 요청했는지만 나타냅니다. 현재 예제에는 센서 지연을 측정하는 장치가 없으므로, 값이 `true`라고 지연이 0으로 측정된 것은 아닙니다.
+
+## 3. 화면 표현과 저장 데이터 정리
+
+```text
+같은 위치 목록
+    ├─ Points 속성 갱신       → USD에 점 저장
+    ├─ Instancer 위치 갱신    → USD에 인스턴스 저장
+    └─ DebugDraw 호출        → 현재 뷰포트에 표시
+
+위치 목록 자체 → rendering.json에 별도 저장
+```
+
+나중에 장면을 다시 열어야 한다면 USD에 남는 표현이 필요합니다. 지금 실행 중인 알고리즘의 중간 결과만 눈으로 확인하려면 DebugDraw를 사용할 수 있습니다. 표현을 고를 때는 모양뿐 아니라 **다시 열었을 때도 필요한 데이터인지** 생각해 보세요.
+
+## 4. 간단한 확인 실험
+
+Points 모드에서 `--count`만 200에서 2000으로 바꿔 실행합니다.
+
+```bash
+~/isaacsim/python.sh src/17_python_usd_util_snippets/run.py --mode points --count 2000 --steps 120
+```
+
+`point_count`와 `final_positions` 개수가 2000으로 늘어나는지 확인하세요. 카메라 설정은 그대로이므로 `focal_x_px`와 `principal_point_px`는 변하지 않아야 합니다. 점 수가 늘어 화면 반응이 달라질 수 있지만, 이 스크립트는 FPS를 자동 측정하지 않습니다.
+
+## 실행할 때 막히면
+
+- **DebugDraw가 Headless에서 오류를 냄**: 보이는 뷰포트가 필요한 모드입니다. `--headless`를 빼고 실행하세요.
+- **USD를 다시 열었는데 점이 안 보임**: 어떤 모드의 출력인지 `rendering.json`부터 확인하세요. Debug 점은 저장되지 않습니다.
+- **카메라 수치가 현재 화면과 맞지 않음**: 계산 대상은 `/World/CalibrationCamera`와 가정한 해상도입니다. 현재 뷰포트 카메라를 측정한 값이 아닙니다.
+- **Pause 예제를 일반 Python에서 실행할 수 없음**: `pause_after_update.py`는 이미 실행 중인 앱의 Script Editor용입니다. 독립 실행용 `run.py`와 사용 위치를 구분하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Util Snippets](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/util_snippets.html)에 대응합니다. 점 표현·카메라 계산·앱 업데이트 대기를 비교하도록 구성했으며, 위치 애니메이션과 JSON 저장은 로컬 학습용 코드입니다.
+
+현재 `tutorial.json`은 `not_run`입니다. 이번 개정에서는 세 모드의 저장 경로와 카메라 계산을 코드로 확인했습니다. 뷰포트 표현, 렌더 지연, 실제 센서 동기화는 실행해 검증하지 않았습니다.

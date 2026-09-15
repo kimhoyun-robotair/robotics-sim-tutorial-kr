@@ -1,83 +1,133 @@
-# 02. Jetbot을 불러오고 바퀴 관절을 직접 움직이기
+# 02. Jetbot의 바퀴에 명령을 보내면 어떻게 움직일까요?
 
-권장 학습 순서 **02** · 첫 실행과 로봇 만나기 · 출처 ID `t099`
+## 이번에 배우는 것
 
-공식 원문: **Hello Robot** · Isaac Sim **5.1.0** · 인덱스 **t099**
+**Jetbot USD를 장면에 불러오고, 두 Python API로 같은 바퀴 속도 명령을 보내 실제 이동을 비교합니다.**
 
-이 패키지는 `Hello Robot` 원문의 핵심 학습 흐름을 **standalone Python**으로 구현한 한국어 실습입니다. 공식 Core 원문의 확장(BaseSample) 워크플로는 Isaac Sim GUI가 앱 수명과 이벤트 루프를 관리합니다. 여기서는 `SimulationApp`을 직접 시작하고 `World.reset()` → 반복 `World.step()` → `app.close()` 순서를 한 폴더에서 읽을 수 있게 구성했습니다. GUI 단계가 주제인 부분은 아래 절차에 함께 적었습니다. 다른 로컬 패키지나 공통 모듈을 먼저 공부할 필요가 없습니다.
+01번에서는 코드로 큐브를 만들었습니다. 로봇은 외형뿐 아니라 여러 링크와 관절 설정도 필요하므로, 이번에는 NVIDIA가 제공하는 Jetbot USD를 참조합니다. 모델을 불러오는 일과 초기화된 관절을 제어하는 일을 나눠 살펴보세요.
 
-## 이 실습의 의도
+| 구분 | `--api robot` | `--api wheeled` |
+|---|---|---|
+| Python 객체 | `Robot` | `WheeledRobot` |
+| 모델 준비 | USD reference를 먼저 추가합니다. | `create_robot=True`와 `usd_path`를 전달합니다. |
+| 바퀴 지정 | 이름으로 인덱스를 찾습니다. | `wheel_dof_names`에 이름을 전달합니다. |
+| 명령 전달 | 컨트롤러의 `apply_action()` | `apply_wheel_actions()` |
+| 비교할 결과 | 실제 바퀴 속도와 차체 이동 | 같은 입력에서 같은 종류의 주행 |
 
-NVIDIA Jetbot USD를 장면에 참조하는 단계와, 초기화된 로봇의 바퀴 관절에 명령을 보내는 단계를 구분합니다. 기본 `--api robot`은 바퀴 이름으로 인덱스를 찾아 명령을 보내며, `--api wheeled`는 그 대응을 `WheeledRobot`에 맡기는 같은 작업을 보여줍니다. 좌우 바퀴에 rad/s 목표를 주고 실제 차체 위치·자세를 읽어, 명령값과 이동 결과의 관계를 확인합니다.
+두 경로의 기본 목표는 좌우 바퀴 각각 **4 rad/s**입니다. 바퀴의 회전 속도이지 차체의 전진 속도 4 m/s가 아닙니다.
 
-## 실행 후 확인할 것
+## 1. Robot으로 Jetbot 주행하기
 
-- 터미널의 `DOF before reset`과 `DOF after reset`을 비교합니다. 초기화 전 값이 아직 준비되지 않은 것은 정상이며, reset 후에는 `left_wheel_joint`, `right_wheel_joint`와 두 바퀴 인덱스를 읽을 수 있어야 합니다.
-- 기본 `--wheel-speeds 4 4`로 충분히 실행하면 `/World/Jetbot`의 차체 위치가 전진 방향으로 변해야 합니다. 터미널의 실제 `wheel_rad_s`가 목표를 추종하는지도 함께 봅니다. 목표값 출력만으로 이동을 판정하지 않습니다.
-- 종료 후 `result.json`의 `command_rad_s`, `wheel_indices`, `displacement_m`, `orientation_wxyz`를 확인합니다. 이동량은 초기 위치를 뺀 벡터이며, 짧은 실행의 과도응답이나 접촉 조건 때문에 고정된 이동 거리를 성공 기준으로 삼지 않습니다.
-- 두 API를 비교할 때는 바퀴 속도와 `--steps`를 동일하게 맞춥니다. 이어서 좌우 속도를 `2 4`로 바꾸면 곡선 주행과 자세 변화가 나타나는지 봅니다. 두 예시 명령은 속도도 다르므로 결과 차이를 API 차이만으로 해석하지 않습니다.
+Isaac Sim 5.1과 지원 GPU·드라이버, Jetbot 자산이 필요합니다. 코드가 찾는 파일은 5.1 자산 루트 아래 `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`입니다. 네트워크 자산을 사용한다면 해당 서버에 접근할 수 있어야 합니다.
 
-## 준비
-
-- Isaac Sim 5.1.0이 설치되고 NVIDIA GPU/드라이버가 정상 동작해야 합니다. `--headless`는 창만 숨기며 Isaac Sim 런타임 요구사항을 없애지 않습니다.
-- Isaac Sim 5.1 에셋 루트의 `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`가 필요합니다. 기본 asset root가 네트워크 주소면 접근이 필요합니다. 에셋 팩을 로컬에 둔 경우 `--asset /절대경로/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`로 지정할 수 있습니다.
-- 이 폴더의 파일을 통째로 복사해도 실행할 수 있습니다. 아래는 이 폴더 안에서 실행하는 명령입니다. `ISAAC_SIM_ROOT`에는 실제 5.1 설치 경로를 지정합니다.
+저장소 루트에서 실행하세요. 설치 위치가 다르면 `~/isaacsim`을 바꿉니다.
 
 ```bash
-ISAAC_SIM_ROOT=/home/hoyunkim/isaacsim
-python3 run.py --help
-"$ISAAC_SIM_ROOT/python.sh" run.py --api robot
-"$ISAAC_SIM_ROOT/python.sh" run.py --api wheeled --wheel-speeds 2 4
+~/isaacsim/python.sh src/02_core_core_hello_robot/run.py --api robot --steps 600 --wheel-speeds 4 4
 ```
 
-`run.py`는 `--steps`를 생략하면 사용자가 창을 닫을 때까지 물리와 제어를 계속 실행합니다. 양수 `--steps N`을 지정하면 N단계 후 종료합니다. `--headless`에서 `--steps`를 생략하면 600단계 후 종료합니다. 실행 중 GUI의 Stop/Play로 초기화를 시도하는 대신 프로그램을 다시 실행하세요. 기본 출력은 이 폴더의 `output/<고유번호>/`이며 `--output`으로 지정한 경로가 이미 있으면 덮어쓰지 않고 오류를 냅니다.
+600단계는 물리 시간 10초입니다. 끝나면 결과를 저장하고 앱이 종료됩니다. `--steps`를 빼면 창을 닫을 때까지 주행하고, `--headless`에서 생략하면 600단계로 제한합니다. 로컬 자산을 쓰려면 같은 명령에 `--asset /실제/경로/jetbot.usd`를 추가하세요. USD가 참조하는 메시와 재질 파일도 함께 있어야 합니다.
 
-## 파일 안내
+### 코드에서 볼 부분
 
-- `run.py`
-- `tutorial.json`: 공식 출처, 실행 형태, 산출물과 검증 상태입니다.
+```python
+add_reference_to_stage(usd_path=asset, prim_path="/World/Jetbot")
+robot = world.scene.add(Robot(prim_path="/World/Jetbot", name="jetbot"))
+```
 
-## 차례대로 실습하기
+첫 줄은 외부 USD를 현재 Stage의 `/World/Jetbot`에 연결합니다. 둘째 줄은 그 로봇을 Python에서 조회·제어할 객체로 감싸고 Scene에 등록합니다. `Robot(...)`에 경로만 넣는다고 Jetbot 모델이 저절로 만들어지는 것은 아닙니다.
 
-1. `--api robot`으로 실행합니다. `add_reference_to_stage`가 Stage의 `/World/Jetbot` 아래에 에셋을 합성하는 줄과 `Robot(...)`이 그 Prim을 감싸는 줄을 따로 확인합니다. Robot 생성만으로 Jetbot 모델이 생기는 것은 아닙니다.
-2. 터미널의 reset 전/후 DOF 값을 비교합니다. reset 전에는 핸들이 준비되지 않았고 reset 후에는 관절 이름과 인덱스를 읽을 수 있습니다.
-3. Stage에서 Jetbot을 선택하고 F를 눌러 봅니다. 좌우 4 rad/s 명령에서는 전진하는지, 출력되는 실제 바퀴 속도가 명령을 따라가는지 봅니다.
-4. 두 번째 명령으로 실행해 WheeledRobot의 `wheel_dof_names`와 `apply_wheel_actions`를 확인합니다. 좌우 속도를 2와 4로 다르게 주면 곡선으로 움직입니다.
-5. 각 실행의 `result.json`에서 `wheel_indices`, `command_rad_s`, `displacement_m`, `orientation_wxyz`를 비교합니다. 첫 위치를 뺀 이동량을 계산하므로 USD의 초기 위치와 혼동하지 않습니다.
+`world.reset()` 이후 다음 이름으로 바퀴 인덱스를 찾습니다.
 
-## API와 Omniverse/USD 개념
+```python
+wheel_names = ["left_wheel_joint", "right_wheel_joint"]
+wheel_indices = np.array([robot.get_dof_index(name) for name in wheel_names])
+```
 
-| API/개념 | 설명 |
+DOF는 독립적으로 움직이는 자유도입니다. 모델마다 배열 순서가 달라질 수 있으므로 왼쪽·오른쪽 바퀴를 이름으로 찾습니다. 그 순서에 맞춰 두 속도를 전달합니다.
+
+```python
+robot.get_articulation_controller().apply_action(ArticulationAction(
+    joint_velocities=np.array(args.wheel_speeds), joint_indices=wheel_indices))
+```
+
+`ArticulationAction`은 목표와 대상을 담는 명령 묶음입니다. 이를 보낸 뒤 `world.step()`이 물리를 진행해야 접촉과 구동 설정을 거친 실제 움직임이 나타납니다.
+
+### 실행 결과 확인하기
+
+터미널의 `DOF before reset`과 `DOF after reset`을 비교하세요. 초기화 전에는 관절 정보가 아직 준비되지 않을 수 있습니다. 이후에는 바퀴 이름과 인덱스를 읽을 수 있어야 합니다. 주행 중 출력되는 `wheel_rad_s`는 요청한 목표가 아니라 로봇에서 읽은 실제 바퀴 속도입니다.
+
+결과는 이 폴더의 `output/고유번호/result.json`에 저장됩니다.
+
+| JSON 항목 | 의미 |
 |---|---|
-| USD reference | 원본 USD를 복사하지 않고 현재 Stage의 특정 주소에서 구성하는 합성 방식입니다. |
-| `Robot` | 관절로 연결된 강체 묶음인 articulation을 조작하는 일반 래퍼입니다. |
-| `world.reset()` | USD 정의를 물리 엔진에 준비시키고 초기 상태로 되돌립니다. 관절 조회는 이 다음입니다. |
-| `get_dof_index(name)` | 이름으로 관절 인덱스를 찾습니다. 모델 파일의 내부 순서를 외우지 않아도 됩니다. |
-| `ArticulationAction` | 위치/속도/힘 목표와 대상 관절 인덱스를 담습니다. 명령 자체가 물리 결과는 아닙니다. |
-| `apply_action` | articulation controller에 목표를 전달합니다. 여기서는 바퀴 관절 속도를 제어합니다. |
-| `WheeledRobot` | 바퀴 이름을 기억하고 바퀴 배열을 전체 articulation의 올바른 인덱스로 변환합니다. |
+| `command_rad_s` | 입력한 왼쪽·오른쪽 바퀴 목표입니다. |
+| `wheel_indices` | 실제 articulation에서 찾은 바퀴 위치입니다. |
+| `displacement_m` | 최종 위치에서 초기 위치를 뺀 월드 좌표 이동 벡터입니다. |
+| `final_position_m` | 월드 좌표계에서 읽은 최종 위치입니다. |
+| `orientation_wxyz` | 최종 회전을 나타내는 쿼터니언입니다. |
 
-회전 관절 속도 단위는 rad/s입니다. 로봇의 전진 속도 m/s와 같지 않습니다. 바퀴 접촉, 마찰, 모터 drive가 명령을 실제 이동으로 바꿉니다. 쿼터니언은 Euler 각도가 아니며 Core API의 배열 순서는 w,x,y,z입니다.
+좌우 목표가 같으면 전진 방향으로 이동하는지 확인하세요. `displacement_m`은 이동 경로의 총 길이가 아닙니다. 곡선으로 돌아 출발점 가까이에 오면, 많이 주행해도 이 벡터의 크기는 작을 수 있습니다.
 
-## 한 변수만 바꾸는 실험
+## 2. WheeledRobot으로 같은 명령 보내기
 
-같은 `--api robot`에서 `--wheel-speeds 4 4`를 `--wheel-speeds -4 -4`로만 바꿉니다. 전진/후진 방향이 뒤집히는지 봅니다.
+첫 실행이 끝난 뒤 API 선택만 바꿔 실행합니다. 비교를 위해 단계 수와 속도는 그대로 둡니다.
 
-## 문제 해결
+```bash
+~/isaacsim/python.sh src/02_core_core_hello_robot/run.py --api wheeled --steps 600 --wheel-speeds 4 4
+```
 
-에셋을 읽을 수 없으면 지정한 파일과 그 USD가 참조하는 하위 리소스를 함께 설치해야 합니다. 관절 이름 오류는 다른 로봇 USD를 넣었을 때 생깁니다. 이 실습의 두 이름은 Jetbot 전용입니다. 실행 중 GUI Stop/Play 대신 프로그램을 다시 실행하면 초기 상태가 확실히 복구됩니다.
+### 코드에서 볼 부분
 
-`SimulationApp`보다 먼저 `omni`, `pxr`, Core 확장을 import하면 모듈 초기화에 실패할 수 있습니다. 일반 Python의 `--help`가 실행되는 것은 CLI 문법 검사일 뿐 물리 실행 성공은 아닙니다. 이 패키지의 검증 상태는 `tutorial.json`에 별도로 기록합니다.
+```python
+robot = world.scene.add(WheeledRobot(
+    prim_path="/World/Jetbot", name="jetbot",
+    wheel_dof_names=wheel_names, create_robot=True, usd_path=asset))
+```
 
-## 버전 고정 출처와 원문 대응
+이 경로는 모델 참조와 바퀴 이름의 대응을 `WheeledRobot`에 맡깁니다. 반복문 안의 명령도 짧아집니다.
 
-- [NVIDIA Isaac Sim 5.1.0 — Hello Robot](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_robot.html)
-- [공식 5.1: adding-a-robot](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_robot.html#adding-a-robot)
-- [공식 5.1: move-the-robot](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_robot.html#move-the-robot)
-- [공식 5.1: using-the-wheeledrobot-class](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_robot.html#using-the-wheeledrobot-class)
+```python
+robot.apply_wheel_actions(ArticulationAction(
+    joint_velocities=np.array(args.wheel_speeds)))
+```
 
-설명은 한국어로 새로 작성했으며 API 흐름과 실습 수치는 해당 5.1 공식 튜토리얼을 기준으로 합니다. 로컬 코드의 선택적 실행 제한, 결과 파일, 인자, 별도 성공 측정은 초심자가 단독으로 실행하고 비교하도록 추가한 구성입니다.
+명령에는 바퀴 속도 두 개만 넣습니다. `WheeledRobot`이 기억한 바퀴 이름을 사용해 전체 관절 중 대상에 대응시킵니다. 새로운 주행 물리 법칙을 쓰는 것은 아니며, 로봇의 바퀴 관절에 목표를 전달하는 절차를 줄여 줍니다.
 
-## 실제 실행 기록
+### 실행 결과 확인하기
 
-확인한 조건과 측정 결과는 [RUNTIME_CHECK.md](RUNTIME_CHECK.md)를 보세요. 검증은 해당 실행 모드에 한정됩니다.
+두 실행의 `result.json`에서 `api`는 달라도 `command_rad_s`는 `[4.0, 4.0]`인지 확인하세요. 실제 바퀴 인덱스와 주행 방향도 비교합니다. 모든 위치 성분이 소수점 끝자리까지 같아야 한다는 기준보다는, 같은 바퀴에 같은 목표를 전달했는지부터 확인하는 것이 좋습니다.
+
+## 3. 모델·명령·실제 상태 정리
+
+```text
+Jetbot USD → Stage에 참조 → reset으로 관절 초기화
+         → 바퀴 이름과 인덱스 대응 → 속도 목표 전달
+         → 물리 계산 → 바퀴 실제 속도와 차체 위치 관찰
+```
+
+**명령값과 관찰값은 서로 다릅니다.** 목표 4 rad/s를 보냈어도 실제 바퀴는 가속 과정을 거칠 수 있습니다. 바퀴 반지름, 접촉, 마찰이 차체 이동을 결정하므로 여기서는 고정된 이동 거리를 정답으로 두지 않습니다. 쿼터니언 네 성분도 Euler 각도로 바로 읽지 마세요.
+
+## 4. 간단한 확인 실험
+
+`robot` 경로에서 **왼쪽 목표 하나만** 4에서 2 rad/s로 줄입니다.
+
+```bash
+~/isaacsim/python.sh src/02_core_core_hello_robot/run.py --api robot --steps 600 --wheel-speeds 2 4
+```
+
+양쪽 바퀴 속도 차이로 직선에서 곡선 주행으로 바뀌는지 보세요. `orientation_wxyz`의 변화와 이동 벡터를 함께 읽습니다. API, 실행 길이, 자산은 그대로이므로 이번 변화는 바퀴 목표 차이와 연결해 해석할 수 있습니다.
+
+## 실행할 때 막히면
+
+- **자산 루트를 찾지 못함**: 5.1 자산 경로를 설정하거나 `--asset`으로 실제 Jetbot USD를 지정하세요.
+- **로봇 일부가 없거나 참조 오류가 나옴**: 최상위 USD만 복사했는지 확인하세요. 하위 메시·재질의 상대 경로도 유지해야 합니다.
+- **바퀴 이름을 찾지 못함**: 이 코드는 Jetbot의 두 관절 이름을 사용합니다. 다른 로봇 USD를 지정했다면 이름과 제어 구조가 다릅니다.
+- **Stop/Play 후 제어가 이상함**: 초기화 과정을 다시 수행하도록 프로그램을 재실행하세요.
+- **결과 폴더가 이미 존재함**: `--output`은 새 폴더만 허용합니다. 생략하면 실행별 폴더를 만듭니다.
+
+## 공식 문서와 실습 범위
+
+이 폴더는 Isaac Sim **5.1.0**의 [Hello Robot](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_robot.html)에 대응합니다. 로봇 추가, 초기화 후 관절 조회, `Robot`과 `WheeledRobot`의 명령 전달을 독립 실행으로 구성했습니다. 최종 이동 벡터를 기록하는 JSON은 이 실습의 비교 도구입니다.
+
+`tutorial.json`에는 두 바퀴 자유도와 전진 이동에 대한 부분 실행 기록이 있습니다. 그 기록이 모든 API·속도 조건을 검증한 것은 아니므로, 두 API와 곡선 주행 비교는 위 절차로 확인하세요.

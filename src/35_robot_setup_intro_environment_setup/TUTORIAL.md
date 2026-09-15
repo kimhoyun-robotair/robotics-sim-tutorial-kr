@@ -1,56 +1,126 @@
-# 35. Stage의 단위·중력·바닥·조명
+# 35. 로봇을 놓기 전에 단위·중력·바닥·조명 준비하기
 
-권장 학습 순서 **35** · 로봇 자산 가져오기와 제작 · 출처 ID `t119`
+## 이번에 배우는 것
 
-공식 Stage Setup 수업의 GUI 절차를 **로컬 절차형 USD fixture**와 함께 학습한다. 이 수업에는 외부 모델이 필요 없다. `run.py`는 아래 설정을 실제 USD API로 작성하여, 초심자가 Property의 값과 결과를 바로 비교할 수 있게 한다. 직접 만드는 연습은 별도 **File → New** stage에서 같은 순서로 수행한다.
+**같은 Stage에서 길이 단위, 중력, 바닥 충돌과 조명을 확인하고, 각 설정이 화면과 물리에 어떻게 영향을 주는지 구분합니다.**
 
+로봇을 가져오기 전에 장면의 기준부터 정해야 합니다. 길이 숫자 1이 1 m인지 1 cm인지에 따라 모델 크기의 해석이 달라지고, 위쪽 축이 다르면 모델 방향도 달라집니다. 한편 조명을 추가했다고 중력이 생기는 것은 아니며, 바닥이 보인다고 모든 물체가 자동으로 충돌하는 것도 아닙니다.
 
-## 이 실습의 의도
+| 준비할 것 | 이 실습의 Prim 또는 속성 | 기본 설정 |
+|---|---|---|
+| 길이·방향 기준 | Stage metadata | 1단위=1 m, Z-up |
+| 물리 환경 | `/World/PhysicsScene` | 아래쪽 중력 9.8 m/s², CPU 물리 |
+| 접촉 바닥 | `/World/Ground` | 지면 충돌과 표시용 바닥 |
+| 기본 조명 | `/World/DefaultLight` | intensity 300 |
+| 추가 조명 | `/World/SpotLight` | 높이 7 m의 초록색 원뿔 조명 |
 
-로봇을 배치하기 전에 stage의 길이 단위·위쪽 축·중력·바닥 충돌·조명을 서로 구분해 설정하는 연습이다. 기본 장면은 m·Z-up 환경과 초록색 spot light를 만들어 Property 값과 화면의 관계를 바로 비교하도록 했다. 실행기가 낙하용 큐브나 자동 Play를 추가하지 않으므로, 중력·접촉 확인은 아래 절차에서 큐브에 강체와 collider를 직접 붙인 뒤 수행한다.
+기본 장면에는 떨어뜨릴 큐브나 로봇이 없습니다. 먼저 환경을 읽고, 2절에서 큐브를 추가해 중력과 접촉을 직접 확인합니다.
 
-## 실행 후 확인할 것
+## 1. 준비된 Stage 열기
 
-- **장면 단위:** 기본 생성 장면의 `initial_inventory.json`에서 `meters_per_unit=1.0`, `up_axis="Z"`를 확인한다. 강체·joint·articulation 목록이 비어 있는 것은 낙하 물체나 로봇을 아직 만들지 않은 출발 상태다.
-- **물리 설정:** `/World/PhysicsScene`의 gravity direction `(0,0,-1)`, magnitude `9.8`, GPU dynamics 꺼짐, broadphase `MBP`를 Property에서 확인한다. GPU 렌더링이 동작하는 것과 GPU 물리를 선택하는 것은 별개다.
-- **빛의 영향:** `/World/SpotLight` visibility를 토글해 바닥의 초록빛이 바뀌는지 본다. `/World/DefaultLight`도 있으므로 spot light를 껐다고 화면 전체가 검게 될 필요는 없다. cone angle만 45→20으로 바꾸면 비추는 영역의 변화를 비교할 수 있다.
-- **수동 낙하 실험:** Z=2에 큐브를 만들고 Rigid Body with Colliders를 적용한 뒤 Play한다. 큐브가 아래로 떨어져 `/World/Ground`에 멈춰야 중력과 접촉을 함께 확인한 것이다. 기본 장면만 열었을 때 아무것도 떨어지지 않는 것은 정상이다.
-- **편집 저장:** 단위·빛·큐브를 수정한 결과는 로컬 `stage.usda`에 Ctrl+S로 저장한다. `initial_inventory.json`은 실행 초기 상태만 기록하므로 나중에 만든 큐브가 그 파일에 추가되지 않는 것은 정상이다.
-
-## 실행 환경과 파일
-
-Isaac Sim **5.1.0**, 지원되는 RTX GPU와 GUI가 필요하다. `ISAAC_SIM_PATH`는 `python.sh`가 있는 설치 디렉터리다. Python CLI 도움말은 일반 Python에서도 열린다. 이 패키지는 자체 코드/설정을 가지며 다른 로컬 튜토리얼을 import하지 않는다.
+Isaac Sim 5.1과 지원 RTX GPU, GUI 화면이 필요합니다. 외부 에셋 없이 코드에서 환경을 만듭니다. 저장소 루트에서 실행하세요. `~/isaacsim`은 실제 설치 경로로 바꾸세요.
 
 ```bash
-cd src/35_robot_setup_intro_environment_setup
-export ISAAC_SIM_PATH="$HOME/isaacsim"
-python3 run.py --help
-"$ISAAC_SIM_PATH/python.sh" run.py --output output/first
+~/isaacsim/python.sh src/35_robot_setup_intro_environment_setup/run.py --output src/35_robot_setup_intro_environment_setup/output/first
 ```
 
-`--steps`를 생략한 GUI 실행은 사용자가 창을 닫을 때까지 유지된다. `--steps 120`처럼 양수를 지정하면 해당 횟수 후 자동 종료하며, `--steps 0`도 GUI를 계속 유지한다. 창이 없는 `--headless` 실행에는 양수 `--steps`를 반드시 지정한다.
+`first`가 이미 있으면 새 폴더 이름을 사용하세요. 앱은 창을 닫을 때까지 열려 있습니다. 편집을 마치면 로컬 `stage.usda`에 저장하고 종료합니다. 양수 `--steps`는 장면 준비 후 앱 업데이트 횟수 제한이며 물리 실행 횟수가 아닙니다. Headless에는 양수 `--steps`가 필요하지만 아래 GUI 조작은 할 수 없습니다.
 
-기본 실행은 창을 계속 열어 두므로 아래 GUI 실습을 수행하고 **Ctrl+S**로 로컬 root layer를 저장한 뒤 창을 닫는다. `output/first/stage.usda`와 `initial_inventory.json`이 생긴다. 기존 output은 덮어쓰지 않으므로 다음 실행은 `output/second`처럼 새 경로를 쓴다. 저장한 실습을 다시 열려면 `--stage "$PWD/output/first/stage.usda" --output output/reopen`을 사용한다. 재개 시에도 새 로컬 layer가 이전 결과를 참조한다.
+### 코드에서 볼 부분
 
-GPU/UI 자동 점검을 위한 한정 실행은 `--headless --steps 120 --output output/check`다. 이는 장면 로드 확인만 하며 GUI 작업이나 로봇 동작의 성공을 증명하지 않는다. 패키지 작성 과정에서는 문법·CLI를 확인했으며 GPU와 실제 GUI 조작은 미검증이다.
+`build_fixture()`는 장면의 기준과 중력을 명시적으로 작성합니다.
 
+```python
+UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
+UsdGeom.SetStageMetersPerUnit(stage, 1.0)
+scene = UsdPhysics.Scene.Define(stage, "/World/PhysicsScene")
+scene.CreateGravityDirectionAttr(Gf.Vec3f(0, 0, -1))
+scene.CreateGravityMagnitudeAttr(9.8)
+```
 
-## 단계별 실습
+Z-up에서 `(0, 0, -1)`은 아래 방향이고, magnitude 9.8은 그 방향의 중력 가속도입니다. 길이 단위를 먼저 확인해야 이 숫자를 m/s²로 해석할 수 있습니다. 이미 있는 모델의 크기를 맞추려면 모델의 transform과 자산 단위도 조사해야 하며, metadata만 바꾼다고 모델을 자동으로 원하는 크기로 재작성하는 것은 아닙니다.
 
-1. **Edit → Preferences → Stage**에서 Up Axis **Z**, 단위 **meters**, 회전 순서를 확인한다. 이 fixture의 `initial_inventory.json`은 `meters_per_unit=1`, `up_axis=Z`여야 한다. 좌표축과 길이 단위는 모델을 넣기 전에 정한다. cm 모델을 m로 잘못 해석하면 100배 차이가 난다.
-2. Stage에서 `/World/PhysicsScene` 선택. 직접 만들 때는 **Create → Physics → Physics Scene**. gravity direction=(0,0,-1), magnitude=9.8이다. 작은 실습은 **Enable GPU dynamics 해제**, **Broadphase=MBP**로 CPU 물리를 쓴다. 렌더링에 RTX GPU가 필요하다는 점과 물리 CPU/GPU 선택은 다른 설정이다.
-3. `/World/Ground`를 선택한다. 직접 만들 때는 **Create → Physics → Ground Plane**. 눈에 보이는 바닥의 크기와 무한 평면 충돌 영역은 다르다. viewport eye 메뉴에서 Grid를 켜 위치를 확인한다.
-4. `/World/SpotLight`의 translate=(0,0,7), orientation=(0,0,0), color=(0.5,1,0.5), intensity=1000000, radius=0.05를 확인한다. 직접 만들 때 **Create → Light → Sphere Light**. **Shaping → cone:angle=45**, **cone:softness=0.05**를 지정한다. `/World/DefaultLight`는 intensity=300으로 둔다.
-5. 조명 visibility를 토글하며 바닥에 초록빛이 사라지고 생기는지 확인한다. 색은 빛의 색이며 바닥 material의 색을 바꾼 것이 아니다.
-6. 중력을 관찰하려면 **Create → Shape → Cube**를 만들고 translate Z=2, scale=(0.2,0.2,0.2)로 둔다. **Property → + Add → Physics → Rigid Body with Colliders Preset**을 적용하고 Play. 바닥에서 멈추면 gravity와 collider를 함께 확인한 것이다. Stop하면 초기 위치로 돌아오는지 확인한다.
+`PhysxSceneAPI`는 GPU dynamics를 끄고 broadphase를 `MBP`로 설정합니다. 이 장면의 물리 계산을 CPU로 설정하는 항목입니다. 화면을 그리는 RTX GPU의 필요 여부와는 별도입니다.
 
-## API 해설
+### 실행 결과 확인하기
 
-`UsdGeom.SetStageMetersPerUnit`과 `SetStageUpAxis`는 stage metadata를 작성한다. `UsdPhysics.Scene`이 중력을, `PhysxSceneAPI`가 PhysX backend 설정을 담당한다. `PhysicsSchemaTools.addGroundPlane`은 충돌 평면과 표시용 기하를 구성한다. `UsdLux.SphereLight`는 점 크기가 있는 광원, `ShapingAPI`는 광원을 원뿔 범위로 제한한다. USD 장면은 물체 기하가 있다는 이유만으로 시뮬레이션하지 않으므로 낙하에는 `RigidBodyAPI`와 `CollisionAPI`가 필요하다.
+`output/first/initial_inventory.json`에서 다음을 확인하세요.
 
-한 변수 실험: cone angle만 45→20으로 바꾸고 빛이 비치는 영역을 비교한다. 광원 intensity나 위치도 함께 바꾸면 원인을 구분하기 어렵다. 물체가 떨어지지 않으면 rigid body, 통과하면 collider, 화면이 검으면 조명 visibility와 camera 노출을 확인한다.
+- `meters_per_unit`은 `1.0`, `up_axis`는 `"Z"`입니다.
+- `rigid_bodies`, `joints`, `articulation_roots`는 기본 장면에서 비어 있습니다.
+- `source`는 코드로 만든 로컬 환경임을 나타냅니다.
 
-## 출처
+강체 목록이 비어 있는 것은 바닥이 없다는 뜻이 아닙니다. 움직이는 강체를 아직 만들지 않은 상태입니다. Stage에서 `/World/Ground`와 PhysicsScene을 직접 찾으세요. 초기 보고서는 이후 GUI 편집으로 만든 큐브를 자동으로 추가하지 않습니다.
 
-- [Isaac Sim 5.1 Tutorial 1: Stage Setup](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_intro_environment_setup.html)
-- 로컬 설명/코드는 해당 버전의 실제 GUI 작업을 재구성한 실습이며 NVIDIA 문서 전문을 복제하지 않는다.
+## 2. Property 값과 실제 화면 연결하기
+
+Stage에서 `/World/PhysicsScene`을 선택해 중력과 CPU 물리 설정을 확인하세요. 원문처럼 빈 Stage부터 만들고 싶다면 별도 새 장면에서 **Create > Physics > Physics Scene**, **Create > Physics > Ground Plane**으로 같은 구성 요소를 추가할 수 있습니다. 현재 준비된 장면에는 이미 있으므로 중복 생성할 필요가 없습니다.
+
+직접 환경을 만드는 경우에는 **Edit > Preferences > Stage**에서 새 장면의 Up Axis를 Z, 단위를 meters로 정한 뒤 **File > New**로 시작하세요. Physics Scene과 Ground Plane을 만들고 위 중력값을 입력합니다. `/World` 아래에 **Create > Lights > Distant Light**와 **Sphere Light**를 추가하고 이름을 각각 `DefaultLight`, `SpotLight`로 정합니다. Distant Light의 intensity는 300으로, Sphere Light는 아래 표의 값으로 조절하세요. Shaping에서 cone angle과 softness를 정하면 준비기의 원뿔 조명과 같은 설정을 비교할 수 있습니다. Preferences의 새 장면 기본값을 바꾸는 것과 이미 불러온 자산의 크기를 변환하는 것은 구분하세요.
+
+### 설정에서 볼 부분
+
+조명은 `/World/SpotLight`를 선택해 다음 값과 화면을 연결합니다.
+
+| 속성 | 값 | 의미 |
+|---|---:|---|
+| Translate | `(0, 0, 7)` | 바닥 위 광원 위치 |
+| Color | `(0.5, 1, 0.5)` | 녹색 성분이 더 큰 빛 |
+| Intensity | `1000000` | 광원 밝기 설정 |
+| Radius | `0.05` | 구형 광원의 크기 |
+| Shaping cone angle | `45`도 | 빛을 원뿔 형태로 제한하는 각도 |
+| Shaping cone softness | `0.05` | 원뿔 경계의 부드러움 |
+
+코드는 `SphereLight`에 `ShapingAPI`를 적용해 이 조명을 만듭니다. SpotLight라는 Prim 이름만으로 광원 종류가 결정되는 것은 아닙니다. 이름과 실제 USD 타입·속성을 함께 보세요.
+
+SpotLight의 visibility를 껐다 켜며 바닥의 초록빛을 비교해 보세요. 바닥 재질 색을 바꾸지 않았어도 조명이 달라지면 표면 색이 달라 보입니다. DefaultLight가 남아 있으므로 SpotLight를 꺼도 장면 전체가 검게 될 필요는 없습니다.
+
+### 실행 결과 확인하기
+
+이번에는 중력과 접촉을 확인할 물체를 직접 추가합니다.
+
+1. **Create > Shape > Cube**로 큐브를 만듭니다. 위치를 `(0, 0, 2)`로 옮기고 Scale을 `(0.2, 0.2, 0.2)`로 줄입니다. Scale은 배율이므로 실제 한 변 길이는 Cube의 Size 속성도 함께 확인하세요.
+2. 큐브를 선택하고 **Property > + Add > Physics > Rigid Body with Colliders Preset**을 적용합니다.
+3. **Play**를 누릅니다. 큐브가 아래로 떨어져 바닥에서 멈추는지 관찰하세요.
+4. **Stop**으로 초기 편집 상태로 돌아온 뒤 **Ctrl+S**로 로컬 장면을 저장합니다.
+
+Rigid Body는 큐브를 물리 운동 대상으로 만들고 Collider는 접촉 형상을 제공합니다. 둘을 함께 적용해야 떨어지면서 바닥과 부딪히는 동작을 확인할 수 있습니다. 바닥의 보이는 사각형과 충돌 평면의 범위도 구분하세요. 이 Ground Plane은 표시 영역 밖으로도 충돌 평면이 이어집니다.
+
+저장한 장면은 다음처럼 새 편집 레이어로 다시 열 수 있습니다.
+
+```bash
+~/isaacsim/python.sh src/35_robot_setup_intro_environment_setup/run.py --stage src/35_robot_setup_intro_environment_setup/output/first/stage.usda --output src/35_robot_setup_intro_environment_setup/output/reopen
+```
+
+이번에는 처음부터 환경을 다시 만드는 대신 저장된 Stage를 참조합니다. 새 `initial_inventory.json`에 저장했던 큐브의 강체 경로가 나타나는지도 확인하세요.
+
+## 3. 화면과 물리 설정의 관계 정리
+
+```text
+Stage 단위·축 → 좌표 숫자의 의미
+Physics Scene → 중력과 물리 계산 설정
+Rigid Body + Collider + Ground → 낙하와 접촉
+Light + 표면 재질 → 화면에 보이는 밝기와 색
+```
+
+물체가 보이는지, 움직이는지, 바닥에서 멈추는지는 서로 다른 질문입니다. 이번에는 큐브의 낙하로 물리를 확인하고, 조명 visibility로 화면 변화를 확인했습니다. 원인을 나누어 관찰하면 이후 로봇이 이상하게 보이거나 움직일 때도 확인할 설정을 좁힐 수 있습니다.
+
+## 4. 간단한 확인 실험
+
+`/World/SpotLight`의 cone angle만 45도에서 20도로 줄여 보세요. 위치·색·intensity·softness는 그대로 둡니다.
+
+바닥에 빛이 비치는 영역이 더 좁아지는지 관찰하세요. 큐브를 떨어뜨리는 운동이나 바닥 충돌은 이 조명 각도 변경으로 달라지지 않아야 합니다. 처음 값과 비교한 뒤 유지하고 싶은 상태를 저장하세요. 화면 밝기 변화만으로 물리 설정이 바뀌었다고 판단하지 않는 연습입니다.
+
+## 실행할 때 막히면
+
+- **실행했는데 아무것도 떨어지지 않음**: 기본 파일은 환경만 만듭니다. 큐브를 추가하고 강체·collider를 적용한 뒤 Play하세요.
+- **큐브가 바닥을 통과함**: 큐브의 Collider와 Ground가 존재·활성 상태인지 확인하세요. 시각적인 바닥만으로 접촉이 생기지는 않습니다.
+- **SpotLight를 껐는데도 밝음**: DefaultLight의 intensity 300이 남아 있습니다. 추가 조명 효과를 비교하는 정상 조건입니다.
+- **장면이 100배 크거나 작아 보임**: Stage 단위와 입력 모델의 단위·scale을 확인하세요. 길이 metadata와 모델 치수를 구분합니다.
+- **저장 후 초기 보고서에 큐브가 없음**: 보고서는 최초 로드 시점에 한 번 작성됩니다. 저장한 Stage를 새 output으로 다시 열어 조사하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Tutorial 1: Stage Setup](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_intro_environment_setup.html)에 대응합니다. 원문의 Stage·물리·바닥·조명 구성을 코드로 준비하고, GUI에서 값과 결과를 비교하도록 구성했습니다. 큐브 낙하는 환경의 역할을 확인하기 위해 추가한 수동 실험입니다.
+
+`tutorial.json`의 상태는 `not_run`입니다. 환경 값은 생성 코드와 공식 5.1 설정에 따른 확인 기준입니다. 장면 렌더링, 조명 비교, 큐브 낙하와 GUI 저장의 실제 실행은 아직 검증하지 않았습니다.

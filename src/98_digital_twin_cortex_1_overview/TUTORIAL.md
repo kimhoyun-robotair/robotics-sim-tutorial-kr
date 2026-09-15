@@ -1,49 +1,122 @@
-# 98. t081 · Cortex의 여섯 단계와 command API
+# 98. 손끝 목표와 팔의 자세 선호를 따로 명령하기
 
-권장 학습 순서 **98** · 환경 구축과 로봇 행동 · 출처 ID `t081`
+## 이번에 배우는 것
 
-Franka의 손끝 목표를 유지하면서 팔의 나머지 자세와 gripper 폭을 바꾸는 실제 command API 예제다. 관절 각도를 매번 직접 명령하는 방식에서 목표 pose를 보내는 방식으로 사고를 옮긴다. 로컬 `run.py`는 NVIDIA의 `example_command_api_main.py`를 기반으로 CLI와 종료 조건을 추가했다.
+**Franka의 손끝 목표는 유지하면서 팔 자세와 그리퍼를 바꾸고, Cortex가 목표를 실제 운동으로 연결하는 과정을 살펴봅니다.**
 
-## 이 실습의 의도
+손끝을 한 점으로 옮기려면 관절 각도를 모두 직접 계산해야 할까요? 이번 코드는 손끝의 목표 위치와 선호하는 팔 자세를 전달합니다. 이후의 운동 생성은 arm commander가 맡습니다.
 
-같은 손끝 위치에 도달하는 여러 팔 자세를 command API의 `posture_config`로 유도하며 Cartesian 목표와 관절 자세 선호를 구분한다. Franka와 지면만 둔 장면에서 7개 arm joint의 선호 자세를 다시 뽑고 gripper를 별도로 여닫아 두 commander의 역할을 드러낸다. 기본 실행은 자동 Play로 이 상태를 반복하며 물체 집기나 카메라 인식, 실제 로봇 연결은 수행하지 않는다.
+팔을 뻗은 채 팔꿈치 위치를 바꿀 수 있는 것처럼, 같은 손끝 목표에 접근하는 팔 자세는 여럿일 수 있습니다. 이 여유를 활용하는 설정이 `posture_config`입니다.
 
-## 실행 후 확인할 것
+| 코드의 값 또는 객체 | 역할 | 관찰할 내용 |
+|---|---|---|
+| `target_p` | 손끝 목표 위치, m | `(0.7, 0, 0.5)`로 고정 |
+| `posture_config` | 팔 관절 7개의 자세 선호 | 상태에 들어갈 때마다 다시 샘플링 |
+| `robot.arm` | 손끝 명령 처리 | 목표에 접근하는 팔 운동 |
+| `robot.gripper` | 손가락 명령 처리 | 열기와 닫기 반복 |
+| `NullspaceShiftState` | 명령과 전환 조건 정의 | 실제 시간 약 2초 뒤 다시 진입 |
 
-- **손끝 목표와 팔 자세:** Stage의 `/World/franka`를 관찰해 손끝이 `(0.7,0,0.5)` 주변을 향하는 동안 팔의 구부러진 모양이 달라지는지 본다. 선호 자세가 바뀌어도 손끝 위치 목표는 매번 같다.
-- **상태 반복:** 콘솔의 `<enter> sampling posture config`가 재출력될 때 새 선호 자세가 적용되는지 비교한다. 전환 조건은 `time.time()` 기준 약 2초이므로 physics step 수나 시뮬레이션 시간과 동일한 주기로 단정하지 않는다.
-- **독립 gripper 명령:** 재진입 시 폭이 0.05보다 크면 닫기(속도 0.5), 그렇지 않으면 열기(속도 0.1)를 명령한다. 팔 자세 변경과 함께 손가락 폭도 변하는지 확인한다.
-- **결과 해석:** 난수로 뽑은 `posture_config`는 최종 관절각을 그대로 강제하지 않는다. 실행마다 같은 팔 모양이나 정확히 같은 궤적을 기대하지 말고, 손끝 목표 유지와 자세 변화가 함께 가능한지를 본다.
-- **충분한 관찰 시간:** 짧은 `--steps` 실행은 접근 또는 첫 상태만 보여 줄 수 있다. 반복 비교에는 여러 `<enter>`를 볼 시간을 확보하며 루프 종료만으로 제어 성공을 판단하지 않는다.
+## 1. 같은 손끝 목표를 반복해서 명령하기
 
-## command API 관찰 순서
-
-1. `run.py`의 `NullspaceShiftState.target_p=[0.7,0,0.5]`를 확인한다. `config_mean`은 7개 arm joint의 기준 자세다. 손가락 두 관절은 별도 gripper commander가 담당한다.
-2. 기본 실행에서 손끝이 목표 주변으로 이동한 뒤 팔 자세가 달라지는지 본다. `<enter> sampling posture config` 로그와 gripper 열림/닫힘을 함께 관찰한다.
-3. `send_end_effector(target_position=..., posture_config=...)`는 Cartesian 목표와 선호 관절 자세를 함께 전달한다. `posture_config`는 목표를 이루는 방법의 선호이며 최종 joint 각도를 그대로 강제하는 명령이 아니다.
-4. `step()`의 2초 조건이 끝나면 `None`을 반환하여 상태를 끝낸다. 외부 `DfStateSequence(loop=True)`가 다시 진입시키므로 `enter()`에서 새로운 자세를 뽑는다. 이 원본은 wall-clock `time.time()`을 사용한다.
-5. 손끝 위치 목표의 z만 0.5에서 0.6으로 바꾸고 다시 실행한다. 자세 noise나 gripper 속도를 동시에 바꾸지 않는다. 목표 높이 변화와 팔 자세 변화를 구분한다.
-
-Cortex는 perception → USD world belief → logical state monitors → decision → command API → control의 여섯 단계로 설명된다. 이 실습은 시뮬레이션의 상태를 직접 사용하므로 카메라 perception이나 실물 제어를 구현한 예제가 아니다. `CortexWorld`가 monitor, decision, commander 순서를 관리하고 `DfStateMachineDecider`는 상태 기계를 decider network에 넣는다. `robot.arm`은 RMPflow 기반 동작 생성기로, `robot.gripper`는 손가락 동작으로 명령을 분리한다.
-
-USD는 장면과 로봇 belief를 표현하는 데이터베이스다. 실제 로봇의 관측을 넣는 world와 화면의 시뮬레이션 world를 동일시하지 않는 것이 이후 시스템 연결의 핵심이다. 회전행렬 `R`의 각 열은 손끝 좌표축을 world에서 표현한 벡터다. `get_fk_R()`, `unpack_R()`, `proj_orth()`로 원하는 z축에 y축을 직교 투영하고 cross product로 x축을 만든다. 축이 평행하면 정규화가 불안정하므로 임의 목표에 수식을 무조건 적용하지 않는다.
-
-성공 기준은 실제 손끝의 목표 유지, posture 변화, gripper 변화가 관측되는 것이다. loop 종료만으로 제어 정확성이 증명되지는 않는다. 움직임이 없으면 Play 상태와 asset 로딩을 먼저 확인한다. 목표가 로봇 작업영역 밖이면 계속 도달하려 할 수 있다.
-
-## 독립 실행 환경
-
-이 디렉터리를 단독으로 복사하여 사용할 수 있다. Isaac Sim **5.1.0** 설치, 지원 RTX GPU/드라이버 및 해당 로봇 자산 접근이 필요하다. `isaacsim.cortex.framework`는 설치된 SDK이며 다른 로컬 튜토리얼 패키지를 import하지 않는다. Python/Kit 초기화와 scene 구성은 각 실행기에 들어 있다. USD Stage는 장면 전체, prim은 `/World/Franka` 같은 경로로 찾는 장면 객체이고, transform은 위치·회전·스케일이다.
+Isaac Sim 5.1, 지원 NVIDIA RTX GPU와 Franka 샘플 자산 접근이 필요합니다. 저장소 루트에서 실행하세요.
 
 ```bash
-cd /path/to/98_digital_twin_cortex_1_overview
-python3 run.py --help
-"$HOME/isaacsim/python.sh" run.py
+~/isaacsim/python.sh src/98_digital_twin_cortex_1_overview/run.py
 ```
 
-기본은 창을 띄우고 자동 Play하며 사용자가 창을 닫을 때까지 계속 실행한다. 사람이 물체를 이동하는 실습은 `--interactive`를 추가하고 창에서 Play를 누른다. `--steps 1800`처럼 양수를 명시하면 interactive 여부와 관계없이 해당 physics step에 도달했을 때 종료한다. 화면 없는 실행은 `--headless`이며 `--steps` 생략 시 1800 step으로 종료한다. `--headless`와 `--interactive`는 동시에 사용할 수 없다. 새 데이터를 저장하는 튜토리얼이 아니며 성공은 위에 명시한 동작 관찰로 판단한다.
+Franka와 지면이 생성되고 자동으로 재생합니다. 몇 차례 자세가 바뀌는 모습을 본 뒤 창을 닫으세요. 단계 수로 끝내려면 `--steps 1800`을 추가합니다. `--headless`는 창 없이 실행하며 단계 생략 시 1800단계로 종료합니다. `--interactive`는 창에서 Play를 누를 때까지 기다리는 옵션이며 `--headless`와 함께 쓸 수 없습니다.
 
-## 버전·검증·출처
+### 코드에서 볼 부분
 
-- [Isaac Sim 5.1 원문](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_1_overview.html)의 모든 주요 하위 실습을 위 단계에 연결했다. 실행 코드는 설치본 5.1의 API와 대조했다.
-- NVIDIA 예제를 포함한 파일은 원래 Apache-2.0 copyright header와 `LICENSE-NVIDIA-EXAMPLES`를 보존한다. 변경 내역은 `NOTICE.md`에 있다. 설치본 원본은 `standalone_examples/api/isaacsim.cortex.framework/` 및 `exts/isaacsim.cortex.behaviors/isaacsim/cortex/behaviors/`다.
-- 작성 시 compile과 CLI help를 확인했다. GPU의 실제 로봇 동작과 GUI 상호작용은 실행하지 않았으며 `tutorial.json`은 `not_run`이다. 일반 Python에서 `omni`/`isaacsim` import가 없는 것은 `python.sh` 런타임을 쓰지 않았기 때문일 수 있다.
+`enter()`는 상태에 들어올 때 한 번 실행됩니다.
+
+```python
+posture_config = self.config_mean + np.random.randn(7)
+self.context.robot.arm.send_end_effector(
+    target_position=self.target_p, posture_config=posture_config
+)
+```
+
+`config_mean`은 팔 관절 7개의 기준 각도입니다. `np.random.randn(7)`을 더해 새로운 자세 선호를 만들지만, 손끝 목표 `self.target_p`는 바꾸지 않습니다.
+
+**`posture_config`는 최종 관절각을 그대로 고정하는 명령이 아닙니다.** 같은 손끝 목표로 가는 운동에서 어떤 관절 자세를 선호할지 알려 주는 값입니다. 따라서 입력한 각도 배열과 실제 관절각이 정확히 일치해야 하는 것은 아닙니다.
+
+그리퍼는 별도 명령을 받습니다.
+
+```python
+if gripper.get_width() > 0.05:
+    gripper.close(speed=0.5)
+else:
+    gripper.open(speed=0.1)
+```
+
+현재 폭이 5 cm보다 넓으면 닫고, 그렇지 않으면 엽니다. 닫는 속도와 여는 속도도 따로 지정되어 있습니다. 팔의 목표를 바꾸는 명령 안에 손가락 동작이 자동으로 포함되는 것은 아닙니다.
+
+### 실행 결과 확인하기
+
+Stage의 `/World/franka`와 콘솔의 `<enter> sampling posture config`를 함께 봅니다.
+
+- 새 로그가 나올 때 팔의 구부러진 모양이 바뀌는지 확인하세요.
+- 손끝은 같은 `(0.7, 0, 0.5)` m 주변을 향하는지 봅니다.
+- 손가락은 현재 폭에 따라 열기 또는 닫기 명령에 반응하는지 확인합니다.
+
+난수 때문에 실행마다 팔 모양은 달라질 수 있습니다. 이 예제는 위치 오차를 CSV로 저장하지 않으므로, 로그만으로 정밀한 제어 오차가 검증되었다고 판단하지 않습니다.
+
+## 2. 상태를 반복시키는 Cortex 흐름 읽기
+
+`main()`에서는 한 상태를 반복하는 시퀀스를 네트워크에 넣습니다.
+
+```python
+DfStateMachineDecider(
+    DfStateSequence([NullspaceShiftState()], loop=True)
+)
+```
+
+`DfStateSequence`는 상태를 순서대로 수행합니다. 여기에는 상태가 하나뿐이지만 `loop=True`이므로 완료되면 다시 처음으로 돌아갑니다. `DfStateMachineDecider`는 이 상태 기계를 Cortex의 의사 결정 네트워크에 연결하는 역할입니다.
+
+### 코드에서 볼 부분
+
+상태의 전환 조건은 다음과 같습니다.
+
+```python
+def step(self):
+    if time.time() - self.entry_time < 2.0:
+        return self
+    return None
+```
+
+`self`는 현재 상태를 계속 수행한다는 뜻이고, `None`은 상태가 끝났다는 뜻입니다. 완료 후 다시 `enter()`에 들어가므로 자세를 새로 뽑고 그리퍼 폭을 다시 판단합니다.
+
+여기의 `time.time()`은 **컴퓨터의 실제 시계**입니다. 물리 시간이 2초 진행되어야 전환한다는 의미가 아닙니다. 느린 렌더링이나 일시정지가 있으면 상태 사이에 진행한 물리 단계 수는 달라질 수 있습니다.
+
+`CortexWorld`는 논리 상태 모니터, 행동 판단, 로봇 commander를 순서대로 처리하고 물리를 진행합니다. 이번 context는 별도 논리 관찰값이 필요 없는 `DfBasicContext`이며, 상태에서 로봇의 command API에 접근할 수 있도록 연결합니다.
+
+## 3. 목표·판단·제어의 역할 정리
+
+```text
+상태 진입 → 손끝 목표와 자세 선호 전달
+           → 그리퍼 폭을 보고 열기/닫기 전달
+CortexWorld → commander가 명령 처리 → 물리 운동
+실제 시간 약 2초 경과 → 상태 완료 → 새 자세로 다시 진입
+```
+
+공식 Cortex 개요는 관측, USD에 표현한 세계 상태, 논리 상태, 판단, 명령, 제어를 연결합니다. 이번 실습은 그중 **판단에서 command API로 목표를 전달하는 부분**을 작게 떼어 봅니다. 카메라 인식이나 실제 로봇 동기화는 구성하지 않습니다.
+
+## 4. 간단한 확인 실험
+
+`run.py`의 `self.target_p`에서 **Z만 `0.5`에서 `0.6`으로** 바꾸고 다시 실행해 보세요. 기준 자세와 난수 생성, 그리퍼 속도는 유지합니다.
+
+손끝이 향하는 높이가 10 cm 높아지는지 보세요. 매번 다른 자세를 샘플링하므로 팔꿈치 모양 하나를 비교하기보다, 여러 상태에서 손끝이 향하는 공통 위치를 비교하는 편이 좋습니다. 실험을 마치면 Z를 0.5로 되돌립니다.
+
+## 실행할 때 막히면
+
+- **`No module named isaacsim`**: 일반 Python이 아니라 Isaac Sim의 `python.sh`로 실행하세요.
+- **로봇은 보이는데 움직이지 않음**: `--interactive`로 시작했다면 Play를 누르세요. Franka 자산 로딩이 끝났는지도 확인합니다.
+- **새 자세가 한 번만 보이고 종료됨**: 너무 작은 `--steps`를 지정했을 수 있습니다. 여러 실제 시간 전환을 관찰할 수 있도록 단계 제한을 빼세요.
+- **목표를 크게 바꾼 뒤 도달하지 못함**: 작업 영역을 벗어난 목표일 수 있습니다. 원래 좌표로 돌아와 자세 선호와 위치 목표를 하나씩 비교하세요.
+
+## 공식 문서와 실습 범위
+
+Isaac Sim **5.1.0**의 [Isaac Cortex: Overview](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_1_overview.html)에 대응합니다. `run.py`는 NVIDIA command API 예제에 실행 옵션과 종료 조건을 더한 코드이며, 출처와 라이선스는 `NOTICE.md`, `LICENSE-NVIDIA-EXAMPLES`에 있습니다.
+
+손끝 목표 유지, 자세 변화, 그리퍼 반응은 실제 운동에서 확인할 기준입니다. `tutorial.json`의 검증 상태는 `not_run`입니다.
