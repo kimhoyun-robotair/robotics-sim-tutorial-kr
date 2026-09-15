@@ -20,4 +20,6 @@ USD는 뭐고, Core API는 뭐고, OmniGraph는 뭐고, GUI / Extension / Standa
 Replicator는 뭐고, Omniverse / Isaac Sim / Isaac Lab / Isaac Groot의 차이는 또 뭐고 ..  
   
 솔직히 처음 봤을 때 뭐라는지 하나도 이해를 못했달까.  
-그래서 나도 편하고 남들도 편하라고 튜토리얼을 작성해본다.
+그래서 나도 편하고 남들도 편하라고 튜토리얼을 작성해본다.  
+여담으로 이 튜토리얼은 반드시 **docs**부터 보길 바란다.  
+docs를 다 본 이후에 **src**를 보면 된다.
