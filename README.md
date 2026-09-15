@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.14 |
+| 수정일 | 2026.09.15 |
 
 로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
 특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
@@ -43,7 +43,7 @@
 | 이름 | 내용 |
 | --- | --- |
 | [**MarsLab**](https://kimhoyun-robotair.github.io/MarsLab/) | Accepted to [iSapRo 2026](https://www.isairas-isparo.de/).<br> 화성 로봇 Navigation 시뮬레이터 |
-| [**aprl_robot_sim**](https://github.com/kimhoyun-robotair/aprl_robot_sim) | APRL이 보유하고 있는 로봇 2종류에 대해서 Isaac Sim에서 활용 가능하도록 Real2Sim 해버린 패키지 |
+| [**ELEVEN**](https://github.com/kimhoyun-robotair/ELEVEN) | APRL이 보유하고 있는 로봇 2종류에 대해서 Isaac Sim에서 활용 가능하도록 Real2Sim 해버린 패키지 |
 
 ### URDF, 오픈소스 로봇 관련 유용한 자료집
 | 이름 | 내용 |
@@ -88,6 +88,7 @@
 | [**WareTwin**](https://github.com/WayneChou-bot/WareTwin) | 웹 기반 100 x 70m 창고 환경 디지털 트윈 시뮬레이터 |
 | [**Magi**](https://github.com/ali-pahlevani/Magi) | ROS2 Humble + Gazebo Harmonic 기반 g2o 로봇의 야외 환경 시뮬레이터 |
 | [**bcr_bot**](https://github.com/blackcoffeerobotics/bcr_bot) | ROS2 Jazzy/Noetic 환경에서 Gazebo11/Harmonic, Isaac Sim, MuJoCo에서 활용 가능한 AMR 시뮬레이터 |
+| [**PteroSim**](https://github.com/PteroLabsAI/PteroSim-UAV-Simulator) | [PteroLabs](https://pterolabs.ai/)라는 기업에서 만든 UE5 기반 드론 시뮬레이터. Px4와 Ardupilot과의 연게를 제공하고, Github에 무료 버젼도 공개하고 있다.|
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
