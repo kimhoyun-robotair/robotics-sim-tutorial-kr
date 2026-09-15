@@ -38,7 +38,7 @@ UsdPhysics.CollisionAPI.Apply(raw_cube.GetPrim())
 UsdPhysics.MassAPI.Apply(raw_cube.GetPrim()).CreateMassAttr(1.0)
 ```
 
-앞의 세 줄은 모양과 위치를 작성합니다. 뒤의 세 줄은 같은 Prim에 강체·충돌·질량 기능을 붙입니다. USD에서 **스키마**는 객체의 종류나 사용할 수 있는 속성을 정의합니다. `Cube`는 종류를 정하는 스키마이고 `RigidBodyAPI` 등은 기능을 추가하는 API 스키마입니다.
+앞의 세 줄은 모양(Visual)과 위치를 작성합니다. 뒤의 세 줄은 같은 Prim에 강체·충돌·질량 기능을 붙입니다. USD에서 **스키마**는 객체의 종류나 사용할 수 있는 속성을 정의합니다. `Cube`는 종류를 정하는 스키마이고 `RigidBodyAPI` 등은 기능을 추가하는 API 스키마입니다.
 
 오른쪽 큐브는 다음 구성으로 같은 기본 조건을 준비합니다.
 

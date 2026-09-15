@@ -1,4 +1,4 @@
-# 01. 처음 만드는 물리 세계: 큐브의 낙하를 읽기
+# 01. 처음 만드는 물리 세계: 낙하하는 큐브 살펴보기
 
 ## 이번에 배우는 것
 
@@ -25,7 +25,7 @@ Isaac Sim 5.1과 지원 GPU·드라이버가 준비된 환경에서 실행합니
 ~/isaacsim/python.sh src/01_core_core_hello_world/run.py --steps 300
 ```
 
-300단계가 끝나면 결과를 저장하고 앱이 종료됩니다. 창을 유지하려면 `--steps 300`을 빼세요. `--headless`를 추가하면 창 없이 실행하며, 이때 단계 수를 생략하면 300단계입니다. Windows에서는 설치의 `python.bat`을 사용합니다.
+300 step이 끝나면 결과를 저장하고 앱이 종료됩니다. 창을 유지하려면 `--steps 300`을 빼세요. `--headless`를 추가하면 창 없이 실행하며, 이때 단계 수를 생략하면 마찬가지로 300 step입니다. Windows에서는 설치의 `python.bat`을 사용합니다.
 
 ### 코드에서 볼 부분
 
@@ -38,7 +38,7 @@ cube = world.scene.add(DynamicCuboid(
 world.reset()
 ```
 
-`DynamicCuboid`는 큐브의 외형·강체·충돌을 함께 만듭니다. `scene.add()`는 이 Python 객체를 등록하고, `world.reset()`은 등록된 객체의 물리 상태를 다룰 준비를 합니다. **장면에 큐브를 작성한 시점과 물리 엔진에서 상태를 읽을 수 있는 시점은 구분해야 합니다.**
+`DynamicCuboid`는 큐브의 외형·강체·충돌을 함께 만듭니다. `scene.add()`는 이 Python 객체를 등록하고, `world.reset()`은 등록된 객체의 물리 상태를 다룰 준비를 합니다. **Stage Scene에 큐브를 작성한 시점과 물리 엔진에서 상태를 읽을 수 있는 시점은 구분해야 합니다.**
 
 바로 뒤의 `assert World.instance() is world`는 현재 프로세스에서 조회한 World가 방금 만든 객체인지 확인합니다. 다른 함수에서 `World.instance()`를 호출해도 이 World에 접근할 수 있습니다.
 
@@ -79,7 +79,7 @@ world.add_physics_callback("observe_fall", callback_fn=observe)
 
 `step_size`는 이번 물리 간격이지만, 이 코드는 시간 열에 `world.current_time`을 사용합니다. `nonlocal`은 함수 바깥의 `sample_count`를 갱신하기 위해 필요합니다. `*position.tolist()`는 세 위치 성분을 각각 CSV 열로 펼칩니다.
 
-콜백 등록 다음의 반복문이 `world.step(render=not args.headless)`를 호출합니다. 등록만 하고 단계 진행을 멈추면 관찰값도 더 이상 쌓이지 않습니다.
+콜백 등록 다음의 반복문이 `world.step(render=not args.headless)`를 호출합니다. 콜백 등록만 하고 코드 진행을 멈추면 관찰값도 더 이상 쌓이지 않습니다.
 
 ### 실행 결과 확인하기
 

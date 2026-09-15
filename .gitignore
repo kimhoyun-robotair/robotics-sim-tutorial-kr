@@ -115,3 +115,4 @@ site/
 # Simulation runs and generated USD/datasets
 outputs/
 src/*/output/
+.ipynb_checkpoints/

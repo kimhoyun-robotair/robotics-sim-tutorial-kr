@@ -14,7 +14,7 @@
 | `/World/Dynamic` | 파랑, `DynamicCuboid` | 강체와 충돌을 한 번에 만들어 낙하하며 바닥에서 멈춥니다. |
 | `/World/RawUsd` | 보라, `pxr.UsdGeom.Cube` | USD를 직접 작성한 외형이며 공중에 머뭅니다. |
 
-Stage는 장면 전체이고, Prim은 `/World/Visual`처럼 경로로 찾는 장면 요소입니다. `VisualCuboid`와 `UsdGeom.Cube`는 접근 방식이 다르지만 둘 다 Stage에 큐브 Prim을 작성합니다.
+Stage는 장면 전체이고, Prim은 `/World/Visual`처럼 경로로 찾는 장면 요소이자 객체 단위입니다. `VisualCuboid`와 `UsdGeom.Cube`는 접근 방식이 다르지만 둘 다 Stage에 큐브 Prim을 작성합니다.
 
 ## 1. 다섯 큐브를 한 번에 실행하기
 
@@ -24,7 +24,7 @@ Isaac Sim 5.1과 지원 NVIDIA GPU·드라이버를 준비하세요. 큐브와 �
 ~/isaacsim/python.sh src/00_core_quickstart_isaacsim/run.py --steps 240
 ```
 
-설치 위치가 다르면 `~/isaacsim`을 바꾸세요. Windows에서는 설치의 `python.bat`을 사용합니다. 240단계가 끝나면 앱이 종료됩니다. 창을 계속 보려면 `--steps 240`을 빼고, 창 없이 실행하려면 `--headless`를 추가하세요. Headless에서 단계 수를 생략하면 240단계입니다.
+설치 위치가 다르면 `~/isaacsim`을 바꾸세요. Windows에서는 설치의 `python.bat`을 사용합니다. 240 step이 끝나면 앱이 종료됩니다. 창을 계속 보려면 `--steps 240`을 빼고, 창 없이 실행하려면 `--headless`를 추가하세요. Headless에서는 Default Step이 240으로 지정되어 있습니다.
 
 ### 코드에서 볼 부분
 
@@ -51,11 +51,11 @@ raw.AddRotateXYZOp().Set(Gf.Vec3f(0.0, 0.0, 45.0))
 raw.AddScaleOp().Set(Gf.Vec3f(1.0, 1.5, 0.5))
 ```
 
-여기의 `RotateXYZ`는 **도 단위**입니다. 앞의 `π/4` 라디안과 이곳의 45도는 같은 회전입니다. 스케일 `[1, 1.5, 0.5]`는 y 길이를 1.5배, z 길이를 절반으로 만듭니다. 회전이나 크기를 바꾸는 작업만으로 중력이 생기지는 않습니다.
+여기의 `RotateXYZ`는 **도 단위**입니다. 앞의 `π/4` 라디안과 이곳의 45도는 같은 회전입니다. 스케일 `[1, 1.5, 0.5]`는 y 길이를 1.5배, z 길이를 절반으로 만듭니다. 회전이나 크기를 바꾸는 작업만으로 중력과 물리 모델이 적용되지는 않습니다.
 
 ### 실행 결과 확인하기
 
-기본 중심 높이는 1.5 m입니다. 빨간 큐브가 바닥 아래로 사라지는 것이 이 비교에서 예상한 동작입니다. 종료 후 이 폴더의 `output/날짜-시간/`을 열어 보세요.
+기본 중심 높이는 1.5 m입니다. 빨간 큐브가 바닥 아래로 사라지는 것이 정상적인 동작입니다. 종료 후 이 폴더의 `output/날짜-시간/`을 열어 보세요.
 
 | 파일·열 | 읽는 방법 |
 |---|---|
@@ -134,4 +134,4 @@ GUI의 Preset과 Python의 `DynamicCuboid`는 강체·충돌을 함께 준비하
 
 이 폴더는 Isaac Sim **5.1.0**의 [Isaac Sim Basic Usage Tutorial](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/quickstart_isaacsim.html)에 대응합니다. GUI의 생성·변환·물리 속성 추가를 Python과 비교하도록 구성했습니다. 실행 방식의 배경은 [Workflows](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/workflows.html)를 참고하세요.
 
-다섯 큐브 비교와 CSV는 이 폴더의 실습 구성입니다. 변환 API는 제공 코드의 `XFormPrim`, `set_local_scales`, 단위 쿼터니언 표현을 기준으로 읽으세요. `tutorial.json`의 실행 상태는 `not_run`이며, 위 값은 실행 시 확인할 기준입니다.
+다섯개의 큐브 비교와 CSV는 이 폴더의 실습 구성입니다. 변환 API는 제공 코드의 `XFormPrim`, `set_local_scales`, 단위 쿼터니언 표현을 기준으로 읽으세요. `tutorial.json`의 실행 상태는 `not_run`이며, 위 값은 실행 시 확인할 기준입니다.
