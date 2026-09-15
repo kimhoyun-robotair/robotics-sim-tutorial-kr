@@ -1,0 +1,20 @@
+{
+  "id": "t117",
+  "title": "Gain Tuner Extension",
+  "category": "importers",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup/ext_isaacsim_robot_setup_gain_tuner.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "arm.urdf",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "RTX GPU and compatible driver"
+  ],
+  "verification": "not_run",
+  "learning_order": 48,
+  "learning_stage": "robot_authoring"
+}

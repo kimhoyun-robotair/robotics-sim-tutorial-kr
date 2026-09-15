@@ -1,0 +1,10 @@
+[package]
+version = "1.0.0"
+title = "Korean Browser Example"
+description = "A standalone BaseSample tutorial"
+[dependencies]
+"isaacsim.examples.interactive" = {}
+"isaacsim.examples.browser" = {}
+"isaacsim.core.api" = {}
+[[python.module]]
+name = "kr_browser_example"

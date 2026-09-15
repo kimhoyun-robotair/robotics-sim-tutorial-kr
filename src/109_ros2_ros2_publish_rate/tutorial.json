@@ -1,0 +1,21 @@
+{
+  "id": "t016",
+  "title": "ROS2 Setting Publish Rates",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_publish_rate.html",
+  "mode": "script_editor",
+  "entrypoint": "configure_rates.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "configure_rates.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble (Ubuntu 22.04) 또는 Jazzy (Ubuntu 24.04)",
+    "isaacsim.ros2.bridge",
+    "Isaac 5.1 turtlebot_tutorial_multi_sensor_publish_rates.usd"
+  ],
+  "verification": "not_run",
+  "learning_order": 109,
+  "learning_stage": "ros2_basics"
+}

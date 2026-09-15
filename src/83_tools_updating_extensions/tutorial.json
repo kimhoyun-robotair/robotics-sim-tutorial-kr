@@ -1,0 +1,20 @@
+{
+  "id": "t172",
+  "title": "Adding and Updating Extensions Guide",
+  "category": "tools",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/updating_extensions.html",
+  "mode": "extension",
+  "entrypoint": "exts/kr.version.lesson/config/extension.toml",
+  "artifacts": [
+    "TUTORIAL.md",
+    "exts/kr.version.lesson/config/extension.toml",
+    "exts/kr.version.lesson/kr_version_lesson/__init__.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA GPU and GUI"
+  ],
+  "verification": "not_run",
+  "learning_order": 83,
+  "learning_stage": "omnigraph_extensions"
+}

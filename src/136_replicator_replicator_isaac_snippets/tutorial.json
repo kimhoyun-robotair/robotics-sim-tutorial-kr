@@ -1,0 +1,56 @@
+{
+  "id": "t048",
+  "title": "Useful Snippets",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_isaac_snippets.html",
+  "title_ko": "캡처 시점과 Replicator 실용 예제",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "Cosmos mode requires bundled CosmosWriter"
+  ],
+  "verification": "partial_runtime_verified",
+  "coverage": [
+    "multi-camera custom Writer",
+    "physics-settled capture",
+    "custom events",
+    "RT and PT motion blur",
+    "four event subscriptions",
+    "fixed sensor FPS",
+    "CosmosWriter"
+  ],
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "camera_sizes": [
+        [
+          320,
+          240
+        ],
+        [
+          400,
+          240
+        ],
+        [
+          480,
+          240
+        ]
+      ]
+    },
+    "checks": {
+      "process_exit": true,
+      "three_render_products": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 136,
+  "learning_stage": "replicator"
+}

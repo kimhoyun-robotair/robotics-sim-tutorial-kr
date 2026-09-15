@@ -1,0 +1,20 @@
+{
+  "id": "t077",
+  "title": "Warehouse Creator Extension",
+  "category": "digital_twin",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/ext_omni_warehouse_creator.html",
+  "mode": "gui",
+  "entrypoint": null,
+  "artifacts": [
+    "TUTORIAL.md",
+    "floor_plan.json"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "GUI session and native extension named in TUTORIAL.md"
+  ],
+  "verification": "not_run",
+  "learning_order": 95,
+  "learning_stage": "environments_behaviors"
+}

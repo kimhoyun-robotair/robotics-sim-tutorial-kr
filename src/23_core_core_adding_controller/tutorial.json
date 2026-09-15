@@ -1,0 +1,21 @@
+{
+  "id": "t100",
+  "title": "Adding a Controller",
+  "category": "core",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_adding_controller.html",
+  "title_ko": "차동구동 식에서 목표 위치 제어까지",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Isaac 5.1 `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`가 필요합니다. 로컬 에셋은 `--asset /절대경로/jetbot.usd`로 넘깁니다. 주변 참조 파일도 보존합니다."
+  ],
+  "verification": "not_run",
+  "learning_order": 23,
+  "learning_stage": "physics_core"
+}

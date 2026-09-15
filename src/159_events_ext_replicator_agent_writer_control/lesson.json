@@ -1,0 +1,39 @@
+{
+  "isaacsim.replicator.agent": {
+    "version": "0.7.0",
+    "global": {
+      "seed": 123456,
+      "simulation_length": 90
+    },
+    "scene": {
+      "asset_path": "{ASSETS}/Isaac/Environments/Simple_Warehouse/full_warehouse.usd"
+    },
+    "sensor": {
+      "camera_num": 1
+    },
+    "character": {
+      "asset_path": "{ASSETS}/Isaac/People/Characters/",
+      "command_file": "{OUTPUT}/character_commands.txt",
+      "num": 2,
+      "filters": [],
+      "spawn_area": [],
+      "navigation_area": []
+    },
+    "robot": {
+      "command_file": "{OUTPUT}/robot_commands.txt",
+      "nova_carter_num": 0,
+      "iw_hub_num": 0,
+      "write_data": false
+    },
+    "replicator": {
+      "writer": "IRABasicWriter",
+      "parameters": {
+        "output_dir": "{OUTPUT}/capture",
+        "rgb": true,
+        "camera_params": true,
+        "object_info_bounding_box_2d_tight": true,
+        "semantic_filter_predicate": "class:character|robot;id:*"
+      }
+    }
+  }
+}

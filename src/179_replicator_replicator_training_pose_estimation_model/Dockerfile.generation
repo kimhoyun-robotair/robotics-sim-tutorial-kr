@@ -1,0 +1,5 @@
+FROM nvcr.io/nvidia/isaac-sim:5.1.0
+WORKDIR /isaac-sim
+COPY generation_config.yaml standalone_examples/replicator/pose_generation/config/dope_config.yaml
+ENTRYPOINT ["/isaac-sim/python.sh", "standalone_examples/replicator/pose_generation/pose_generation.py"]
+CMD ["--writer", "dope", "--num_mesh", "1000", "--num_dome", "1000", "--no-window"]

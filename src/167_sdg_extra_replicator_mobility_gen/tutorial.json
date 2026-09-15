@@ -1,0 +1,26 @@
+{
+  "id": "t076",
+  "title": "Data Generation with MobilityGen",
+  "category": "sdg_extra",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html",
+  "mode": "gui",
+  "entrypoint": "replay.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "custom_robot.py",
+    "inspect_recording.py",
+    "map_recipe.json",
+    "prepare_map.py",
+    "replay.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 GUI and RTX GPU",
+    "isaacsim.replicator.mobility_gen, .examples and .ui",
+    "Isaac Sim 5.1 warehouse/robot assets; H1 policy assets for H1Robot",
+    "A real GUI-exported occupancy map and recorded trajectory",
+    "Isaac Sim bundled PyYAML for prepare_map.py"
+  ],
+  "verification": "not_run",
+  "learning_order": 167,
+  "learning_stage": "policies_scaling"
+}

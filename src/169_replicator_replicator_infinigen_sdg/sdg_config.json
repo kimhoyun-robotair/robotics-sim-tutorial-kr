@@ -1,0 +1,95 @@
+{
+  "environments": {
+    "folders": [
+      "/Isaac/Samples/Replicator/Infinigen/dining_rooms/"
+    ],
+    "files": []
+  },
+  "capture": {
+    "total_captures": 6,
+    "num_floating_captures_per_env": 1,
+    "num_dropped_captures_per_env": 2,
+    "num_cameras": 2,
+    "resolution": [
+      640,
+      480
+    ],
+    "disable_render_products": true,
+    "rt_subframes": 8,
+    "path_tracing": false,
+    "camera_look_at_target_offset": 0.1,
+    "camera_distance_to_target_range": [
+      1.05,
+      1.25
+    ],
+    "num_scene_lights": 3
+  },
+  "writers": [
+    {
+      "type": "BasicWriter",
+      "kwargs": {
+        "output_dir": "output/basic",
+        "rgb": true,
+        "semantic_segmentation": true,
+        "colorize_semantic_segmentation": true,
+        "use_common_output_dir": false
+      }
+    },
+    {
+      "type": "DataVisualizationWriter",
+      "kwargs": {
+        "output_dir": "output/visualization",
+        "bounding_box_2d_tight": true,
+        "bounding_box_2d_tight_params": {
+          "background": "rgb"
+        },
+        "bounding_box_3d": true,
+        "bounding_box_3d_params": {
+          "background": "normals"
+        }
+      }
+    }
+  ],
+  "labeled_assets": {
+    "auto_label": {
+      "num": 3,
+      "gravity_disabled_chance": 0.25,
+      "folders": [],
+      "files": [
+        "/Isaac/Props/YCB/Axis_Aligned/036_wood_block.usd"
+      ],
+      "regex_replace_pattern": "^\\d+_",
+      "regex_replace_repl": ""
+    },
+    "manual_label": [
+      {
+        "url": "/Isaac/Props/YCB/Axis_Aligned/008_pudding_box.usd",
+        "label": "pudding_box",
+        "num": 2,
+        "gravity_disabled_chance": 0.25
+      }
+    ]
+  },
+  "distractors": {
+    "shape_distractors": {
+      "num": 8,
+      "gravity_disabled_chance": 0.25,
+      "types": [
+        "capsule",
+        "cone",
+        "cylinder",
+        "sphere",
+        "cube"
+      ]
+    },
+    "mesh_distractors": {
+      "num": 2,
+      "gravity_disabled_chance": 0.25,
+      "folders": [],
+      "files": [
+        "/Isaac/Environments/Office/Props/SM_Book_03.usd"
+      ]
+    }
+  },
+  "debug_mode": true
+}

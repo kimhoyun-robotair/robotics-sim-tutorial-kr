@@ -1,0 +1,43 @@
+{
+  "id": "t045",
+  "title": "Custom Replicator Randomization Nodes",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_custom_og_randomizer.html",
+  "title_ko": "사용자 OmniGraph 구 영역 무작위화",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "sphere_node.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "omni.graph.scriptnode"
+  ],
+  "verification": "partial_runtime_verified",
+  "coverage": [
+    "direct USD randomizer",
+    "custom ScriptNode",
+    "manual OmniGraph",
+    "ReplicatorWrapper integration"
+  ],
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "min_radius": 0.18288729200406004,
+      "max_radius": 0.6996374467743788,
+      "sample_count": 30
+    },
+    "checks": {
+      "process_exit": true,
+      "sphere_samples": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 140,
+  "learning_stage": "replicator"
+}

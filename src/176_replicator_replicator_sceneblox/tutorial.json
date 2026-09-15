@@ -1,0 +1,28 @@
+{
+  "id": "t052",
+  "title": "Scene Generation with SceneBlox",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "LICENSE-NVIDIA-EXAMPLES.txt",
+    "TUTORIAL.md",
+    "config/constraints.yaml",
+    "config/generation.yaml",
+    "config/hazards_corridors.yaml",
+    "config/obstacle_pile_1.yaml",
+    "config/obstacle_pile_2.yaml",
+    "config/rules.yaml",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA RTX GPU",
+    "See TUTORIAL.md for exact asset and external dependencies"
+  ],
+  "verification": "not_run",
+  "deprecated": true,
+  "learning_order": 176,
+  "learning_stage": "legacy_reference"
+}

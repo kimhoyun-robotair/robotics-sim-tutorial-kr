@@ -1,0 +1,131 @@
+# Isaac Sim 5.1 / IRO 0.4.x: this file is complete and does not inherit another config.
+isaacsim.replicator.object:
+  version: 0.4.13
+  num_frames: 3
+  seed: 11
+  output_path: '@OUTPUT@'
+  screen_width: 640
+  screen_height: 480
+  path_tracing: false
+  gravity: 981
+  simulation_time: 1.0
+  extra_rendering_time: 0.1
+  output_name: frame_$[seed]_$(camera_name)
+  output_switches:
+    images: true
+    labels: true
+    3d_labels: true
+    segmentation: true
+    descriptions: true
+    depth: false
+    normal: false
+    instance_id_segmentation: false
+    usd: false
+    caption: false
+    florance2: false
+    object_caption: false
+    caption_like: false
+  camera_parameters:
+    screen_width: $[/screen_width]
+    screen_height: $[/screen_height]
+    focal_length: 24
+    horizontal_aperture: 24
+    near_clip: 1
+    far_clip: 5000
+  default_camera:
+    type: camera
+    camera_parameters: $[/camera_parameters]
+    transform_operators:
+    - translate_global:
+      - 0
+      - 50
+      - 0
+    - rotateY: 25
+    - rotateX: -20
+    - translate:
+      - 0
+      - 0
+      - 700
+  dome_light:
+    type: light
+    subtype: dome
+    intensity: 700
+  key_light:
+    type: light
+    subtype: distant
+    intensity: 1200
+    transform_operators:
+    - rotateX: -45
+    - rotateY: -25
+  floor:
+    type: geometry
+    subtype: plane
+    tracked: true
+    color:
+    - 0.35
+    - 0.35
+    - 0.35
+    transform_operators:
+    - translate:
+      - 0
+      - 0
+      - 0
+    - scale:
+      - 8
+      - 8
+      - 8
+    physics: collision
+  subject:
+    type: geometry
+    subtype: sphere
+    tracked: true
+    color:
+    - 0.7
+    - 0.2
+    - 0.2
+    transform_operators:
+    - translate:
+      - -130
+      - 180
+      - 0
+    - scale:
+      - 0.7
+      - 0.7
+      - 0.7
+    physics: rigidbody
+  static_cube:
+    type: geometry
+    subtype: cube
+    tracked: true
+    color:
+    - 0.2
+    - 0.7
+    - 0.3
+    transform_operators:
+    - translate:
+      - 100
+      - 50
+      - 0
+    - scale:
+      - 1
+      - 1
+      - 1
+    physics: collision
+  falling_cube:
+    type: geometry
+    subtype: cube
+    tracked: true
+    color:
+    - 0.3
+    - 0.4
+    - 0.9
+    transform_operators:
+    - translate:
+      - 100
+      - 210
+      - 0
+    - scale:
+      - 0.6
+      - 0.6
+      - 0.6
+    physics: rigidbody

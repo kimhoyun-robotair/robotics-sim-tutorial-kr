@@ -1,0 +1,9 @@
+[package]
+version = "1.0.0"
+title = "Korean Extension Starter"
+description = "Local UI callback and USD example"
+[dependencies]
+"omni.kit.uiapp" = {}
+"omni.usd" = {}
+[[python.module]]
+name = "kr_lifecycle_starter"

@@ -1,0 +1,25 @@
+{
+  "id": "t053",
+  "title": "Actor Simulation and Synthetic Data Generation",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_agent.html",
+  "mode": "gui",
+  "entrypoint": "prepare.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "character_commands.txt",
+    "lesson.json",
+    "prepare.py",
+    "robot_commands.txt",
+    "run_scheduler.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 GUI and RTX GPU",
+    "isaacsim.replicator.agent.core and isaacsim.replicator.agent.ui",
+    "Isaac Sim 5.1 Assets access; baked NavMesh",
+    "No ROS or cloud API required"
+  ],
+  "verification": "not_run",
+  "learning_order": 156,
+  "learning_stage": "actor_events"
+}

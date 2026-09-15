@@ -1,0 +1,22 @@
+{
+  "id": "t102",
+  "title": "Adding Multiple Robots",
+  "category": "core",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_adding_multiple_robots.html",
+  "title_ko": "Jetbot과 Franka 사이의 작업 인계",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "handover_task.py",
+    "run.py",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Isaac 5.1 Jetbot `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`와 Franka `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`가 필요합니다. Jetbot만 `--asset /절대경로/jetbot.usd`로 대체 경로를 지정할 수 있습니다. Franka와 Lula/RMPflow는 5.1 기본 확장/에셋 설정을 사용합니다."
+  ],
+  "verification": "not_run",
+  "learning_order": 25,
+  "learning_stage": "physics_core"
+}

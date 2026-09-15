@@ -1,0 +1,82 @@
+{
+  "source_url": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/Policies/H1_Policies/h1_env.yaml",
+  "joint_positions_rad": {
+    ".*_hip_yaw": 0.0,
+    ".*_hip_roll": 0.0,
+    ".*_hip_pitch": -0.28,
+    ".*_knee": 0.79,
+    ".*_ankle": -0.52,
+    "torso": 0.0,
+    ".*_shoulder_pitch": 0.28,
+    ".*_shoulder_roll": 0.0,
+    ".*_shoulder_yaw": 0.0,
+    ".*_elbow": 0.52
+  },
+  "actuators": {
+    "legs": {
+      "effort_limit": 300.0,
+      "velocity_limit": 100.0,
+      "joint_names_expr": [
+        ".*_hip_yaw",
+        ".*_hip_roll",
+        ".*_hip_pitch",
+        ".*_knee",
+        "torso"
+      ],
+      "stiffness": {
+        ".*_hip_yaw": 150.0,
+        ".*_hip_roll": 150.0,
+        ".*_hip_pitch": 200.0,
+        ".*_knee": 200.0,
+        "torso": 200.0
+      },
+      "damping": {
+        ".*_hip_yaw": 5.0,
+        ".*_hip_roll": 5.0,
+        ".*_hip_pitch": 5.0,
+        ".*_knee": 5.0,
+        "torso": 5.0
+      }
+    },
+    "feet": {
+      "effort_limit": 100.0,
+      "velocity_limit": 100.0,
+      "joint_names_expr": [
+        ".*_ankle"
+      ],
+      "stiffness": {
+        ".*_ankle": 20.0
+      },
+      "damping": {
+        ".*_ankle": 4.0
+      }
+    },
+    "arms": {
+      "effort_limit": 300.0,
+      "velocity_limit": 100.0,
+      "joint_names_expr": [
+        ".*_shoulder_pitch",
+        ".*_shoulder_roll",
+        ".*_shoulder_yaw",
+        ".*_elbow"
+      ],
+      "stiffness": {
+        ".*_shoulder_pitch": 40.0,
+        ".*_shoulder_roll": 40.0,
+        ".*_shoulder_yaw": 40.0,
+        ".*_elbow": 40.0
+      },
+      "damping": {
+        ".*_shoulder_pitch": 10.0,
+        ".*_shoulder_roll": 10.0,
+        ".*_shoulder_yaw": 10.0,
+        ".*_elbow": 10.0
+      }
+    }
+  },
+  "base_position_m": [
+    0,
+    0,
+    1.05
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "t093",
+  "title": "Core API Overview",
+  "category": "python_usd",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/core_api_overview.html",
+  "title_ko": "Core API: 원시 USD를 감싸는 로봇용 도구",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "tutorial.json"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver"
+  ],
+  "verification": "not_run",
+  "learning_order": 9,
+  "learning_stage": "python_usd"
+}

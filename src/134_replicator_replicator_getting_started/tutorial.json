@@ -1,0 +1,38 @@
+{
+  "id": "t037",
+  "title": "Getting Started Scripts",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "requirements": [
+    "Isaac Sim 5.1.0 full installation",
+    "Supported NVIDIA RTX GPU and driver"
+  ],
+  "verification": "partial_runtime_verified",
+  "implementation": "Local runnable lesson; NVIDIA Apache-2.0 implementation included where NOTICE.txt is present",
+  "artifacts": [
+    "TUTORIAL.md",
+    "VERIFICATION.md",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "rgb_frames": 2,
+      "bbox_counts": [
+        1,
+        1
+      ]
+    },
+    "checks": {
+      "rgb": true,
+      "nonempty_labels": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 134,
+  "learning_stage": "replicator"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "t032",
+  "title": "ROS 2 Custom C++ OmniGraph Node",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_omnigraph_cpp_node.html",
+  "mode": "external",
+  "entrypoint": "prepare_build.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "nodes/ROS2CustomMessageNode.cpp",
+    "nodes/ROS2CustomMessageNode.ogn",
+    "prepare_build.py",
+    "ros_ws/src/tutorial_interfaces/CMakeLists.txt",
+    "ros_ws/src/tutorial_interfaces/msg/Sphere.msg",
+    "ros_ws/src/tutorial_interfaces/package.xml"
+  ],
+  "requirements": [
+    "Linux Ubuntu 22.04",
+    "ROS 2 Humble",
+    "Isaac Sim 5.1.0",
+    "Kit Extension C++ template release/107.3.0",
+    "Official 5.1 ROS C++ sample extension ZIP",
+    "C++17 toolchain and colcon"
+  ],
+  "verification": "not_run",
+  "learning_order": 131,
+  "learning_stage": "ros2_applications"
+}

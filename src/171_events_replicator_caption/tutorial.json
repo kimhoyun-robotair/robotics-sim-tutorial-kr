@@ -1,0 +1,29 @@
+{
+  "id": "t070",
+  "title": "VLM Scene Captioning",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html",
+  "mode": "script_editor",
+  "entrypoint": "generate_scene_graph.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "caption_config.json",
+    "character_commands.txt",
+    "generate_scene_graph.py",
+    "lesson.json",
+    "patch_iro.py",
+    "prepare.py",
+    "prepare_ira.py",
+    "robot_commands.txt"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 GUI and RTX GPU",
+    "isaacsim.replicator.caption.core",
+    "Isaac Sim 5.1 caption sample assets",
+    "Optional NIM endpoint/model/API key for textual captions; not required for graphs",
+    "Optional IRA/IRO extensions for their integration sections"
+  ],
+  "verification": "not_run",
+  "learning_order": 171,
+  "learning_stage": "advanced_integrations"
+}

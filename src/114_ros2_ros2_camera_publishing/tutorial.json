@@ -1,0 +1,21 @@
+{
+  "id": "t013",
+  "title": "Publishing Camera’s Data",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera_publishing.html",
+  "mode": "ros2",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 with RTX-capable GPU",
+    "ROS 2 Humble (Ubuntu 22.04) or Jazzy (Ubuntu 24.04)",
+    "isaacsim.ros2.bridge enabled; matching ROS_DOMAIN_ID",
+    "RViz2 or ros2 topic tools for receiver verification"
+  ],
+  "verification": "not_run",
+  "learning_order": 114,
+  "learning_stage": "ros2_basics"
+}

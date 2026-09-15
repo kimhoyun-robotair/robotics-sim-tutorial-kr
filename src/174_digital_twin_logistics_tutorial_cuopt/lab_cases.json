@@ -1,0 +1,53 @@
+{
+  "cost_matrix": {
+    "fleet_size": 2,
+    "vehicle_capacity": 4,
+    "number_of_locations": 6,
+    "solver_time_limit_seconds": 5
+  },
+  "capacity_experiment": {
+    "vehicle_capacity": 2,
+    "expected_feasibility": "6 unit-demand stops exceed total capacity 4; inspect infeasible result"
+  },
+  "network_vertices": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      4,
+      0,
+      0
+    ],
+    [
+      4,
+      4,
+      0
+    ],
+    [
+      0,
+      4,
+      0
+    ]
+  ],
+  "network_edges": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      0
+    ]
+  ],
+  "semantic_zone_experiment": "Cover one edge, UPDATE, SOLVE, compare returned path and cost; no optimal solution is hard-coded"
+}

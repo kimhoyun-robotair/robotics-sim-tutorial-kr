@@ -1,0 +1,21 @@
+{
+  "id": "t140",
+  "title": "Configuring RMPflow for a New Manipulator",
+  "category": "motion",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_configure_rmpflow_denso.html",
+  "mode": "gui",
+  "entrypoint": "prepare_config.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "prepare_config.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 GUI와 지원 NVIDIA GPU",
+    "공식 Cobotta_Pro_900_Assets.zip의 URDF/robot_description/template 및 5.1 Assets의 Isaac/Robots/Denso/CobottaPro900/cobotta_pro_900.usd",
+    "Isaac Sim Python의 PyYAML",
+    "Lula Test Widget extension"
+  ],
+  "verification": "not_run",
+  "learning_order": 58,
+  "learning_stage": "motion_control"
+}

@@ -1,0 +1,47 @@
+{
+  "id": "t158",
+  "title": "PhysX SDK Lightbeam Sensor",
+  "category": "sensors",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physx_lightbeam.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 and its python.sh",
+    "Supported NVIDIA GPU/driver",
+    "isaacsim.sensors.physx"
+  ],
+  "verification": "partial_runtime_verified",
+  "title_ko": "Lightbeam으로 빛의 장막 만들기",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "detected_depth_m": [
+        2.75
+      ],
+      "final_beam_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "checks": {
+      "process_exit": true,
+      "moving_target": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 71,
+  "learning_stage": "sensors"
+}

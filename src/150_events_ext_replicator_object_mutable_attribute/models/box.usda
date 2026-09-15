@@ -1,0 +1,43 @@
+#usda 1.0
+(
+    defaultPrim = "Model"
+    metersPerUnit = 0.01
+    upAxis = "Y"
+)
+def Xform "Model"
+{
+    def Mesh "Mesh" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        point3f[] points = [(-50,-50,-50),(50,-50,-50),(50,-50,50),(-50,-50,50),(-50,50,-50),(50,50,-50),(50,50,50),(-50,50,50)]
+        int[] faceVertexCounts = [4,4,4,4,4,4]
+        int[] faceVertexIndices = [0,1,2,3,4,7,6,5,0,4,5,1,1,5,6,2,2,6,7,3,3,7,4,0]
+        uniform token subdivisionScheme = "none"
+        texCoord2f[] primvars:st = [(0,0), (1,0), (1,1), (0,1), (0,0), (1,0), (1,1), (0,1), (0,0), (1,0), (1,1), (0,1), (0,0), (1,0), (1,1), (0,1), (0,0), (1,0), (1,1), (0,1), (0,0), (1,0), (1,1), (0,1)] (
+            interpolation = "faceVarying"
+        )
+        rel material:binding = </Model/Looks/Material>
+    }
+    def Scope "Looks"
+    {
+        def Material "Material"
+        {
+            token outputs:mdl:surface.connect = </Model/Looks/Material/Shader.outputs:out>
+            token outputs:mdl:volume.connect = </Model/Looks/Material/Shader.outputs:out>
+            token outputs:mdl:displacement.connect = </Model/Looks/Material/Shader.outputs:out>
+            def Shader "Shader"
+            {
+                uniform token info:implementationSource = "sourceAsset"
+                uniform asset info:mdl:sourceAsset = @OmniPBR.mdl@
+                uniform token info:mdl:sourceAsset:subIdentifier = "OmniPBR"
+                color3f inputs:diffuse_tint = (0.7,0.4,0.2)
+                float inputs:reflection_roughness_constant = 0.5
+                float inputs:texture_rotate = 0
+                float2 inputs:texture_scale = (1,1)
+                
+                token outputs:out
+            }
+        }
+    }
+}

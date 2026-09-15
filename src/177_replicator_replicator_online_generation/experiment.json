@@ -1,0 +1,16 @@
+{
+  "categories": [
+    "plane",
+    "watercraft",
+    "rocket"
+  ],
+  "synsets": [
+    "02691156",
+    "04530566",
+    "04099429"
+  ],
+  "max_asset_size_mb": 10,
+  "num_test_images": 4,
+  "training_steps": 10,
+  "learning_rate": 0.0001
+}

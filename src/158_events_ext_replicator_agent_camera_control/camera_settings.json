@@ -1,0 +1,13 @@
+{
+  "aim_camera_to_character": true,
+  "character_focus_height": 0.7,
+  "min_camera_distance": 6.5,
+  "max_camera_distance": 14.0,
+  "min_camera_focallength": 13.0,
+  "max_camera_focallength": 23.0,
+  "min_camera_height": 2.0,
+  "max_camera_height": 3.0,
+  "min_camera_look_down_angle": 0.0,
+  "max_camera_look_down_angle": 60.0,
+  "randomize_camera_info": true
+}

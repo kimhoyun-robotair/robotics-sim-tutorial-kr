@@ -1,0 +1,39 @@
+{
+  "id": "t005",
+  "title": "Getting Started with Cloner",
+  "category": "motion",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_cloner.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 설치와 해당 버전 Python 환경",
+    "Isaac Sim 지원 NVIDIA GPU 및 드라이버"
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "clone_count": 4,
+      "final_z": [
+        0.559761643409729,
+        0.559761643409729,
+        0.5597617030143738,
+        0.5597617030143738
+      ]
+    },
+    "checks": {
+      "process_exit": true,
+      "four_clones": true,
+      "all_fall": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 163,
+  "learning_stage": "policies_scaling"
+}

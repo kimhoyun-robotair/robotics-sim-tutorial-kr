@@ -1,0 +1,21 @@
+{
+  "id": "t008",
+  "title": "Driving TurtleBot using ROS 2 Messages",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html",
+  "mode": "ros2",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble (Ubuntu 22.04) 또는 Jazzy (Ubuntu 24.04)",
+    "isaacsim.ros2.bridge",
+    "Isaac 5.1 TurtleBot3 USD 또는 --robot-usd"
+  ],
+  "verification": "not_run",
+  "learning_order": 105,
+  "learning_stage": "ros2_basics"
+}

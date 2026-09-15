@@ -1,0 +1,20 @@
+{
+  "id": "t090",
+  "title": "Omniverse Script Editor",
+  "category": "tools",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/development_tools/omniverse_script_editor.html",
+  "mode": "script_editor",
+  "entrypoint": "tab1_create.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "tab1_create.py",
+    "tab2_resize.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA GPU and GUI"
+  ],
+  "verification": "not_run",
+  "learning_order": 4,
+  "learning_stage": "python_usd"
+}

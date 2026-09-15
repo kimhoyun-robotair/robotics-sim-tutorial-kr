@@ -1,0 +1,22 @@
+{
+  "scene_usd": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Environments/Simple_Warehouse/warehouse_multiple_shelves.usd",
+  "origin": [
+    2,
+    0,
+    0
+  ],
+  "upper_bound": [
+    10,
+    20,
+    2
+  ],
+  "lower_bound": [
+    -14,
+    -18,
+    0.1
+  ],
+  "rotation_degrees": 180,
+  "export_type": "ROS Occupancy Map Parameters File YAML",
+  "robot_type": "H1Robot",
+  "scenario_type": "KeyboardTeleoperationScenario"
+}

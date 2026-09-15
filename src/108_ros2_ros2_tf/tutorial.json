@@ -1,0 +1,22 @@
+{
+  "id": "t015",
+  "title": "ROS2 Transform Trees and Odometry",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_tf.html",
+  "mode": "gui",
+  "entrypoint": null,
+  "artifacts": [
+    "TUTORIAL.md",
+    "inspect_tf.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble (Ubuntu 22.04) 또는 Jazzy (Ubuntu 24.04)",
+    "isaacsim.ros2.bridge",
+    "Isaac 5.1 turtlebot_tutorial.usd",
+    "ROS 터미널의 rclpy, tf2_msgs, nav_msgs"
+  ],
+  "verification": "not_run",
+  "learning_order": 108,
+  "learning_stage": "ros2_basics"
+}

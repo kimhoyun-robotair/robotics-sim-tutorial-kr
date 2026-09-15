@@ -1,0 +1,2 @@
+# No robot is spawned in the initial lesson.
+# When Nova_Carter_01 is enabled: Nova_Carter_01 Idle 3

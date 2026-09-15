@@ -1,0 +1,22 @@
+{
+  "id": "t107",
+  "title": "Custom Python Nodes",
+  "category": "tools",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_custom_python_nodes.html",
+  "mode": "extension",
+  "entrypoint": "exts/kr.positive.node/config/extension.toml",
+  "artifacts": [
+    "TUTORIAL.md",
+    "exts/kr.positive.node/config/extension.toml",
+    "exts/kr.positive.node/kr_positive_node/__init__.py",
+    "exts/kr.positive.node/kr_positive_node/ogn/OgnPositive.ogn",
+    "exts/kr.positive.node/kr_positive_node/ogn/OgnPositive.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA GPU and GUI"
+  ],
+  "verification": "not_run",
+  "learning_order": 87,
+  "learning_stage": "omnigraph_extensions"
+}

@@ -1,0 +1,20 @@
+{
+  "bounding_box_2d_tight": true,
+  "bounding_box_2d_tight_params": {
+    "background": "rgb",
+    "outline": "green",
+    "fill": null
+  },
+  "bounding_box_2d_loose": true,
+  "bounding_box_2d_loose_params": {
+    "background": "normals",
+    "outline": "red",
+    "fill": null
+  },
+  "bounding_box_3d": true,
+  "bounding_box_3d_params": {
+    "background": "rgb",
+    "fill": "blue",
+    "width": 2
+  }
+}

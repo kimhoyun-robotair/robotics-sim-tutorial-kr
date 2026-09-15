@@ -1,0 +1,52 @@
+{
+  "isaacsim.replicator.incident": {
+    "version": "0.1.0",
+    "global": {
+      "seed": 654321,
+      "report_dir": "REPLACE_WITH_ABSOLUTE_OUTPUT_DIRECTORY"
+    },
+    "event": {
+      "event_list": [
+        {
+          "ToppleEvent": {
+            "name": "shelf_topple",
+            "topple_item": {
+              "item": "$random_loose_item$",
+              "topple_nearby_radius": 1.5
+            },
+            "trigger": {
+              "type": "time",
+              "time": 3
+            }
+          }
+        },
+        {
+          "FireEvent": {
+            "name": "small_fire",
+            "flammable_item": {
+              "item": "$random_flammable_item$"
+            },
+            "trigger": {
+              "type": "time",
+              "time": 6
+            }
+          }
+        },
+        {
+          "SpillEvent": {
+            "name": "floor_spill",
+            "leakable_item": {
+              "item": "$random_leakable_item$",
+              "target_size": 1.5,
+              "leak_duration": 5.0
+            },
+            "trigger": {
+              "type": "time",
+              "time": 9
+            }
+          }
+        }
+      ]
+    }
+  }
+}

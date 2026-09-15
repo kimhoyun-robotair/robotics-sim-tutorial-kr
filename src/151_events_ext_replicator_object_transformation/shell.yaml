@@ -1,0 +1,95 @@
+# Isaac Sim 5.1 / IRO 0.4.x: this file is complete and does not inherit another config.
+isaacsim.replicator.object:
+  version: 0.4.13
+  num_frames: 3
+  seed: 11
+  output_path: '@OUTPUT@'
+  screen_width: 640
+  screen_height: 480
+  path_tracing: false
+  gravity: 0
+  simulation_time: 0
+  extra_rendering_time: 0.1
+  output_name: frame_$[seed]_$(camera_name)
+  output_switches:
+    images: true
+    labels: true
+    3d_labels: true
+    segmentation: true
+    descriptions: true
+    depth: false
+    normal: false
+    instance_id_segmentation: false
+    usd: false
+    caption: false
+    florance2: false
+    object_caption: false
+    caption_like: false
+  camera_parameters:
+    screen_width: $[/screen_width]
+    screen_height: $[/screen_height]
+    focal_length: 24
+    horizontal_aperture: 24
+    near_clip: 1
+    far_clip: 5000
+  default_camera:
+    type: camera
+    camera_parameters: $[/camera_parameters]
+    transform_operators:
+    - translate_global:
+      - 0
+      - 50
+      - 0
+    - rotateY: 25
+    - rotateX: -20
+    - translate:
+      - 0
+      - 0
+      - 700
+  dome_light:
+    type: light
+    subtype: dome
+    intensity: 700
+  key_light:
+    type: light
+    subtype: distant
+    intensity: 1200
+    transform_operators:
+    - rotateX: -45
+    - rotateY: -25
+  subject:
+    type: geometry
+    subtype: cube
+    tracked: true
+    color:
+    - 0.8
+    - 0.2
+    - 0.1
+    transform_operators:
+    - rotateY:
+        distribution_type: range
+        start: -70
+        end: 70
+    - rotateX:
+        distribution_type: range
+        start: -30
+        end: 30
+    - translate:
+      - 0
+      - 0
+      - 220
+    - rotateXYZ:
+        distribution_type: range
+        start:
+        - 0
+        - 0
+        - 0
+        end:
+        - 180
+        - 180
+        - 180
+    - scale:
+      - 0.15
+      - 0.15
+      - 0.15
+    count: 60

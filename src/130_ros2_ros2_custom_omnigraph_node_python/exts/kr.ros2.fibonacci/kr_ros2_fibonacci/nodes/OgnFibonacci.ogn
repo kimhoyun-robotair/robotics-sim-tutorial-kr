@@ -1,0 +1,28 @@
+{
+  "Fibonacci": {
+    "version": 1,
+    "language": "python",
+    "uiName": "ROS2 Fibonacci Lesson",
+    "description": "Subscribe to Int32 and emit a checked uint64 Fibonacci result.",
+    "categories": [
+      "tutorials"
+    ],
+    "inputs": {
+      "execIn": {
+        "type": "execution"
+      },
+      "topic": {
+        "type": "string",
+        "default": "/number"
+      }
+    },
+    "outputs": {
+      "execOut": {
+        "type": "execution"
+      },
+      "fibonacci": {
+        "type": "uint64"
+      }
+    }
+  }
+}

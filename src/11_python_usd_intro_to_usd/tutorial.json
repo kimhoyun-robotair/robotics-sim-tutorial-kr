@@ -1,0 +1,35 @@
+{
+  "id": "t174",
+  "title": "Working with USD",
+  "category": "python_usd",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/intro_to_usd.html",
+  "title_ko": "USD 저장과 참조: 로봇만 재사용하는 defaultPrim",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "tutorial.json",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver"
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "default_prim": "/mock_robot",
+      "assembly_prim_count": 11
+    },
+    "checks": {
+      "process_exit": true,
+      "two_references": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 11,
+  "learning_stage": "python_usd"
+}

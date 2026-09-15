@@ -1,0 +1,10 @@
+{
+  "history": "keepLast",
+  "depth": 1,
+  "reliability": "reliable",
+  "durability": "transientLocal",
+  "deadline": 0.0,
+  "lifespan": 0.0,
+  "liveliness": "systemDefault",
+  "leaseDuration": 0.0
+}

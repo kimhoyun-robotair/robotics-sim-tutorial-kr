@@ -1,0 +1,9 @@
+[package]
+version = "1.0.0"
+title = "Korean Positive Node"
+description = "Independent Python OGN example"
+[dependencies]
+"omni.graph.core" = {}
+"omni.graph.action" = {}
+[[python.module]]
+name = "kr_positive_node"

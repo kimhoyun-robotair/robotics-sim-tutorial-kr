@@ -1,0 +1,37 @@
+{
+  "id": "t104",
+  "title": "Adding Props",
+  "category": "core",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_adding_props.html",
+  "title_ko": "Rubik 큐브에 물리 성질을 단계별로 붙이기",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "TUTORIAL.md",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Isaac Sim 5.1 에셋 `/Isaac/Props/Rubiks_Cube/rubiks_cube.usd`가 필요합니다. 별도 설치한 5.1 에셋 팩은 `--asset /절대경로/Isaac/Props/Rubiks_Cube/rubiks_cube.usd`로 지정합니다. 모형을 일반 큐브로 대체하지 않으며 Rubik의 참조 mesh가 없으면 오류로 중단합니다."
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "colliders": [
+        "/World/Rubik/PhysicsSphere"
+      ],
+      "recorded_samples": 4
+    },
+    "checks": {
+      "process_exit": true,
+      "dynamic_motion": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 19,
+  "learning_stage": "physics_core"
+}

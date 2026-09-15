@@ -1,0 +1,34 @@
+camera:
+  create.camera:
+    position: [0, 0, 8]
+render_product:
+  create.render_product:
+    camera: camera
+    resolution: [512, 512]
+light:
+  create.light:
+    light_type: Dome
+    intensity: 600
+carton:
+  create.cube:
+    semantics: [["class", "carton"]]
+    scale: 1
+writer:
+  writers.get:
+    name: BasicWriter
+    init_params:
+      output_dir: /tmp/isaac51_overview_yaml_first_run
+      rgb: true
+      semantic_segmentation: true
+    render_products: render_product
+trigger:
+  trigger.on_frame:
+    max_execs: 3
+with_trigger:
+  with.trigger:
+    with.carton:
+      modify.pose:
+        rotation:
+          distribution.uniform:
+            lower: [0, 0, 0]
+            upper: [0, 0, 90]

@@ -1,0 +1,25 @@
+{
+  "isaacsim.replicator.caption.core": {
+    "version": "0.0.9",
+    "camera_prim_path": "/World/Cameras/Camera",
+    "scene_path": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.1/Isaac/Samples/Replicator/Captioning/test_caption.usda",
+    "caption_configs": {
+      "save_full_scene_graph": true,
+      "save_pruned_scene_graph": true,
+      "attach_label_to_usd": true,
+      "use_ai_label": false,
+      "visualize_caption": true,
+      "max_object_capacity": 100,
+      "export_edges": true,
+      "global_caption": false,
+      "qa_caption": false,
+      "brief_caption": false,
+      "pruning_ratio": 1.0,
+      "verbose": true,
+      "random_seed": 0,
+      "caption_only": false,
+      "export_world": true
+    },
+    "output_path": ""
+  }
+}

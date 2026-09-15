@@ -1,0 +1,22 @@
+{
+  "id": "t131",
+  "title": "Tutorial 13: Rigging a Legged Robot for Locomotion Policy",
+  "category": "robot_setup",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_rig_legged_robot.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "h1_policy.json",
+    "inspect_runtime.py",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "RTX GPU and GUI display for the interactive lab",
+    "Official asset paths and exact tool setup are repeated in TUTORIAL.md"
+  ],
+  "verification": "not_run",
+  "learning_order": 47,
+  "learning_stage": "robot_authoring"
+}

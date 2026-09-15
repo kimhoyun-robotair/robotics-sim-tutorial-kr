@@ -1,0 +1,22 @@
+{
+  "id": "t103",
+  "title": "Multiple Tasks",
+  "category": "core",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_multiple_tasks.html",
+  "title_ko": "좌표 offset과 고유 이름으로 여러 Task 확장하기",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "handover_task.py",
+    "run.py",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Isaac Sim 5.1과 Jetbot `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`, Franka `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`, 내장 RMPflow 확장이 필요합니다. `--asset`은 Jetbot USD만 지정하며 Franka는 기본 5.1 asset root를 사용합니다. 작업 수가 증가하면 GPU 메모리/CPU 물리 비용도 늘어납니다."
+  ],
+  "verification": "not_run",
+  "learning_order": 26,
+  "learning_stage": "physics_core"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "t061",
+  "title": "Camera",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/camera.html",
+  "mode": "extension",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "scene.yaml"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "isaacsim.replicator.object 0.4.x",
+    "NVIDIA RTX GPU and compatible driver",
+    "PyYAML (bundled with Isaac Sim)"
+  ],
+  "verification": "not_run",
+  "native_workflow": "IRO YAML description via Object SDG",
+  "source_specific_variants": [
+    "scene"
+  ],
+  "learning_order": 147,
+  "learning_stage": "object_sdg"
+}

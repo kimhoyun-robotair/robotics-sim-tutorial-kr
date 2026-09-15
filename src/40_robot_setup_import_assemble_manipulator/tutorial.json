@@ -1,0 +1,22 @@
+{
+  "id": "t124",
+  "title": "Tutorial 6: Setup a Manipulator",
+  "category": "robot_setup",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_import_assemble_manipulator.html",
+  "title_ko": "UR10e와 Robotiq 2F-140을 하나의 로봇으로 조립하기",
+  "mode": "gui",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "prepare_xacro.py",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Official 5.1 UR10e/Robotiq sample assets"
+  ],
+  "verification": "not_run",
+  "learning_order": 40,
+  "learning_stage": "robot_authoring"
+}

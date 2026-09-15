@@ -1,0 +1,1750 @@
+{
+  "date": "2026-09-14",
+  "environment": {
+    "isaac_sim_version": "5.1.0-rc.19+release.26219.9c81211b.gl",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti 16 GiB",
+    "os": "Ubuntu 24.04",
+    "ros": "Jazzy; clock publisher/receiver ROS_DOMAIN_ID=87"
+  },
+  "scope": "각 기록의 기본 모드와 인자에 대한 실제 출력 검증. 다른 모드, GUI 상호작용, 외부 모델/서비스 통합 전체를 검증한 기록이 아님.",
+  "runtime_package_count": 36,
+  "records": [
+    {
+      "id": "t098",
+      "package": "src/01_core_core_hello_world",
+      "title": "Hello World",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/core_core_hello_world/run.py",
+        "--headless",
+        "--steps",
+        "120"
+      ],
+      "output": "/home/hoyunkim/robotics-sim-tutorial-kr/src/core_core_hello_world/output/1789394589670865665",
+      "log": ".omo/work/isaac51-catalog/evidence/t098.log",
+      "metrics": {
+        "samples": 120,
+        "rest_height_m": 0.24999813735485077
+      },
+      "checks": {
+        "samples": true,
+        "cube_on_floor": true
+      },
+      "input_sha256": {
+        "run.py": "30e6ea185ffb6ca1126eb8ca2d5583634286ad4d4c4069afdcbb3e9d2a127666"
+      },
+      "learning_order": 1,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/01_core_core_hello_world/run.py",
+        "--headless",
+        "--steps",
+        "120"
+      ],
+      "current_output": "/home/hoyunkim/robotics-sim-tutorial-kr/src/01_core_core_hello_world/output/1789394589670865665"
+    },
+    {
+      "id": "t099",
+      "package": "src/02_core_core_hello_robot",
+      "title": "Hello Robot",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/core_core_hello_robot/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/hello-robot-output"
+      ],
+      "output": "/tmp/isaac51-source/hello-robot-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t099.log",
+      "metrics": {
+        "forward_displacement_m": 0.26874056458473206
+      },
+      "checks": {
+        "two_wheel_dofs": true,
+        "forward_motion": true
+      },
+      "input_sha256": {
+        "run.py": "e3355656fc8c8e29b9d8aa0f2e3efe26c215e865ff09c120ca4e984fbd90a06e"
+      },
+      "learning_order": 2,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/02_core_core_hello_robot/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/hello-robot-output"
+      ]
+    },
+    {
+      "id": "t173",
+      "package": "src/10_python_usd_open_usd",
+      "title": "OpenUSD Fundamentals",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/python_usd_open_usd/run.py",
+        "--headless",
+        "--steps",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/formatted-reruns/openusd-output"
+      ],
+      "output": "/tmp/isaac51-source/formatted-reruns/openusd-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t173.log",
+      "metrics": {
+        "session_radius": 1.0,
+        "saved_radius": 0.5,
+        "transform_max_error": 1.1102230246251565e-16
+      },
+      "checks": {
+        "process_exit": true,
+        "layer_strength": true,
+        "transform": true
+      },
+      "input_sha256": {
+        "run.py": "da6a4e1588036b0c849bd998830ce33dabe3016639623a60229ab2433a11e235"
+      },
+      "learning_order": 10,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/10_python_usd_open_usd/run.py",
+        "--headless",
+        "--steps",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/formatted-reruns/openusd-output"
+      ]
+    },
+    {
+      "id": "t174",
+      "package": "src/11_python_usd_intro_to_usd",
+      "title": "Working with USD",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/python_usd_intro_to_usd/run.py",
+        "--headless",
+        "--steps",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/formatted-reruns/usd_composition-output"
+      ],
+      "output": "/tmp/isaac51-source/formatted-reruns/usd_composition-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t174.log",
+      "metrics": {
+        "default_prim": "/mock_robot",
+        "assembly_prim_count": 11
+      },
+      "checks": {
+        "process_exit": true,
+        "two_references": true
+      },
+      "input_sha256": {
+        "run.py": "c5ce31bc5bb9e290f82bbd531e9f8afd1d0b30d93d9a16783d495e0b60e21da0"
+      },
+      "learning_order": 11,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/11_python_usd_intro_to_usd/run.py",
+        "--headless",
+        "--steps",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/formatted-reruns/usd_composition-output"
+      ]
+    },
+    {
+      "id": "t175",
+      "package": "src/12_python_usd_usd_tools",
+      "title": "USD Tools",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/python_usd_usd_tools/run.py",
+        "--headless",
+        "--steps",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/formatted-reruns/usd_tools-output"
+      ],
+      "output": "/tmp/isaac51-source/formatted-reruns/usd_tools-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t175.log",
+      "metrics": {
+        "broken_has_body": false,
+        "repaired_has_body": true,
+        "path_changes": [
+          [
+            "old_assets/body.usda",
+            "moved_assets/body.usda"
+          ]
+        ],
+        "variants": [
+          "blue",
+          "red"
+        ],
+        "selection": "red",
+        "color": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "repair_and_variant": true
+      },
+      "input_sha256": {
+        "run.py": "3a269ea7c965d591bb52e834c01dbc52add2b8d55bd65ac1a5ade2bdfd36ba11"
+      },
+      "learning_order": 12,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/12_python_usd_usd_tools/run.py",
+        "--headless",
+        "--steps",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/formatted-reruns/usd_tools-output"
+      ]
+    },
+    {
+      "id": "t104",
+      "package": "src/19_core_core_adding_props",
+      "title": "Adding Props",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/core_core_adding_props/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix/props-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/props-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t104.log",
+      "metrics": {
+        "colliders": [
+          "/World/Rubik/PhysicsSphere"
+        ],
+        "recorded_samples": 4
+      },
+      "checks": {
+        "process_exit": true,
+        "dynamic_motion": true
+      },
+      "input_sha256": {
+        "run.py": "8b67998285e67eb1b82e6b4a0b7a56baa6ae537a24584f1696a9ee25e01752b1"
+      },
+      "learning_order": 19,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/19_core_core_adding_props/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix/props-output"
+      ]
+    },
+    {
+      "id": "t101",
+      "package": "src/24_core_core_adding_manipulator",
+      "title": "Adding a Manipulator Robot",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/core_core_adding_manipulator/run.py",
+        "--headless",
+        "--steps",
+        "1800",
+        "--output",
+        "/tmp/isaac51-source/franka-output"
+      ],
+      "output": "/tmp/isaac51-source/franka-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t101.log",
+      "metrics": {
+        "cube_target_error_m": 0.002613832367330498
+      },
+      "checks": {
+        "controller_done": true,
+        "actual_cube_at_target": true
+      },
+      "input_sha256": {
+        "run.py": "750ffe9cdc75a3c7db921848c02cac51b572ed705deedb1dbbf7ba68adba8d5a",
+        "pick_task.py": "62f3d41d877b9492ffbc1edf280c99958924033f88e28ee41bfae590ed603cdd"
+      },
+      "learning_order": 24,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/24_core_core_adding_manipulator/run.py",
+        "--headless",
+        "--steps",
+        "1800",
+        "--output",
+        "/tmp/isaac51-source/franka-output"
+      ]
+    },
+    {
+      "id": "t105",
+      "package": "src/27_core_advanced_data_logging",
+      "title": "Data Logging",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/core_advanced_data_logging/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix/data_logging-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/data_logging-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t105.log",
+      "metrics": {
+        "recorded_frames": 120
+      },
+      "checks": {
+        "process_exit": true,
+        "actual_frames": true
+      },
+      "input_sha256": {
+        "run.py": "d4719420e76fa9cb71ff0296e302aa302e49cffe111ac3c123695d5a9980ab07",
+        "inspect_log.py": "680f3676e49d70f65dbd463887c523c2ff9a33536eeaf3cec25257599a235d03"
+      },
+      "learning_order": 27,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/27_core_advanced_data_logging/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix/data_logging-output"
+      ]
+    },
+    {
+      "id": "t111",
+      "package": "src/30_importers_import_urdf",
+      "title": "Tutorial: Import URDF",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_import_urdf/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/urdf-output"
+      ],
+      "output": "/tmp/isaac51-source/importer-matrix/urdf-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t111.log",
+      "metrics": {
+        "source": "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_import_urdf/arm.urdf",
+        "prim_path": "/tutorial_arm",
+        "joint_names": [
+          "shoulder"
+        ],
+        "joint_positions": [
+          0.5153891444206238
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "import_and_drive": true
+      },
+      "input_sha256": {
+        "run.py": "543499b50e0f2896ae6e0482aa46bb8137da42c321f1a9e06816177b20a4a2bc",
+        "arm.urdf": "3b400ca5d2a0eb5778e422a9826dd287d69199d62428b42721565b0f4efe8333"
+      },
+      "learning_order": 30,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/30_importers_import_urdf/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/urdf-output"
+      ]
+    },
+    {
+      "id": "t113",
+      "package": "src/31_importers_import_mjcf",
+      "title": "Tutorial: Import MJCF",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_import_mjcf/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/mjcf-output"
+      ],
+      "output": "/tmp/isaac51-source/importer-matrix/mjcf-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t113.log",
+      "metrics": {
+        "source": "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_import_mjcf/pendulum.xml",
+        "joints": [
+          "/World/Imported/joints/rootJoint_mount",
+          "/World/Imported/joints/hinge"
+        ],
+        "stage_meters_per_unit": 1.0
+      },
+      "checks": {
+        "process_exit": true,
+        "hinge_import": true
+      },
+      "input_sha256": {
+        "run.py": "fb25a2cb1e713105163365d89e42cff40440cbfc52badd6807dc2ecd9e049e0a",
+        "pendulum.xml": "2588a32f9ec1124fed30d426fccc2246f089c9dbfb0c3f3194914ed0df45e710"
+      },
+      "learning_order": 31,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/31_importers_import_mjcf/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/mjcf-output"
+      ]
+    },
+    {
+      "id": "t116",
+      "package": "src/33_importers_util_merge_mesh",
+      "title": "Merge Mesh Utility",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_util_merge_mesh/run.py",
+        "--headless",
+        "--frames",
+        "5",
+        "--output",
+        "/tmp/isaac51-source/mesh-parent-output"
+      ],
+      "output": "/tmp/isaac51-source/mesh-parent-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t116.log",
+      "metrics": {
+        "merged_path": "/Merged/Source_0",
+        "faces": 12,
+        "subsets": 2,
+        "sources_active": [
+          false,
+          false
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "topology": true,
+        "materials": true,
+        "sources_deactivated": true
+      },
+      "input_sha256": {
+        "run.py": "4cfdc6778c0fa7bf59266703f1056d9897a452612d4a79f26e53412f5e9c79b2"
+      },
+      "learning_order": 33,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/33_importers_util_merge_mesh/run.py",
+        "--headless",
+        "--frames",
+        "5",
+        "--output",
+        "/tmp/isaac51-source/mesh-parent-output"
+      ]
+    },
+    {
+      "id": "t127",
+      "package": "src/43_robot_setup_pickplace_example",
+      "title": "Tutorial 9: Pick and Place Example",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/robot_setup_pickplace_example/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix2/ur10_ik-output",
+        "--exercise",
+        "ik"
+      ],
+      "output": "/tmp/isaac51-source/matrix2/ur10_ik-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t127.log",
+      "metrics": {
+        "target_error_m": 0.0009520575986243784,
+        "ik_failures": 0
+      },
+      "checks": {
+        "process_exit": true,
+        "target": true
+      },
+      "input_sha256": {
+        "run.py": "ca743a55a0b6473f9275b62f07691e01da83e5ecc28e055f60295e186faa7723",
+        "config/ur10e_kinematics.urdf": "9b123c4f2a58fadb799a3bb6a1c64d9fd4b9d1c63c4eea9e4734869e83ed535f",
+        "config/robot_descriptor.yaml": "4bd423a26f544719be2a1671bdee7d8af8ee58303c79d56791fb86b3b22c1756",
+        "config/ur10e_rmpflow_common.yaml": "aec7d47787cb05c139538501239857ebb05ceb40095be5dba4589460f8ea0616"
+      },
+      "learning_order": 43,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/43_robot_setup_pickplace_example/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix2/ur10_ik-output",
+        "--exercise",
+        "ik"
+      ]
+    },
+    {
+      "id": "t132",
+      "package": "src/50_importers_asset_validation",
+      "title": "Asset Validation",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_asset_validation/run.py",
+        "--headless",
+        "--frames",
+        "5",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/asset_validation-output"
+      ],
+      "output": "/tmp/isaac51-source/importer-matrix/asset_validation-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t132.log",
+      "metrics": {
+        "issues_before": 4,
+        "issues_after": 0
+      },
+      "checks": {
+        "process_exit": true,
+        "real_rule_repairs": true
+      },
+      "input_sha256": {
+        "run.py": "a8933aa5156b105d9088bd4d9ea46d4edb88fdbbb27c40c4f8671e5fe5696964"
+      },
+      "learning_order": 50,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/50_importers_asset_validation/run.py",
+        "--headless",
+        "--frames",
+        "5",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/asset_validation-output"
+      ]
+    },
+    {
+      "id": "t138",
+      "package": "src/54_motion_manipulators_lula_kinematics",
+      "title": "Lula Kinematics Solver",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/motion_manipulators_lula_kinematics/run.py",
+        "--headless",
+        "--steps",
+        "180",
+        "--output",
+        "/tmp/isaac51-source/matrix/lula_ik-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/lula_ik-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t138.log",
+      "metrics": {
+        "last_position_error_m": 0.00104181254329367
+      },
+      "checks": {
+        "process_exit": true,
+        "solved": true,
+        "actual_goal": true
+      },
+      "input_sha256": {
+        "run.py": "c42fe6748707d213ff3bc37f95d74a5495e90ba440f69b1282d5ef819d06c8a5"
+      },
+      "learning_order": 54,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/54_motion_manipulators_lula_kinematics/run.py",
+        "--headless",
+        "--steps",
+        "180",
+        "--output",
+        "/tmp/isaac51-source/matrix/lula_ik-output"
+      ]
+    },
+    {
+      "id": "t139",
+      "package": "src/55_motion_manipulators_lula_trajectory_generator",
+      "title": "Lula Trajectory Generator",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/motion_manipulators_lula_trajectory_generator/run.py",
+        "--headless",
+        "--steps",
+        "600",
+        "--output",
+        "/tmp/isaac51-source/trajectory-fixed-output"
+      ],
+      "output": "/tmp/isaac51-source/trajectory-fixed-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t139.log",
+      "metrics": {
+        "completed_sequence": true,
+        "action_count": 349,
+        "max_joint_error_rad": 7.245266719024812e-06,
+        "ground_z_m": -2.0
+      },
+      "checks": {
+        "process_exit": true,
+        "full_sequence": true,
+        "tracking": true
+      },
+      "input_sha256": {
+        "run.py": "41da74ad8a5804d77b54d2fc5a4acad0616b69bf4270431ca1e7253c46c7c97f"
+      },
+      "learning_order": 55,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/55_motion_manipulators_lula_trajectory_generator/run.py",
+        "--headless",
+        "--steps",
+        "600",
+        "--output",
+        "/tmp/isaac51-source/trajectory-fixed-output"
+      ]
+    },
+    {
+      "id": "t136",
+      "package": "src/56_motion_manipulators_rmpflow",
+      "title": "Lula RMPflow",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/motion_manipulators_rmpflow/run.py",
+        "--headless",
+        "--steps",
+        "180",
+        "--output",
+        "/tmp/isaac51-source/matrix/rmpflow-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/rmpflow-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t136.log",
+      "metrics": {
+        "last_position_error_m": 0.002240093072170879
+      },
+      "checks": {
+        "process_exit": true,
+        "actual_tracking": true
+      },
+      "input_sha256": {
+        "run.py": "c50cc34a64b3c8779937b9a27cb1536b9fbab97c65b644bd8d04f5b647a29c87"
+      },
+      "learning_order": 56,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/56_motion_manipulators_rmpflow/run.py",
+        "--headless",
+        "--steps",
+        "180",
+        "--output",
+        "/tmp/isaac51-source/matrix/rmpflow-output"
+      ]
+    },
+    {
+      "id": "t137",
+      "package": "src/57_motion_manipulators_lula_rrt",
+      "title": "Lula RRT",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/motion_manipulators_lula_rrt/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix2/rrt-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix2/rrt-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t137.log",
+      "metrics": {
+        "planning_records": 1,
+        "record_keys": [
+          "step",
+          "target_m",
+          "success",
+          "joint_positions",
+          "joint_indices"
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "plan": true
+      },
+      "input_sha256": {
+        "run.py": "96e9cae893f51b2bb577d304d79dbec514da0f5ebef95546b64459924c219305"
+      },
+      "learning_order": 57,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/57_motion_manipulators_lula_rrt/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix2/rrt-output"
+      ]
+    },
+    {
+      "id": "t145",
+      "package": "src/62_sensors_sensors_camera",
+      "title": "Camera Sensors",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/sensors_sensors_camera/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/camera-fixed-output"
+      ],
+      "output": "/tmp/isaac51-source/camera-fixed-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t145.log",
+      "metrics": {
+        "image_shape": [
+          480,
+          640,
+          4
+        ],
+        "projected_points": [
+          [
+            320.00000267149596,
+            318.0487804878049
+          ],
+          [
+            320.0,
+            240.00000000000003
+          ],
+          [
+            319.9999973285041,
+            161.95121951219514
+          ]
+        ],
+        "lower_pixel_rgb": [
+          64,
+          218,
+          246
+        ],
+        "upper_pixel_rgb": [
+          246,
+          218,
+          64
+        ]
+      },
+      "checks": {
+        "shape": true,
+        "blue_cube_at_projected_pixel": true,
+        "red_cube_at_projected_pixel": true
+      },
+      "input_sha256": {
+        "run.py": "42def3dc5e9560c3e8b50390f392187a735a5cba7aa3fd090249b514cdbd8512"
+      },
+      "learning_order": 62,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/62_sensors_sensors_camera/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/camera-fixed-output"
+      ]
+    },
+    {
+      "id": "t152",
+      "package": "src/65_sensors_sensors_physics_contact",
+      "title": "Contact Sensor",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/sensors_sensors_physics_contact/run.py",
+        "--headless",
+        "--steps",
+        "180",
+        "--output",
+        "/tmp/isaac51-source/matrix/contact-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/contact-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t152.log",
+      "metrics": {
+        "samples": 180,
+        "rest_force_N": 9.80999960899353
+      },
+      "checks": {
+        "process_exit": true,
+        "contact": true,
+        "weight": true
+      },
+      "input_sha256": {
+        "run.py": "0c2134f60536ea0bb63bab0c07732a084fcce655b5e0fd7ee44d6a58ef43e87d"
+      },
+      "learning_order": 65,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/65_sensors_sensors_physics_contact/run.py",
+        "--headless",
+        "--steps",
+        "180",
+        "--output",
+        "/tmp/isaac51-source/matrix/contact-output"
+      ]
+    },
+    {
+      "id": "t153",
+      "package": "src/66_sensors_sensors_physics_effort",
+      "title": "Effort Sensor",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/sensors_sensors_physics_effort/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix/effort-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/effort-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t153.log",
+      "metrics": {
+        "samples": 120,
+        "last_torque_Nm": -11.040670394897461,
+        "last_sensor_time": 2.0000000000000004
+      },
+      "checks": {
+        "process_exit": true,
+        "valid": true,
+        "nonzero_torque": true,
+        "advancing_time": true
+      },
+      "input_sha256": {
+        "run.py": "fd81f47dfbb4c9fc94bd54895edfe1c18abd1d6d622cf1f62a6c534431193ce6"
+      },
+      "learning_order": 66,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/66_sensors_sensors_physics_effort/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix/effort-output"
+      ]
+    },
+    {
+      "id": "t154",
+      "package": "src/67_sensors_sensors_physics_imu",
+      "title": "IMU Sensor",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/sensors_sensors_physics_imu/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix/imu-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/imu-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t154.log",
+      "metrics": {
+        "samples": 120,
+        "rest_acceleration_z": 9.810001420974732
+      },
+      "checks": {
+        "process_exit": true,
+        "freefall": true,
+        "rest_gravity": true
+      },
+      "input_sha256": {
+        "run.py": "b3dd2c6a1358c52acd28747b7d99ac1e1874848f33858e114ec587908e2f5109"
+      },
+      "learning_order": 67,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/67_sensors_sensors_physics_imu/run.py",
+        "--headless",
+        "--steps",
+        "120",
+        "--output",
+        "/tmp/isaac51-source/matrix/imu-output"
+      ]
+    },
+    {
+      "id": "t156",
+      "package": "src/69_sensors_sensors_physx_generic",
+      "title": "PhysX SDK Generic Sensor",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/sensors_sensors_physx_generic/run.py",
+        "--headless",
+        "--steps",
+        "30",
+        "--output",
+        "/tmp/isaac51-source/matrix/physx_generic-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/physx_generic-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t156.log",
+      "metrics": {
+        "batches_sent": 2,
+        "rays_in_batch": 12000,
+        "last_depth_count": 40,
+        "min_depth_m": 4.975386619567871
+      },
+      "checks": {
+        "process_exit": true,
+        "actual_depths": true
+      },
+      "input_sha256": {
+        "run.py": "09bc2b1bc082cf3195a0d0af236d4f9d39fb1b73db9a2d23d3dfdf8f125a296e"
+      },
+      "learning_order": 69,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/69_sensors_sensors_physx_generic/run.py",
+        "--headless",
+        "--steps",
+        "30",
+        "--output",
+        "/tmp/isaac51-source/matrix/physx_generic-output"
+      ]
+    },
+    {
+      "id": "t158",
+      "package": "src/71_sensors_sensors_physx_lightbeam",
+      "title": "PhysX SDK Lightbeam Sensor",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/sensors_sensors_physx_lightbeam/run.py",
+        "--headless",
+        "--steps",
+        "30",
+        "--output",
+        "/tmp/isaac51-source/matrix/lightbeam-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/lightbeam-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t158.log",
+      "metrics": {
+        "detected_depth_m": [
+          2.75
+        ],
+        "final_beam_hits": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "moving_target": true
+      },
+      "input_sha256": {
+        "run.py": "4399f4481d0c989f701dfb105ed91ee52823ba99c4714408d41b1ba771e118f0"
+      },
+      "learning_order": 71,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/71_sensors_sensors_physx_lightbeam/run.py",
+        "--headless",
+        "--steps",
+        "30",
+        "--output",
+        "/tmp/isaac51-source/matrix/lightbeam-output"
+      ]
+    },
+    {
+      "id": "t147",
+      "package": "src/72_sensors_sensors_rtx_lidar",
+      "title": "RTX Lidar Sensor",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/sensors_sensors_rtx_lidar/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix/rtx_lidar-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/rtx_lidar-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t147.log",
+      "metrics": {
+        "last_cloud_shape": [
+          41315,
+          3
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "actual_points": true
+      },
+      "input_sha256": {
+        "run.py": "a25449a67affab9c692c6c1ab39029b7d0c123149a7dd91852c7ff960f06e1c3"
+      },
+      "learning_order": 72,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/72_sensors_sensors_rtx_lidar/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix/rtx_lidar-output"
+      ]
+    },
+    {
+      "id": "t009",
+      "package": "src/106_ros2_ros2_clock",
+      "title": "ROS 2 Clock",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/ros2_ros2_clock/run.py",
+        "--headless",
+        "--steps",
+        "240"
+      ],
+      "output": "/tmp/isaac51-source/clock-receiver.json",
+      "log": ".omo/work/isaac51-catalog/evidence/t009.log",
+      "metrics": {
+        "received": 100,
+        "first": 0.050000002,
+        "last": 1.700000088,
+        "strictly_increasing": true
+      },
+      "checks": {
+        "real_ROS_receiver": true,
+        "monotonic": true
+      },
+      "input_sha256": {
+        "run.py": "f8ed8b465afb2f96b615a4d46e05c9e0cc4c294bc9e8f724eee0449b5168cc2f"
+      },
+      "learning_order": 106,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/106_ros2_ros2_clock/run.py",
+        "--headless",
+        "--steps",
+        "240"
+      ]
+    },
+    {
+      "id": "t037",
+      "package": "src/134_replicator_replicator_getting_started",
+      "title": "Getting Started Scripts",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/replicator_replicator_getting_started/run.py",
+        "--example",
+        "basic",
+        "--headless",
+        "--frames",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/replicator-basic-output"
+      ],
+      "output": "/tmp/isaac51-source/replicator-basic-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t037.log",
+      "metrics": {
+        "rgb_frames": 2,
+        "bbox_counts": [
+          1,
+          1
+        ]
+      },
+      "checks": {
+        "rgb": true,
+        "nonempty_labels": true
+      },
+      "input_sha256": {
+        "run.py": "1fa81bb58908c04d83055cb8f635054ec959e53d273695627fd38da260a0fe39"
+      },
+      "learning_order": 134,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/134_replicator_replicator_getting_started/run.py",
+        "--example",
+        "basic",
+        "--headless",
+        "--frames",
+        "2",
+        "--output",
+        "/tmp/isaac51-source/replicator-basic-output"
+      ]
+    },
+    {
+      "id": "t047",
+      "package": "src/135_replicator_replicator_isaac_randomizers",
+      "title": "Randomization Snippets",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/replicator_replicator_isaac_randomizers/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/randomizers-output"
+      ],
+      "output": "/tmp/isaac51-source/more/randomizers-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t047.log",
+      "metrics": {
+        "lights": [
+          {
+            "position": [
+              -1.9508870104080982,
+              -1.5504045556790569,
+              2.785674723101485
+            ],
+            "intensity": 13257.964101799003,
+            "temperature_K": 3521.19285271608
+          },
+          {
+            "position": [
+              -1.4103951161588864,
+              0.9626207957600244,
+              3.3243333110305264
+            ],
+            "intensity": 5048.677865173951,
+            "temperature_K": 5585.441087248501
+          },
+          {
+            "position": [
+              -1.627554442937726,
+              -1.9185341665074858,
+              3.879603831286267
+            ],
+            "intensity": 9044.187174163748,
+            "temperature_K": 3832.187687388241
+          }
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "lights": true
+      },
+      "input_sha256": {
+        "run.py": "ef89435d9da71e7ba001090cffd769a31cba9a02b8db4c260ee7093d8d8e9712",
+        "simready_lab.py": "80f0be4a86333c72ca69178cf1c1dc2a1835a65c6e58d1840d0012206315c2d3"
+      },
+      "learning_order": 135,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/135_replicator_replicator_isaac_randomizers/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/randomizers-output"
+      ]
+    },
+    {
+      "id": "t048",
+      "package": "src/136_replicator_replicator_isaac_snippets",
+      "title": "Useful Snippets",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/replicator_replicator_isaac_snippets/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/sdg_snippets-output"
+      ],
+      "output": "/tmp/isaac51-source/more/sdg_snippets-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t048.log",
+      "metrics": {
+        "camera_sizes": [
+          [
+            320,
+            240
+          ],
+          [
+            400,
+            240
+          ],
+          [
+            480,
+            240
+          ]
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "three_render_products": true
+      },
+      "input_sha256": {
+        "run.py": "d8d0ef81cf568b9dfda05f5c4373c66a048ae691eaaf5dfb3bca1366591965e4"
+      },
+      "learning_order": 136,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/136_replicator_replicator_isaac_snippets/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/sdg_snippets-output"
+      ]
+    },
+    {
+      "id": "t044",
+      "package": "src/139_replicator_replicator_augmentation",
+      "title": "Data Augmentation",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/replicator_replicator_augmentation/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/augmentation-output"
+      ],
+      "output": "/tmp/isaac51-source/more/augmentation-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t044.log",
+      "metrics": {
+        "frame": 0,
+        "shape": [
+          240,
+          320,
+          4
+        ],
+        "small_noise_std_m": 0.10048652440309525,
+        "large_noise_std_m": 0.502432644367218,
+        "red_blue_swap_exact": true
+      },
+      "checks": {
+        "process_exit": true,
+        "channel_swap": true,
+        "noise_scales": true
+      },
+      "input_sha256": {
+        "run.py": "2cd0ab98f84a5dfc8e6aa70543582feaef3031faceba63f842033ec400997e78",
+        "filters.py": "e9c8d13b2f8742154dbacee7fba327a6f44d0cc91f4fe9ec38137f4c47d2989c"
+      },
+      "learning_order": 139,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/139_replicator_replicator_augmentation/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/augmentation-output"
+      ]
+    },
+    {
+      "id": "t045",
+      "package": "src/140_replicator_replicator_custom_og_randomizer",
+      "title": "Custom Replicator Randomization Nodes",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/replicator_replicator_custom_og_randomizer/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/custom_og-output"
+      ],
+      "output": "/tmp/isaac51-source/more/custom_og-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t045.log",
+      "metrics": {
+        "min_radius": 0.18288729200406004,
+        "max_radius": 0.6996374467743788,
+        "sample_count": 30
+      },
+      "checks": {
+        "process_exit": true,
+        "sphere_samples": true
+      },
+      "input_sha256": {
+        "run.py": "9980a25092ddc9e80a0d76c40de61f0a8a2eef10b291d4ce0efe1f9dab21c0e0",
+        "sphere_node.py": "df83e1140278de9acc2c1337d4ecbfcad996b82102c8ff2c868ce0bde930bce7"
+      },
+      "learning_order": 140,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/140_replicator_replicator_custom_og_randomizer/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/custom_og-output"
+      ]
+    },
+    {
+      "id": "t046",
+      "package": "src/141_replicator_replicator_modular_scripting",
+      "title": "Modular Behavior Scripting",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/replicator_replicator_modular_scripting/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/behavior-output"
+      ],
+      "output": "/tmp/isaac51-source/more/behavior-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t046.log",
+      "metrics": {
+        "frame": 0,
+        "time_s": 0.03333333507180214,
+        "target_position": [
+          0.12191428520636083,
+          -0.1587321074991621,
+          0.902993325101275
+        ],
+        "orbit_position": [
+          -0.3812491508768334,
+          0.7033129352967238,
+          1.8
+        ],
+        "light_intensity": 14904.982421875
+      },
+      "checks": {
+        "process_exit": true,
+        "behavior_outputs": true
+      },
+      "input_sha256": {
+        "run.py": "83c108bc0d2d19d88c6f4c9e798bad5e862341836fc28dc64968d6edde36e562",
+        "orbit_behavior.py": "f9f7e086b0267b4926ae58f08b3af5581b8eaacc3d27e2fb7011c12e0f07745e"
+      },
+      "learning_order": 141,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/141_replicator_replicator_modular_scripting/run.py",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/behavior-output"
+      ]
+    },
+    {
+      "id": "t059",
+      "package": "src/145_events_ext_replicator_object_setting",
+      "title": "Setting",
+      "status": "partial_runtime_verified",
+      "command": [
+        "python3",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/events_ext_replicator_object_setting/run.py",
+        "--launch",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/iro-setting-fixed-output"
+      ],
+      "output": "/tmp/isaac51-source/iro-setting-fixed-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t059.log",
+      "metrics": {
+        "image_size": [
+          640,
+          480
+        ],
+        "annotation_count": 2
+      },
+      "checks": {
+        "image": true,
+        "labels": true,
+        "depth_normal": true
+      },
+      "input_sha256": {
+        "rgb_only.yaml": "3e9431c922efb928297c2fcf9d7f0d1cee94afd663d7a436959dd098ca82dc64",
+        "run.py": "2a049bc080cee531ac4270d2c299ac9854cad7f724aeaf7eb7adb8fcd2931ad7",
+        "scene.yaml": "bce7fe79b961c0b1d8eae6f7a9df3488c8b341722a9b0ae24e3bca5761e2e5d3"
+      },
+      "learning_order": 145,
+      "replay_command": [
+        "python3",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/145_events_ext_replicator_object_setting/run.py",
+        "--launch",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/iro-setting-fixed-output"
+      ]
+    },
+    {
+      "id": "t066",
+      "package": "src/152_events_ext_replicator_object_harmonizer",
+      "title": "Harmonizer",
+      "status": "partial_runtime_verified",
+      "command": [
+        "python3",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/events_ext_replicator_object_harmonizer/run.py",
+        "--launch",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/iro_harmonizer-output"
+      ],
+      "output": "/tmp/isaac51-source/more/iro_harmonizer-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t066.log",
+      "metrics": {
+        "annotation_count": 5,
+        "image_count": 1
+      },
+      "checks": {
+        "process_exit": true,
+        "objects_and_image": true
+      },
+      "input_sha256": {
+        "run.py": "2a049bc080cee531ac4270d2c299ac9854cad7f724aeaf7eb7adb8fcd2931ad7",
+        "bin_pack.yaml": "174bdd1788f619b6ccf03803cf8e39c94e5febd69c0eb785812206f36c0fc9a8",
+        "scene.yaml": "22ffc2ade7a0a89da6948dffbc47f1b88f182bd9f16e674e00a58f647bec8032"
+      },
+      "learning_order": 152,
+      "replay_command": [
+        "python3",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/152_events_ext_replicator_object_harmonizer/run.py",
+        "--launch",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/iro_harmonizer-output"
+      ]
+    },
+    {
+      "id": "t067",
+      "package": "src/153_events_ext_replicator_object_macro",
+      "title": "Macro",
+      "status": "partial_runtime_verified",
+      "command": [
+        "python3",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/events_ext_replicator_object_macro/run.py",
+        "--launch",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/iro_macro-output"
+      ],
+      "output": "/tmp/isaac51-source/more/iro_macro-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t067.log",
+      "metrics": {
+        "annotation_count": 4,
+        "image_count": 1
+      },
+      "checks": {
+        "process_exit": true,
+        "objects_and_image": true
+      },
+      "input_sha256": {
+        "run.py": "2a049bc080cee531ac4270d2c299ac9854cad7f724aeaf7eb7adb8fcd2931ad7",
+        "scene.yaml": "41e9d504199e7b97c36ba5f7c0055bf3158e29619e5cd283b797cb26e7c7a193"
+      },
+      "learning_order": 153,
+      "replay_command": [
+        "python3",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/153_events_ext_replicator_object_macro/run.py",
+        "--launch",
+        "--headless",
+        "--frames",
+        "1",
+        "--output",
+        "/tmp/isaac51-source/more/iro_macro-output"
+      ]
+    },
+    {
+      "id": "t005",
+      "package": "src/163_motion_cloner",
+      "title": "Getting Started with Cloner",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/motion_cloner/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix/cloner-output"
+      ],
+      "output": "/tmp/isaac51-source/matrix/cloner-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t005.log",
+      "metrics": {
+        "clone_count": 4,
+        "final_z": [
+          0.559761643409729,
+          0.559761643409729,
+          0.5597617030143738,
+          0.5597617030143738
+        ]
+      },
+      "checks": {
+        "process_exit": true,
+        "four_clones": true,
+        "all_fall": true
+      },
+      "input_sha256": {
+        "run.py": "88a16e489fb6a0a945484b93011d40f36085c07c7421fbc4471d6766ec937bb1"
+      },
+      "learning_order": 163,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/163_motion_cloner/run.py",
+        "--headless",
+        "--steps",
+        "60",
+        "--output",
+        "/tmp/isaac51-source/matrix/cloner-output"
+      ]
+    },
+    {
+      "id": "t114",
+      "package": "src/175_importers_shapenet_importer",
+      "title": "Tutorial: ShapeNet Importer",
+      "status": "partial_runtime_verified",
+      "command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_shapenet_importer/run.py",
+        "--headless",
+        "--frames",
+        "5",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/obj-output"
+      ],
+      "output": "/tmp/isaac51-source/importer-matrix/obj-output",
+      "log": ".omo/work/isaac51-catalog/evidence/t114.log",
+      "metrics": {
+        "converted_usd_bytes": 1436
+      },
+      "checks": {
+        "process_exit": true,
+        "converted_file": true
+      },
+      "input_sha256": {
+        "run.py": "aa45c4c0b92ad175d9bc7b90c85fa6d1c6e6c04f7f642c702e188c6ba4a98211",
+        "sample.obj": "561c2c8d594a11aba01be040ca28ba7557a64ddf57b98dc31ae3ecb679c66fc0"
+      },
+      "learning_order": 175,
+      "replay_command": [
+        "/home/hoyunkim/isaacsim/python.sh",
+        "/home/hoyunkim/robotics-sim-tutorial-kr/src/175_importers_shapenet_importer/run.py",
+        "--headless",
+        "--frames",
+        "5",
+        "--output",
+        "/tmp/isaac51-source/importer-matrix/obj-output"
+      ]
+    }
+  ],
+  "package_path_update": {
+    "date": "2026-09-15",
+    "note": "package와 replay_command는 학습 순서에 따라 변경한 현재 경로입니다. command와 metrics는 2026-09-14 실제 실행 당시 기록을 보존합니다. 시뮬레이션 코드와 입력 설정은 변경하지 않았습니다."
+  },
+  "gui_lifetime_update": {
+    "date": "2026-09-15",
+    "scope": "GUI lifetime changes: actual Kit/GPU checks for listed cases only; previous36 records retain their historical input hashes. CPU regression tests verify Python control flow with external SDK fakes, not physics/rendering/ROS execution.",
+    "regression_command": "python3 -m unittest discover -s tests -v",
+    "regression_tests_passed": 27,
+    "records": [
+      {
+        "case": "01-default",
+        "script": "src/01_core_core_hello_world/run.py",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/01_core_core_hello_world/run.py",
+          "--output",
+          "/tmp/isaac-gui-default-01-20260915"
+        ],
+        "input_sha256": "e80ef814007e7d3bf911fc6bdbdec2cd72ed69818654352fc14a5f16fe3109d2",
+        "exit_code": 0,
+        "observation": {
+          "samples": 5597,
+          "old_default": 300,
+          "window_close_event": "WM_DELETE_WINDOW"
+        },
+        "output": "/tmp/isaac-gui-default-01-20260915",
+        "log": ".omo/work/gui-unlimited/runtime-01-default.log"
+      },
+      {
+        "case": "01-explicit",
+        "script": "src/01_core_core_hello_world/run.py",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/01_core_core_hello_world/run.py",
+          "--steps",
+          "120",
+          "--output",
+          "/tmp/isaac-gui-explicit-01-20260915"
+        ],
+        "input_sha256": "e80ef814007e7d3bf911fc6bdbdec2cd72ed69818654352fc14a5f16fe3109d2",
+        "exit_code": 0,
+        "observation": {
+          "samples": 120,
+          "automatic_exit": true
+        },
+        "output": "/tmp/isaac-gui-explicit-01-20260915",
+        "log": ".omo/work/gui-unlimited/runtime-01-explicit.log"
+      },
+      {
+        "case": "01-headless",
+        "script": "src/01_core_core_hello_world/run.py",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/01_core_core_hello_world/run.py",
+          "--headless",
+          "--output",
+          "/tmp/isaac-headless-default-01-20260915"
+        ],
+        "input_sha256": "e80ef814007e7d3bf911fc6bdbdec2cd72ed69818654352fc14a5f16fe3109d2",
+        "exit_code": 0,
+        "observation": {
+          "samples": 300,
+          "automatic_exit": true
+        },
+        "output": "/tmp/isaac-headless-default-01-20260915",
+        "log": ".omo/work/gui-unlimited/runtime-01-headless.log"
+      },
+      {
+        "case": "62-default",
+        "script": "src/62_sensors_sensors_camera/run.py",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/62_sensors_sensors_camera/run.py",
+          "--output",
+          "/tmp/isaac-gui-default-62-20260915"
+        ],
+        "input_sha256": "f190cdba599c31250468b651cd9264dc419be64271df1dc1d794e71c080280cb",
+        "exit_code": 0,
+        "observation": {
+          "rgba_shape": [
+            480,
+            640,
+            4
+          ],
+          "window_alive_after_save": true,
+          "window_close_event": "WM_DELETE_WINDOW"
+        },
+        "output": "/tmp/isaac-gui-default-62-20260915",
+        "log": ".omo/work/gui-unlimited/runtime-62-default.log"
+      },
+      {
+        "case": "132-default",
+        "script": "src/132_replicator_replicator_overview/run.py",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/132_replicator_replicator_overview/run.py",
+          "--frames",
+          "1",
+          "--output",
+          "/tmp/isaac-gui-default-132-20260915"
+        ],
+        "input_sha256": "7728fd86caf627ae5667590c47f8239c57e519d428720c03369d97be998998cd",
+        "exit_code": 0,
+        "observation": {
+          "rgb_count": 1,
+          "window_alive_after_save": true,
+          "window_close_event": "WM_DELETE_WINDOW"
+        },
+        "output": "/tmp/isaac-gui-default-132-20260915",
+        "log": ".omo/work/gui-unlimited/runtime-132-default.log"
+      },
+      {
+        "case": "132-explicit",
+        "script": "src/132_replicator_replicator_overview/run.py",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/132_replicator_replicator_overview/run.py",
+          "--frames",
+          "1",
+          "--steps",
+          "2",
+          "--output",
+          "/tmp/isaac-gui-explicit-132-20260915"
+        ],
+        "input_sha256": "7728fd86caf627ae5667590c47f8239c57e519d428720c03369d97be998998cd",
+        "exit_code": 0,
+        "observation": {
+          "rgb_count": 1,
+          "automatic_exit": true
+        },
+        "output": "/tmp/isaac-gui-explicit-132-20260915",
+        "log": ".omo/work/gui-unlimited/runtime-132-explicit.log"
+      }
+    ],
+    "supplemental_checks": [
+      {
+        "case": "native-adapter-default",
+        "script": "src/169_replicator_replicator_infinigen_sdg/native_runner.py",
+        "input_sha256": "d7056f9576e29f4d7a83641ee82559e4e93f7fb1228b64236b8da31616909db4",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/169_replicator_replicator_infinigen_sdg/native_runner.py",
+          ".omo/work/gui-unlimited/finite_native_example.py"
+        ],
+        "scope": "Real Kit with a small finite test fixture; full Infinigen generation was not executed. Native app.close() deferred, GUI remained alive until WM_DELETE_WINDOW, then cleanup completed.",
+        "exit_code": 0,
+        "log": ".omo/work/gui-unlimited/runtime-native-adapter-default.log"
+      },
+      {
+        "case": "06-urdf-explicit",
+        "script": "src/06_python_usd_manual_standalone_python/urdf_import.py",
+        "input_sha256": "e54c02f88738056e94ea0436e1daa02af4ebb6cf758e244c052bb58cdcc1598d",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/06_python_usd_manual_standalone_python/urdf_import.py",
+          "--headless",
+          "--steps",
+          "5"
+        ],
+        "scope": "Imported installed Carter URDF, initialized valid articulation at /carter/chassis_link, then bounded exit; GUI/manual robot editing not tested.",
+        "exit_code": 0,
+        "log": ".omo/work/gui-unlimited/runtime-06-urdf-explicit.log"
+      },
+      {
+        "case": "63-depth-headless",
+        "script": "src/63_sensors_sensors_camera_depth/add_depth_sensor.py",
+        "input_sha256": "a99fc10ee6a92ac202996d2fd03440a1219a9fe5c61aa941bda3341b8de3f13b",
+        "command": [
+          "/home/hoyunkim/isaacsim/python.sh",
+          "src/63_sensors_sensors_camera_depth/add_depth_sensor.py",
+          "--headless",
+          "--output",
+          "/tmp/isaac-depth-lifetime-63-20260915.usda"
+        ],
+        "scope": "Exported actual /root/Camera + template render-product asset and bounded headless exit; depth capture is not part of this authoring test.",
+        "exit_code": 0,
+        "log": ".omo/work/gui-unlimited/runtime-63-depth-headless.log"
+      }
+    ]
+  }
+}

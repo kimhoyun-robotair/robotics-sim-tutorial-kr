@@ -1,0 +1,35 @@
+{
+  "id": "t105",
+  "title": "Data Logging",
+  "category": "core",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_advanced_data_logging.html",
+  "title_ko": "실제 관절 상태와 목표를 기록하고 재생하기",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "inspect_log.py",
+    "run.py",
+    "TUTORIAL.md",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Isaac Sim 5.1의 Franka `/Isaac/Robots/FrankaRobotics/FrankaPanda/franka.usd`, `isaacsim.robot.manipulators.examples`와 내장 Lula/RMPflow가 필요합니다. `inspect_log.py`만 실행할 때는 Python 3 표준 라이브러리로 충분합니다. 기록 파일은 이 폴더에서 직접 생성합니다."
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "recorded_frames": 120
+    },
+    "checks": {
+      "process_exit": true,
+      "actual_frames": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 27,
+  "learning_stage": "physics_core"
+}

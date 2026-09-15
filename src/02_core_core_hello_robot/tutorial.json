@@ -1,0 +1,34 @@
+{
+  "id": "t099",
+  "title": "Hello Robot",
+  "category": "core",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_robot.html",
+  "title_ko": "Jetbot을 불러오고 바퀴 관절을 직접 움직이기",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "TUTORIAL.md",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Isaac Sim 5.1 에셋 루트의 `/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`가 필요합니다. 기본 asset root가 네트워크 주소면 접근이 필요합니다. 에셋 팩을 로컬에 둔 경우 `--asset /절대경로/Isaac/Robots/NVIDIA/Jetbot/jetbot.usd`로 지정할 수 있습니다."
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "forward_displacement_m": 0.26874056458473206
+    },
+    "checks": {
+      "two_wheel_dofs": true,
+      "forward_motion": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 2,
+  "learning_stage": "first_steps"
+}

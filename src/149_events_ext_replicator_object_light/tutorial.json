@@ -1,0 +1,29 @@
+{
+  "id": "t063",
+  "title": "Light",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/light.html",
+  "mode": "extension",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "dome.yaml",
+    "run.py",
+    "scene.yaml",
+    "sky.png"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "isaacsim.replicator.object 0.4.x",
+    "NVIDIA RTX GPU and compatible driver",
+    "PyYAML (bundled with Isaac Sim)"
+  ],
+  "verification": "not_run",
+  "native_workflow": "IRO YAML description via Object SDG",
+  "source_specific_variants": [
+    "scene",
+    "dome"
+  ],
+  "learning_order": 149,
+  "learning_stage": "object_sdg"
+}

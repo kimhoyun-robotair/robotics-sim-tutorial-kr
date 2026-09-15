@@ -1,0 +1,20 @@
+{
+  "id": "t160",
+  "title": "Physics Inspector",
+  "category": "sensors",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/joint_inspector.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 and its python.sh",
+    "Supported NVIDIA GPU/driver"
+  ],
+  "verification": "not_run",
+  "title_ko": "Physics Inspector로 관절 편집",
+  "learning_order": 21,
+  "learning_stage": "physics_core"
+}

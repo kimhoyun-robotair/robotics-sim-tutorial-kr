@@ -1,0 +1,23 @@
+{
+  "id": "t020",
+  "title": "ROS 2 Ackermann Controller",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_ackermann_controller.html",
+  "mode": "script_editor",
+  "entrypoint": "setup_stage.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "drive.py",
+    "setup_stage.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble or Jazzy",
+    "ackermann_msgs",
+    "Leatherback 5.1 USD asset",
+    "Supported NVIDIA GPU"
+  ],
+  "verification": "not_run",
+  "learning_order": 118,
+  "learning_stage": "ros2_basics"
+}

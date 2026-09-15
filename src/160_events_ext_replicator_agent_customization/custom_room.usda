@@ -1,0 +1,29 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+def Xform "World"
+{
+    def Mesh "Floor"
+    {
+        point3f[] points = [(-6,-6,0), (6,-6,0), (6,6,0), (-6,6,0)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0,1,2,3]
+        uniform token subdivisionScheme = "none"
+        color3f[] primvars:displayColor = [(0.35,0.4,0.45)]
+    }
+    def Cube "Obstacle"
+    {
+        double size = 2
+        double3 xformOp:translate = (0,0,1)
+        double3 xformOp:scale = (1,0.5,1)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        color3f[] primvars:displayColor = [(0.8,0.3,0.1)]
+    }
+    def DomeLight "Light"
+    {
+        float inputs:intensity = 1000
+    }
+}

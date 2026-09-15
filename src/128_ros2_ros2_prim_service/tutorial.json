@@ -1,0 +1,23 @@
+{
+  "id": "t029",
+  "title": "ROS 2 Service for Manipulating Prims Attributes",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_prim_service.html",
+  "mode": "script_editor",
+  "entrypoint": "setup_stage.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "attribute_client.py",
+    "setup_stage.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble or Jazzy",
+    "isaacsim.ros2.bridge",
+    "Supported NVIDIA GPU",
+    "Native ROS isaac_ros2_messages package from IsaacSim-5.1.0 workspace"
+  ],
+  "verification": "not_run",
+  "learning_order": 128,
+  "learning_stage": "ros2_applications"
+}

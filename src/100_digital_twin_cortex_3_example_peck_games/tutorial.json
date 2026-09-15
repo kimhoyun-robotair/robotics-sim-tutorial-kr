@@ -1,0 +1,25 @@
+{
+  "id": "t083",
+  "title": "Behavior Examples: Peck Games",
+  "category": "digital_twin",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_3_example_peck_games.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "peck_state_machine.py",
+    "run.py",
+    "peck_game.py",
+    "peck_decider_network.py",
+    "NOTICE.md",
+    "LICENSE-NVIDIA-EXAMPLES",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "Isaac Sim 5.1 sample assets"
+  ],
+  "verification": "not_run",
+  "learning_order": 100,
+  "learning_stage": "environments_behaviors"
+}

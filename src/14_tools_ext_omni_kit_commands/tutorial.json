@@ -1,0 +1,18 @@
+{
+  "id": "t169",
+  "title": "Omniverse Commands Tool Extension",
+  "category": "tools",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/debugging/ext_omni_kit_commands.html",
+  "mode": "gui",
+  "entrypoint": null,
+  "artifacts": [
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA GPU and GUI"
+  ],
+  "verification": "not_run",
+  "learning_order": 14,
+  "learning_stage": "python_usd"
+}

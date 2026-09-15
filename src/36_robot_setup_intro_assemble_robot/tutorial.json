@@ -1,0 +1,20 @@
+{
+  "id": "t120",
+  "title": "Tutorial 2: Assemble a Simple Robot",
+  "category": "robot_setup",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_intro_assemble_robot.html",
+  "mode": "gui",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "RTX GPU and GUI display for the interactive lab",
+    "Official asset paths and exact tool setup are repeated in TUTORIAL.md"
+  ],
+  "verification": "not_run",
+  "learning_order": 36,
+  "learning_stage": "robot_authoring"
+}

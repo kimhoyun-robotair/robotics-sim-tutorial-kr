@@ -1,0 +1,43 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+    customLayerData = {
+        dictionary navmeshSettings = {
+            double agentMaxRadius = 0.3
+            double agentMinHeight = 1.5
+            double agentMaxStepHeight = 0.2
+            double agentMaxFloorSlope = 45
+        }
+    }
+)
+def Xform "World" {
+    def Xform "Room" {
+        def Mesh "Floor" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {
+            point3f[] points = [(-6,-5,0),(6,-5,0),(6,5,0),(-6,5,0)]
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0,1,2,3]
+            uniform token subdivisionScheme = "none"
+            color3f[] primvars:displayColor = [(0.55,0.6,0.65)]
+        }
+        def Cube "Occluder" (prepend apiSchemas = ["PhysicsCollisionAPI"]) {
+            double size = 1
+            double3 xformOp:translate = (0,0,1.5)
+            double3 xformOp:scale = (1,4,3)
+            uniform token[] xformOpOrder = ["xformOp:translate","xformOp:scale"]
+            color3f[] primvars:displayColor = [(0.15,0.3,0.65)]
+        }
+    }
+    def NavMeshVolume "NavMeshVolume" (prepend apiSchemas = ["NavMeshAreaAPI"]) {
+        float3[] extent = [(-6,-5,-0.1),(6,5,1.8)]
+        string nav:area = "Walkable"
+    }
+    def DomeLight "Light"
+    {
+        float inputs:intensity = 1000
+    }
+    def Xform "Cameras" {
+
+    }
+}

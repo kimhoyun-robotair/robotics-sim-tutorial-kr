@@ -1,0 +1,21 @@
+{
+  "id": "t150",
+  "title": "RTX Sensor Annotators",
+  "category": "sensors",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx_annotators.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 and its python.sh",
+    "Supported NVIDIA GPU/driver",
+    "isaacsim.sensors.rtx; RTX GPU rendering"
+  ],
+  "verification": "not_run",
+  "title_ko": "RTX annotator의 한 프레임과 누적 스캔",
+  "learning_order": 75,
+  "learning_stage": "sensors"
+}

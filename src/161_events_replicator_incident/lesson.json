@@ -1,0 +1,77 @@
+{
+  "isaacsim.replicator.agent": {
+    "version": "0.7.0",
+    "global": {
+      "seed": 123456,
+      "simulation_length": 90
+    },
+    "scene": {
+      "asset_path": "{ASSETS}/Isaac/Samples/Replicator/Incidents/full_warehouse_with_incident_tags.usd"
+    },
+    "sensor": {
+      "camera_num": 1
+    },
+    "character": {
+      "asset_path": "{ASSETS}/Isaac/People/Characters/",
+      "command_file": "{OUTPUT}/character_commands.txt",
+      "num": 1,
+      "filters": [],
+      "spawn_area": [],
+      "navigation_area": []
+    },
+    "robot": {
+      "command_file": "{OUTPUT}/robot_commands.txt",
+      "nova_carter_num": 0,
+      "iw_hub_num": 0,
+      "write_data": false
+    },
+    "replicator": {
+      "writer": "IRABasicWriter",
+      "parameters": {
+        "output_dir": "{OUTPUT}/capture",
+        "rgb": true,
+        "camera_params": true,
+        "object_info_bounding_box_2d_tight": true,
+        "semantic_filter_predicate": "class:character|robot|incident_toppled_item|incident_flaming_item|incident_leaking_item|incident_liquid_spill;id:*"
+      }
+    },
+    "event": {
+      "event_list": [
+        {
+          "ToppleEvent": {
+            "name": "shelf_topple",
+            "topple_item": {
+              "item": "$random_loose_item$",
+              "topple_nearby_radius": 1.5
+            },
+            "trigger": {
+              "type": "time",
+              "time": 1.0
+            }
+          }
+        }
+      ]
+    },
+    "response": {
+      "response_list": [
+        {
+          "CommandResponse": {
+            "name": "inspect_topple",
+            "priority": 1,
+            "pick_agent": "nearest",
+            "resume": true,
+            "position": "(0, 0, 0)",
+            "commands": [
+              "GoToResponse",
+              "LookAround 2"
+            ],
+            "trigger": {
+              "type": "physical_event",
+              "event_name": "shelf_topple"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "t038",
+  "title": "Scene Based Synthetic Dataset Generation",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "requirements": [
+    "Isaac Sim 5.1.0 full installation",
+    "Supported NVIDIA RTX GPU and driver",
+    "Isaac Sim 5.1 remote asset root or equivalent local mirror"
+  ],
+  "verification": "not_run",
+  "implementation": "Local runnable lesson; NVIDIA Apache-2.0 implementation included where NOTICE.txt is present",
+  "artifacts": [
+    "LICENSE-APACHE-2.0.txt",
+    "NOTICE.txt",
+    "TUTORIAL.md",
+    "VERIFICATION.md",
+    "config.json",
+    "config_basic_writer.yaml",
+    "config_coco_writer.yaml",
+    "config_default_writer.json",
+    "config_kitti_writer.yaml",
+    "run.py",
+    "scene_based_sdg.py",
+    "scene_based_sdg_utils.py"
+  ],
+  "learning_order": 137,
+  "learning_stage": "replicator"
+}

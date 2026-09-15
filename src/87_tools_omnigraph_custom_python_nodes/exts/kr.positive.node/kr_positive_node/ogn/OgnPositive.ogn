@@ -1,0 +1,30 @@
+{
+  "Positive": {
+    "version": 1,
+    "categories": [
+      "examples"
+    ],
+    "description": "Reports whether a number is strictly positive",
+    "language": "python",
+    "metadata": {
+      "uiName": "Korean Positive"
+    },
+    "inputs": {
+      "execIn": {
+        "type": "execution",
+        "description": "Execution trigger"
+      },
+      "value_input": {
+        "type": "double",
+        "default": 0.0,
+        "description": "Number to compare"
+      }
+    },
+    "outputs": {
+      "output_bool": {
+        "type": "bool",
+        "description": "True exactly when input > 0"
+      }
+    }
+  }
+}

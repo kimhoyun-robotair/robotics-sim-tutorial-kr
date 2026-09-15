@@ -1,0 +1,10 @@
+This package includes NVIDIA Isaac Sim 5.1 example source from:
+standalone_examples/replicator/scene_based_sdg/scene_based_sdg.py
+standalone_examples/replicator/scene_based_sdg/scene_based_sdg_utils.py
+standalone_examples/replicator/scene_based_sdg/config/
+
+Original source and example configurations: Copyright NVIDIA CORPORATION & AFFILIATES,
+Apache License 2.0, as stated in the individual source headers.
+Local modifications: bounded launcher, independent config/output paths, try/finally
+application cleanup, fail-fast error paths, Korean tutorial explanations.
+License text is included in LICENSE-APACHE-2.0.txt.

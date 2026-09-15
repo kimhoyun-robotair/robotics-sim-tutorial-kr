@@ -1,0 +1,11 @@
+[package]
+version = "1.0.0"
+title = "KR Cortex World Lab"
+description = "Isaac Sim 5.1 CortexWorld lifecycle and command API exercise"
+category = "Simulation"
+[dependencies]
+"omni.ui" = {}
+"isaacsim.core.api" = {}
+"isaacsim.cortex.framework" = {}
+[[python.module]]
+name = "kr_cortex_lab"

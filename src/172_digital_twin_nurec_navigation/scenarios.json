@@ -1,0 +1,58 @@
+{
+  "cafe": {
+    "stage": "nova_carter-cafe/stage.usdz",
+    "start": [
+      0,
+      0,
+      0
+    ],
+    "relative_target": [
+      -3,
+      -1.5,
+      0
+    ],
+    "collision_ground": false
+  },
+  "galileo": {
+    "stage": "nova_carter-galileo/stage.usdz",
+    "start": [
+      -2.5,
+      2.5,
+      0
+    ],
+    "relative_target": [
+      4,
+      0,
+      0
+    ],
+    "collision_ground": false
+  },
+  "wormhole": {
+    "stage": "nova_carter-wormhole/stage.usdz",
+    "start": [
+      0,
+      0,
+      0
+    ],
+    "relative_target": [
+      5,
+      0,
+      0
+    ],
+    "collision_ground": false
+  },
+  "lounge": {
+    "stage": "zh_lounge/usd/zh_lounge.usda",
+    "start": [
+      -1.5,
+      -3,
+      -1.6
+    ],
+    "relative_target": [
+      -0.5,
+      5,
+      -1.6
+    ],
+    "collision_ground": true
+  }
+}

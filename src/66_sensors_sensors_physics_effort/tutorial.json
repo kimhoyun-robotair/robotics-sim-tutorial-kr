@@ -1,0 +1,37 @@
+{
+  "id": "t153",
+  "title": "Effort Sensor",
+  "category": "sensors",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physics_effort.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 and its python.sh",
+    "Supported NVIDIA GPU/driver"
+  ],
+  "verification": "partial_runtime_verified",
+  "title_ko": "Effort Sensor의 샘플 주기",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "samples": 120,
+      "last_torque_Nm": -11.040670394897461,
+      "last_sensor_time": 2.0000000000000004
+    },
+    "checks": {
+      "process_exit": true,
+      "valid": true,
+      "nonzero_torque": true,
+      "advancing_time": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 66,
+  "learning_stage": "sensors"
+}

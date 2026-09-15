@@ -1,0 +1,23 @@
+{
+  "id": "t018",
+  "title": "ROS2 Joint Control: Extension Python Scripting",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_manipulation.html",
+  "mode": "ros2",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "send_command.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble (Ubuntu 22.04) 또는 Jazzy (Ubuntu 24.04)",
+    "isaacsim.ros2.bridge",
+    "Isaac 5.1 Franka Panda USD",
+    "ROS 터미널의 rclpy 및 sensor_msgs"
+  ],
+  "verification": "not_run",
+  "learning_order": 117,
+  "learning_stage": "ros2_basics"
+}

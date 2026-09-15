@@ -1,0 +1,55 @@
+{
+  "id": "t046",
+  "title": "Modular Behavior Scripting",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_modular_scripting.html",
+  "title_ko": "Prim 행동 스크립트와 이벤트",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "orbit_behavior.py",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "isaacsim.replicator.behavior",
+    "omni.kit.scripting",
+    "Optional --stack: Isaac 5.1 asset library"
+  ],
+  "verification": "partial_runtime_verified",
+  "coverage": [
+    "all six built-in behaviors",
+    "local BehaviorScript",
+    "exposed USD attributes",
+    "event request and completion"
+  ],
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "frame": 0,
+      "time_s": 0.03333333507180214,
+      "target_position": [
+        0.12191428520636083,
+        -0.1587321074991621,
+        0.902993325101275
+      ],
+      "orbit_position": [
+        -0.3812491508768334,
+        0.7033129352967238,
+        1.8
+      ],
+      "light_intensity": 14904.982421875
+    },
+    "checks": {
+      "process_exit": true,
+      "behavior_outputs": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 141,
+  "learning_stage": "replicator"
+}

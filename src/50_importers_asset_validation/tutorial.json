@@ -1,0 +1,33 @@
+{
+  "id": "t132",
+  "title": "Asset Validation",
+  "category": "importers",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup/asset_validation.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "RTX GPU and compatible driver"
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "issues_before": 4,
+      "issues_after": 0
+    },
+    "checks": {
+      "process_exit": true,
+      "real_rule_repairs": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 50,
+  "learning_stage": "robot_authoring"
+}

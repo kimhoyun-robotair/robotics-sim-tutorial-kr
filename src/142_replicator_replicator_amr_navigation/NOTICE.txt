@@ -1,0 +1,6 @@
+NVIDIA Isaac Sim 5.1 implementation adapted from standalone_examples/replicator/amr_navigation.py.
+Original copyright NVIDIA CORPORATION & AFFILIATES, Apache-2.0.
+Original copyright and license headers retained in the implementation.
+Local changes: separate bounded launcher, independent output, guarded cleanup,
+tracked capture tasks (UR10), zero simulation delta during AMR capture.
+The full license is LICENSE-APACHE-2.0.txt.

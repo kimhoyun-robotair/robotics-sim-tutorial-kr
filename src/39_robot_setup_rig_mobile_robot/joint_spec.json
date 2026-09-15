@@ -1,0 +1,7 @@
+{
+  "stage_meters_per_unit": 0.01,
+  "lift_slide": {"type": "prismatic", "axis": "Z", "limits": [-15, 200], "target_position": -15, "stiffness": 100000, "damping": 10000},
+  "roller_joints": {"count": 4, "axis": "X", "actuated": false},
+  "rear_drive": {"type": "revolute", "axis": "X", "stiffness": 100, "damping": 10000, "target_velocity_deg_s": -200},
+  "rear_steer": {"type": "revolute", "axis": "Z", "limits_deg": [-60, 60], "stiffness": 100000, "damping": 100}
+}

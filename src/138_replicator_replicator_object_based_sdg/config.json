@@ -1,0 +1,89 @@
+{
+  "launch_config": {
+    "renderer": "RaytracedLighting",
+    "headless": false
+  },
+  "env_url": "",
+  "working_area_size": [
+    4,
+    4,
+    3
+  ],
+  "rt_subframes": 4,
+  "num_frames": 6,
+  "num_cameras": 2,
+  "camera_collider_radius": 0.5,
+  "disable_render_products_between_captures": true,
+  "simulation_duration_between_captures": 0.05,
+  "resolution": [
+    512,
+    512
+  ],
+  "camera_properties_kwargs": {
+    "focalLength": 24.0,
+    "focusDistance": 400,
+    "fStop": 0.0,
+    "clippingRange": [
+      0.01,
+      10000
+    ]
+  },
+  "camera_look_at_target_offset": 0.15,
+  "camera_distance_to_target_min_max": [
+    0.25,
+    0.75
+  ],
+  "writer_type": "BasicWriter",
+  "writer_kwargs": {
+    "output_dir": "output",
+    "rgb": true,
+    "semantic_segmentation": true,
+    "bounding_box_2d_tight": true,
+    "distance_to_image_plane": true,
+    "use_common_output_dir": true
+  },
+  "labeled_assets_and_properties": [
+    {
+      "url": "/Isaac/Props/YCB/Axis_Aligned/008_pudding_box.usd",
+      "label": "pudding_box",
+      "count": 3,
+      "floating": true,
+      "scale_min_max": [
+        0.85,
+        1.25
+      ]
+    },
+    {
+      "url": "/Isaac/Props/YCB/Axis_Aligned_Physics/006_mustard_bottle.usd",
+      "label": "mustard_bottle",
+      "count": 3,
+      "floating": true,
+      "scale_min_max": [
+        0.85,
+        1.25
+      ]
+    }
+  ],
+  "shape_distractors_types": [
+    "capsule",
+    "cone",
+    "cylinder",
+    "sphere",
+    "cube"
+  ],
+  "shape_distractors_scale_min_max": [
+    0.015,
+    0.15
+  ],
+  "shape_distractors_num": 40,
+  "mesh_distractors_urls": [
+    "/Isaac/Environments/Simple_Warehouse/Props/SM_CardBoxD_04_1847.usd",
+    "/Isaac/Environments/Simple_Warehouse/Props/SM_CardBoxA_01_414.usd",
+    "/Isaac/Environments/Simple_Warehouse/Props/S_TrafficCone.usd"
+  ],
+  "mesh_distractors_scale_min_max": [
+    0.35,
+    1.35
+  ],
+  "mesh_distractors_num": 12
+}

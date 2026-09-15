@@ -1,0 +1,35 @@
+{
+  "id": "t152",
+  "title": "Contact Sensor",
+  "category": "sensors",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physics_contact.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 and its python.sh",
+    "Supported NVIDIA GPU/driver"
+  ],
+  "verification": "partial_runtime_verified",
+  "title_ko": "낙하 상자의 접촉 센서",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "samples": 180,
+      "rest_force_N": 9.80999960899353
+    },
+    "checks": {
+      "process_exit": true,
+      "contact": true,
+      "weight": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 65,
+  "learning_stage": "sensors"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "t001",
+  "title": "Isaac Sim Basic Usage Tutorial",
+  "category": "core",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/quickstart_isaacsim.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "script_editor.py",
+    "TUTORIAL.md",
+    "tutorial.json"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver"
+  ],
+  "verification": "not_run",
+  "additional_modes": [
+    "gui",
+    "script_editor"
+  ],
+  "learning_order": 0,
+  "learning_stage": "first_steps"
+}

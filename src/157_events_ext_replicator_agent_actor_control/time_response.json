@@ -1,0 +1,20 @@
+{
+  "response_list": [
+    {
+      "CommandResponse": {
+        "name": "pause_everyone",
+        "priority": 1,
+        "pick_agent": "all",
+        "resume": true,
+        "position": "(0, 0, 0)",
+        "trigger": {
+          "type": "time",
+          "time": 1.0
+        },
+        "commands": [
+          "Idle 1"
+        ]
+      }
+    }
+  ]
+}

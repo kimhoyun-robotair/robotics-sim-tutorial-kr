@@ -1,0 +1,4265 @@
+{
+  "isaac_sim_version": "5.1.0",
+  "documentation_root": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/",
+  "retrieved_at": "2026-09-14",
+  "scope": "공식 Tutorial Reference Table의 9개 시리즈와 5.1 목차에 포함된 실습 본문 및 하위 실습 페이지. Quick Start, Cortex, NuRec, USD/Python, 확장 개발/디버깅의 실습도 포함. 외부 제품의 전체 문서와 설치/릴리스/API 참조는 포함 범위에서 제외.",
+  "tutorials": [
+    {
+      "id": "t001",
+      "title": "Isaac Sim Basic Usage Tutorial",
+      "category": "core",
+      "source_path": "introduction/quickstart_isaacsim.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/quickstart_isaacsim.html",
+      "package": "src/00_core_quickstart_isaacsim",
+      "learning_order": 0,
+      "learning_stage": "first_steps"
+    },
+    {
+      "id": "t098",
+      "title": "Hello World",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_core_hello_world.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_world.html",
+      "package": "src/01_core_core_hello_world",
+      "learning_order": 1,
+      "learning_stage": "first_steps"
+    },
+    {
+      "id": "t099",
+      "title": "Hello Robot",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_core_hello_robot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_hello_robot.html",
+      "package": "src/02_core_core_hello_robot",
+      "learning_order": 2,
+      "learning_stage": "first_steps"
+    },
+    {
+      "id": "t002",
+      "title": "Basic Robot Tutorial",
+      "category": "core",
+      "source_path": "introduction/quickstart_isaacsim_robot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/introduction/quickstart_isaacsim_robot.html",
+      "package": "src/03_core_quickstart_isaacsim_robot",
+      "learning_order": 3,
+      "learning_stage": "first_steps"
+    },
+    {
+      "id": "t090",
+      "title": "Omniverse Script Editor",
+      "category": "tools",
+      "source_path": "development_tools/omniverse_script_editor.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/development_tools/omniverse_script_editor.html",
+      "package": "src/04_tools_omniverse_script_editor",
+      "learning_order": 4,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t092",
+      "title": "Python Scripting Concepts",
+      "category": "python_usd",
+      "source_path": "python_scripting/python_scripting_concepts.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/python_scripting_concepts.html",
+      "package": "src/05_python_usd_python_scripting_concepts",
+      "learning_order": 5,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t094",
+      "title": "Python Environment",
+      "category": "python_usd",
+      "source_path": "python_scripting/manual_standalone_python.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/manual_standalone_python.html",
+      "package": "src/06_python_usd_manual_standalone_python",
+      "learning_order": 6,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t088",
+      "title": "Visual Studio Code (VS Code)",
+      "category": "tools",
+      "source_path": "development_tools/vscode.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/development_tools/vscode.html",
+      "package": "src/07_tools_vscode",
+      "learning_order": 7,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t089",
+      "title": "Jupyter Notebook",
+      "category": "tools",
+      "source_path": "development_tools/jupyter_notebook.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/development_tools/jupyter_notebook.html",
+      "package": "src/08_tools_jupyter_notebook",
+      "learning_order": 8,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t093",
+      "title": "Core API Overview",
+      "category": "python_usd",
+      "source_path": "python_scripting/core_api_overview.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/core_api_overview.html",
+      "package": "src/09_python_usd_core_api_overview",
+      "learning_order": 9,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t173",
+      "title": "OpenUSD Fundamentals",
+      "category": "python_usd",
+      "source_path": "omniverse_usd/open_usd.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/open_usd.html",
+      "package": "src/10_python_usd_open_usd",
+      "learning_order": 10,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t174",
+      "title": "Working with USD",
+      "category": "python_usd",
+      "source_path": "omniverse_usd/intro_to_usd.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/intro_to_usd.html",
+      "package": "src/11_python_usd_intro_to_usd",
+      "learning_order": 11,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t175",
+      "title": "USD Tools",
+      "category": "python_usd",
+      "source_path": "omniverse_usd/usd_tools.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/usd_tools.html",
+      "package": "src/12_python_usd_usd_tools",
+      "learning_order": 12,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t177",
+      "title": "Commands",
+      "category": "python_usd",
+      "source_path": "omniverse_usd/omniverse_tools.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/omniverse_tools.html",
+      "package": "src/13_python_usd_omniverse_tools",
+      "learning_order": 13,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t169",
+      "title": "Omniverse Commands Tool Extension",
+      "category": "tools",
+      "source_path": "utilities/debugging/ext_omni_kit_commands.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/debugging/ext_omni_kit_commands.html",
+      "package": "src/14_tools_ext_omni_kit_commands",
+      "learning_order": 14,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t091",
+      "title": "Modify Carb Settings",
+      "category": "tools",
+      "source_path": "development_tools/carb_settings.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/development_tools/carb_settings.html",
+      "package": "src/15_tools_carb_settings",
+      "learning_order": 15,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t095",
+      "title": "Scene Setup Snippets",
+      "category": "python_usd",
+      "source_path": "python_scripting/environment_setup.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/environment_setup.html",
+      "package": "src/16_python_usd_environment_setup",
+      "learning_order": 16,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t096",
+      "title": "Util Snippets",
+      "category": "python_usd",
+      "source_path": "python_scripting/util_snippets.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/util_snippets.html",
+      "package": "src/17_python_usd_util_snippets",
+      "learning_order": 17,
+      "learning_stage": "python_usd"
+    },
+    {
+      "id": "t159",
+      "title": "Physics Simulation Fundamentals",
+      "category": "sensors",
+      "source_path": "physics/simulation_fundamentals.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/simulation_fundamentals.html",
+      "package": "src/18_sensors_simulation_fundamentals",
+      "learning_order": 18,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t104",
+      "title": "Adding Props",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_core_adding_props.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_adding_props.html",
+      "package": "src/19_core_core_adding_props",
+      "learning_order": 19,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t161",
+      "title": "Physics Static Collision Extension",
+      "category": "sensors",
+      "source_path": "physics/physics_static_collision.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/physics_static_collision.html",
+      "package": "src/20_sensors_physics_static_collision",
+      "learning_order": 20,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t160",
+      "title": "Physics Inspector",
+      "category": "sensors",
+      "source_path": "physics/joint_inspector.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/joint_inspector.html",
+      "package": "src/21_sensors_joint_inspector",
+      "learning_order": 21,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t162",
+      "title": "Simulation Data Visualizer",
+      "category": "sensors",
+      "source_path": "physics/ext_isaacsim_inspect_physics.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/ext_isaacsim_inspect_physics.html",
+      "package": "src/22_sensors_inspect_physics",
+      "learning_order": 22,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t100",
+      "title": "Adding a Controller",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_core_adding_controller.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_adding_controller.html",
+      "package": "src/23_core_core_adding_controller",
+      "learning_order": 23,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t101",
+      "title": "Adding a Manipulator Robot",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_core_adding_manipulator.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_adding_manipulator.html",
+      "package": "src/24_core_core_adding_manipulator",
+      "learning_order": 24,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t102",
+      "title": "Adding Multiple Robots",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_core_adding_multiple_robots.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_adding_multiple_robots.html",
+      "package": "src/25_core_core_adding_multiple_robots",
+      "learning_order": 25,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t103",
+      "title": "Multiple Tasks",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_core_multiple_tasks.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_core_multiple_tasks.html",
+      "package": "src/26_core_core_multiple_tasks",
+      "learning_order": 26,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t105",
+      "title": "Data Logging",
+      "category": "core",
+      "source_path": "core_api_tutorials/tutorial_advanced_data_logging.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/core_api_tutorials/tutorial_advanced_data_logging.html",
+      "package": "src/27_core_advanced_data_logging",
+      "learning_order": 27,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t097",
+      "title": "Robot Simulation Snippets",
+      "category": "python_usd",
+      "source_path": "python_scripting/robots_simulation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/robots_simulation.html",
+      "package": "src/28_python_usd_robots_simulation",
+      "learning_order": 28,
+      "learning_stage": "physics_core"
+    },
+    {
+      "id": "t176",
+      "title": "Robot Schema",
+      "category": "python_usd",
+      "source_path": "omniverse_usd/robot_schema.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/robot_schema.html",
+      "package": "src/29_python_usd_robot_schema",
+      "learning_order": 29,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t111",
+      "title": "Tutorial: Import URDF",
+      "category": "importers",
+      "source_path": "importer_exporter/import_urdf.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/import_urdf.html",
+      "package": "src/30_importers_import_urdf",
+      "learning_order": 30,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t113",
+      "title": "Tutorial: Import MJCF",
+      "category": "importers",
+      "source_path": "importer_exporter/import_mjcf.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/import_mjcf.html",
+      "package": "src/31_importers_import_mjcf",
+      "learning_order": 31,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t112",
+      "title": "Tutorial: Export URDF",
+      "category": "importers",
+      "source_path": "importer_exporter/export_urdf.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/export_urdf.html",
+      "package": "src/32_importers_export_urdf",
+      "learning_order": 32,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t116",
+      "title": "Merge Mesh Utility",
+      "category": "importers",
+      "source_path": "robot_setup/ext_isaacsim_util_merge_mesh.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup/ext_isaacsim_util_merge_mesh.html",
+      "package": "src/33_importers_util_merge_mesh",
+      "learning_order": 33,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t115",
+      "title": "Robot Wizard Tutorial",
+      "category": "robot_setup",
+      "source_path": "robot_setup/robot_wizard_tutorials.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup/robot_wizard_tutorials.html",
+      "package": "src/34_robot_setup_robot_wizard_tutorials",
+      "learning_order": 34,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t119",
+      "title": "Tutorial 1: Stage Setup",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_intro_environment_setup.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_intro_environment_setup.html",
+      "package": "src/35_robot_setup_intro_environment_setup",
+      "learning_order": 35,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t120",
+      "title": "Tutorial 2: Assemble a Simple Robot",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_intro_assemble_robot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_intro_assemble_robot.html",
+      "package": "src/36_robot_setup_intro_assemble_robot",
+      "learning_order": 36,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t121",
+      "title": "Tutorial 3: Articulate a Basic Robot",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_gui_simple_robot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_gui_simple_robot.html",
+      "package": "src/37_robot_setup_gui_simple_robot",
+      "learning_order": 37,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t122",
+      "title": "Tutorial 4: Add Camera and Sensors to a Robot",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_gui_camera_sensors.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_gui_camera_sensors.html",
+      "package": "src/38_robot_setup_gui_camera_sensors",
+      "learning_order": 38,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t123",
+      "title": "Tutorial 5: Rig a Mobile Robot",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/rig_mobile_robot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/rig_mobile_robot.html",
+      "package": "src/39_robot_setup_rig_mobile_robot",
+      "learning_order": 39,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t124",
+      "title": "Tutorial 6: Setup a Manipulator",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_import_assemble_manipulator.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_import_assemble_manipulator.html",
+      "package": "src/40_robot_setup_import_assemble_manipulator",
+      "learning_order": 40,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t125",
+      "title": "Tutorial 7: Configure a Manipulator",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_configure_manipulator.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_configure_manipulator.html",
+      "package": "src/41_robot_setup_configure_manipulator",
+      "learning_order": 41,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t126",
+      "title": "Tutorial 8: Generate Robot Configuration File",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_generate_robot_config.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_generate_robot_config.html",
+      "package": "src/42_robot_setup_generate_robot_config",
+      "learning_order": 42,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t127",
+      "title": "Tutorial 9: Pick and Place Example",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_pickplace_example.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_pickplace_example.html",
+      "package": "src/43_robot_setup_pickplace_example",
+      "learning_order": 43,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t128",
+      "title": "Tutorial 10: Rig Closed-Loop Structures",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/rig_closed_loop_structures.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/rig_closed_loop_structures.html",
+      "package": "src/44_robot_setup_rig_closed_loop_structures",
+      "learning_order": 44,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t129",
+      "title": "Tutorial 11: Tuning Joint Drive Gains",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/joint_tuning.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/joint_tuning.html",
+      "package": "src/45_robot_setup_joint_tuning",
+      "learning_order": 45,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t130",
+      "title": "Tutorial 12: Asset Optimization",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/optimizing_asset.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/optimizing_asset.html",
+      "package": "src/46_robot_setup_optimizing_asset",
+      "learning_order": 46,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t131",
+      "title": "Tutorial 13: Rigging a Legged Robot for Locomotion Policy",
+      "category": "robot_setup",
+      "source_path": "robot_setup_tutorials/tutorial_rig_legged_robot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_rig_legged_robot.html",
+      "package": "src/47_robot_setup_rig_legged_robot",
+      "learning_order": 47,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t117",
+      "title": "Gain Tuner Extension",
+      "category": "importers",
+      "source_path": "robot_setup/ext_isaacsim_robot_setup_gain_tuner.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup/ext_isaacsim_robot_setup_gain_tuner.html",
+      "package": "src/48_importers_robot_setup_gain_tuner",
+      "learning_order": 48,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t118",
+      "title": "Robot Assembler",
+      "category": "importers",
+      "source_path": "robot_setup/assemble_robots.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup/assemble_robots.html",
+      "package": "src/49_importers_assemble_robots",
+      "learning_order": 49,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t132",
+      "title": "Asset Validation",
+      "category": "importers",
+      "source_path": "robot_setup/asset_validation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup/asset_validation.html",
+      "package": "src/50_importers_asset_validation",
+      "learning_order": 50,
+      "learning_stage": "robot_authoring"
+    },
+    {
+      "id": "t133",
+      "title": "Articulation Controller",
+      "category": "motion",
+      "source_path": "robot_simulation/articulation_controller.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/articulation_controller.html",
+      "package": "src/51_motion_articulation_controller",
+      "learning_order": 51,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t134",
+      "title": "Mobile Robot Controllers",
+      "category": "motion",
+      "source_path": "robot_simulation/mobile_robot_controllers.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/mobile_robot_controllers.html",
+      "package": "src/52_motion_mobile_robot_controllers",
+      "learning_order": 52,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t135",
+      "title": "Lula Robot Description and XRDF Editor",
+      "category": "motion",
+      "source_path": "manipulators/manipulators_robot_description_editor.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_robot_description_editor.html",
+      "package": "src/53_motion_manipulators_robot_description_editor",
+      "learning_order": 53,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t138",
+      "title": "Lula Kinematics Solver",
+      "category": "motion",
+      "source_path": "manipulators/manipulators_lula_kinematics.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_kinematics.html",
+      "package": "src/54_motion_manipulators_lula_kinematics",
+      "learning_order": 54,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t139",
+      "title": "Lula Trajectory Generator",
+      "category": "motion",
+      "source_path": "manipulators/manipulators_lula_trajectory_generator.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_trajectory_generator.html",
+      "package": "src/55_motion_manipulators_lula_trajectory_generator",
+      "learning_order": 55,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t136",
+      "title": "Lula RMPflow",
+      "category": "motion",
+      "source_path": "manipulators/manipulators_rmpflow.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_rmpflow.html",
+      "package": "src/56_motion_manipulators_rmpflow",
+      "learning_order": 56,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t137",
+      "title": "Lula RRT",
+      "category": "motion",
+      "source_path": "manipulators/manipulators_lula_rrt.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_lula_rrt.html",
+      "package": "src/57_motion_manipulators_lula_rrt",
+      "learning_order": 57,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t140",
+      "title": "Configuring RMPflow for a New Manipulator",
+      "category": "motion",
+      "source_path": "manipulators/manipulators_configure_rmpflow_denso.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_configure_rmpflow_denso.html",
+      "package": "src/58_motion_manipulators_configure_rmpflow_denso",
+      "learning_order": 58,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t180",
+      "title": "RMPflow Tuning Guide",
+      "category": "motion",
+      "source_path": "manipulators/concepts/rmpflow_tuning_guide.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/concepts/rmpflow_tuning_guide.html",
+      "package": "src/59_motion_rmpflow_tuning",
+      "learning_order": 59,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t142",
+      "title": "Surface Gripper Extension",
+      "category": "motion",
+      "source_path": "robot_simulation/ext_isaacsim_robot_surface_gripper.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/ext_isaacsim_robot_surface_gripper.html",
+      "package": "src/60_motion_robot_surface_gripper",
+      "learning_order": 60,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t143",
+      "title": "Grasp Editor",
+      "category": "motion",
+      "source_path": "robot_simulation/grasp_editor.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/grasp_editor.html",
+      "package": "src/61_motion_grasp_editor",
+      "learning_order": 61,
+      "learning_stage": "motion_control"
+    },
+    {
+      "id": "t145",
+      "title": "Camera Sensors",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_camera.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera.html",
+      "package": "src/62_sensors_sensors_camera",
+      "learning_order": 62,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t146",
+      "title": "Depth Sensors",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_camera_depth.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_camera_depth.html",
+      "package": "src/63_sensors_sensors_camera_depth",
+      "learning_order": 63,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t151",
+      "title": "Articulation Joint Sensors",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physics_articulation_force.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physics_articulation_force.html",
+      "package": "src/64_sensors_sensors_physics_articulation_force",
+      "learning_order": 64,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t152",
+      "title": "Contact Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physics_contact.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physics_contact.html",
+      "package": "src/65_sensors_sensors_physics_contact",
+      "learning_order": 65,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t153",
+      "title": "Effort Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physics_effort.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physics_effort.html",
+      "package": "src/66_sensors_sensors_physics_effort",
+      "learning_order": 66,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t154",
+      "title": "IMU Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physics_imu.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physics_imu.html",
+      "package": "src/67_sensors_sensors_physics_imu",
+      "learning_order": 67,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t155",
+      "title": "Proximity Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physics_proximity.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physics_proximity.html",
+      "package": "src/68_sensors_sensors_physics_proximity",
+      "learning_order": 68,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t156",
+      "title": "PhysX SDK Generic Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physx_generic.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physx_generic.html",
+      "package": "src/69_sensors_sensors_physx_generic",
+      "learning_order": 69,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t157",
+      "title": "PhysX SDK Lidar",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physx_lidar.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physx_lidar.html",
+      "package": "src/70_sensors_sensors_physx_lidar",
+      "learning_order": 70,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t158",
+      "title": "PhysX SDK Lightbeam Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_physx_lightbeam.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_physx_lightbeam.html",
+      "package": "src/71_sensors_sensors_physx_lightbeam",
+      "learning_order": 71,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t147",
+      "title": "RTX Lidar Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_rtx_lidar.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx_lidar.html",
+      "package": "src/72_sensors_sensors_rtx_lidar",
+      "learning_order": 72,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t149",
+      "title": "RTX Radar Sensor",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_rtx_radar.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx_radar.html",
+      "package": "src/73_sensors_sensors_rtx_radar",
+      "learning_order": 73,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t148",
+      "title": "RTX Sensor Non-Visual Materials",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_rtx_materials.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx_materials.html",
+      "package": "src/74_sensors_sensors_rtx_materials",
+      "learning_order": 74,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t150",
+      "title": "RTX Sensor Annotators",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_rtx_annotators.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx_annotators.html",
+      "package": "src/75_sensors_sensors_rtx_annotators",
+      "learning_order": 75,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t179",
+      "title": "RTX Sensors",
+      "category": "sensors",
+      "source_path": "sensors/isaacsim_sensors_rtx.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/sensors/isaacsim_sensors_rtx.html",
+      "package": "src/76_sensors_rtx_motion_bvh",
+      "learning_order": 76,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t072",
+      "title": "RTX Sensors Placement and Calibration",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/tutorial_sensors_rtx_placement.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_sensors_rtx_placement.html",
+      "package": "src/77_events_sensors_rtx_placement",
+      "learning_order": 77,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t073",
+      "title": "Camera Placement",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_sensors_rtx_placement/camera_placement.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_sensors_rtx_placement/camera_placement.html",
+      "package": "src/78_events_ext_sensors_rtx_placement_camera_placement",
+      "learning_order": 78,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t074",
+      "title": "Camera Calibration",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_sensors_rtx_placement/camera_calibration.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_sensors_rtx_placement/camera_calibration.html",
+      "package": "src/79_events_ext_sensors_rtx_placement_camera_calibration",
+      "learning_order": 79,
+      "learning_stage": "sensors"
+    },
+    {
+      "id": "t109",
+      "title": "Isaac Sim Omnigraph Tutorial",
+      "category": "tools",
+      "source_path": "omnigraph/omnigraph_tutorial.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_tutorial.html",
+      "package": "src/80_tools_omnigraph_tutorial",
+      "learning_order": 80,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t106",
+      "title": "Commonly Used Omnigraph Shortcuts",
+      "category": "tools",
+      "source_path": "omnigraph/omnigraph_shortcuts.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_shortcuts.html",
+      "package": "src/81_tools_omnigraph_shortcuts",
+      "learning_order": 81,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t110",
+      "title": "OmniGraph via Python Scripting Tutorial",
+      "category": "tools",
+      "source_path": "omnigraph/omnigraph_scripting.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_scripting.html",
+      "package": "src/82_tools_omnigraph_scripting",
+      "learning_order": 82,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t172",
+      "title": "Adding and Updating Extensions Guide",
+      "category": "tools",
+      "source_path": "utilities/updating_extensions.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/updating_extensions.html",
+      "package": "src/83_tools_updating_extensions",
+      "learning_order": 83,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t164",
+      "title": "Extension Template Generator",
+      "category": "tools",
+      "source_path": "utilities/extension_template_generator.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_template_generator.html",
+      "package": "src/84_tools_extension_template_generator",
+      "learning_order": 84,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t165",
+      "title": "Extension Template Generator Explained",
+      "category": "tools",
+      "source_path": "utilities/extension_templates_tutorial.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_templates_tutorial.html",
+      "package": "src/85_tools_extension_templates_tutorial",
+      "learning_order": 85,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t163",
+      "title": "Custom Interactive Examples",
+      "category": "tools",
+      "source_path": "utilities/custom_interactive_examples.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/custom_interactive_examples.html",
+      "package": "src/86_tools_custom_interactive_examples",
+      "learning_order": 86,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t107",
+      "title": "Custom Python Nodes",
+      "category": "tools",
+      "source_path": "omnigraph/omnigraph_custom_python_nodes.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_custom_python_nodes.html",
+      "package": "src/87_tools_omnigraph_custom_python_nodes",
+      "learning_order": 87,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t167",
+      "title": "Advanced Extension Template Generator from VS Code",
+      "category": "tools",
+      "source_path": "utilities/vscode_extension_template_generator.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/vscode_extension_template_generator.html",
+      "package": "src/88_tools_vscode_extension_template_generator",
+      "learning_order": 88,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t166",
+      "title": "Custom Extensions: C++",
+      "category": "tools",
+      "source_path": "utilities/custom_cpp_extensions.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/custom_cpp_extensions.html",
+      "package": "src/89_tools_custom_cpp_extensions",
+      "learning_order": 89,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t108",
+      "title": "Custom C++ Nodes",
+      "category": "tools",
+      "source_path": "omnigraph/omnigraph_custom_cpp_nodes.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_custom_cpp_nodes.html",
+      "package": "src/90_tools_omnigraph_custom_cpp_nodes",
+      "learning_order": 90,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t168",
+      "title": "Debug Drawing Extension API",
+      "category": "tools",
+      "source_path": "utilities/debugging/ext_isaacsim_util_debug_draw.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/debugging/ext_isaacsim_util_debug_draw.html",
+      "package": "src/91_tools_util_debug_draw",
+      "learning_order": 91,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t170",
+      "title": "Debugging With Visual Studio Code",
+      "category": "tools",
+      "source_path": "utilities/debugging/tutorial_advanced_python_debugging.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/debugging/tutorial_advanced_python_debugging.html",
+      "package": "src/92_tools_advanced_python_debugging",
+      "learning_order": 92,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t171",
+      "title": "Profiling Performance Using Tracy",
+      "category": "tools",
+      "source_path": "utilities/debugging/profiling_performance.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/debugging/profiling_performance.html",
+      "package": "src/93_tools_profiling_performance",
+      "learning_order": 93,
+      "learning_stage": "omnigraph_extensions"
+    },
+    {
+      "id": "t079",
+      "title": "Static Warehouse Assets",
+      "category": "digital_twin",
+      "source_path": "digital_twin/warehouse_logistics/tutorial_static_assets.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/tutorial_static_assets.html",
+      "package": "src/94_digital_twin_static_assets",
+      "learning_order": 94,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t077",
+      "title": "Warehouse Creator Extension",
+      "category": "digital_twin",
+      "source_path": "digital_twin/warehouse_logistics/ext_omni_warehouse_creator.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/ext_omni_warehouse_creator.html",
+      "package": "src/95_digital_twin_ext_omni_warehouse_creator",
+      "learning_order": 95,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t078",
+      "title": "Conveyor Belt Utility",
+      "category": "digital_twin",
+      "source_path": "digital_twin/warehouse_logistics/ext_isaacsim_asset_gen_conveyor.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/ext_isaacsim_asset_gen_conveyor.html",
+      "package": "src/96_digital_twin_asset_gen_conveyor",
+      "learning_order": 96,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t087",
+      "title": "Mapping",
+      "category": "digital_twin",
+      "source_path": "digital_twin/ext_isaacsim_asset_generator_occupancy_map.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/ext_isaacsim_asset_generator_occupancy_map.html",
+      "package": "src/97_digital_twin_asset_generator_occupancy_map",
+      "learning_order": 97,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t081",
+      "title": "Isaac Cortex: Overview",
+      "category": "digital_twin",
+      "source_path": "cortex_tutorials/tutorial_cortex_1_overview.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_1_overview.html",
+      "package": "src/98_digital_twin_cortex_1_overview",
+      "learning_order": 98,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t082",
+      "title": "Decider networks",
+      "category": "digital_twin",
+      "source_path": "cortex_tutorials/tutorial_cortex_2_decider_networks.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_2_decider_networks.html",
+      "package": "src/99_digital_twin_cortex_2_decider_networks",
+      "learning_order": 99,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t083",
+      "title": "Behavior Examples: Peck Games",
+      "category": "digital_twin",
+      "source_path": "cortex_tutorials/tutorial_cortex_3_example_peck_games.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_3_example_peck_games.html",
+      "package": "src/100_digital_twin_cortex_3_example_peck_games",
+      "learning_order": 100,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t084",
+      "title": "Walkthrough: Franka Block Stacking",
+      "category": "digital_twin",
+      "source_path": "cortex_tutorials/tutorial_cortex_4_franka_block_stacking.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_4_franka_block_stacking.html",
+      "package": "src/101_digital_twin_cortex_4_franka_block_stacking",
+      "learning_order": 101,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t085",
+      "title": "Walkthrough: UR10 Bin Stacking",
+      "category": "digital_twin",
+      "source_path": "cortex_tutorials/tutorial_cortex_5_ur10_bin_stacking.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_5_ur10_bin_stacking.html",
+      "package": "src/102_digital_twin_cortex_5_ur10_bin_stacking",
+      "learning_order": 102,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t086",
+      "title": "Building Cortex Based Extensions",
+      "category": "digital_twin",
+      "source_path": "cortex_tutorials/tutorial_cortex_7_cortex_extension.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_7_cortex_extension.html",
+      "package": "src/103_digital_twin_cortex_7_cortex_extension",
+      "learning_order": 103,
+      "learning_stage": "environments_behaviors"
+    },
+    {
+      "id": "t007",
+      "title": "URDF Import: Turtlebot",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_turtlebot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_turtlebot.html",
+      "package": "src/104_ros2_ros2_turtlebot",
+      "learning_order": 104,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t008",
+      "title": "Driving TurtleBot using ROS 2 Messages",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_drive_turtlebot.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_drive_turtlebot.html",
+      "package": "src/105_ros2_ros2_drive_turtlebot",
+      "learning_order": 105,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t009",
+      "title": "ROS 2 Clock",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_clock.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_clock.html",
+      "package": "src/106_ros2_ros2_clock",
+      "learning_order": 106,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t010",
+      "title": "ROS 2 Publish Real Time Factor (RTF)",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_rtf.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rtf.html",
+      "package": "src/107_ros2_ros2_rtf",
+      "learning_order": 107,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t015",
+      "title": "ROS2 Transform Trees and Odometry",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_tf.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_tf.html",
+      "package": "src/108_ros2_ros2_tf",
+      "learning_order": 108,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t016",
+      "title": "ROS2 Setting Publish Rates",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_publish_rate.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_publish_rate.html",
+      "package": "src/109_ros2_ros2_publish_rate",
+      "learning_order": 109,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t017",
+      "title": "ROS 2 Quality of Service (QoS)",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_qos.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_qos.html",
+      "package": "src/110_ros2_ros2_qos",
+      "learning_order": 110,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t019",
+      "title": "NameOverride Attribute",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_name_override.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_name_override.html",
+      "package": "src/111_ros2_ros2_name_override",
+      "learning_order": 111,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t021",
+      "title": "Automatic ROS 2 Namespace Generation",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_auto_namespace.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_auto_namespace.html",
+      "package": "src/112_ros2_ros2_auto_namespace",
+      "learning_order": 112,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t011",
+      "title": "ROS 2 Cameras",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_camera.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera.html",
+      "package": "src/113_ros2_ros2_camera",
+      "learning_order": 113,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t013",
+      "title": "Publishing Camera’s Data",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_camera_publishing.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera_publishing.html",
+      "package": "src/114_ros2_ros2_camera_publishing",
+      "learning_order": 114,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t012",
+      "title": "Add Noise to Camera",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_camera_noise.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_camera_noise.html",
+      "package": "src/115_ros2_ros2_camera_noise",
+      "learning_order": 115,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t014",
+      "title": "RTX Lidar Sensors",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_rtx_lidar.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rtx_lidar.html",
+      "package": "src/116_ros2_ros2_rtx_lidar",
+      "learning_order": 116,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t018",
+      "title": "ROS2 Joint Control: Extension Python Scripting",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_manipulation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_manipulation.html",
+      "package": "src/117_ros2_ros2_manipulation",
+      "learning_order": 117,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t020",
+      "title": "ROS 2 Ackermann Controller",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_ackermann_controller.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_ackermann_controller.html",
+      "package": "src/118_ros2_ros2_ackermann_controller",
+      "learning_order": 118,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t022",
+      "title": "ROS 2 Bridge in Standalone Workflow",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_python.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_python.html",
+      "package": "src/119_ros2_ros2_python",
+      "learning_order": 119,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t033",
+      "title": "ROS 2 Launch",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_launch.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_launch.html",
+      "package": "src/120_ros2_ros2_launch",
+      "learning_order": 120,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t034",
+      "title": "ROS2 Simulation Control",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_simulation_control.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_simulation_control.html",
+      "package": "src/121_ros2_ros2_simulation_control",
+      "learning_order": 121,
+      "learning_stage": "ros2_basics"
+    },
+    {
+      "id": "t023",
+      "title": "ROS 2 Navigation",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_navigation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_navigation.html",
+      "package": "src/122_ros2_ros2_navigation",
+      "learning_order": 122,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t024",
+      "title": "Multiple Robot ROS2 Navigation",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_multi_navigation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_multi_navigation.html",
+      "package": "src/123_ros2_ros2_multi_navigation",
+      "learning_order": 123,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t025",
+      "title": "ROS 2 Navigation with Block World Generator",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_navigation_block_world.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_navigation_block_world.html",
+      "package": "src/124_ros2_ros2_navigation_block_world",
+      "learning_order": 124,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t026",
+      "title": "MoveIt 2",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_moveit.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_moveit.html",
+      "package": "src/125_ros2_ros2_moveit",
+      "learning_order": 125,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t027",
+      "title": "ROS 2 Generic Publisher and Subscriber",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_generic_publisher_subscriber.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_generic_publisher_subscriber.html",
+      "package": "src/126_ros2_ros2_generic_publisher_subscriber",
+      "learning_order": 126,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t028",
+      "title": "ROS 2 Generic Server and Client",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_generic_server_client.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_generic_server_client.html",
+      "package": "src/127_ros2_ros2_generic_server_client",
+      "learning_order": 127,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t029",
+      "title": "ROS 2 Service for Manipulating Prims Attributes",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_prim_service.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_prim_service.html",
+      "package": "src/128_ros2_ros2_prim_service",
+      "learning_order": 128,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t030",
+      "title": "ROS 2 Python Custom Messages",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_custom_message_python.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_custom_message_python.html",
+      "package": "src/129_ros2_ros2_custom_message_python",
+      "learning_order": 129,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t031",
+      "title": "ROS 2 Python Custom OmniGraph Node",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_custom_omnigraph_node_python.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_custom_omnigraph_node_python.html",
+      "package": "src/130_ros2_ros2_custom_omnigraph_node_python",
+      "learning_order": 130,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t032",
+      "title": "ROS 2 Custom C++ OmniGraph Node",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_omnigraph_cpp_node.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_omnigraph_cpp_node.html",
+      "package": "src/131_ros2_ros2_omnigraph_cpp_node",
+      "learning_order": 131,
+      "learning_stage": "ros2_applications"
+    },
+    {
+      "id": "t035",
+      "title": "Overview",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_overview.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html",
+      "package": "src/132_replicator_replicator_overview",
+      "learning_order": 132,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t036",
+      "title": "Synthetic Data Recorder",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_recorder.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html",
+      "package": "src/133_replicator_replicator_recorder",
+      "learning_order": 133,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t037",
+      "title": "Getting Started Scripts",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_getting_started.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_getting_started.html",
+      "package": "src/134_replicator_replicator_getting_started",
+      "learning_order": 134,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t047",
+      "title": "Randomization Snippets",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_isaac_randomizers.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_isaac_randomizers.html",
+      "package": "src/135_replicator_replicator_isaac_randomizers",
+      "learning_order": 135,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t048",
+      "title": "Useful Snippets",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_isaac_snippets.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_isaac_snippets.html",
+      "package": "src/136_replicator_replicator_isaac_snippets",
+      "learning_order": 136,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t038",
+      "title": "Scene Based Synthetic Dataset Generation",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_scene_based_sdg.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_scene_based_sdg.html",
+      "package": "src/137_replicator_replicator_scene_based_sdg",
+      "learning_order": 137,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t039",
+      "title": "Object Based Synthetic Dataset Generation",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_object_based_sdg.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_object_based_sdg.html",
+      "package": "src/138_replicator_replicator_object_based_sdg",
+      "learning_order": 138,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t044",
+      "title": "Data Augmentation",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_augmentation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_augmentation.html",
+      "package": "src/139_replicator_replicator_augmentation",
+      "learning_order": 139,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t045",
+      "title": "Custom Replicator Randomization Nodes",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_custom_og_randomizer.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_custom_og_randomizer.html",
+      "package": "src/140_replicator_replicator_custom_og_randomizer",
+      "learning_order": 140,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t046",
+      "title": "Modular Behavior Scripting",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_modular_scripting.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_modular_scripting.html",
+      "package": "src/141_replicator_replicator_modular_scripting",
+      "learning_order": 141,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t041",
+      "title": "Randomization in Simulation – AMR Navigation",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_amr_navigation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_amr_navigation.html",
+      "package": "src/142_replicator_replicator_amr_navigation",
+      "learning_order": 142,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t042",
+      "title": "Randomization in Simulation – UR10 Palletizing",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_ur10_palletizing.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_ur10_palletizing.html",
+      "package": "src/143_replicator_replicator_ur10_palletizing",
+      "learning_order": 143,
+      "learning_stage": "replicator"
+    },
+    {
+      "id": "t058",
+      "title": "Object Simulation and Synthetic Data Generation",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/tutorial_replicator_object.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_object.html",
+      "package": "src/144_events_replicator_object",
+      "learning_order": 144,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t059",
+      "title": "Setting",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/setting.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/setting.html",
+      "package": "src/145_events_ext_replicator_object_setting",
+      "learning_order": 145,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t060",
+      "title": "Mutable",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/mutable.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/mutable.html",
+      "package": "src/146_events_ext_replicator_object_mutable",
+      "learning_order": 146,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t061",
+      "title": "Camera",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/camera.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/camera.html",
+      "package": "src/147_events_ext_replicator_object_camera",
+      "learning_order": 147,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t062",
+      "title": "Geometry",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/geometry.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/geometry.html",
+      "package": "src/148_events_ext_replicator_object_geometry",
+      "learning_order": 148,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t063",
+      "title": "Light",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/light.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/light.html",
+      "package": "src/149_events_ext_replicator_object_light",
+      "learning_order": 149,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t064",
+      "title": "Mutable Attribute",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/mutable_attribute.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/mutable_attribute.html",
+      "package": "src/150_events_ext_replicator_object_mutable_attribute",
+      "learning_order": 150,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t065",
+      "title": "Transformation",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/transformation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/transformation.html",
+      "package": "src/151_events_ext_replicator_object_transformation",
+      "learning_order": 151,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t066",
+      "title": "Harmonizer",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/harmonizer.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/harmonizer.html",
+      "package": "src/152_events_ext_replicator_object_harmonizer",
+      "learning_order": 152,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t067",
+      "title": "Macro",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/macro.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/macro.html",
+      "package": "src/153_events_ext_replicator_object_macro",
+      "learning_order": 153,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t068",
+      "title": "Distribution Visualizer",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/distribution_visualizer.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/distribution_visualizer.html",
+      "package": "src/154_events_ext_replicator_object_distribution_visualizer",
+      "learning_order": 154,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t069",
+      "title": "Randomization Dependency: Incremental Examples",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-object/randomization_dependency.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/randomization_dependency.html",
+      "package": "src/155_events_ext_replicator_object_randomization_dependency",
+      "learning_order": 155,
+      "learning_stage": "object_sdg"
+    },
+    {
+      "id": "t053",
+      "title": "Actor Simulation and Synthetic Data Generation",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/tutorial_replicator_agent.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_agent.html",
+      "package": "src/156_events_replicator_agent",
+      "learning_order": 156,
+      "learning_stage": "actor_events"
+    },
+    {
+      "id": "t054",
+      "title": "Actor Control",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/actor_control.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/actor_control.html",
+      "package": "src/157_events_ext_replicator_agent_actor_control",
+      "learning_order": 157,
+      "learning_stage": "actor_events"
+    },
+    {
+      "id": "t055",
+      "title": "Camera Control",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/camera_control.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/camera_control.html",
+      "package": "src/158_events_ext_replicator_agent_camera_control",
+      "learning_order": 158,
+      "learning_stage": "actor_events"
+    },
+    {
+      "id": "t056",
+      "title": "Writer Control",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/writer_control.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/writer_control.html",
+      "package": "src/159_events_ext_replicator_agent_writer_control",
+      "learning_order": 159,
+      "learning_stage": "actor_events"
+    },
+    {
+      "id": "t057",
+      "title": "Customization",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/customization.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/customization.html",
+      "package": "src/160_events_ext_replicator_agent_customization",
+      "learning_order": 160,
+      "learning_stage": "actor_events"
+    },
+    {
+      "id": "t071",
+      "title": "Physical Space Event Generation",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/tutorial_replicator_incident.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_incident.html",
+      "package": "src/161_events_replicator_incident",
+      "learning_order": 161,
+      "learning_stage": "actor_events"
+    },
+    {
+      "id": "t006",
+      "title": "Instanceable Assets",
+      "category": "motion",
+      "source_path": "isaac_lab_tutorials/tutorial_instanceable_assets.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_instanceable_assets.html",
+      "package": "src/162_motion_instanceable_assets",
+      "learning_order": 162,
+      "learning_stage": "policies_scaling"
+    },
+    {
+      "id": "t005",
+      "title": "Getting Started with Cloner",
+      "category": "motion",
+      "source_path": "isaac_lab_tutorials/tutorial_cloner.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_cloner.html",
+      "package": "src/163_motion_cloner",
+      "learning_order": 163,
+      "learning_stage": "policies_scaling"
+    },
+    {
+      "id": "t144",
+      "title": "Reinforcement Learning Policies Examples in Isaac Sim",
+      "category": "motion",
+      "source_path": "robot_simulation/ext_isaacsim_robot_policy_example.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/ext_isaacsim_robot_policy_example.html",
+      "package": "src/164_motion_robot_policy_example",
+      "learning_order": 164,
+      "learning_stage": "policies_scaling"
+    },
+    {
+      "id": "t003",
+      "title": "Deploying Policies in Isaac Sim",
+      "category": "motion",
+      "source_path": "isaac_lab_tutorials/tutorial_policy_deployment.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/isaac_lab_tutorials/tutorial_policy_deployment.html",
+      "package": "src/165_motion_policy_deployment",
+      "learning_order": 165,
+      "learning_stage": "policies_scaling"
+    },
+    {
+      "id": "t004",
+      "title": "Running a Reinforcement Learning Policy through ROS 2 and Isaac Sim",
+      "category": "ros2",
+      "source_path": "ros2_tutorials/tutorial_ros2_rl_controller.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_rl_controller.html",
+      "package": "src/166_ros2_ros2_rl_controller",
+      "learning_order": 166,
+      "learning_stage": "policies_scaling"
+    },
+    {
+      "id": "t076",
+      "title": "Data Generation with MobilityGen",
+      "category": "sdg_extra",
+      "source_path": "synthetic_data_generation/tutorial_replicator_mobility_gen.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_mobility_gen.html",
+      "package": "src/167_sdg_extra_replicator_mobility_gen",
+      "learning_order": 167,
+      "learning_stage": "policies_scaling"
+    },
+    {
+      "id": "t075",
+      "title": "Grasping Synthetic Data Generation",
+      "category": "sdg_extra",
+      "source_path": "synthetic_data_generation/tutorial_replicator_grasping_sdg.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_grasping_sdg.html",
+      "package": "src/168_sdg_extra_replicator_grasping_sdg",
+      "learning_order": 168,
+      "learning_stage": "advanced_integrations"
+    },
+    {
+      "id": "t040",
+      "title": "Environment Based Synthetic Dataset Generation with Infinigen",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_infinigen_sdg.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_infinigen_sdg.html",
+      "package": "src/169_replicator_replicator_infinigen_sdg",
+      "learning_order": 169,
+      "learning_stage": "advanced_integrations"
+    },
+    {
+      "id": "t043",
+      "title": "Cosmos Synthetic Data Generation",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_cosmos.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_cosmos.html",
+      "package": "src/170_replicator_replicator_cosmos",
+      "learning_order": 170,
+      "learning_stage": "advanced_integrations"
+    },
+    {
+      "id": "t070",
+      "title": "VLM Scene Captioning",
+      "category": "events",
+      "source_path": "action_and_event_data_generation/tutorial_replicator_caption.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_replicator_caption.html",
+      "package": "src/171_events_replicator_caption",
+      "learning_order": 171,
+      "learning_stage": "advanced_integrations"
+    },
+    {
+      "id": "t178",
+      "title": "Neural Volume Rendering",
+      "category": "digital_twin",
+      "source_path": "assets/usd_assets_nurec.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/assets/usd_assets_nurec.html",
+      "package": "src/172_digital_twin_nurec_navigation",
+      "learning_order": 172,
+      "learning_stage": "advanced_integrations"
+    },
+    {
+      "id": "t141",
+      "title": "cuRobo and cuMotion",
+      "category": "motion",
+      "source_path": "manipulators/manipulators_curobo.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/manipulators/manipulators_curobo.html",
+      "package": "src/173_motion_manipulators_curobo",
+      "learning_order": 173,
+      "learning_stage": "advanced_integrations"
+    },
+    {
+      "id": "t080",
+      "title": "NVIDIA cuOpt",
+      "category": "digital_twin",
+      "source_path": "digital_twin/warehouse_logistics/logistics_tutorial_cuopt.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/logistics_tutorial_cuopt.html",
+      "package": "src/174_digital_twin_logistics_tutorial_cuopt",
+      "learning_order": 174,
+      "learning_stage": "advanced_integrations"
+    },
+    {
+      "id": "t114",
+      "title": "Tutorial: ShapeNet Importer",
+      "category": "importers",
+      "source_path": "importer_exporter/shapenet_importer.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/shapenet_importer.html",
+      "package": "src/175_importers_shapenet_importer",
+      "learning_order": 175,
+      "learning_stage": "legacy_reference"
+    },
+    {
+      "id": "t052",
+      "title": "Scene Generation with SceneBlox",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_sceneblox.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_sceneblox.html",
+      "package": "src/176_replicator_replicator_sceneblox",
+      "learning_order": 176,
+      "learning_stage": "legacy_reference"
+    },
+    {
+      "id": "t049",
+      "title": "Online Generation",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_online_generation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_online_generation.html",
+      "package": "src/177_replicator_replicator_online_generation",
+      "learning_order": 177,
+      "learning_stage": "legacy_reference"
+    },
+    {
+      "id": "t050",
+      "title": "Pose Estimation Synthetic Data Generation",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_pose_estimation.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_pose_estimation.html",
+      "package": "src/178_replicator_replicator_pose_estimation",
+      "learning_order": 178,
+      "learning_stage": "legacy_reference"
+    },
+    {
+      "id": "t051",
+      "title": "Training Pose Estimation Model with Synthetic Data",
+      "category": "replicator",
+      "source_path": "replicator_tutorials/tutorial_replicator_training_pose_estimation_model.html",
+      "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_training_pose_estimation_model.html",
+      "package": "src/179_replicator_replicator_training_pose_estimation_model",
+      "learning_order": 179,
+      "learning_stage": "legacy_reference"
+    }
+  ],
+  "navigation_audit": [
+    {
+      "source_path": "overview/release_notes.html",
+      "title": "Release Notes",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "overview/known_issues.html",
+      "title": "Known Issues",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "installation/index.html",
+      "title": "Installation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/quick-install.html",
+      "title": "Quick Install",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/requirements.html",
+      "title": "Isaac Sim Requirements",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/download.html",
+      "title": "Download Isaac Sim",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_workstation.html",
+      "title": "Workstation Installation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_container.html",
+      "title": "Container Installation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_cloud.html",
+      "title": "Cloud Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_launchable.html",
+      "title": "Isaac Launchable Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_brev.html",
+      "title": "NVIDIA Brev Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_aws.html",
+      "title": "AWS Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_azure.html",
+      "title": "Azure Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_gcp.html",
+      "title": "Google Cloud Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_tencent.html",
+      "title": "Tencent Cloud Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_alibaba.html",
+      "title": "Alibaba Cloud Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_volcano.html",
+      "title": "Volcano Engine Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_cloud_setup_baidu.html",
+      "title": "Baidu Cloud Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_advanced_remote_setup.html",
+      "title": "Remote Workstation Deployment",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/manual_livestream_clients.html",
+      "title": "Livestream Clients",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_python.html",
+      "title": "Python Environment Installation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_ros.html",
+      "title": "ROS 2 Installation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "installation/install_faq.html",
+      "title": "Setup Tips",
+      "disposition": "reference",
+      "package": null,
+      "reason": "설치/배포 전제조건 안내; 튜토리얼 패키지의 설치 설명에서 참조"
+    },
+    {
+      "source_path": "overview/help.html",
+      "title": "Help & FAQ",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "overview/isaac_sim_forums.html",
+      "title": "Isaac Sim Developer Resources",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "common/feedback.html",
+      "title": "Omniverse Feedback and Forums",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/general-feedback-form.html",
+      "title": "General Feedback",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/feedback-form.html",
+      "title": "Documentation Fix Request",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "overview/faq_index.html",
+      "title": "FAQ",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "overview/troubleshooting.html",
+      "title": "Troubleshooting",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "isaac_lab_tutorials/troubleshooting.html",
+      "title": "Isaac Lab Troubleshooting",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "ros2_tutorials/troubleshooting.html",
+      "title": "ROS 2 Troubleshooting",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "replicator_tutorials/troubleshooting.html",
+      "title": "Replicator Troubleshooting",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "robot_setup/troubleshooting.html",
+      "title": "Robot Setup Troubleshooting",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "digital_twin/troubleshooting.html",
+      "title": "Digital Twin Troubleshooting",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "assets/usd_assets_overview.html",
+      "title": "Isaac Sim Assets",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_robots.html",
+      "title": "Robot Assets",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_camera_depth_sensors.html",
+      "title": "Camera and Depth Sensors",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_nonvisual_sensors.html",
+      "title": "Non-Visual Sensors",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_props.html",
+      "title": "Prop Assets",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_environments.html",
+      "title": "Environment Assets",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_featured.html",
+      "title": "Featured Assets",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/nova_carter_landing_page.html",
+      "title": "Nova Carter",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_third_party.html",
+      "title": "Third-Party SimReady USD Assets",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "assets/usd_assets_nurec.html",
+      "title": "Neural Volume Rendering",
+      "disposition": "package",
+      "package": "src/172_digital_twin_nurec_navigation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "introduction/quickstart_index.html",
+      "title": "Quick Tutorials",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "introduction/quickstart_isaacsim.html",
+      "title": "Isaac Sim Basic Usage Tutorial",
+      "disposition": "package",
+      "package": "src/00_core_quickstart_isaacsim",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "introduction/quickstart_isaacsim_robot.html",
+      "title": "Basic Robot Tutorial",
+      "disposition": "package",
+      "package": "src/03_core_quickstart_isaacsim_robot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "introduction/tutorial_list.html",
+      "title": "Tutorial Reference Table",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "introduction/examples.html",
+      "title": "Examples",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "introduction/menu_examples.html",
+      "title": "Interactive Examples Reference Table",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "introduction/standalone_examples_list.html",
+      "title": "Standalone Examples Reference List",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "introduction/reference_architecture.html",
+      "title": "Reference Architecture and Task Groupings",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "introduction/workflows.html",
+      "title": "Workflows",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "gui/reference_user_interface.html",
+      "title": "User Interface Reference",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "gui/reference_keyboard_shortcuts.html",
+      "title": "Keyboard Shortcuts Reference",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "robot_setup/asset_structure.html",
+      "title": "Asset Structure",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "isaac_lab_tutorials/index.html",
+      "title": "Isaac Lab",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "isaac_lab_tutorials/tutorial_policy_deployment.html",
+      "title": "Deploying Policies in Isaac Sim",
+      "disposition": "package",
+      "package": "src/165_motion_policy_deployment",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_rl_controller.html",
+      "title": "Running a Reinforcement Learning Policy through ROS 2 and Isaac Sim",
+      "disposition": "package",
+      "package": "src/166_ros2_ros2_rl_controller",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "isaac_lab_tutorials/tutorial_cloner.html",
+      "title": "Getting Started with Cloner",
+      "disposition": "package",
+      "package": "src/163_motion_cloner",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "isaac_lab_tutorials/tutorial_instanceable_assets.html",
+      "title": "Instanceable Assets",
+      "disposition": "package",
+      "package": "src/162_motion_instanceable_assets",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/ros2_landing_page.html",
+      "title": "ROS 2",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "ros2_tutorials/index.html",
+      "title": "ROS 2 Tutorials (Linux and Windows)",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_turtlebot.html",
+      "title": "URDF Import: Turtlebot",
+      "disposition": "package",
+      "package": "src/104_ros2_ros2_turtlebot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_drive_turtlebot.html",
+      "title": "Driving TurtleBot using ROS 2 Messages",
+      "disposition": "package",
+      "package": "src/105_ros2_ros2_drive_turtlebot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_clock.html",
+      "title": "ROS 2 Clock",
+      "disposition": "package",
+      "package": "src/106_ros2_ros2_clock",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_rtf.html",
+      "title": "ROS 2 Publish Real Time Factor (RTF)",
+      "disposition": "package",
+      "package": "src/107_ros2_ros2_rtf",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_camera.html",
+      "title": "ROS 2 Cameras",
+      "disposition": "package",
+      "package": "src/113_ros2_ros2_camera",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_camera_noise.html",
+      "title": "Add Noise to Camera",
+      "disposition": "package",
+      "package": "src/115_ros2_ros2_camera_noise",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_camera_publishing.html",
+      "title": "Publishing Camera’s Data",
+      "disposition": "package",
+      "package": "src/114_ros2_ros2_camera_publishing",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_rtx_lidar.html",
+      "title": "RTX Lidar Sensors",
+      "disposition": "package",
+      "package": "src/116_ros2_ros2_rtx_lidar",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_tf.html",
+      "title": "ROS2 Transform Trees and Odometry",
+      "disposition": "package",
+      "package": "src/108_ros2_ros2_tf",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_publish_rate.html",
+      "title": "ROS2 Setting Publish Rates",
+      "disposition": "package",
+      "package": "src/109_ros2_ros2_publish_rate",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_qos.html",
+      "title": "ROS 2 Quality of Service (QoS)",
+      "disposition": "package",
+      "package": "src/110_ros2_ros2_qos",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_manipulation.html",
+      "title": "ROS2 Joint Control: Extension Python Scripting",
+      "disposition": "package",
+      "package": "src/117_ros2_ros2_manipulation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_name_override.html",
+      "title": "NameOverride Attribute",
+      "disposition": "package",
+      "package": "src/111_ros2_ros2_name_override",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_ackermann_controller.html",
+      "title": "ROS 2 Ackermann Controller",
+      "disposition": "package",
+      "package": "src/118_ros2_ros2_ackermann_controller",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_auto_namespace.html",
+      "title": "Automatic ROS 2 Namespace Generation",
+      "disposition": "package",
+      "package": "src/112_ros2_ros2_auto_namespace",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_python.html",
+      "title": "ROS 2 Bridge in Standalone Workflow",
+      "disposition": "package",
+      "package": "src/119_ros2_ros2_python",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_navigation.html",
+      "title": "ROS 2 Navigation",
+      "disposition": "package",
+      "package": "src/122_ros2_ros2_navigation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_multi_navigation.html",
+      "title": "Multiple Robot ROS2 Navigation",
+      "disposition": "package",
+      "package": "src/123_ros2_ros2_multi_navigation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_navigation_block_world.html",
+      "title": "ROS 2 Navigation with Block World Generator",
+      "disposition": "package",
+      "package": "src/124_ros2_ros2_navigation_block_world",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_moveit.html",
+      "title": "MoveIt 2",
+      "disposition": "package",
+      "package": "src/125_ros2_ros2_moveit",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_generic_publisher_subscriber.html",
+      "title": "ROS 2 Generic Publisher and Subscriber",
+      "disposition": "package",
+      "package": "src/126_ros2_ros2_generic_publisher_subscriber",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_generic_server_client.html",
+      "title": "ROS 2 Generic Server and Client",
+      "disposition": "package",
+      "package": "src/127_ros2_ros2_generic_server_client",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_prim_service.html",
+      "title": "ROS 2 Service for Manipulating Prims Attributes",
+      "disposition": "package",
+      "package": "src/128_ros2_ros2_prim_service",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_custom_message_python.html",
+      "title": "ROS 2 Python Custom Messages",
+      "disposition": "package",
+      "package": "src/129_ros2_ros2_custom_message_python",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_custom_omnigraph_node_python.html",
+      "title": "ROS 2 Python Custom OmniGraph Node",
+      "disposition": "package",
+      "package": "src/130_ros2_ros2_custom_omnigraph_node_python",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_omnigraph_cpp_node.html",
+      "title": "ROS 2 Custom C++ OmniGraph Node",
+      "disposition": "package",
+      "package": "src/131_ros2_ros2_omnigraph_cpp_node",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_launch.html",
+      "title": "ROS 2 Launch",
+      "disposition": "package",
+      "package": "src/120_ros2_ros2_launch",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "ros2_tutorials/tutorial_ros2_simulation_control.html",
+      "title": "ROS2 Simulation Control",
+      "disposition": "package",
+      "package": "src/121_ros2_ros2_simulation_control",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "nvidia_isaac_ros/isaac_ros_tutorials.html",
+      "title": "NVIDIA Isaac ROS",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "ros2_tutorials/ros2_reference_architecture.html",
+      "title": "ROS 2 Reference Architecture",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "importer_exporter/ext_isaacsim_asset_importer_urdf.html",
+      "title": "URDF Importer Extension",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "importer_exporter/ext_omni_exporter_urdf.html",
+      "title": "USD to URDF Exporter Extension",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "synthetic_data_generation/index.html",
+      "title": "Synthetic Data Generation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "replicator_tutorials/index.html",
+      "title": "Perception Data Generation (Replicator)",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_overview.html",
+      "title": "Overview",
+      "disposition": "package",
+      "package": "src/132_replicator_replicator_overview",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_recorder.html",
+      "title": "Synthetic Data Recorder",
+      "disposition": "package",
+      "package": "src/133_replicator_replicator_recorder",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_getting_started.html",
+      "title": "Getting Started Scripts",
+      "disposition": "package",
+      "package": "src/134_replicator_replicator_getting_started",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_scene_based_sdg.html",
+      "title": "Scene Based Synthetic Dataset Generation",
+      "disposition": "package",
+      "package": "src/137_replicator_replicator_scene_based_sdg",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_object_based_sdg.html",
+      "title": "Object Based Synthetic Dataset Generation",
+      "disposition": "package",
+      "package": "src/138_replicator_replicator_object_based_sdg",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_infinigen_sdg.html",
+      "title": "Environment Based Synthetic Dataset Generation with Infinigen",
+      "disposition": "package",
+      "package": "src/169_replicator_replicator_infinigen_sdg",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_amr_navigation.html",
+      "title": "Randomization in Simulation – AMR Navigation",
+      "disposition": "package",
+      "package": "src/142_replicator_replicator_amr_navigation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_ur10_palletizing.html",
+      "title": "Randomization in Simulation – UR10 Palletizing",
+      "disposition": "package",
+      "package": "src/143_replicator_replicator_ur10_palletizing",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_cosmos.html",
+      "title": "Cosmos Synthetic Data Generation",
+      "disposition": "package",
+      "package": "src/170_replicator_replicator_cosmos",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_augmentation.html",
+      "title": "Data Augmentation",
+      "disposition": "package",
+      "package": "src/139_replicator_replicator_augmentation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_custom_og_randomizer.html",
+      "title": "Custom Replicator Randomization Nodes",
+      "disposition": "package",
+      "package": "src/140_replicator_replicator_custom_og_randomizer",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_modular_scripting.html",
+      "title": "Modular Behavior Scripting",
+      "disposition": "package",
+      "package": "src/141_replicator_replicator_modular_scripting",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_isaac_randomizers.html",
+      "title": "Randomization Snippets",
+      "disposition": "package",
+      "package": "src/135_replicator_replicator_isaac_randomizers",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_isaac_snippets.html",
+      "title": "Useful Snippets",
+      "disposition": "package",
+      "package": "src/136_replicator_replicator_isaac_snippets",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_online_generation.html",
+      "title": "Online Generation",
+      "disposition": "package",
+      "package": "src/177_replicator_replicator_online_generation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_pose_estimation.html",
+      "title": "Pose Estimation Synthetic Data Generation",
+      "disposition": "package",
+      "package": "src/178_replicator_replicator_pose_estimation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_training_pose_estimation_model.html",
+      "title": "Training Pose Estimation Model with Synthetic Data",
+      "disposition": "package",
+      "package": "src/179_replicator_replicator_training_pose_estimation_model",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "replicator_tutorials/tutorial_replicator_sceneblox.html",
+      "title": "Scene Generation with SceneBlox",
+      "disposition": "package",
+      "package": "src/176_replicator_replicator_sceneblox",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/index.html",
+      "title": "Action and Event Data Generation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "action_and_event_data_generation/tutorial_replicator_agent.html",
+      "title": "Actor Simulation and Synthetic Data Generation",
+      "disposition": "package",
+      "package": "src/156_events_replicator_agent",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/actor_control.html",
+      "title": "Actor Control",
+      "disposition": "package",
+      "package": "src/157_events_ext_replicator_agent_actor_control",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/camera_control.html",
+      "title": "Camera Control",
+      "disposition": "package",
+      "package": "src/158_events_ext_replicator_agent_camera_control",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/writer_control.html",
+      "title": "Writer Control",
+      "disposition": "package",
+      "package": "src/159_events_ext_replicator_agent_writer_control",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-agent/customization.html",
+      "title": "Customization",
+      "disposition": "package",
+      "package": "src/160_events_ext_replicator_agent_customization",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/tutorial_replicator_object.html",
+      "title": "Object Simulation and Synthetic Data Generation",
+      "disposition": "package",
+      "package": "src/144_events_replicator_object",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/setting.html",
+      "title": "Setting",
+      "disposition": "package",
+      "package": "src/145_events_ext_replicator_object_setting",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/mutable.html",
+      "title": "Mutable",
+      "disposition": "package",
+      "package": "src/146_events_ext_replicator_object_mutable",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/camera.html",
+      "title": "Camera",
+      "disposition": "package",
+      "package": "src/147_events_ext_replicator_object_camera",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/geometry.html",
+      "title": "Geometry",
+      "disposition": "package",
+      "package": "src/148_events_ext_replicator_object_geometry",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/light.html",
+      "title": "Light",
+      "disposition": "package",
+      "package": "src/149_events_ext_replicator_object_light",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/mutable_attribute.html",
+      "title": "Mutable Attribute",
+      "disposition": "package",
+      "package": "src/150_events_ext_replicator_object_mutable_attribute",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/transformation.html",
+      "title": "Transformation",
+      "disposition": "package",
+      "package": "src/151_events_ext_replicator_object_transformation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/harmonizer.html",
+      "title": "Harmonizer",
+      "disposition": "package",
+      "package": "src/152_events_ext_replicator_object_harmonizer",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/macro.html",
+      "title": "Macro",
+      "disposition": "package",
+      "package": "src/153_events_ext_replicator_object_macro",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/distribution_visualizer.html",
+      "title": "Distribution Visualizer",
+      "disposition": "package",
+      "package": "src/154_events_ext_replicator_object_distribution_visualizer",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_replicator-object/randomization_dependency.html",
+      "title": "Randomization Dependency: Incremental Examples",
+      "disposition": "package",
+      "package": "src/155_events_ext_replicator_object_randomization_dependency",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/tutorial_replicator_caption.html",
+      "title": "VLM Scene Captioning",
+      "disposition": "package",
+      "package": "src/171_events_replicator_caption",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/tutorial_replicator_incident.html",
+      "title": "Physical Space Event Generation",
+      "disposition": "package",
+      "package": "src/161_events_replicator_incident",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/tutorial_sensors_rtx_placement.html",
+      "title": "RTX Sensors Placement and Calibration",
+      "disposition": "package",
+      "package": "src/77_events_sensors_rtx_placement",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_sensors_rtx_placement/camera_placement.html",
+      "title": "Camera Placement",
+      "disposition": "package",
+      "package": "src/78_events_ext_sensors_rtx_placement_camera_placement",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "action_and_event_data_generation/ext_sensors_rtx_placement/camera_calibration.html",
+      "title": "Camera Calibration",
+      "disposition": "package",
+      "package": "src/79_events_ext_sensors_rtx_placement_camera_calibration",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "synthetic_data_generation/tutorial_replicator_grasping_sdg.html",
+      "title": "Grasping Synthetic Data Generation",
+      "disposition": "package",
+      "package": "src/168_sdg_extra_replicator_grasping_sdg",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "synthetic_data_generation/tutorial_replicator_mobility_gen.html",
+      "title": "Data Generation with MobilityGen",
+      "disposition": "package",
+      "package": "src/167_sdg_extra_replicator_mobility_gen",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "digital_twin/index.html",
+      "title": "Digital Twin",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "digital_twin/warehouse_logistics/ext_omni_warehouse_creator.html",
+      "title": "Warehouse Creator Extension",
+      "disposition": "package",
+      "package": "src/95_digital_twin_ext_omni_warehouse_creator",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "digital_twin/warehouse_logistics/ext_isaacsim_asset_gen_conveyor.html",
+      "title": "Conveyor Belt Utility",
+      "disposition": "package",
+      "package": "src/96_digital_twin_asset_gen_conveyor",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "digital_twin/warehouse_logistics/tutorial_static_assets.html",
+      "title": "Static Warehouse Assets",
+      "disposition": "package",
+      "package": "src/94_digital_twin_static_assets",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "digital_twin/warehouse_logistics/logistics_tutorial_cuopt.html",
+      "title": "NVIDIA cuOpt",
+      "disposition": "package",
+      "package": "src/174_digital_twin_logistics_tutorial_cuopt",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "cortex_tutorials/tutorial_cortex_1_overview.html",
+      "title": "Isaac Cortex: Overview",
+      "disposition": "package",
+      "package": "src/98_digital_twin_cortex_1_overview",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "cortex_tutorials/tutorial_cortex_2_decider_networks.html",
+      "title": "Decider networks",
+      "disposition": "package",
+      "package": "src/99_digital_twin_cortex_2_decider_networks",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "cortex_tutorials/tutorial_cortex_3_example_peck_games.html",
+      "title": "Behavior Examples: Peck Games",
+      "disposition": "package",
+      "package": "src/100_digital_twin_cortex_3_example_peck_games",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "cortex_tutorials/tutorial_cortex_4_franka_block_stacking.html",
+      "title": "Walkthrough: Franka Block Stacking",
+      "disposition": "package",
+      "package": "src/101_digital_twin_cortex_4_franka_block_stacking",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "cortex_tutorials/tutorial_cortex_5_ur10_bin_stacking.html",
+      "title": "Walkthrough: UR10 Bin Stacking",
+      "disposition": "package",
+      "package": "src/102_digital_twin_cortex_5_ur10_bin_stacking",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "cortex_tutorials/tutorial_cortex_7_cortex_extension.html",
+      "title": "Building Cortex Based Extensions",
+      "disposition": "package",
+      "package": "src/103_digital_twin_cortex_7_cortex_extension",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "digital_twin/ext_isaacsim_asset_generator_occupancy_map.html",
+      "title": "Mapping",
+      "disposition": "package",
+      "package": "src/97_digital_twin_asset_generator_occupancy_map",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "app_template/index.html",
+      "title": "Application Template",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "development_tools/index.html",
+      "title": "Development Tools",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "development_tools/vscode.html",
+      "title": "Visual Studio Code (VS Code)",
+      "disposition": "package",
+      "package": "src/07_tools_vscode",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "development_tools/jupyter_notebook.html",
+      "title": "Jupyter Notebook",
+      "disposition": "package",
+      "package": "src/08_tools_jupyter_notebook",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "development_tools/omniverse_script_editor.html",
+      "title": "Omniverse Script Editor",
+      "disposition": "package",
+      "package": "src/04_tools_omniverse_script_editor",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "development_tools/carb_settings.html",
+      "title": "Modify Carb Settings",
+      "disposition": "package",
+      "package": "src/15_tools_carb_settings",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "python_scripting/index.html",
+      "title": "Python Scripting and Tutorials",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "python_scripting/python_scripting_concepts.html",
+      "title": "Python Scripting Concepts",
+      "disposition": "package",
+      "package": "src/05_python_usd_python_scripting_concepts",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "python_scripting/core_api_overview.html",
+      "title": "Core API Overview",
+      "disposition": "package",
+      "package": "src/09_python_usd_core_api_overview",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "python_scripting/manual_standalone_python.html",
+      "title": "Python Environment",
+      "disposition": "package",
+      "package": "src/06_python_usd_manual_standalone_python",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "python_scripting/environment_setup.html",
+      "title": "Scene Setup Snippets",
+      "disposition": "package",
+      "package": "src/16_python_usd_environment_setup",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "python_scripting/util_snippets.html",
+      "title": "Util Snippets",
+      "disposition": "package",
+      "package": "src/17_python_usd_util_snippets",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "python_scripting/robots_simulation.html",
+      "title": "Robot Simulation Snippets",
+      "disposition": "package",
+      "package": "src/28_python_usd_robots_simulation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "reference_python_api.html",
+      "title": "API Documentation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "core_api_tutorials/index.html",
+      "title": "Core API Tutorial Series",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_core_hello_world.html",
+      "title": "Hello World",
+      "disposition": "package",
+      "package": "src/01_core_core_hello_world",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_core_hello_robot.html",
+      "title": "Hello Robot",
+      "disposition": "package",
+      "package": "src/02_core_core_hello_robot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_core_adding_controller.html",
+      "title": "Adding a Controller",
+      "disposition": "package",
+      "package": "src/23_core_core_adding_controller",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_core_adding_manipulator.html",
+      "title": "Adding a Manipulator Robot",
+      "disposition": "package",
+      "package": "src/24_core_core_adding_manipulator",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_core_adding_multiple_robots.html",
+      "title": "Adding Multiple Robots",
+      "disposition": "package",
+      "package": "src/25_core_core_adding_multiple_robots",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_core_multiple_tasks.html",
+      "title": "Multiple Tasks",
+      "disposition": "package",
+      "package": "src/26_core_core_multiple_tasks",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_core_adding_props.html",
+      "title": "Adding Props",
+      "disposition": "package",
+      "package": "src/19_core_core_adding_props",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "core_api_tutorials/tutorial_advanced_data_logging.html",
+      "title": "Data Logging",
+      "disposition": "package",
+      "package": "src/27_core_advanced_data_logging",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "gui/index.html",
+      "title": "GUI Reference",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "gui/app_selector.html",
+      "title": "Isaac Sim App Selector",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "gui/menu_create.html",
+      "title": "Create Menu",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "gui/menu_replicator.html",
+      "title": "Replicator Menu",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "gui/preferences.html",
+      "title": "Preferences",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "gui/selection-modes.html",
+      "title": "Selection Modes",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "omnigraph/index.html",
+      "title": "Omnigraph",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "omnigraph/omnigraph_shortcuts.html",
+      "title": "Commonly Used Omnigraph Shortcuts",
+      "disposition": "package",
+      "package": "src/81_tools_omnigraph_shortcuts",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omnigraph/omnigraph_custom_python_nodes.html",
+      "title": "Custom Python Nodes",
+      "disposition": "package",
+      "package": "src/87_tools_omnigraph_custom_python_nodes",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omnigraph/omnigraph_custom_cpp_nodes.html",
+      "title": "Custom C++ Nodes",
+      "disposition": "package",
+      "package": "src/90_tools_omnigraph_custom_cpp_nodes",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omnigraph/omnigraph_tutorial.html",
+      "title": "Isaac Sim Omnigraph Tutorial",
+      "disposition": "package",
+      "package": "src/80_tools_omnigraph_tutorial",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omnigraph/omnigraph_scripting.html",
+      "title": "OmniGraph via Python Scripting Tutorial",
+      "disposition": "package",
+      "package": "src/82_tools_omnigraph_scripting",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "importer_exporter/importers_exporters.html",
+      "title": "Importers and Exporters",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "importer_exporter/ext_isaacsim_asset_importer_mjcf.html",
+      "title": "MJCF Importer Extension",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "importer_exporter/ext_omni_isaac_shapenet.html",
+      "title": "ShapeNet Importer",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "importer_exporter/formats.html",
+      "title": "Formats",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "importer_exporter/importer_exporter_tutorials.html",
+      "title": "Importer and Exporter Tutorials Series",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "importer_exporter/import_urdf.html",
+      "title": "Tutorial: Import URDF",
+      "disposition": "package",
+      "package": "src/30_importers_import_urdf",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "importer_exporter/export_urdf.html",
+      "title": "Tutorial: Export URDF",
+      "disposition": "package",
+      "package": "src/32_importers_export_urdf",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "importer_exporter/import_mjcf.html",
+      "title": "Tutorial: Import MJCF",
+      "disposition": "package",
+      "package": "src/31_importers_import_mjcf",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "importer_exporter/shapenet_importer.html",
+      "title": "Tutorial: ShapeNet Importer",
+      "disposition": "package",
+      "package": "src/175_importers_shapenet_importer",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup/index.html",
+      "title": "Robot Setup",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "robot_setup/robot_wizard.html",
+      "title": "Robot Wizard [Beta]",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "robot_setup/robot_wizard_tutorials.html",
+      "title": "Robot Wizard Tutorial",
+      "disposition": "package",
+      "package": "src/34_robot_setup_robot_wizard_tutorials",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup/editing_tools.html",
+      "title": "Editor Tools",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "robot_setup/ext_isaacsim_util_merge_mesh.html",
+      "title": "Merge Mesh Utility",
+      "disposition": "package",
+      "package": "src/33_importers_util_merge_mesh",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup/ext_isaacsim_robot_setup_gain_tuner.html",
+      "title": "Gain Tuner Extension",
+      "disposition": "package",
+      "package": "src/48_importers_robot_setup_gain_tuner",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup/assemble_robots.html",
+      "title": "Robot Assembler",
+      "disposition": "package",
+      "package": "src/49_importers_assemble_robots",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/index.html",
+      "title": "Robot Setup Tutorials Series",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_intro_environment_setup.html",
+      "title": "Tutorial 1: Stage Setup",
+      "disposition": "package",
+      "package": "src/35_robot_setup_intro_environment_setup",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_intro_assemble_robot.html",
+      "title": "Tutorial 2: Assemble a Simple Robot",
+      "disposition": "package",
+      "package": "src/36_robot_setup_intro_assemble_robot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_gui_simple_robot.html",
+      "title": "Tutorial 3: Articulate a Basic Robot",
+      "disposition": "package",
+      "package": "src/37_robot_setup_gui_simple_robot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_gui_camera_sensors.html",
+      "title": "Tutorial 4: Add Camera and Sensors to a Robot",
+      "disposition": "package",
+      "package": "src/38_robot_setup_gui_camera_sensors",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/rig_mobile_robot.html",
+      "title": "Tutorial 5: Rig a Mobile Robot",
+      "disposition": "package",
+      "package": "src/39_robot_setup_rig_mobile_robot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_import_assemble_manipulator.html",
+      "title": "Tutorial 6: Setup a Manipulator",
+      "disposition": "package",
+      "package": "src/40_robot_setup_import_assemble_manipulator",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_configure_manipulator.html",
+      "title": "Tutorial 7: Configure a Manipulator",
+      "disposition": "package",
+      "package": "src/41_robot_setup_configure_manipulator",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_generate_robot_config.html",
+      "title": "Tutorial 8: Generate Robot Configuration File",
+      "disposition": "package",
+      "package": "src/42_robot_setup_generate_robot_config",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_pickplace_example.html",
+      "title": "Tutorial 9: Pick and Place Example",
+      "disposition": "package",
+      "package": "src/43_robot_setup_pickplace_example",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/rig_closed_loop_structures.html",
+      "title": "Tutorial 10: Rig Closed-Loop Structures",
+      "disposition": "package",
+      "package": "src/44_robot_setup_rig_closed_loop_structures",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/joint_tuning.html",
+      "title": "Tutorial 11: Tuning Joint Drive Gains",
+      "disposition": "package",
+      "package": "src/45_robot_setup_joint_tuning",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/optimizing_asset.html",
+      "title": "Tutorial 12: Asset Optimization",
+      "disposition": "package",
+      "package": "src/46_robot_setup_optimizing_asset",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup_tutorials/tutorial_rig_legged_robot.html",
+      "title": "Tutorial 13: Rigging a Legged Robot for Locomotion Policy",
+      "disposition": "package",
+      "package": "src/47_robot_setup_rig_legged_robot",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_setup/asset_validation.html",
+      "title": "Asset Validation",
+      "disposition": "package",
+      "package": "src/50_importers_asset_validation",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_simulation/index.html",
+      "title": "Robot Simulation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "robot_simulation/articulation_controller.html",
+      "title": "Articulation Controller",
+      "disposition": "package",
+      "package": "src/51_motion_articulation_controller",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_simulation/mobile_robot_controllers.html",
+      "title": "Mobile Robot Controllers",
+      "disposition": "package",
+      "package": "src/52_motion_mobile_robot_controllers",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/motion_generation_overview.html",
+      "title": "Motion Generation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/index.html",
+      "title": "Motion Generation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "manipulators/concepts/motion_gen_api.html",
+      "title": "Motion Generation Extension API Documentation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/kinematics_solver.html",
+      "title": "Kinematics Solvers",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/trajectory_interface.html",
+      "title": "Trajectory Generation",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/path_planner.html",
+      "title": "Path Planner Algorithm",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/lula_rrt.html",
+      "title": "Lula RRT",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/motion_policy.html",
+      "title": "Motion Policy Algorithm",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/rmpflow.html",
+      "title": "RMPflow",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "manipulators/concepts/rmpflow_tuning_guide.html",
+      "title": "RMPflow Tuning Guide",
+      "disposition": "package",
+      "package": "src/59_motion_rmpflow_tuning",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/manipulators_robot_description_editor.html",
+      "title": "Lula Robot Description and XRDF Editor",
+      "disposition": "package",
+      "package": "src/53_motion_manipulators_robot_description_editor",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/manipulators_rmpflow.html",
+      "title": "Lula RMPflow",
+      "disposition": "package",
+      "package": "src/56_motion_manipulators_rmpflow",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/manipulators_lula_rrt.html",
+      "title": "Lula RRT",
+      "disposition": "package",
+      "package": "src/57_motion_manipulators_lula_rrt",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/manipulators_lula_kinematics.html",
+      "title": "Lula Kinematics Solver",
+      "disposition": "package",
+      "package": "src/54_motion_manipulators_lula_kinematics",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/manipulators_lula_trajectory_generator.html",
+      "title": "Lula Trajectory Generator",
+      "disposition": "package",
+      "package": "src/55_motion_manipulators_lula_trajectory_generator",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/manipulators_configure_rmpflow_denso.html",
+      "title": "Configuring RMPflow for a New Manipulator",
+      "disposition": "package",
+      "package": "src/58_motion_manipulators_configure_rmpflow_denso",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "manipulators/manipulators_curobo.html",
+      "title": "cuRobo and cuMotion",
+      "disposition": "package",
+      "package": "src/173_motion_manipulators_curobo",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_simulation/ext_isaacsim_robot_surface_gripper.html",
+      "title": "Surface Gripper Extension",
+      "disposition": "package",
+      "package": "src/60_motion_robot_surface_gripper",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_simulation/grasp_editor.html",
+      "title": "Grasp Editor",
+      "disposition": "package",
+      "package": "src/61_motion_grasp_editor",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_simulation/ext_isaacsim_robot_policy_example.html",
+      "title": "Reinforcement Learning Policies Examples in Isaac Sim",
+      "disposition": "package",
+      "package": "src/164_motion_robot_policy_example",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "robot_simulation/robot_simulation_tips.html",
+      "title": "Robot Simulation Tips",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "robot_simulation/robot_simulation_core_concepts.html",
+      "title": "Useful Links",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "sensors/index.html",
+      "title": "Sensors",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_camera.html",
+      "title": "Camera Sensors",
+      "disposition": "package",
+      "package": "src/62_sensors_sensors_camera",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_camera_depth.html",
+      "title": "Depth Sensors",
+      "disposition": "package",
+      "package": "src/63_sensors_sensors_camera_depth",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_rtx.html",
+      "title": "RTX Sensors",
+      "disposition": "package",
+      "package": "src/76_sensors_rtx_motion_bvh",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_rtx_lidar.html",
+      "title": "RTX Lidar Sensor",
+      "disposition": "package",
+      "package": "src/72_sensors_sensors_rtx_lidar",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_rtx_materials.html",
+      "title": "RTX Sensor Non-Visual Materials",
+      "disposition": "package",
+      "package": "src/74_sensors_sensors_rtx_materials",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_rtx_radar.html",
+      "title": "RTX Radar Sensor",
+      "disposition": "package",
+      "package": "src/73_sensors_sensors_rtx_radar",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_rtx_annotators.html",
+      "title": "RTX Sensor Annotators",
+      "disposition": "package",
+      "package": "src/75_sensors_sensors_rtx_annotators",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physics.html",
+      "title": "Physics-Based Sensors",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physics_articulation_force.html",
+      "title": "Articulation Joint Sensors",
+      "disposition": "package",
+      "package": "src/64_sensors_sensors_physics_articulation_force",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physics_contact.html",
+      "title": "Contact Sensor",
+      "disposition": "package",
+      "package": "src/65_sensors_sensors_physics_contact",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physics_effort.html",
+      "title": "Effort Sensor",
+      "disposition": "package",
+      "package": "src/66_sensors_sensors_physics_effort",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physics_imu.html",
+      "title": "IMU Sensor",
+      "disposition": "package",
+      "package": "src/67_sensors_sensors_physics_imu",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physics_proximity.html",
+      "title": "Proximity Sensor",
+      "disposition": "package",
+      "package": "src/68_sensors_sensors_physics_proximity",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physx.html",
+      "title": "PhysX SDK Sensors",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physx_generic.html",
+      "title": "PhysX SDK Generic Sensor",
+      "disposition": "package",
+      "package": "src/69_sensors_sensors_physx_generic",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physx_lidar.html",
+      "title": "PhysX SDK Lidar",
+      "disposition": "package",
+      "package": "src/70_sensors_sensors_physx_lidar",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "sensors/isaacsim_sensors_physx_lightbeam.html",
+      "title": "PhysX SDK Lightbeam Sensor",
+      "disposition": "package",
+      "package": "src/71_sensors_sensors_physx_lightbeam",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "physics/index.html",
+      "title": "Physics",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "physics/simulation_fundamentals.html",
+      "title": "Physics Simulation Fundamentals",
+      "disposition": "package",
+      "package": "src/18_sensors_simulation_fundamentals",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "physics/physics_resources.html",
+      "title": "Omniverse™ Physics and PhysX SDK Limitations",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "physics/joint_inspector.html",
+      "title": "Physics Inspector",
+      "disposition": "package",
+      "package": "src/21_sensors_joint_inspector",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "physics/physics_static_collision.html",
+      "title": "Physics Static Collision Extension",
+      "disposition": "package",
+      "package": "src/20_sensors_physics_static_collision",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "physics/ext_isaacsim_inspect_physics.html",
+      "title": "Simulation Data Visualizer",
+      "disposition": "package",
+      "package": "src/22_sensors_inspect_physics",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/browsers.html",
+      "title": "Browsers",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "utilities/content_browser.html",
+      "title": "Content Browser",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "utilities/asset_browser.html",
+      "title": "Isaac Sim Asset Browser [Beta]",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "utilities/templates_index.html",
+      "title": "Templates",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "utilities/custom_interactive_examples.html",
+      "title": "Custom Interactive Examples",
+      "disposition": "package",
+      "package": "src/86_tools_custom_interactive_examples",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/extension_template_generator.html",
+      "title": "Extension Template Generator",
+      "disposition": "package",
+      "package": "src/84_tools_extension_template_generator",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/extension_templates_tutorial.html",
+      "title": "Extension Template Generator Explained",
+      "disposition": "package",
+      "package": "src/85_tools_extension_templates_tutorial",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/custom_cpp_extensions.html",
+      "title": "Custom Extensions: C++",
+      "disposition": "package",
+      "package": "src/89_tools_custom_cpp_extensions",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/vscode_extension_template_generator.html",
+      "title": "Advanced Extension Template Generator from VS Code",
+      "disposition": "package",
+      "package": "src/88_tools_vscode_extension_template_generator",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/debugging/index.html",
+      "title": "Debugging & Profiling",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "utilities/debugging/ext_isaacsim_util_debug_draw.html",
+      "title": "Debug Drawing Extension API",
+      "disposition": "package",
+      "package": "src/91_tools_util_debug_draw",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/debugging/ext_omni_kit_commands.html",
+      "title": "Omniverse Commands Tool Extension",
+      "disposition": "package",
+      "package": "src/14_tools_ext_omni_kit_commands",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/debugging/tutorial_advanced_python_debugging.html",
+      "title": "Debugging With Visual Studio Code",
+      "disposition": "package",
+      "package": "src/92_tools_advanced_python_debugging",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/debugging/profiling_performance.html",
+      "title": "Profiling Performance Using Tracy",
+      "disposition": "package",
+      "package": "src/93_tools_profiling_performance",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "utilities/updating_extensions.html",
+      "title": "Adding and Updating Extensions Guide",
+      "disposition": "package",
+      "package": "src/83_tools_updating_extensions",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "reference_material/community_highlights.html",
+      "title": "Community Project Highlights",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "reference_material/reference_glossary.html",
+      "title": "Glossary",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "reference_material/reference_conventions.html",
+      "title": "Isaac Sim Conventions",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "reference_material/sim_performance_optimization_handbook.html",
+      "title": "Isaac Sim Performance Optimization Handbook",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "reference_material/benchmarks.html",
+      "title": "Isaac Sim Benchmarks",
+      "disposition": "reference",
+      "package": null,
+      "reason": "API/자산/개념/도구 참조 또는 외부 자료 연결; 독립적인 5.1 실습 본문이 아닌 참조 페이지"
+    },
+    {
+      "source_path": "overview/extensions_renaming.html",
+      "title": "Renaming Extensions in Isaac Sim 4.5",
+      "disposition": "reference",
+      "package": null,
+      "reason": "릴리스/문제 해결 참조"
+    },
+    {
+      "source_path": "omniverse_usd/index.html",
+      "title": "Omniverse and USD",
+      "disposition": "reference",
+      "package": null,
+      "reason": "상위 색인/개요; 포함된 실습 페이지를 개별 패키지로 연결"
+    },
+    {
+      "source_path": "omniverse_usd/open_usd.html",
+      "title": "OpenUSD Fundamentals",
+      "disposition": "package",
+      "package": "src/10_python_usd_open_usd",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omniverse_usd/intro_to_usd.html",
+      "title": "Working with USD",
+      "disposition": "package",
+      "package": "src/11_python_usd_intro_to_usd",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omniverse_usd/usd_tools.html",
+      "title": "USD Tools",
+      "disposition": "package",
+      "package": "src/12_python_usd_usd_tools",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omniverse_usd/robot_schema.html",
+      "title": "Robot Schema",
+      "disposition": "package",
+      "package": "src/29_python_usd_robot_schema",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "omniverse_usd/omniverse_tools.html",
+      "title": "Commands",
+      "disposition": "package",
+      "package": "src/13_python_usd_omniverse_tools",
+      "reason": "독립 실습 패키지"
+    },
+    {
+      "source_path": "common/data-collection.html",
+      "title": "Data Collection & Usage",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/legal.html",
+      "title": "Licenses",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/licenses-isaac-sim.html",
+      "title": "Isaac Sim License",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/license-isaac-sim-additional.html",
+      "title": "Isaac Sim Additional Software and Materials License",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/license-isaac-sim-webrtc-streaming-client.html",
+      "title": "Isaac Sim WebRTC Streaming Client License",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/NVIDIA_Omniverse_License_Agreement.html",
+      "title": "Omniverse License",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/licensing-notices-disclaimers.html",
+      "title": "Licensing Disclaimer",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/licenses.html",
+      "title": "Other Licenses",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    },
+    {
+      "source_path": "common/redistributable-ov-software.html",
+      "title": "Redistributable Omniverse Software",
+      "disposition": "reference",
+      "package": null,
+      "reason": "라이선스/지원/법적 고지"
+    }
+  ],
+  "learning_stages": [
+    {
+      "key": "first_steps",
+      "title": "첫 실행과 로봇 만나기",
+      "description": "기본 조작, World의 물리 스텝, Jetbot 관절 제어를 먼저 경험하고 기본 로봇 조사 실습으로 연결한다.",
+      "start": 0,
+      "end": 3,
+      "tutorial_ids": [
+        "t001",
+        "t098",
+        "t099",
+        "t002"
+      ]
+    },
+    {
+      "key": "python_usd",
+      "title": "Python 실행 환경과 USD 기초",
+      "description": "실행 방식과 개발 도구를 익힌 뒤 Core API, USD 계층·속성·명령, 장면 작성 코드를 이해한다.",
+      "start": 4,
+      "end": 17,
+      "tutorial_ids": [
+        "t090",
+        "t092",
+        "t094",
+        "t088",
+        "t089",
+        "t093",
+        "t173",
+        "t174",
+        "t175",
+        "t177",
+        "t169",
+        "t091",
+        "t095",
+        "t096"
+      ]
+    },
+    {
+      "key": "physics_core",
+      "title": "물리 기초와 Core API 확장",
+      "description": "충돌·강체·물리 검사부터 익히고 컨트롤러, 매니퓰레이터, 여러 로봇과 Task, 데이터 기록으로 확장한다.",
+      "start": 18,
+      "end": 28,
+      "tutorial_ids": [
+        "t159",
+        "t104",
+        "t161",
+        "t160",
+        "t162",
+        "t100",
+        "t101",
+        "t102",
+        "t103",
+        "t105",
+        "t097"
+      ]
+    },
+    {
+      "key": "robot_authoring",
+      "title": "로봇 자산 가져오기와 제작",
+      "description": "로봇 스키마와 변환 도구를 익히고 공식 제작 Tutorial 1–13 순서를 유지해 조립·리깅·설정·최적화를 연습한다. 마지막 보행 로봇 수업은 정책 실행 전 USD 설정 실습이다.",
+      "start": 29,
+      "end": 50,
+      "tutorial_ids": [
+        "t176",
+        "t111",
+        "t113",
+        "t112",
+        "t116",
+        "t115",
+        "t119",
+        "t120",
+        "t121",
+        "t122",
+        "t123",
+        "t124",
+        "t125",
+        "t126",
+        "t127",
+        "t128",
+        "t129",
+        "t130",
+        "t131",
+        "t117",
+        "t118",
+        "t132"
+      ]
+    },
+    {
+      "key": "motion_control",
+      "title": "로봇 제어와 동작 계획",
+      "description": "관절·모바일 제어에서 로봇 기술 파일, 운동학·궤적, RMPflow·RRT, 튜닝과 그리퍼로 진행한다.",
+      "start": 51,
+      "end": 61,
+      "tutorial_ids": [
+        "t133",
+        "t134",
+        "t135",
+        "t138",
+        "t139",
+        "t136",
+        "t137",
+        "t140",
+        "t180",
+        "t142",
+        "t143"
+      ]
+    },
+    {
+      "key": "sensors",
+      "title": "센서와 측정 데이터",
+      "description": "카메라와 물리 센서에서 RTX Lidar·Radar, 비시각 재질·annotator·Motion BVH로 확장하고 배치·보정을 마무리한다.",
+      "start": 62,
+      "end": 79,
+      "tutorial_ids": [
+        "t145",
+        "t146",
+        "t151",
+        "t152",
+        "t153",
+        "t154",
+        "t155",
+        "t156",
+        "t157",
+        "t158",
+        "t147",
+        "t149",
+        "t148",
+        "t150",
+        "t179",
+        "t072",
+        "t073",
+        "t074"
+      ]
+    },
+    {
+      "key": "omnigraph_extensions",
+      "title": "OmniGraph와 확장 개발",
+      "description": "그래프 연결과 Python 생성, 확장 등록·템플릿·대화형 예제를 익힌 뒤 Python/C++ custom node와 디버깅·프로파일링을 학습한다. 이후 ROS와 Replicator 사용자 노드의 기반이다.",
+      "start": 80,
+      "end": 93,
+      "tutorial_ids": [
+        "t109",
+        "t106",
+        "t110",
+        "t172",
+        "t164",
+        "t165",
+        "t163",
+        "t107",
+        "t167",
+        "t166",
+        "t108",
+        "t168",
+        "t170",
+        "t171"
+      ]
+    },
+    {
+      "key": "environments_behaviors",
+      "title": "환경 구축과 로봇 행동",
+      "description": "창고·컨베이어·Occupancy Map을 만들고 RMPflow와 확장 개발 경험을 Cortex의 의사결정·행동 예제에 적용한다. 지도 작성은 다음 ROS 내비게이션의 배경이 된다.",
+      "start": 94,
+      "end": 103,
+      "tutorial_ids": [
+        "t079",
+        "t077",
+        "t078",
+        "t087",
+        "t081",
+        "t082",
+        "t083",
+        "t084",
+        "t085",
+        "t086"
+      ]
+    },
+    {
+      "key": "ros2_basics",
+      "title": "ROS 2 연결과 기본 통신",
+      "description": "TurtleBot 제어와 시계·TF·통신 설정을 익히고 카메라·Lidar·관절 제어를 연결한 뒤 standalone·launch·simulation control을 실습한다.",
+      "start": 104,
+      "end": 121,
+      "tutorial_ids": [
+        "t007",
+        "t008",
+        "t009",
+        "t010",
+        "t015",
+        "t016",
+        "t017",
+        "t019",
+        "t021",
+        "t011",
+        "t013",
+        "t012",
+        "t014",
+        "t018",
+        "t020",
+        "t022",
+        "t033",
+        "t034"
+      ]
+    },
+    {
+      "key": "ros2_applications",
+      "title": "ROS 2 응용과 사용자 인터페이스",
+      "description": "내비게이션·다중 로봇·MoveIt을 적용한 뒤 generic topic/service, 사용자 메시지, Python/C++ OmniGraph 노드를 구현한다.",
+      "start": 122,
+      "end": 131,
+      "tutorial_ids": [
+        "t023",
+        "t024",
+        "t025",
+        "t026",
+        "t027",
+        "t028",
+        "t029",
+        "t030",
+        "t031",
+        "t032"
+      ]
+    },
+    {
+      "key": "replicator",
+      "title": "Replicator 합성 데이터 기초와 확장",
+      "description": "의미 라벨과 Recorder부터 스크립트·무작위화·캡처 시점·장면 및 물체 데이터셋을 익히고 증강·사용자 노드·행동 스크립트·로봇 응용으로 확장한다.",
+      "start": 132,
+      "end": 143,
+      "tutorial_ids": [
+        "t035",
+        "t036",
+        "t037",
+        "t047",
+        "t048",
+        "t038",
+        "t039",
+        "t044",
+        "t045",
+        "t046",
+        "t041",
+        "t042"
+      ]
+    },
+    {
+      "key": "object_sdg",
+      "title": "물체 시뮬레이션과 YAML 무작위화",
+      "description": "IRO 전체 실행에서 설정·Mutable·카메라·기하·조명·속성·변환을 익히고 Harmonizer·Macro·분포·의존 무작위화로 나아간다.",
+      "start": 144,
+      "end": 155,
+      "tutorial_ids": [
+        "t058",
+        "t059",
+        "t060",
+        "t061",
+        "t062",
+        "t063",
+        "t064",
+        "t065",
+        "t066",
+        "t067",
+        "t068",
+        "t069"
+      ]
+    },
+    {
+      "key": "actor_events",
+      "title": "액터와 공간 이벤트 데이터",
+      "description": "액터 실행부터 동작·카메라·Writer·사용자 설정을 익히고 물리 공간의 사건 시나리오로 연결한다.",
+      "start": 156,
+      "end": 161,
+      "tutorial_ids": [
+        "t053",
+        "t054",
+        "t055",
+        "t056",
+        "t057",
+        "t071"
+      ]
+    },
+    {
+      "key": "policies_scaling",
+      "title": "병렬 환경과 학습 정책 활용",
+      "description": "Instanceable 자산과 Cloner를 익히고 이미 학습된 정책 예제, 정책 배포, ROS 제어, MobilityGen 궤적 기록·재렌더링을 연결한다.",
+      "start": 162,
+      "end": 167,
+      "tutorial_ids": [
+        "t006",
+        "t005",
+        "t144",
+        "t003",
+        "t004",
+        "t076"
+      ]
+    },
+    {
+      "key": "advanced_integrations",
+      "title": "고급 데이터 생성과 외부 시스템 통합",
+      "description": "집기 평가에서 Infinigen·Cosmos·VLM 데이터 흐름, NuRec 장면, cuRobo·cuMotion과 cuOpt 서비스로 넓힌다. 별도 데이터·모델·설치·서비스가 필요한 통합 실습을 뒤에 둔다.",
+      "start": 168,
+      "end": 174,
+      "tutorial_ids": [
+        "t075",
+        "t040",
+        "t043",
+        "t070",
+        "t178",
+        "t141",
+        "t080"
+      ]
+    },
+    {
+      "key": "legacy_reference",
+      "title": "사용 중단 문서와 레거시 참고",
+      "description": "공식 원문이 deprecated로 표시된 ShapeNet·SceneBlox·온라인 생성·Pose Estimation 생성 및 학습을 마지막 참고 과정으로 둔다. ShapeNet 실습 자체는 현재 OBJ→USD 변환 경로를 사용한다.",
+      "start": 175,
+      "end": 179,
+      "tutorial_ids": [
+        "t114",
+        "t052",
+        "t049",
+        "t050",
+        "t051"
+      ]
+    }
+  ],
+  "learning_order_note": "폴더 접두사 00–179는 저장소의 권장 학습 순서이며, t001 등의 ID는 기존 공식 출처 식별자입니다. 각 패키지는 독립적이며 번호가 실행 의존성을 만들지 않습니다."
+}

@@ -1,0 +1,41 @@
+{
+  "launch_config": {
+    "renderer": "RaytracedLighting",
+    "headless": false
+  },
+  "resolution": [
+    512,
+    512
+  ],
+  "rt_subframes": 16,
+  "num_frames": 6,
+  "env_url": "/Isaac/Environments/Simple_Warehouse/full_warehouse.usd",
+  "writer": "BasicWriter",
+  "writer_config": {
+    "output_dir": "output",
+    "rgb": true,
+    "bounding_box_2d_tight": true,
+    "semantic_segmentation": true,
+    "distance_to_image_plane": true,
+    "bounding_box_3d": true,
+    "occlusion": true
+  },
+  "clear_previous_semantics": true,
+  "forklift": {
+    "url": "/Isaac/Props/Forklift/forklift.usd",
+    "class": "forklift"
+  },
+  "cone": {
+    "url": "/Isaac/Environments/Simple_Warehouse/Props/S_TrafficCone.usd",
+    "class": "traffic_cone"
+  },
+  "pallet": {
+    "url": "/Isaac/Environments/Simple_Warehouse/Props/SM_PaletteA_01.usd",
+    "class": "pallet"
+  },
+  "cardbox": {
+    "url": "/Isaac/Environments/Simple_Warehouse/Props/SM_CardBoxD_04.usd",
+    "class": "cardbox"
+  },
+  "close_app_after_run": false
+}

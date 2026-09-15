@@ -1,0 +1,23 @@
+{
+  "id": "t085",
+  "title": "Walkthrough: UR10 Bin Stacking",
+  "category": "digital_twin",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_5_ur10_bin_stacking.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "bin_stacking_behavior.py",
+    "NOTICE.md",
+    "LICENSE-NVIDIA-EXAMPLES",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "Isaac Sim 5.1 sample assets"
+  ],
+  "verification": "not_run",
+  "learning_order": 102,
+  "learning_stage": "environments_behaviors"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "t054",
+  "title": "Actor Control",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-agent/actor_control.html",
+  "mode": "gui",
+  "entrypoint": "prepare.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "character_commands.txt",
+    "custom_commands.json",
+    "lesson.json",
+    "prepare.py",
+    "queue_commands.txt",
+    "robot_commands.txt",
+    "set_actor_behavior.py",
+    "time_response.json",
+    "transition_map.json"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 GUI and RTX GPU",
+    "isaacsim.replicator.agent.core and isaacsim.replicator.agent.ui",
+    "Isaac Sim 5.1 Assets access; baked NavMesh",
+    "No ROS or cloud API required"
+  ],
+  "verification": "not_run",
+  "learning_order": 157,
+  "learning_stage": "actor_events"
+}

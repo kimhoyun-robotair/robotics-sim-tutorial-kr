@@ -1,0 +1,20 @@
+{
+  "id": "t142",
+  "title": "Surface Gripper Extension",
+  "category": "motion",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_simulation/ext_isaacsim_robot_surface_gripper.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "RTX GPU and compatible driver",
+    "isaacsim.robot.surface_gripper native gantry data"
+  ],
+  "verification": "not_run",
+  "learning_order": 60,
+  "learning_stage": "motion_control"
+}

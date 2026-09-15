@@ -1,0 +1,22 @@
+{
+  "id": "t072",
+  "title": "RTX Sensors Placement and Calibration",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/tutorial_sensors_rtx_placement.html",
+  "mode": "gui",
+  "entrypoint": "room.usda",
+  "artifacts": [
+    "TUTORIAL.md",
+    "room.usda",
+    "inspect_stage.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 GUI and RTX GPU",
+    "isaacsim.sensors.rtx.placement",
+    "omni.anim.navigation.bundle",
+    "Baked NavMesh"
+  ],
+  "verification": "not_run",
+  "learning_order": 77,
+  "learning_stage": "sensors"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "t095",
+  "title": "Scene Setup Snippets",
+  "category": "python_usd",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/python_scripting/environment_setup.html",
+  "title_ko": "장면 구성 모음: 접촉, 질량, 메시, 재질, 질의",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "convert.py",
+    "run.py",
+    "tetrahedron.obj",
+    "tutorial.json"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Bundled omni.kit.asset_converter extension for convert.py"
+  ],
+  "verification": "not_run",
+  "learning_order": 16,
+  "learning_stage": "python_usd"
+}

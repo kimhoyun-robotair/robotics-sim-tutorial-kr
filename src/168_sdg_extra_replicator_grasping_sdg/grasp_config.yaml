@@ -1,0 +1,48 @@
+{
+  "gripper_path": "/World/Grippers/xarm_gripper",
+  "object_path": "/World/Objects/_05_tomato_soup_can",
+  "joint_pregrasp_states": {
+    "/World/Grippers/xarm_gripper/joints/drive_joint": 0.0,
+    "/World/Grippers/xarm_gripper/joints/left_finger_joint": 0.0,
+    "/World/Grippers/xarm_gripper/joints/left_inner_knuckle_joint": 0.0,
+    "/World/Grippers/xarm_gripper/joints/right_finger_joint": 0.0,
+    "/World/Grippers/xarm_gripper/joints/right_inner_knuckle_joint": 0.0,
+    "/World/Grippers/xarm_gripper/joints/right_outer_knuckle_joint": 0.0,
+    "/World/Grippers/xarm_gripper/root_joint": 0.0
+  },
+  "grasp_phases": [
+    {
+      "name": "Close",
+      "joint_drive_targets": {
+        "/World/Grippers/xarm_gripper/joints/drive_joint": 48.0
+      },
+      "simulation_step_dt": 0.016666666666666666,
+      "simulation_steps": 32
+    }
+  ],
+  "sampler_config": {
+    "sampler_type": "antipodal",
+    "grasp_align_axis": [
+      0,
+      1,
+      0
+    ],
+    "gripper_approach_direction": [
+      0,
+      0,
+      1
+    ],
+    "gripper_maximum_aperture": 0.08,
+    "gripper_standoff_fingertips": 0.17,
+    "lateral_sigma": 0.0,
+    "num_candidates": 5,
+    "num_orientations": 1,
+    "orientation_sample_axis": [
+      0,
+      1,
+      0
+    ],
+    "random_seed": 12,
+    "verbose": false
+  }
+}

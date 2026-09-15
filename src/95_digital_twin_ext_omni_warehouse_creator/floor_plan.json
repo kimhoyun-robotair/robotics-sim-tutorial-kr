@@ -1,0 +1,31 @@
+{
+  "description": "Counter-clockwise vertices in tile units; GUI snaps to dataset tile size",
+  "vertices_tiles": [
+    [
+      0,
+      0
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      0
+    ]
+  ],
+  "crossing_edges": false,
+  "exercises": [
+    "Change one straight-wall style",
+    "Disable one internal column and Confirm",
+    "Flip All then Cancel; confirm original column state"
+  ]
+}

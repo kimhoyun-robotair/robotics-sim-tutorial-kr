@@ -1,0 +1,10 @@
+Queue Counter
+Queue_Spot Counter -1 4 0 0 90
+Queue_Spot Counter 0 2 0 0 90
+Queue_Spot Counter 1 0 0 0 90
+Character_01 Queue Counter
+Character_01 LookAround 2
+Character_01 Dequeue Counter 4 2 0 _
+Character_02 Queue Counter
+Character_02 LookAround 2
+Character_02 Dequeue Counter 4 2 0 _

@@ -1,0 +1,21 @@
+{
+  "id": "t028",
+  "title": "ROS 2 Generic Server and Client",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_generic_server_client.html",
+  "mode": "script_editor",
+  "entrypoint": "setup_stage.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "setup_stage.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble or Jazzy",
+    "isaacsim.ros2.bridge",
+    "Supported NVIDIA GPU"
+  ],
+  "verification": "not_run",
+  "learning_order": 127,
+  "learning_stage": "ros2_applications"
+}

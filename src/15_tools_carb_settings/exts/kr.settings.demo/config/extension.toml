@@ -1,0 +1,10 @@
+[package]
+version = "1.0.0"
+title = "Korean Settings Demo"
+description = "Observe a Carbonite setting at extension startup"
+[dependencies]
+"omni.kit.uiapp" = {}
+[[python.module]]
+name = "kr_settings_demo"
+[settings]
+exts."kr.settings.demo".data.foo = false

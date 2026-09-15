@@ -1,0 +1,25 @@
+{
+  "id": "t082",
+  "title": "Decider networks",
+  "category": "digital_twin",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/cortex_tutorials/tutorial_cortex_2_decider_networks.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "simple_state_machine.py",
+    "simple_decider_network.py",
+    "NOTICE.md",
+    "LICENSE-NVIDIA-EXAMPLES",
+    "follow.py",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "Isaac Sim 5.1 sample assets"
+  ],
+  "verification": "not_run",
+  "learning_order": 99,
+  "learning_stage": "environments_behaviors"
+}

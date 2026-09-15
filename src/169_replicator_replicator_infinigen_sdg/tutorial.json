@@ -1,0 +1,24 @@
+{
+  "id": "t040",
+  "title": "Environment Based Synthetic Dataset Generation with Infinigen",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_infinigen_sdg.html",
+  "mode": "external",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "run.py",
+    "generate_rooms.py",
+    "sdg_config.json",
+    "TUTORIAL.md",
+    "native_runner.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA RTX GPU and supported driver",
+    "Isaac Sim 5.1 sample assets",
+    "Existing Infinigen installation only for custom room generation"
+  ],
+  "verification": "not_run",
+  "learning_order": 169,
+  "learning_stage": "advanced_integrations"
+}

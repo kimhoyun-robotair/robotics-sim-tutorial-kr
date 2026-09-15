@@ -1,0 +1,22 @@
+{
+  "id": "t126",
+  "title": "Tutorial 8: Generate Robot Configuration File",
+  "category": "robot_setup",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_generate_robot_config.html",
+  "title_ko": "UR10e URDF·Lula YAML·XRDF를 생성하고 맞춰 보기",
+  "mode": "gui",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "validate_exports.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Official 5.1 UR10e/Robotiq sample assets"
+  ],
+  "verification": "not_run",
+  "learning_order": 42,
+  "learning_stage": "robot_authoring"
+}

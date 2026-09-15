@@ -1,0 +1,22 @@
+{
+  "id": "t021",
+  "title": "Automatic ROS 2 Namespace Generation",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_auto_namespace.html",
+  "mode": "script_editor",
+  "entrypoint": "setup_stage.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "setup_stage.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble or Jazzy",
+    "isaacsim.ros2.bridge",
+    "Supported NVIDIA GPU",
+    "5.1 Hawk camera and Example Rotary 2D sensor assets (full GUI lab)"
+  ],
+  "verification": "not_run",
+  "learning_order": 112,
+  "learning_stage": "ros2_basics"
+}

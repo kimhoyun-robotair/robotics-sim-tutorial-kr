@@ -1,0 +1,13 @@
+<mujoco model="tutorial_pendulum">
+  <compiler angle="radian"/>
+  <option timestep="0.01" gravity="0 0 -9.81"/>
+  <worldbody>
+    <body name="mount" pos="0 0 1">
+      <geom name="mount_shape" type="sphere" size="0.06" mass="1"/>
+      <body name="pendulum" pos="0 0 0">
+        <joint name="hinge" type="hinge" axis="0 1 0" limited="true" range="-1.5 1.5" damping="0.1"/>
+        <geom name="rod" type="capsule" fromto="0 0 0 0.3 0 -0.3" size="0.025" mass="0.3"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

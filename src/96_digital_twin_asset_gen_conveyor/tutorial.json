@@ -1,0 +1,20 @@
+{
+  "id": "t078",
+  "title": "Conveyor Belt Utility",
+  "category": "digital_twin",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/digital_twin/warehouse_logistics/ext_isaacsim_asset_gen_conveyor.html",
+  "mode": "gui",
+  "entrypoint": null,
+  "artifacts": [
+    "conveyor_lab.usda",
+    "TUTORIAL.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "GUI session and native extension named in TUTORIAL.md"
+  ],
+  "verification": "not_run",
+  "learning_order": 96,
+  "learning_stage": "environments_behaviors"
+}

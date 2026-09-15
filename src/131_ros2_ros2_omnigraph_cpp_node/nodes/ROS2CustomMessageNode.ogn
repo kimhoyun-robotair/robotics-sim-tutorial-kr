@@ -1,0 +1,34 @@
+{
+  "ROS2CustomMessageNode": {
+    "version": 1,
+    "description": "Publish a Sphere message and expose the successful publish count.",
+    "metadata": {
+      "uiName": "ROS2 Publish Custom Message"
+    },
+    "categories": [
+      "tutorials"
+    ],
+    "inputs": {
+      "execIn": {
+        "type": "execution"
+      },
+      "publishCenter": {
+        "type": "float[3]",
+        "default": [
+          0,
+          0,
+          0
+        ]
+      },
+      "publishRadius": {
+        "type": "float",
+        "default": 1.5
+      }
+    },
+    "outputs": {
+      "publishedCount": {
+        "type": "uint64"
+      }
+    }
+  }
+}

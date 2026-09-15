@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+tile_size: 5.0
+fixed_prims:
+  - prim_path: /Environment/Sky
+    usd: /NVIDIA/Assets/Skies/Dynamic/CumulusHeavy.usd
+    semantic: sky
+    world_pose:
+      position: [0, 0, 0]
+      orientation: [90, 0, 0]
+cross:
+  usd: /Isaac/Samples/Scene_Blox/Tutorial/cross.usd
+  generation:
+    - config: hazards_corridors.yaml
+corridor:
+  usd: /Isaac/Samples/Scene_Blox/Tutorial/corridor.usd
+  generation:
+    - config: hazards_corridors.yaml
+corner:
+  usd: /Isaac/Samples/Scene_Blox/Tutorial/corner.usd
+  generation:
+    - config: ["None", "obstacle_pile_2.yaml"]
+      weights: [0.7, 0.3]
+dead_end:
+  usd: /Isaac/Samples/Scene_Blox/Tutorial/dead_end.usd
+  generation:
+    - config: ["obstacle_pile_1.yaml", "obstacle_pile_2.yaml"]
+      weights: [0.5, 0.5]

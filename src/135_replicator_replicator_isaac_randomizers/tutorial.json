@@ -1,0 +1,70 @@
+{
+  "id": "t047",
+  "title": "Randomization Snippets",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_isaac_randomizers.html",
+  "title_ko": "USD 및 Isaac API 무작위화",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "simready_lab.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "Optional simready mode: omni.simready.explorer and accessible asset catalog"
+  ],
+  "verification": "partial_runtime_verified",
+  "coverage": [
+    "lights",
+    "textures",
+    "sequential transforms",
+    "physics volume filling adaptation",
+    "native SimReady search and variants"
+  ],
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "lights": [
+        {
+          "position": [
+            -1.9508870104080982,
+            -1.5504045556790569,
+            2.785674723101485
+          ],
+          "intensity": 13257.964101799003,
+          "temperature_K": 3521.19285271608
+        },
+        {
+          "position": [
+            -1.4103951161588864,
+            0.9626207957600244,
+            3.3243333110305264
+          ],
+          "intensity": 5048.677865173951,
+          "temperature_K": 5585.441087248501
+        },
+        {
+          "position": [
+            -1.627554442937726,
+            -1.9185341665074858,
+            3.879603831286267
+          ],
+          "intensity": 9044.187174163748,
+          "temperature_K": 3832.187687388241
+        }
+      ]
+    },
+    "checks": {
+      "process_exit": true,
+      "lights": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 135,
+  "learning_stage": "replicator"
+}

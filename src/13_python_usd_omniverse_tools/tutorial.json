@@ -1,0 +1,21 @@
+{
+  "id": "t177",
+  "title": "Commands",
+  "category": "python_usd",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omniverse_usd/omniverse_tools.html",
+  "title_ko": "Kit Commands와 Registered Actions: 실행·Undo·Redo",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "run.py",
+    "tutorial.json"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver"
+  ],
+  "verification": "not_run",
+  "learning_order": 13,
+  "learning_stage": "python_usd"
+}

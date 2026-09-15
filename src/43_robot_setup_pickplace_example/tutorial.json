@@ -1,0 +1,40 @@
+{
+  "id": "t127",
+  "title": "Tutorial 9: Pick and Place Example",
+  "category": "robot_setup",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/tutorial_pickplace_example.html",
+  "title_ko": "UR10e+Robotiq의 그리퍼·IK·RMPflow·집기 실행하기",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "LICENSE-APACHE-2.0.txt",
+    "NOTICE.md",
+    "TUTORIAL.md",
+    "config/robot_descriptor.yaml",
+    "config/ur10e_kinematics.urdf",
+    "config/ur10e_rmpflow_common.yaml",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA GPU and driver",
+    "Official 5.1 UR10e/Robotiq sample assets"
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "target_error_m": 0.0009520575986243784,
+      "ik_failures": 0
+    },
+    "checks": {
+      "process_exit": true,
+      "target": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 43,
+  "learning_stage": "robot_authoring"
+}

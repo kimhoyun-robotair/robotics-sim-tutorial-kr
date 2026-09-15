@@ -1,0 +1,26 @@
+{
+  "id": "t036",
+  "title": "Synthetic Data Recorder",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_recorder.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "requirements": [
+    "Isaac Sim 5.1.0 full installation",
+    "Supported NVIDIA RTX GPU and driver",
+    "Desktop display for interactive recorder exercises"
+  ],
+  "verification": "not_run",
+  "implementation": "Local runnable lesson; NVIDIA Apache-2.0 implementation included where NOTICE.txt is present",
+  "artifacts": [
+    "TUTORIAL.md",
+    "VERIFICATION.md",
+    "custom_writer.py",
+    "custom_writer_params.json",
+    "randomize_camera.py",
+    "run.py",
+    "visualization_params.json"
+  ],
+  "learning_order": 133,
+  "learning_stage": "replicator"
+}

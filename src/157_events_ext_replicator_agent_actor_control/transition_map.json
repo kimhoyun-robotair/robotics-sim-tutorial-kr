@@ -1,0 +1,20 @@
+{
+  "GoTo": {
+    "weight": 0,
+    "transitions": {
+      "Idle": 1
+    }
+  },
+  "Idle": {
+    "weight": 1,
+    "transitions": {
+      "LookAround": 1
+    }
+  },
+  "LookAround": {
+    "weight": 0,
+    "transitions": {
+      "Idle": 1
+    }
+  }
+}

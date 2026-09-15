@@ -1,0 +1,50 @@
+{
+  "id": "t044",
+  "title": "Data Augmentation",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_augmentation.html",
+  "title_ko": "RGB와 깊이 데이터 증강",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "filters.py",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "Supported NVIDIA RTX GPU and driver",
+    "NumPy/Pillow/Warp bundled with Isaac Sim 5.1.0"
+  ],
+  "verification": "partial_runtime_verified",
+  "coverage": [
+    "annotator augmentation",
+    "writer augmentation",
+    "NumPy and Warp",
+    "RGB-HSV composition"
+  ],
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "frame": 0,
+      "shape": [
+        240,
+        320,
+        4
+      ],
+      "small_noise_std_m": 0.10048652440309525,
+      "large_noise_std_m": 0.502432644367218,
+      "red_blue_swap_exact": true
+    },
+    "checks": {
+      "process_exit": true,
+      "channel_swap": true,
+      "noise_scales": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 139,
+  "learning_stage": "replicator"
+}

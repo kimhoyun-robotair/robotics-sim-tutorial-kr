@@ -1,0 +1,22 @@
+{
+  "id": "t075",
+  "title": "Grasping Synthetic Data Generation",
+  "category": "sdg_extra",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/synthetic_data_generation/tutorial_replicator_grasping_sdg.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "grasp_config.yaml",
+    "run.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0 and RTX GPU",
+    "isaacsim.replicator.grasping",
+    "libspatialindex runtime library",
+    "Isaac Sim 5.1 sdg_grasping_xarm.usd and referenced assets"
+  ],
+  "verification": "not_run",
+  "learning_order": 168,
+  "learning_stage": "advanced_integrations"
+}

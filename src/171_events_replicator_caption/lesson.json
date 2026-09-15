@@ -1,0 +1,58 @@
+{
+  "isaacsim.replicator.agent": {
+    "version": "0.7.0",
+    "global": {
+      "seed": 123456,
+      "simulation_length": 90
+    },
+    "scene": {
+      "asset_path": "{ASSETS}/Isaac/Environments/Simple_Warehouse/full_warehouse.usd"
+    },
+    "sensor": {
+      "camera_num": 1
+    },
+    "character": {
+      "asset_path": "{ASSETS}/Isaac/People/Characters/",
+      "command_file": "{OUTPUT}/character_commands.txt",
+      "num": 2,
+      "filters": [],
+      "spawn_area": [],
+      "navigation_area": []
+    },
+    "robot": {
+      "command_file": "{OUTPUT}/robot_commands.txt",
+      "nova_carter_num": 0,
+      "iw_hub_num": 0,
+      "write_data": false
+    },
+    "replicator": {
+      "writer": "SceneGraphWriter",
+      "parameters": {
+        "output_dir": "{OUTPUT}/capture",
+        "caption_config": {
+          "save_full_scene_graph": true,
+          "save_pruned_scene_graph": true,
+          "attach_label_to_usd": true,
+          "use_ai_label": false,
+          "visualize_caption": true,
+          "max_object_capacity": 100,
+          "export_edges": true,
+          "global_caption": false,
+          "qa_caption": false,
+          "brief_caption": false,
+          "pruning_ratio": 1.0,
+          "verbose": true,
+          "random_seed": 0,
+          "caption_only": false,
+          "export_world": true
+        },
+        "caption_interval": 30,
+        "scene_graph_interval": 10,
+        "skip_frames": 0,
+        "writer_interval": 1,
+        "export_point_cloud": false,
+        "export_depth": false
+      }
+    }
+  }
+}

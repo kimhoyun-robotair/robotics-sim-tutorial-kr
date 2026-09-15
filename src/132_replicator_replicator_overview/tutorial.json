@@ -1,0 +1,22 @@
+{
+  "id": "t035",
+  "title": "Overview",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_overview.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "requirements": [
+    "Isaac Sim 5.1.0 full installation",
+    "Supported NVIDIA RTX GPU and driver"
+  ],
+  "verification": "not_run",
+  "implementation": "Local runnable lesson; NVIDIA Apache-2.0 implementation included where NOTICE.txt is present",
+  "artifacts": [
+    "TUTORIAL.md",
+    "VERIFICATION.md",
+    "run.py",
+    "workflow.yaml"
+  ],
+  "learning_order": 132,
+  "learning_stage": "replicator"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "t164",
+  "title": "Extension Template Generator",
+  "category": "tools",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/utilities/extension_template_generator.html",
+  "mode": "extension",
+  "entrypoint": "exts/kr.template.starter/config/extension.toml",
+  "artifacts": [
+    "TUTORIAL.md",
+    "exts/kr.template.starter/config/extension.toml",
+    "exts/kr.template.starter/kr_template_starter/__init__.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA GPU and GUI"
+  ],
+  "verification": "not_run",
+  "learning_order": 84,
+  "learning_stage": "omnigraph_extensions"
+}

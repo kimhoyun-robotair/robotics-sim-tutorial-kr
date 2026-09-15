@@ -1,0 +1,42 @@
+{
+  "id": "t111",
+  "title": "Tutorial: Import URDF",
+  "category": "importers",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/importer_exporter/import_urdf.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "arm.urdf",
+    "run.py",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "RTX GPU and compatible driver",
+    "Optional: bundled Franka URDF and manipulator controller",
+    "Optional ROS node workflow: Linux, ROS 2 Humble and ur_description workspace"
+  ],
+  "verification": "partial_runtime_verified",
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "source": "/home/hoyunkim/robotics-sim-tutorial-kr/src/importers_import_urdf/arm.urdf",
+      "prim_path": "/tutorial_arm",
+      "joint_names": [
+        "shoulder"
+      ],
+      "joint_positions": [
+        0.5153891444206238
+      ]
+    },
+    "checks": {
+      "process_exit": true,
+      "import_and_drive": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 30,
+  "learning_stage": "robot_authoring"
+}

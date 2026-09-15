@@ -1,0 +1,22 @@
+{
+  "id": "t027",
+  "title": "ROS 2 Generic Publisher and Subscriber",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_generic_publisher_subscriber.html",
+  "mode": "script_editor",
+  "entrypoint": "setup_stage.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "setup_stage.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble or Jazzy",
+    "isaacsim.ros2.bridge",
+    "Supported NVIDIA GPU",
+    "Franka URDF import example and assets for optional JointState lab"
+  ],
+  "verification": "not_run",
+  "learning_order": 126,
+  "learning_stage": "ros2_applications"
+}

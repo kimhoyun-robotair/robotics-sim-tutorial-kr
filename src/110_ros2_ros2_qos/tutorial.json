@@ -1,0 +1,22 @@
+{
+  "id": "t017",
+  "title": "ROS 2 Quality of Service (QoS)",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_qos.html",
+  "mode": "gui",
+  "entrypoint": null,
+  "artifacts": [
+    "TUTORIAL.md",
+    "qos_profile.json",
+    "listen.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "ROS 2 Humble (Ubuntu 22.04) 또는 Jazzy (Ubuntu 24.04)",
+    "isaacsim.ros2.bridge",
+    "ROS 터미널의 rclpy 및 std_msgs"
+  ],
+  "verification": "not_run",
+  "learning_order": 110,
+  "learning_stage": "ros2_basics"
+}

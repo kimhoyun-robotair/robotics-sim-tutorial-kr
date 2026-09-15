@@ -1,0 +1,26 @@
+{
+  "IRABasicWriter": {
+    "rgb": true,
+    "camera_params": true,
+    "object_info_bounding_box_2d_tight": true,
+    "object_info_bounding_box_3d": true,
+    "agent_info_skeleton_data": true
+  },
+  "TaoWriter": {
+    "rgb": true,
+    "bbox": true,
+    "shoulder_height_ratio": 0.25,
+    "valid_width_unoccluded_threshold": 0.5,
+    "valid_height_unoccluded_threshold": 0.5
+  },
+  "StereoWriter": {
+    "rgb": true,
+    "bbox": true,
+    "customized_camera_params": true,
+    "customized_distance_to_image_plane": true
+  },
+  "RTSPWriter": {
+    "rtsp_stream_url": "rtsp://localhost:8554/RTSPWriter",
+    "rtsp_rgb": true
+  }
+}

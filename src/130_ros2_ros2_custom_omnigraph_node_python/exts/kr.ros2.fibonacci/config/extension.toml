@@ -1,0 +1,15 @@
+[package]
+version = "1.0.0"
+title = "Korean ROS2 Fibonacci Node"
+description = "Independent Isaac Sim 5.1 rclpy OmniGraph node lesson"
+category = "Simulation"
+[dependencies]
+"omni.graph.core" = {}
+"omni.graph.tools" = {}
+"isaacsim.core.nodes" = {}
+"isaacsim.ros2.bridge" = {}
+[[python.module]]
+name = "kr_ros2_fibonacci"
+[fswatcher.patterns]
+include = ["*.ogn", "*.py"]
+exclude = ["Ogn*Database.py"]

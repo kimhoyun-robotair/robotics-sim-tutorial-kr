@@ -1,0 +1,19 @@
+{
+  "id": "t110",
+  "title": "OmniGraph via Python Scripting Tutorial",
+  "category": "tools",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/omnigraph/omnigraph_scripting.html",
+  "mode": "script_editor",
+  "entrypoint": "create_graphs.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "create_graphs.py"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "NVIDIA GPU and GUI"
+  ],
+  "verification": "not_run",
+  "learning_order": 82,
+  "learning_stage": "omnigraph_extensions"
+}

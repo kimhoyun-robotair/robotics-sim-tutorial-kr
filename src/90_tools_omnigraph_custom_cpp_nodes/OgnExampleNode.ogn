@@ -1,0 +1,24 @@
+{
+  "ExampleNode": {
+    "version": 1,
+    "language": "cpp",
+    "categories": [
+      "tutorials"
+    ],
+    "uiName": "Korean Positive Cpp",
+    "description": "Compute strict positivity in a native OGN node",
+    "inputs": {
+      "value": {
+        "type": "double",
+        "default": 0.0,
+        "description": "Number to compare"
+      }
+    },
+    "outputs": {
+      "positive": {
+        "type": "bool",
+        "description": "Input is greater than zero"
+      }
+    }
+  }
+}

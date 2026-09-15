@@ -1,0 +1,26 @@
+{
+  "id": "t031",
+  "title": "ROS 2 Python Custom OmniGraph Node",
+  "category": "ros2",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/ros2_tutorials/tutorial_ros2_custom_omnigraph_node_python.html",
+  "mode": "extension",
+  "entrypoint": "exts/kr.ros2.fibonacci/config/extension.toml",
+  "artifacts": [
+    "TUTORIAL.md",
+    "exts/kr.ros2.fibonacci/config/extension.toml",
+    "exts/kr.ros2.fibonacci/kr_ros2_fibonacci/__init__.py",
+    "exts/kr.ros2.fibonacci/kr_ros2_fibonacci/nodes/OgnFibonacci.ogn",
+    "exts/kr.ros2.fibonacci/kr_ros2_fibonacci/nodes/OgnFibonacci.py",
+    "setup_graph.py"
+  ],
+  "requirements": [
+    "Linux",
+    "Isaac Sim 5.1.0",
+    "Internal Python 3.11 rclpy",
+    "ROS 2 Humble or Jazzy",
+    "omni.graph.tools"
+  ],
+  "verification": "not_run",
+  "learning_order": 130,
+  "learning_stage": "ros2_applications"
+}

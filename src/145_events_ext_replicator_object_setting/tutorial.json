@@ -1,0 +1,46 @@
+{
+  "id": "t059",
+  "title": "Setting",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/setting.html",
+  "mode": "extension",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "rgb_only.yaml",
+    "run.py",
+    "scene.yaml",
+    "RUNTIME_CHECK.md"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "isaacsim.replicator.object 0.4.x",
+    "NVIDIA RTX GPU and compatible driver",
+    "PyYAML (bundled with Isaac Sim)"
+  ],
+  "verification": "partial_runtime_verified",
+  "native_workflow": "IRO YAML description via Object SDG",
+  "source_specific_variants": [
+    "scene",
+    "rgb_only"
+  ],
+  "verification_report": "RUNTIME_CHECK.md",
+  "verified_scenario": {
+    "date": "2026-09-14",
+    "metrics": {
+      "image_size": [
+        640,
+        480
+      ],
+      "annotation_count": 2
+    },
+    "checks": {
+      "image": true,
+      "labels": true,
+      "depth_normal": true
+    }
+  },
+  "unverified_scope": "다른 CLI 모드·매개변수, GUI 조작, 외부 모델/서비스 통합 전체",
+  "learning_order": 145,
+  "learning_stage": "object_sdg"
+}

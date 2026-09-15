@@ -1,0 +1,3 @@
+Character_01 Idle 1
+Character_01 LookAround 2
+Character_02 LookAround 3

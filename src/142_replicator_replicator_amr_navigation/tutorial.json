@@ -1,0 +1,26 @@
+{
+  "id": "t041",
+  "title": "Randomization in Simulation – AMR Navigation",
+  "category": "replicator",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_amr_navigation.html",
+  "mode": "standalone",
+  "entrypoint": "run.py",
+  "requirements": [
+    "Isaac Sim 5.1.0 full installation",
+    "Supported NVIDIA RTX GPU and driver",
+    "Isaac Sim 5.1 remote asset root or equivalent local mirror"
+  ],
+  "verification": "not_run",
+  "implementation": "Local runnable lesson; NVIDIA Apache-2.0 implementation included where NOTICE.txt is present",
+  "artifacts": [
+    "LICENSE-APACHE-2.0.txt",
+    "NOTICE.txt",
+    "TUTORIAL.md",
+    "VERIFICATION.md",
+    "environments.json",
+    "navigation.py",
+    "run.py"
+  ],
+  "learning_order": 142,
+  "learning_stage": "replicator"
+}

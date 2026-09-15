@@ -1,0 +1,32 @@
+{
+  "id": "t060",
+  "title": "Mutable",
+  "category": "events",
+  "source_url": "https://docs.isaacsim.omniverse.nvidia.com/5.1.0/action_and_event_data_generation/ext_replicator-object/mutable.html",
+  "mode": "extension",
+  "entrypoint": "run.py",
+  "artifacts": [
+    "TUTORIAL.md",
+    "checker.png",
+    "models/textured.usda",
+    "run.py",
+    "scene.yaml",
+    "shader.yaml",
+    "shader_image.yaml"
+  ],
+  "requirements": [
+    "Isaac Sim 5.1.0",
+    "isaacsim.replicator.object 0.4.x",
+    "NVIDIA RTX GPU and compatible driver",
+    "PyYAML (bundled with Isaac Sim)"
+  ],
+  "verification": "not_run",
+  "native_workflow": "IRO YAML description via Object SDG",
+  "source_specific_variants": [
+    "scene",
+    "shader",
+    "shader_image"
+  ],
+  "learning_order": 146,
+  "learning_stage": "object_sdg"
+}
