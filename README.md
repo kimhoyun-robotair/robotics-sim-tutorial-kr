@@ -69,6 +69,7 @@
 | [**InSpace**](https://kookie12.github.io/InSpace-Project-Page/) | Accepted to ECCV 2026. 360도 Structure-Aware한 3D Indoor Scene 생성하기 |
 | [**LiteReality-Agent**](https://github.com/LiteReality/LiteReality-Agent) | RGBD 이미지를 AI Agent를 활용해서 MuJoCo에서 사용 가능한 포맷(MJCF)로 변환해주는 Real2Sim Asset Generation 패키지 |
 | [**awesome-astra-prompts**](https://github.com/TripoGrowthLab/awesome-astra-prompts) | GPT6 아스트라를 활용한 3D 모델링 관련 프롬프트 |
+| [**RoboCousin**](https://arxiv.org/abs/2609.08339v1) | Bimanual manipulation에 필요한 데이터를 시뮬레이션 베이스로 생성하는 플랫폼. 3000개의 object들과 50개의 background env를 가지고 있다고. | 
 
 ### 이런저런 시뮬레이터들 (추후 확장되면 분류 추가 예정)
 | 이름 | 내용 |
