@@ -25,6 +25,8 @@ if (args.steps is not None and args.steps < 1) or (args.headless and args.intera
 if args.steps is None and args.headless:
     args.steps = 1800
 from isaacsim import SimulationApp
+# SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+# headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
 
 simulation_app = SimulationApp({"headless": args.headless})
 
@@ -32,15 +34,26 @@ import random
 
 import bin_stacking_behavior as behavior
 import isaacsim.cortex.framework.math_util as math_util
+# Cortex의 math_util은 로봇과 물체의 위치·회전 및 변환 행렬 계산을 돕는 함수들을 제공한다.
 import numpy as np
 from isaacsim.core.api.objects import VisualCapsule, VisualSphere
+# VisualCapsule은 물리 동작 없이 캡슐 모양을 표시하는 객체이다.
+# VisualSphere는 물리 동작 없이 구 모양을 표시하는 객체이다.
 from isaacsim.core.api.tasks import BaseTask
+# BaseTask는 장면 구성, 초기화, 관측값 제공을 하나의 시뮬레이션 작업으로 묶는 기본 클래스이다.
 from isaacsim.core.prims import XFormPrim
+# XFormPrim은 경로로 선택한 Prim의 위치, 회전, 스케일을 배열 단위로 다룬다.
+# Prim은 USD 장면의 객체 단위이며 같은 경로의 Prim을 감싸도 새 객체를 복제하는 것은 아니다.
 from isaacsim.core.utils.stage import add_reference_to_stage
+# add_reference_to_stage는 외부 USD 자산을 현재 Stage의 지정한 Prim 경로에 참조로 연결한다.
 from isaacsim.cortex.framework.cortex_rigid_prim import CortexRigidPrim
+# CortexRigidPrim은 Cortex 작업에서 물체의 강체 상태와 자세를 다루는 래퍼이다.
 from isaacsim.cortex.framework.cortex_utils import get_assets_root_path_or_die
+# get_assets_root_path_or_die는 Cortex 예제에서 사용할 자산 루트를 찾고 찾지 못하면 오류를 발생시킨다.
 from isaacsim.cortex.framework.cortex_world import CortexWorld
+# CortexWorld는 물리 시뮬레이션과 로봇의 행동 의사결정을 함께 진행하는 World이다.
 from isaacsim.cortex.framework.robot import CortexUr10
+# CortexUr10은 Cortex의 동작 명령을 받는 UR10 로봇 클래스이다.
 
 
 class Ur10Assets:
@@ -150,6 +163,7 @@ def main():
     )
     robot = world.add_robot(CortexUr10(name="robot", prim_path="{}/ur10".format(env_path)))
 
+    # 생성한 객체를 World의 Scene에 등록하여 이름으로 찾고 초기화할 수 있게 한다.
     obs = world.scene.add(
         VisualSphere(
             "/World/Ur10Table/Obstacles/FlipStationSphere",
@@ -201,9 +215,12 @@ def main():
     )
     robot.register_obstacle(obs)
 
+    # 작업을 World에 등록하여 장면 구성과 관측값·초기화를 World와 함께 관리한다.
     world.add_task(BinStackingTask(env_path, ur10_assets))
+    # Cortex 행동 네트워크를 등록하여 시뮬레이션 중 의사결정을 갱신한다.
     world.add_decider_network(behavior.make_decider_network(robot, print_diagnostics))
 
+    # CortexWorld의 실행 루프를 시작하여 물리와 행동 네트워크를 함께 진행한다.
     world.run(simulation_app, play_on_entry=not args.interactive,
               is_done_cb=lambda: args.steps is not None and world.current_time_step_index >= args.steps)
 
@@ -212,4 +229,5 @@ if __name__ == "__main__":
     try:
         main()
     finally:
+        # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
         simulation_app.close()

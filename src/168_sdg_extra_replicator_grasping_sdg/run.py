@@ -25,6 +25,8 @@ def main():
     if not args.config.is_file():
         parser.error("Config file does not exist")
     from isaacsim import SimulationApp
+    # SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+    # headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
     app = SimulationApp({"headless": args.headless})
     manager = None
     task = None
@@ -32,11 +34,18 @@ def main():
         import asyncio
         import json
         import omni.kit.app
+        # omni.kit.app은 현재 Kit 앱과 확장 관리자에 접근하며 비동기 프레임 갱신을 기다리는 기능을 제공한다.
         import omni.usd
+        # omni.usd는 현재 Kit 애플리케이션의 USD 문맥에 접근하는 모듈이다.
+        # get_context().get_stage()로 객체·조명 등이 들어 있는 현재 Stage를 얻는다.
         from pxr import UsdPhysics
+        # pxr은 USD 장면을 직접 다루는 OpenUSD의 Python 바인딩이다.
+        # UsdPhysics는 강체·충돌·관절·물리 재질의 USD 스키마를 다룬다.
         extensions = omni.kit.app.get_app().get_extension_manager()
         extensions.set_extension_enabled_immediate("isaacsim.replicator.grasping", True)
         from isaacsim.replicator.grasping.grasping_manager import GraspingManager
+        # GraspingManager는 grasping 합성 데이터 예제에서 잡기 후보 생성과 평가 작업을 관리한다.
+        # USD 파일을 Kit의 현재 Stage로 연다.
         if not omni.usd.get_context().open_stage(args.scene):
             raise RuntimeError(f"Could not open grasping stage: {args.scene}")
         stage = omni.usd.get_context().get_stage()
@@ -50,8 +59,10 @@ def main():
         if not manager.get_object_prim_path() or not manager.gripper_path:
             raise ValueError("Gripper and target object must both exist")
         manager.sampler_config["num_candidates"] = args.samples
+        # 설정한 물체와 그리퍼를 사용해 잡기 자세 후보를 생성한다. 후보 생성만으로 잡기 성공이 보장되지는 않는다.
         if not manager.generate_grasp_poses() or not manager.grasp_locations:
             raise RuntimeError("Antipodal sampler produced no candidates")
+        # 생성한 잡기 자세를 읽는다. in_world_frame=True이면 월드 좌표계 기준의 자세를 반환한다.
         poses = manager.get_grasp_poses(in_world_frame=True)[:args.samples]
         if not poses:
             raise RuntimeError("No world-space grasp poses are available")
@@ -59,6 +70,7 @@ def main():
         manager.store_initial_gripper_pose()
         manager.set_results_output_dir(str(output))
         manager.set_overwrite_results_output(False)
+        # 잡기 자세 후보들을 물리 시뮬레이션으로 평가하는 비동기 작업을 시작한다.
         task = asyncio.ensure_future(manager.evaluate_grasp_poses(
             grasp_poses=poses, render=True, physics_scene_path=args.physics_scene,
             isolate_simulation=bool(args.physics_scene), simulate_using_timeline=args.timeline,
@@ -67,6 +79,8 @@ def main():
         while not task.done() and (args.steps is None or step < args.steps):
             if not app.is_running():
                 raise RuntimeError("Application closed before evaluation finished")
+            # Kit의 한 프레임을 갱신하여 렌더링·이벤트·비동기 작업을 처리한다.
+            # 물리 진행 여부는 현재 타임라인의 재생 상태와 설정에 따라 달라진다.
             app.update()
             step += 1
         if not task.done():
@@ -91,6 +105,7 @@ def main():
             if manager is not None:
                 manager.clear()
         finally:
+            # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
             app.close()
 
 

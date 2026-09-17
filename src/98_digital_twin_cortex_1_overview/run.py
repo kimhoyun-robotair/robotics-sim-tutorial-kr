@@ -25,6 +25,8 @@ if (args.steps is not None and args.steps < 1) or (args.headless and args.intera
 if args.steps is None and args.headless:
     args.steps = 1800
 from isaacsim import SimulationApp
+# SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+# headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
 
 simulation_app = SimulationApp({"headless": args.headless})
 
@@ -32,9 +34,16 @@ import time
 
 import numpy as np
 from isaacsim.cortex.framework.cortex_world import CortexWorld
+# CortexWorld는 물리 시뮬레이션과 로봇의 행동 의사결정을 함께 진행하는 World이다.
 from isaacsim.cortex.framework.df import DfNetwork, DfState, DfStateMachineDecider, DfStateSequence
+# DfNetwork는 로봇의 행동 선택을 구성하는 Cortex 의사결정 네트워크이다.
+# DfState는 진입·실행·종료 동작을 정의하는 Cortex 상태의 기본 클래스이다.
+# DfStateMachineDecider는 상태 기계를 Cortex 의사결정 구조에 연결한다.
+# DfStateSequence는 여러 상태를 순서대로 실행하는 상태 시퀀스이다.
 from isaacsim.cortex.framework.dfb import DfBasicContext
+# DfBasicContext는 의사결정 네트워크에서 로봇과 공유 상태에 접근하는 기본 문맥이다.
 from isaacsim.cortex.framework.robot import add_franka_to_stage
+# add_franka_to_stage는 Cortex에서 제어할 Franka 로봇을 Stage에 추가한다.
 
 
 class NullspaceShiftState(DfState):
@@ -70,13 +79,16 @@ class NullspaceShiftState(DfState):
 def main():
     world = CortexWorld()
     robot = world.add_robot(add_franka_to_stage(name="franka", prim_path="/World/franka"))
+    # 기본 바닥을 Scene에 추가한다. 이 바닥은 강체가 떨어졌을 때 충돌할 표면이다.
     world.scene.add_default_ground_plane()
 
     decider_network = DfNetwork(
         DfStateMachineDecider(DfStateSequence([NullspaceShiftState()], loop=True)), context=DfBasicContext(robot)
     )
+    # Cortex 행동 네트워크를 등록하여 시뮬레이션 중 의사결정을 갱신한다.
     world.add_decider_network(decider_network)
 
+    # CortexWorld의 실행 루프를 시작하여 물리와 행동 네트워크를 함께 진행한다.
     world.run(simulation_app, play_on_entry=not args.interactive,
               is_done_cb=lambda: args.steps is not None and world.current_time_step_index >= args.steps)
 
@@ -85,4 +97,5 @@ if __name__ == "__main__":
     try:
         main()
     finally:
+        # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
         simulation_app.close()

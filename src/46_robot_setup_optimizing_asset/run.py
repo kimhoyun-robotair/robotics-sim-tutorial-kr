@@ -24,11 +24,21 @@ def main():
     output = args.output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=False)
     from isaacsim import SimulationApp
+    # SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+    # headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
     app = SimulationApp({"headless": args.headless})
     try:
         import omni.usd
+        # omni.usd는 현재 Kit 애플리케이션의 USD 문맥에 접근하는 모듈이다.
+        # get_context().get_stage()로 객체·조명 등이 들어 있는 현재 Stage를 얻는다.
         from pxr import Sdf, UsdGeom, UsdPhysics
+        # pxr은 USD 장면을 직접 다루는 OpenUSD의 Python 바인딩이다.
+        # Sdf는 USD 경로, 레이어, 속성 값의 자료형을 다룬다.
+        # UsdGeom은 형상, 변환, 카메라와 장면 단위·축 설정을 다룬다.
+        # UsdPhysics는 강체·충돌·관절·물리 재질의 USD 스키마를 다룬다.
         from isaacsim.storage.native import get_assets_root_path
+        # get_assets_root_path는 Isaac Sim 기본 자산의 루트 경로를 찾는다.
+        # 반환 경로에 로봇·환경 USD의 상대 경로를 붙여 사용할 수 있다.
         context = omni.usd.get_context()
         if args.stage:
             path = args.stage.expanduser().resolve(strict=True)
@@ -56,11 +66,14 @@ def main():
         if not source:
             build_fixture(stage)
         for _ in range(1200):
+            # Kit의 한 프레임을 갱신하여 렌더링·이벤트·비동기 작업을 처리한다.
+            # 물리 진행 여부는 현재 타임라인의 재생 상태와 설정에 따라 달라진다.
             app.update()
             if not context.is_stage_loading():
                 break
         if context.is_stage_loading():
             raise RuntimeError("Stage loading did not finish after 1200 updates")
+        # Stage의 Prim 계층을 순회하여 형상·관절·스키마 정보를 검사한다.
         report = {"source": source or "local procedural fixture", "meters_per_unit": UsdGeom.GetStageMetersPerUnit(stage),
                   "up_axis": str(UsdGeom.GetStageUpAxis(stage)),
                   "rigid_bodies": [str(p.GetPath()) for p in stage.Traverse() if p.HasAPI(UsdPhysics.RigidBodyAPI)],
@@ -68,6 +81,7 @@ def main():
                   "articulation_roots": [str(p.GetPath()) for p in stage.Traverse() if p.HasAPI(UsdPhysics.ArticulationRootAPI)]}
         if len(list(stage.Traverse())) < 2:
             raise RuntimeError("The lesson stage has no usable content")
+        # 현재 루트 레이어의 변경을 원래 연결된 USD 파일에 저장한다.
         stage.GetRootLayer().Save()
         (output / "initial_inventory.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report, indent=2))
@@ -77,6 +91,7 @@ def main():
             app.update()
             updates += 1
     finally:
+        # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
         app.close()
 
 

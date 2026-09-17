@@ -38,6 +38,7 @@ def main():
     if args.action == "audit":
         return
     install = args.isaac_sim.expanduser().resolve()
+    # Isaac Sim에 설치된 online_generation 예제는 ShapeNet 변환, 합성 이미지 생성, 온라인 학습 진입점을 제공한다.
     scripts = install / "standalone_examples/replicator/online_generation"
     filename = {"convert": "usd_convertor.py", "sample": "generate_shapenet.py", "train": "train_shapenet.py"}[args.action]
     script = scripts / filename
@@ -47,6 +48,8 @@ def main():
     output = args.output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=False)
     (output / "asset_audit.json").write_text(json.dumps(report, indent=2))
+    # python.sh가 Isaac Sim Python 환경을 준비하고 native_runner가 선택한 예제를 실행한다.
+    # 렌더링과 Replicator 데이터 생성은 선택된 예제 안에서 진행된다.
     command = [str(launcher), str(Path(__file__).with_name("native_runner.py"))]
     if args.headless:
         command.append("--headless")
@@ -58,6 +61,7 @@ def main():
         converted = Path(str(root) + "_nomat")
         if converted.exists():
             parser.error(f"Refusing conversion over existing directory {converted}; use a fresh ShapeNet copy")
+        # 변환 예제는 이 환경 변수로 원본 ShapeNet 모델의 위치를 찾는다.
         env["SHAPENET_LOCAL_DIR"] = str(root)
         command += ["--max_models", str(args.max_models)]
     else:

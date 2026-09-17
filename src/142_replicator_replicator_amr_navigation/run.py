@@ -28,12 +28,18 @@ def main():
         parser.error(f"Choose a new --output; already exists: {output}")
     output.mkdir(parents=True)
     from isaacsim import SimulationApp
+    # SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+    # headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
     app = SimulationApp({"headless": args.headless})
     demo = None
     try:
         import omni.replicator.core as rep
+        # omni.replicator.core는 장면 무작위화와 합성 데이터 생성을 위한 API이다.
+        # render product는 카메라의 렌더링 출력이며, annotator는 데이터를 추출하고 writer는 결과를 저장한다.
         from navigation import NavSDGDemo
         from isaacsim.storage.native import get_assets_root_path
+        # get_assets_root_path는 Isaac Sim 기본 자산의 루트 경로를 찾는다.
+        # 반환 경로에 로봇·환경 USD의 상대 경로를 붙여 사용할 수 있다.
         if not get_assets_root_path():
             raise RuntimeError("Isaac Sim 5.1 asset root unavailable")
         demo = NavSDGDemo()
@@ -41,12 +47,15 @@ def main():
                    env_interval=args.env_interval, use_temp_rp=args.use_temp_rp, seed=args.seed)
         updates = 0
         while app.is_running() and demo.is_running() and (step_limit is None or updates < step_limit):
+            # Kit의 한 프레임을 갱신하여 렌더링·이벤트·비동기 작업을 처리한다.
+            # 물리 진행 여부는 현재 타임라인의 재생 상태와 설정에 따라 달라진다.
             app.update()
             updates += 1
         if not app.is_running():
             return
         if demo.is_running():
             raise RuntimeError("Navigation did not finish within --steps; inspect asset loading and robot target")
+        # 예약된 합성 데이터 처리와 writer의 저장 작업이 끝날 때까지 기다린다.
         rep.orchestrator.wait_until_complete()
         images = list(output.rglob("*.png"))
         if len(images) != args.frames * 2:
@@ -59,6 +68,7 @@ def main():
             if demo is not None and demo.is_running():
                 demo.clear()
         finally:
+            # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
             app.close()
 
 

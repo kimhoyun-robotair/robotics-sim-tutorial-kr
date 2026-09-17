@@ -161,6 +161,7 @@ def main() -> None:
             ),
         )
         core_transform.set_local_scales(np.array([[1.0, 1.5, 0.5]]))
+        # Stage의 루트 레이어를 USD 파일로 내보낸다. 참조 자산 자체를 모두 복사하는 것은 아니다.
         stage.GetRootLayer().Export(str(output / "initial_scene.usda"))
         world.reset()
         with (output / "heights.csv").open("x", newline="", encoding="utf-8") as stream:
@@ -192,6 +193,7 @@ def main() -> None:
                     )
         print(f"Scene and measured heights: {output.resolve()}")
     finally:
+        # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
         app.close()
 
 

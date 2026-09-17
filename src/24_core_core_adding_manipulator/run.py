@@ -20,17 +20,25 @@ def main():
     output = args.output or Path(__file__).resolve().parent / "output" / str(time.time_ns())
     output.mkdir(parents=True, exist_ok=False)
     from isaacsim import SimulationApp
+    # SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+    # headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
     app = SimulationApp({"headless": args.headless})
     try:
         import numpy as np
         from isaacsim.core.api import World
+        # World는 Stage의 객체와 작업을 관리하고 물리·렌더링 시간 간격, 초기화, 시뮬레이션 진행을 제어한다.
         from isaacsim.robot.manipulators.examples.franka.tasks import PickPlace
+        # PickPlace는 로봇 팔과 집을 물체를 구성하고 위치 등의 관측값을 제공하는 예제 Task이다.
         from isaacsim.robot.manipulators.examples.franka.controllers import PickPlaceController
+        # PickPlaceController는 물체 접근·잡기·이동·놓기 단계를 진행하며 로봇의 관절 명령을 계산한다.
         from pick_task import LocalPickTask
+        # stage_units_in_meters는 장면 길이 단위이고, physics_dt·rendering_dt는 각각 물리·렌더링 시간 간격(초)이다.
         world = World(stage_units_in_meters=1.0, physics_dt=1/60, rendering_dt=1/60)
         task = (LocalPickTask(target=args.target) if args.task == "custom" else
                 PickPlace(name="builtin_pick", target_position=np.array(args.target)))
+        # 작업을 World에 등록하여 장면 구성과 관측값·초기화를 World와 함께 관리한다.
         world.add_task(task)
+        # World를 초기화하고 등록된 객체의 물리 핸들을 준비한다. 관절·강체 상태를 읽기 전에 호출한다.
         world.reset()
         params = task.get_params()
         robot = world.scene.get_object(params["robot_name"]["value"])
@@ -42,12 +50,15 @@ def main():
         for step in count():
             if not app.is_running() or (step_limit is not None and step >= step_limit):
                 break
+            # 등록된 작업이 제공하는 로봇·물체·목표의 관측값을 읽어 제어기에 전달한다.
             observations = world.get_observations()
             if not controller.is_done():
+                # 관절 제어기에 명령을 전달한다. 실제 관절의 움직임은 이후 물리 step에서 계산된다.
                 robot.apply_action(controller.forward(
                     picking_position=observations[cube.name]["position"],
                     placing_position=observations[cube.name]["target_position"],
                     current_joint_positions=observations[robot.name]["joint_positions"]))
+            # 물리 시뮬레이션을 한 step 진행한다. render는 이 호출에서 렌더링도 수행할지 지정한다.
             world.step(render=not args.headless)
             if not app.is_running():
                 return
@@ -69,6 +80,7 @@ def main():
         while args.steps is None and not args.headless and app.is_running():
             world.step(render=True)
     finally:
+        # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
         app.close()
 
 

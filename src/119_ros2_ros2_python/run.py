@@ -18,15 +18,25 @@ if args.output.exists():
     parser.error(f'Output already exists: {args.output}; choose another --output')
 
 from isaacsim import SimulationApp
+# SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+# headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
 app = SimulationApp({'headless': args.headless})
 try:
     import omni.graph.core as og
+    # omni.graph.core는 노드와 연결로 실행 흐름을 구성하는 OmniGraph API이다.
+    # Controller.edit에서 노드 생성, 입력값 설정, 출력과 입력의 연결을 정의한다.
     from isaacsim.core.api import SimulationContext
+    # SimulationContext는 물리 및 렌더링 시간 간격과 시뮬레이션의 재생·정지·step을 관리한다.
     from isaacsim.core.utils.extensions import enable_extension
+    # enable_extension은 이름으로 지정한 Kit 확장을 활성화하여 해당 기능과 명령을 사용할 수 있게 한다.
 
     enable_extension('isaacsim.ros2.bridge')
+    # Kit의 한 프레임을 갱신하여 렌더링·이벤트·비동기 작업을 처리한다.
+    # 물리 진행 여부는 현재 타임라인의 재생 상태와 설정에 따라 달라진다.
     app.update()
     keys = og.Controller.Keys
+    # OmniGraph의 노드와 입력값을 만들고 포트를 연결한다.
+    # 실행 포트는 처리 순서를, 데이터 포트는 시간·센서·관절 값의 전달 경로를 정한다.
     graph, _, _, _ = og.Controller.edit(
         {'graph_path': '/ClockLab', 'evaluator_name': 'execution'},
         {keys.CREATE_NODES: [
@@ -49,7 +59,9 @@ try:
             ('Context.inputs:domain_id', args.domain_id),
             ('Context.inputs:useDomainIDEnvVar', False)]})
     sim = SimulationContext(physics_dt=1/60, rendering_dt=1/60, stage_units_in_meters=1.0)
+    # 물리 엔진과 시뮬레이션 핸들을 초기화한다.
     sim.initialize_physics()
+    # 타임라인을 재생 상태로 전환하여 물리 시뮬레이션이 진행되게 한다.
     sim.play()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open('x') as stream:
@@ -65,10 +77,12 @@ try:
                     stream.write(',\n')
                 json.dump({'frame': frame, 'simulation_time_before_step': sim.current_time}, stream)
                 first_trigger = False
+            # SimulationContext의 시간 간격으로 시뮬레이션을 한 step 진행한다.
             sim.step(render=True)
             frame += 1
         stream.write('\n], "note": "Trigger schedule only; DDS reception must be observed with ros2 topic echo."}\n')
     sim.stop()
     print(f'Wrote actual trigger schedule to {args.output}')
 finally:
+    # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
     app.close()

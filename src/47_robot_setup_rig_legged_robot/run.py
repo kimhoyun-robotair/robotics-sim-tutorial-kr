@@ -28,11 +28,23 @@ def main():
     output = args.output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=False)
     from isaacsim import SimulationApp
+    # SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+    # headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
     app = SimulationApp({"headless": args.headless})
     try:
         import omni.usd
+        # omni.usd는 현재 Kit 애플리케이션의 USD 문맥에 접근하는 모듈이다.
+        # get_context().get_stage()로 객체·조명 등이 들어 있는 현재 Stage를 얻는다.
         from pxr import Gf, Sdf, UsdGeom, UsdPhysics, PhysxSchema
+        # pxr은 USD 장면을 직접 다루는 OpenUSD의 Python 바인딩이다.
+        # Gf는 벡터·행렬·쿼터니언 등 위치와 회전을 계산하는 수학 자료형을 다룬다.
+        # Sdf는 USD 경로, 레이어, 속성 값의 자료형을 다룬다.
+        # UsdGeom은 형상, 변환, 카메라와 장면 단위·축 설정을 다룬다.
+        # UsdPhysics는 강체·충돌·관절·물리 재질의 USD 스키마를 다룬다.
+        # PhysxSchema는 PhysX 전용 물리 설정을 USD Prim에 기록하는 스키마를 다룬다.
         from isaacsim.storage.native import get_assets_root_path
+        # get_assets_root_path는 Isaac Sim 기본 자산의 루트 경로를 찾는다.
+        # 반환 경로에 로봇·환경 USD의 상대 경로를 붙여 사용할 수 있다.
         root = get_assets_root_path()
         if not root:
             raise RuntimeError("Isaac Sim 5.1 asset root not available")
@@ -47,6 +59,8 @@ def main():
             raise RuntimeError("Cannot open the H1 override stage")
         stage = context.get_stage()
         for _ in range(1200):
+            # Kit의 한 프레임을 갱신하여 렌더링·이벤트·비동기 작업을 처리한다.
+            # 물리 진행 여부는 현재 타임라인의 재생 상태와 설정에 따라 달라진다.
             app.update()
             if not context.is_stage_loading():
                 break
@@ -55,11 +69,13 @@ def main():
         robot_prim = stage.GetPrimAtPath("/h1")
         if not robot_prim:
             raise RuntimeError("H1 asset does not contain /h1")
+        # Prim의 변환 연산에 접근한다. AddTranslateOp·AddRotateXYZOp·AddScaleOp로 이동·회전·스케일을 기록할 수 있다.
         transform = UsdGeom.Xformable(robot_prim)
         transform.ClearXformOpOrder()
         transform.AddTranslateOp(opSuffix="policy").Set(Gf.Vec3d(*cfg["base_position_m"]))
         transform.AddOrientOp(opSuffix="policy").Set(Gf.Quatf(1, Gf.Vec3f(0)))
         reports = []
+        # Stage의 Prim 계층을 순회하여 형상·관절·스키마 정보를 검사한다.
         for prim in stage.Traverse():
             if not prim.IsA(UsdPhysics.RevoluteJoint):
                 continue
@@ -71,6 +87,7 @@ def main():
             position = matching_value(cfg["joint_positions_rad"], name)
             stiffness = matching_value(group["stiffness"], name)
             damping = matching_value(group["damping"], name)
+            # 관절에 구동 API를 적용한다. stiffness·damping·목표값으로 관절 구동 방식을 설정한다.
             drive = UsdPhysics.DriveAPI.Apply(prim, "angular")
             drive.CreateTypeAttr("force")
             drive.CreateTargetPositionAttr(math.degrees(position))
@@ -89,6 +106,7 @@ def main():
                             "max_effort_nm": group["effort_limit"], "max_velocity_rad_s": group["velocity_limit"]})
         if len(reports) != 19:
             raise RuntimeError(f"Expected the H1 policy's 19 controlled joints; found {len(reports)}")
+        # 현재 루트 레이어의 변경을 원래 연결된 USD 파일에 저장한다.
         stage.GetRootLayer().Save()
         (output / "joint_configuration.json").write_text(json.dumps(reports, indent=2))
         print(json.dumps(reports, indent=2))
@@ -98,6 +116,7 @@ def main():
             app.update()
             count += 1
     finally:
+        # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
         app.close()
 
 

@@ -7,6 +7,8 @@ import subprocess
 import sys
 
 
+# 이 파일은 Isaac Sim이 생성한 자세 추정 데이터를 읽어 외부 DOPE 프로그램으로 전달하는 단계이다.
+# SimulationApp을 시작하지 않으며 학습·추론은 --python으로 지정한 별도 환경에서 실행한다.
 def audit_dataset(data: Path, object_name: str) -> dict:
     frames = 0
     instances = 0
@@ -20,6 +22,7 @@ def audit_dataset(data: Path, object_name: str) -> dict:
         for obj in document["objects"]:
             if obj.get("class", "").lower() != object_name.lower():
                 continue
+            # DOPE 정답의 projected_cuboid는 물체 경계 상자의 8개 꼭짓점과 중심을 영상에 투영한 9개 좌표이다.
             points = obj.get("projected_cuboid", [])
             if len(points) != 9 or any(len(point) != 2 for point in points):
                 raise ValueError(f"Expected eight corners and center (9 x 2) in {label}")
@@ -87,6 +90,7 @@ def main():
     output.mkdir(parents=True)
     (output / "input_audit.json").write_text(json.dumps(report, indent=2))
     (output / "command.json").write_text(json.dumps(command, indent=2))
+    # 준비된 DOPE 환경에서 선택한 학습·추론·평가 프로그램을 실행하고 종료를 기다린다.
     subprocess.run(command, cwd=cwd, check=True)
     if args.action == "train" and not list((output / "weights").glob("*.pth")):
         raise RuntimeError("Training exited without a model checkpoint")

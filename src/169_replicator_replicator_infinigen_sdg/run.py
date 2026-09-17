@@ -22,6 +22,7 @@ def main() -> None:
     if args.steps is not None and args.steps < 1:
         parser.error("--steps must be a positive integer")
     install = args.isaac_root.expanduser().resolve()
+    # 설치된 Infinigen SDG 예제가 USD 환경을 불러오고 Replicator로 합성 데이터를 생성한다.
     script = install / "standalone_examples/replicator/infinigen/infinigen_sdg.py"
     for required in (install / "python.sh", script, script.with_name("infinigen_sdg_utils.py")):
         if not required.is_file():
@@ -35,6 +36,7 @@ def main() -> None:
         config["environments"] = {"folders": [], "files": [path.as_uri() for path in files]}
     if args.captures is not None:
         config["capture"]["total_captures"] = args.captures
+    # capture 설정은 촬영 횟수, 카메라 수와 렌더링 누적 프레임(rt_subframes) 수를 지정한다.
     capture = config["capture"]
     for key in ("total_captures", "num_cameras", "rt_subframes"):
         if not isinstance(capture[key], int) or capture[key] < 1:
@@ -46,6 +48,7 @@ def main() -> None:
     output = args.output.expanduser().resolve()
     if output.exists():
         parser.error(f"Output already exists; choose a new directory: {output}")
+    # 각 writer는 이미지·주석을 저장하는 출력 담당이며, 종류별로 서로 다른 저장 폴더를 지정한다.
     for index, writer in enumerate(config["writers"]):
         writer["kwargs"]["output_dir"] = str(output / f"{index:02}_{writer['type']}")
     if args.check:
@@ -55,6 +58,8 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=False)
     resolved = output / "resolved_config.json"
     resolved.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    # Isaac Sim의 python.sh로 native_runner를 실행해 설치된 SDG 예제에 설정을 전달한다.
+    # Kit 앱과 Replicator API는 이 자식 프로세스에서 사용된다.
     command = [str(install / "python.sh"), str(package / "native_runner.py")]
     if args.headless:
         command.append("--headless")

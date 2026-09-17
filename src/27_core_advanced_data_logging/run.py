@@ -20,22 +20,33 @@ def main():
     output = args.output or Path(__file__).resolve().parent / "output" / str(time.time_ns())
     output.mkdir(parents=True, exist_ok=False)
     from isaacsim import SimulationApp
+    # SimulationApp은 Python에서 Isaac Sim의 Kit 애플리케이션을 시작하고 갱신·종료하는 클래스이다.
+    # headless=True는 창 없이 실행한다는 뜻이며, omni와 Isaac Sim 확장 모듈은 앱 생성 후 import한다.
     app = SimulationApp({"headless": args.headless})
     try:
         import numpy as np
         from isaacsim.core.api import World
+        # World는 Stage의 객체와 작업을 관리하고 물리·렌더링 시간 간격, 초기화, 시뮬레이션 진행을 제어한다.
         from isaacsim.core.utils.types import ArticulationAction
+        # ArticulationAction은 관절 위치·속도·힘 명령과 적용할 관절 인덱스를 담는 자료형이다.
+        # 이 값을 apply_action에 전달하면 관절 제어기가 해당 명령을 적용한다.
         from isaacsim.robot.manipulators.examples.franka.tasks import FollowTarget
+        # FollowTarget은 로봇 팔이 따라갈 목표 Prim과 로봇을 구성하는 예제 Task이다.
         from isaacsim.robot.manipulators.examples.franka.controllers.rmpflow_controller import RMPFlowController
+        # RMPFlowController는 목표 말단 자세를 추종하도록 RMPflow 기반 관절 명령을 계산하는 예제 제어기이다.
         if args.mode != "record" and (args.input is None or not args.input.is_file()):
             raise ValueError("Replay requires --input pointing to a recorded trajectory.json")
+        # stage_units_in_meters는 장면 길이 단위이고, physics_dt·rendering_dt는 각각 물리·렌더링 시간 간격(초)이다.
         world = World(stage_units_in_meters=1.0, physics_dt=1/60, rendering_dt=1/60)
         task = FollowTarget(name="follow_for_logging")
+        # 작업을 World에 등록하여 장면 구성과 관측값·초기화를 World와 함께 관리한다.
         world.add_task(task)
+        # World를 초기화하고 등록된 객체의 물리 핸들을 준비한다. 관절·강체 상태를 읽기 전에 호출한다.
         world.reset()
         params = task.get_params()
         robot = world.scene.get_object(params["robot_name"]["value"])
         target = world.scene.get_object(params["target_name"]["value"])
+        # World의 데이터 로거를 얻어 step별 상태 기록과 저장에 사용한다.
         logger = world.get_data_logger()
         controller = RMPFlowController(name="follow", robot_articulation=robot)
         replay_errors = []
@@ -45,12 +56,15 @@ def main():
             observation = task.get_observations()[target.name]
             action = controller.forward(target_end_effector_position=observation["position"],
                                         target_end_effector_orientation=observation["orientation"])
+            # 관절 제어기에 명령을 전달한다. 실제 관절의 움직임은 이후 물리 step에서 계산된다.
             robot.apply_action(action)
+            # 물리 시뮬레이션을 한 step 진행한다. render는 이 호출에서 렌더링도 수행할지 지정한다.
             world.step(render=not args.headless)
 
         if args.mode == "record":
             def log_frame(tasks, scene):
                 position, orientation = target.get_world_pose()
+                # 현재 관절 위치를 읽는다. 회전 관절은 라디안, 직선 관절은 장면 길이 단위를 사용한다.
                 return {"joint_positions": robot.get_joint_positions().tolist(),
                         "applied_joint_positions": robot.get_applied_action().joint_positions.tolist(),
                         "target_position": position.tolist(), "target_orientation": orientation.tolist()}
@@ -68,6 +82,7 @@ def main():
             if frame_count == 0:
                 raise ValueError("Input log has no frames")
             first = logger.get_data_frame(data_frame_index=0).data
+            # 관절 위치 상태를 직접 설정한다. 물리 제어기의 목표 위치를 지정하는 호출과 구분된다.
             robot.set_joint_positions(np.array(first["joint_positions"]))
             replay_steps = min(args.steps, frame_count) if args.steps is not None else (min(sample_steps, frame_count) if args.headless else frame_count)
             for index in range(replay_steps):
@@ -100,6 +115,7 @@ def main():
             else:
                 world.step(render=True)
     finally:
+        # Isaac Sim 앱을 종료하고 Kit·렌더링 자원을 정리한다.
         app.close()
 
 

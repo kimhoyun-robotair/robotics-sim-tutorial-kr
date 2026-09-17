@@ -24,7 +24,8 @@ Replicator는 뭐고, Omniverse / Isaac Sim / Isaac Lab / Isaac Groot의 차이�
 
 ## 읽는 순서
 1. **반드시 docs부터 볼 것**
-2. 이후에 **src** 내부의 튜토리얼을 따라갈 것.  
+2. **[usd](usd/README.md)**에서 Stage·Prim·Layer, USD와 URDF의 차이, Python 기초 예제를 볼 것.
+3. 이후에 **src** 내부의 튜토리얼을 따라갈 것.
   
 튜토리얼의 양이 많고, 이 모든 코드를 직접 작성할 수 없다.  
 하지만 개인적으로 이제 Isaac Sim 관련 코드를 직접 작성할 필요는 없다고 생각한다 (astra 딸깍).  
