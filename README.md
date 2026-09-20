@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.17 |
+| 수정일 | 2026.09.20 |
 
 로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
 특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
@@ -43,7 +43,7 @@
 | 이름 | 내용 |
 | --- | --- |
 | [**MarsLab**](https://kimhoyun-robotair.github.io/MarsLab/) | Accepted to [iSapRo 2026](https://www.isairas-isparo.de/).<br> 화성 로봇 Navigation 시뮬레이터 |
-| [**ELEVEN**](https://github.com/kimhoyun-robotair/ELEVEN) | APRL이 보유하고 있는 로봇 2종류에 대해서 Isaac Sim에서 활용 가능하도록 Real2Sim 해버린 패키지 |
+| [**aprl-robot-sim**](https://github.com/kimhoyun-robotair/aprl-robot-sim)) | APRL이 보유하고 있는 로봇 2종류에 대해서 Isaac Sim에서 활용 가능하도록 Real2Sim 해버린 패키지 |
 
 ### URDF, 오픈소스 로봇 관련 유용한 자료집
 | 이름 | 내용 |
