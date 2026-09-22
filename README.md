@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.20 |
+| 수정일 | 2026.09.22 |
 
 로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
 특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
@@ -91,6 +91,7 @@
 | [**bcr_bot**](https://github.com/blackcoffeerobotics/bcr_bot) | ROS2 Jazzy/Noetic 환경에서 Gazebo11/Harmonic, Isaac Sim, MuJoCo에서 활용 가능한 AMR 시뮬레이터 |
 | [**PteroSim**](https://github.com/PteroLabsAI/PteroSim-UAV-Simulator) | [PteroLabs](https://pterolabs.ai/)라는 기업에서 만든 UE5 기반 드론 시뮬레이터. Px4와 Ardupilot과의 연게를 제공하고, Github에 무료 버젼도 공개하고 있다.|
 | [**RainBot**](https://github.com/ali-pahlevani/RainBot) | ROS2 Humble x Gazebo Harmonic에서 창고 환경과 병원 환경에서 multi-robot locomanipulation을 테스트 할 수 있도록 만든 시뮬레이터 |
+| [**Matrix**](https://github.com/zsibot/matrix) | Unreal Engine과 MuJoCo, Carla를 결합한 Legged Robot 시뮬레이터. IROS Challenge용으로도 사용하는듯 |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
