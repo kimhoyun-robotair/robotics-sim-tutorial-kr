@@ -80,6 +80,7 @@
 | [**RainBot**](https://github.com/ali-pahlevani/RainBot) | ROS2 Humble x Gazebo Harmonic에서 창고 환경과 병원 환경에서 multi-robot locomanipulation을 테스트 할 수 있도록 만든 시뮬레이터 |
 | [**Matrix**](https://github.com/zsibot/matrix) | Unreal Engine과 MuJoCo, Carla를 결합한 Legged Robot 시뮬레이터. IROS Challenge용으로도 사용하는듯 |
 | [**urban-sim**](https://github.com/metadriverse/urban-sim) | Accepted to CVPR 2025/Highlight. Isaac Sim 5에다가 만든 도심 시뮬레이터 |
+| [**Vid2Sim**](https://metadriverse.github.io/vid2sim/) | Accepted to CVPR 2025. Real2Sim(Video) + GS Urban Sim |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
