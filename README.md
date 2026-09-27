@@ -4,16 +4,8 @@
 | --- | --- |
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
-| 작성일 | 2026.8.30 |
-| 수정일 | 2026.09.26 |
-
-로봇을 개발하는데 있어서 시뮬레이션의 중요성은 갈수록 커지고 있다고 생각한다.
-특히나 알고리즘의 소프트웨어적인 강건성을 확인하는 것, 그리고 Sim-to-Real 관점에서 더욱 그렇다.
-따라서 시뮬레이션 기초에 대해서 공부를 하고, 본인 연구에 활용하는 것 역시 중요하다고 생각한다.
-(당연히 시뮬레이션이 필수적이지 않은 연구에 대해서 얘기하는게 아니다).
-
-따라서 Robotics 분야에서 많이, 널리 쓰이는 두 시뮬레이션 툴인 **Gazebo**, **Isaac Sim**에 대해서,
-다음 환경에 대해서 튜토리얼을 정리해두려고 한다 (추후 MuJoCo, Chrono 등이 추가될 수 있다).
+| 작성일 | 2026.08.30 |
+| 수정일 | 2026.09.27 |
 
 ## Gazebo & Isaac Sim 튜토리얼 개관
 
@@ -30,12 +22,6 @@
 **Isaac Sim (Isaac Lab) 튜토리얼**의 경우 다음 브랜치에 정리한다.
 - `IsaacSim5.1` : Ubuntu 24.04 LTS / ROS2 Jazzy / Isaac Sim 5.1.0 조합의 튜토리얼
 - `IsaacSim6.0.1` : Ubuntu 24.04 LTS / ROS2 Jazzy / Isaac Sim 6.0.1 조합의 튜토리얼
-- `IsaacLab` : Ubuntu 24.04 LTS / Isaac Lab (2026.09 기준 최신 버젼) / ROS2 Jazzy (Optional) 조합의 튜토리얼
-
-따라서 원하는 버젼의 시뮬레이터 혹은 원하는 버젼의 ROS2 연동 튜토리얼을 보고 싶으면 `git clone`을 할 때 `branch`를 바꿔서 `clone` 하거나 혹은 `main` 브랜치에서 `swtich` 하기를 바란다.
-
-추가적으로, 시뮬레이션 관련해서 유용하다고 생각하는 자료들을 리스트 업해서 기록하려고 한다.
-해당 모음집들은 다음과 같다.
 
 ## 유용한 시뮬레이션 관련 자료 모음집
 
@@ -93,6 +79,7 @@
 | [**PteroSim**](https://github.com/PteroLabsAI/PteroSim-UAV-Simulator) | [PteroLabs](https://pterolabs.ai/)라는 기업에서 만든 UE5 기반 드론 시뮬레이터. Px4와 Ardupilot과의 연게를 제공하고, Github에 무료 버젼도 공개하고 있다.|
 | [**RainBot**](https://github.com/ali-pahlevani/RainBot) | ROS2 Humble x Gazebo Harmonic에서 창고 환경과 병원 환경에서 multi-robot locomanipulation을 테스트 할 수 있도록 만든 시뮬레이터 |
 | [**Matrix**](https://github.com/zsibot/matrix) | Unreal Engine과 MuJoCo, Carla를 결합한 Legged Robot 시뮬레이터. IROS Challenge용으로도 사용하는듯 |
+| [**urban-sim**](https://github.com/metadriverse/urban-sim) | Accepted to CVPR 2025/Highlight. Isaac Sim 5에다가 만든 도심 시뮬레이터 |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
