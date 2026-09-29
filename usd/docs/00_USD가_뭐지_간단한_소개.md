@@ -64,3 +64,12 @@ USD에서는 이런 3D Scene에 대해서 묘사하기 위해서 여러 파일�
   - Layering이 가능하기 때문에, 각자 맡은 파트에 따라서 각자의 Layer만 수정하고 Composition 할 수 있다.
 - Maximizes artistic iteration by minimizing latency.
   - multi-core를 사용하며, scene graph 방식, payload를 활용해 필요한 부분만 메모리에 올리는 방식, Hydra 기반 Groud-Truth preview 기능을 활용해 빠른 작업 속도를 지원한다.
+
+### USD의 형식은 뭐가 있는데?
+OpenUSD의 자료를 보면 USD는 총 4가지 서로 다른 형식으로 제공하게 된다.  
+| 확장자 | 형식 (내부 형식 포함) | 사람이 직접 읽기 여부 | 성능/용량 | 여러 파일 및 텍스쳐 결합 | 주요 용도 |
+| -- | -- | -- | -- | -- | -- |
+| `.usda` | USD ASCII/UTF-8 텍스트 | 직접 읽기 가능 | 느림/큼 | 불가능 | 디버깅, 튜토리얼, 수동 편집 |
+| `.usdc` | USD Crate | 바이너리 | 불가능 | 빠름/작음 | 불가능 | 프로덕션, 빠른 로딩 등 |
+| `.usd` | 범용 USD 확장자, USDA 혹은 USDC로 작성 | 경우에 따라 다름(USDA면 가능) | 이하 동일 | 불가능 | -- |
+| `.usdz` | USD Package | 비압축 ZIP 컨테이너 | 내부 파일에 따라 다름 | 배포에 유리함 | 가능함 | 전달 용도, Asset Bundle 용도 등 |
