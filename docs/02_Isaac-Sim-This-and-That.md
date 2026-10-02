@@ -3,7 +3,7 @@
 
 ## Isaac Sim 사양
 [이 링크](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/requirements.html)에서 확인할 수 있다.
-![alt text](../asset/02_Isaac-Sim-This-and-That/image.png)
+![alt text](./00_asset/02_Isaac-Sim-This-and-That/image.png)
 
 ## Isaac Sim 관련 여러 Setup Tips
 [이 링크](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/install_faq.html)에서 자세하게 확인할 수 있다.  

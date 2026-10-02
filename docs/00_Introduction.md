@@ -4,7 +4,7 @@ Isaac Sim은 NVIDIA에서 밀어주고 있는 시뮬레이터로서, NVIDIA Omni
 
 참고로 기본적으로 Linux + x86/amd64 OS를 산정하고 만들어졌지만, Isaac Sim 5.1은 **DGX Spark에 대한 제한적인 기능을 지원한다.**
 
-![alt text](../asset/00_introduction/image.png)
+![alt text](./00_asset/00_introduction/image.png)
 
 언젠가의 문서에서 다루겠지만, NVIDIA에서 공개한 Omniverse 관련 플랫폼들을 아주 간단히 구분해보자면 다음과 같다.
 | 이름 | 용도 |
@@ -29,6 +29,6 @@ Isaac Sim의 가장 큰 특징 중 하나라고 한다면 GPU 기반의 (엔비�
   
 그리고 로보틱스 학계 + 입문자들에게 매우 친절하게도, ROS2에 대한 지원을 제공한다. 거의 ROS2-native 수준으로 지원을 제공하게 되는데, 그냥 ROS2랑 연결 뿐만 아니라 GPU 가속을 활용한 [Isaac ROS](https://nvidia-isaac-ros.github.io/) 등과의 강력한 연동을 제공한다. 이에 대해서는 추후 ROS2 연동 관련 튜토리얼 문서에서 다루게 될 것이다.  
   
-![alt text](../asset/00_introduction/pipeline.png)
+![alt text](./00_asset/00_introduction/pipeline.png)
   
 Isaac Sim 5.1이 어떤 점에서 달라졌는지에 대해서는 다음 [Release note](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/overview/release_notes.html)를 참고하면 된다.

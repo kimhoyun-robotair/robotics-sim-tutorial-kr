@@ -106,13 +106,3 @@ log/
 *.pfx
 *.keystore
 .npmrc
-
-# Browser and UI-test artifacts
-playwright-report/
-test-results/
-site/
-
-# Simulation runs and generated USD/datasets
-outputs/
-src/*/output/
-.ipynb_checkpoints/

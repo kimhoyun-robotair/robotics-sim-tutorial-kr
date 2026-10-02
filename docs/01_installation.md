@@ -17,6 +17,6 @@
    2. 리눅스의 경우, CLI에서 `./post_install.sh` 파일을 실행한다. 이후 `./isaac-sim.selector.sh`도 연속으로 실행한다.
 5. [Isaac Sim Selector](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/gui/app_selector.html)에서 **Start** 버튼을 누른다.
 6. 그러면 다음과 같은 화면을 확인할 수 있다.
-![alt text](../asset/01_installation/image.png)
+![alt text](./00_asset/01_installation/image.png)
 7. **Create > Environment > Simple Room**을 선택하고, 거기서 다시 **Create > Robots > Franka Emika Panda Arm**을 선택한다.
-![alt text](../asset/01_installation/franka_in_the_room.png)
+![alt text](./00_asset/01_installation/franka_in_the_room.png)
