@@ -147,4 +147,53 @@ Contact 같은 경우 두 물체의 상호작용이기 때문에, 각 물체의 
 예를 들어, Collider A의 friction combine mode가 average고 Collider B의 friction combine mode가 min이면 Collider B의 방식으로 진행된다.
 
 ## Joints
-<추후 기술>
+로봇은 일반적으로 Rigid Body를 기본으로 깔고, 여기에 Joint가 연결된 구조로 이루어져 있다. Joint는 두 Body 사이에 제약 조건(constraint)을 생성한다고 할 수도 있을 것이다.  
+아래 예제에서는 **Revolute Joint**를 사용해서 설명을 진행하지만, [**Joint 문서**](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/dev_guide/rigid_bodies_articulations/joints.html#joints) 문서에 나와있는 다른 Joint들 역시 마찬가지로 진행된다. Isaac Sim에서 제공되는 기본적인 Joint 목록은 다음과 같다.
+| Joint Type | Description | Joint Support (CPU/GPU) | Articulation Joint Support (CPU/GPU) |
+|---|---|---|---|
+| **D6 Joint** | 상대 운동에 대해 **0~6 DOF**를 설정할 수 있음. 3개의 병진축 + 3개의 회전축을 각각 자유롭게 하거나 제한할 수 있음 | yes / yes | yes / yes *(단, 모든 linear axis가 locked인 경우)* |
+| **Distance Joint** | 두 Rigid Body 사이의 상대 운동은 허용하지만, **두 물체 사이의 거리**를 제한함 | yes / no | no / no |
+| **Fixed Joint** | 두 Body 사이의 **모든 상대 운동을 허용하지 않음**. Fixed-base articulation 구성에 유용함 | yes / yes | yes / yes |
+| **Prismatic Joint** | 하나의 축을 따라 **직선 운동**만 허용함 | yes / yes | yes / yes |
+| **Revolute Joint** | 하나의 축을 중심으로 **회전 운동**만 허용함 | yes / yes | yes / yes |
+| **Spherical Joint** | 세 회전축에 대한 **회전 운동**을 허용함. Ball-and-socket joint와 동일한 개념 | yes / yes | yes / yes |
+먼저, Joint로 연결할 각 Body에 대해서 Joint Frame의 상대적인 pose를 설정해야 한다. 특히 Joint Frame의 local scaling 관련 내용은 [**Joint Frames Section**](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/dev_guide/rigid_bodies_articulations/joints.html#jointframes)을 참고하면 된다.  
+  
+UI를 통해서 Joint를 생성할 경우, Joint 프레임은 **Joint 생성 과정에서 2번째로 선택한 Rigid Body의 pose와 일치**하도록 생성이 된다. 이제 다음과 같이 Joint를 생성해보자.
+1. 먼저 `Xform Rigid Body`를 선택하고, 그 다음 `Torus Rigid Body`를 선택한다.
+2. `Create > Physics > Joints > (Joint Type)` 으로 이동한다.
+이 튜토리얼에서는 **Revolute Joint**를 활용하며, Torus를 2번째로 선택했기 때문에 Joint는 Torus의 중심에 생성된다.
+![alt text](../00_asset/07_Physics/joint1.png)
+Properties Panel에서 다음 속성들을 확인 가능하다.
+1. Body 0: `/World/XForm`
+2. Body 1: `/World/Torus`
+아래 값ㄷ르은 각 Body를 기준으로 표현된 Joint Frame의 Pose이다. Position 0의 Z값이 -7.0인 것을 확인 가능하다.
+1. Position 0: [0, 0, -7.0]
+2. Rotation 0: [0, 0, 0.0]
+3. Position 1: [0, 0, 0.0]
+4. Rotation 1: [0, 0, 0.0]
+> **Note!**  
+> Articulation의 일부가 되는 Joint를 설정할 때에는 Body 0이 Articulation Tree 계층 구조에서 Body 1의 Parent가 되도록 설정해야함  
+> 이렇게 설정하면 link의 incoming joint force나 joint drive target 같은 joint 관련 값이 PhysX SDK와 USD 사이에서 일대일 대응된다.
+
+### Joint Axis
+Revolute Joint는 1개의 DOF를 제공한다. 그리고 Joint Frame의 어느 축을 자유롭게 회전할 수 있는 축으로 사용할지 선택할 수 있다 (기본값은 X축으로 지정되어있다). 이 값은 Properties의 **Revolute Joint** 섹션에서 수정이 가능하다.
+
+### Joint Limits
+Joint Limits는 Joint가 초기 위치에서 얼마나 멀리 움직일 수 있는지 결정한다. 기본적으로 Joint를 새로 생성하면 Limit는 설정되어 있지 않은데, Joint를 선택한 상태에서 Properties Panel을 아래로 스크롤 하여 **Revolute Joint** 섹션의 다음 값을 수정할 수 있다.
+- Lower Limit
+- Upper Limit
+USD에서는 각을 표현할 때 라디안이 아니라 degree를 사용하는 것을 기억해야 한다.
+
+### Adding a Joint Drive
+Joint가 추가한 DOF의 position과 velocity를 Joint Drive를 통해서 제어 가능하다. Joint Drive를 추가하려면 `Add Button > Physics > Angular Drive`를 선택해서 진행하면 된다. 보다 자세한 내용은 [**Tutorial 11: Tuning Joint Drvie Gains**](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/robot_setup_tutorials/joint_tuning.html#isaac-sim-app-tutorial-advanced-joint-tuning)을 참고하면 된다.
+
+## Articulation
+**Articulation**은 Joint로 연결된 Body들을 효율적으로 시뮬레이션 하기 위해 최적화된 구조이다. Articulation을 사용하면 더 우수한 성능, 더 뛰어난 정확도(fidelity), 그리고 로봇 관련 여러 기능(feature)을 제공할 수 있다. 다만 **topology (loop-closing)과 joint surpport**에서는 일부 제한 사항이 존재한다. 이러한 제한 사항은 [**Articulation**](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/dev_guide/rigid_bodies_articulations/articulations.html#articulations) 문서를 참고하면 된다.
+
+## Simulation Residual
+Physics 시뮬레이션에서는 solver가 계산한 해가 얼마나 잘 수렴했는지 확인할 수 있는 metric을 제공한다. 이를 통해서 Simulation이 여러 제약 조건을 얼마나 잘 만족했는지 확인할 수 있다. 이 Residual을 확인하려면:
+1. 확인하려는 Physics Element 선택
+2. `Add > Physics > Residual Reporting` 선택
+3. Viewport에서 다음 경로로 이동 : `(eye icon on viewport) > Show by Type > Physics > Simulation Data Visualizer`
+![alt text](../00_asset/07_Physics/residual.png)
