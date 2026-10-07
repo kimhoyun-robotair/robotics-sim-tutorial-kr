@@ -1,4 +1,5 @@
 # Physics Simulation Fundamentals
+> 출처 : [**Physics Simulation Fundamentals**](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/physics/simulation_fundamentals.html)
 ## Physics in USD Schema
 우리는 이미 이전 강의에서, **Schema란 USD의 데이터 구조와 해석 규칙을 규정해놓은 것**이라고 학습을 했다. 이 중에서 [**USD Physics Schema**](https://openusd.org/release/api/usd_physics_page_front.html) 같은 경우, USD의 여러 Schema 중에서 물리법칙과 관련된 Schema들을 지정해놓으며, 일반적으로 **UsdPhysics** API를 사용해서 활용이 되는 타입들이다. 한편, 엔비디아에서 PhysX 엔진을 개발하면서 기존 USD Physics Schema에 더해서 PhysX 엔진에 특화되도록 Schema를 확장할 필요가 있었고, 그에 따라서 개발된 **PhysX Schemas**가 있다. 이런 Schema들 같은 경우 기본적으로 C++을 통한 Access 방식을 취하지만, 파이썬 API로도 개발이 되어서 파이썬에서도 쉽게 접근할 수 있다. 예를 들어서:
 ```
@@ -114,4 +115,36 @@ penetration depth는?
 > Fewer convex hulls typically results in higher performance.  
   
 ![alt text](../00_asset/07_Physics/convexdecomposition.png)
-좀 더 자세한 내용에 대해서는 [**Omni Physics**](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/index.html)의 
+좀 더 자세한 내용에 대해서는 [**Omni Physics**](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/index.html)의 [**Rigid Bodies**](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/dev_guide/rigid_bodies_articulations/rigid_bodies.html), 그리고 [**Colliders**](https://docs.omniverse.nvidia.com/kit/docs/omni_physics/latest/dev_guide/rigid_bodies_articulations/collision.html)를 참고하면 된다. USD Stage와 Prim에 대햇 제대로 공부했다면 솔직히 이해 못할건 아니고 그냥 읽으면 된다.
+
+### Contact and Reset Offset
+Collider의 **Advanced** 탭에는 충돌 문제가 발생했을 때 조정에 사용 가능한 2가지 추가 파라미터가 있다. 이런 파라미터들을 Isaac Sim 공식 doc에서는 작거나 얇은 물체에 유리하다고 적고 있다.  
+- **Rest Offset** : collision geometry를 실제보다 좀 더 inflate하거나 혹은 shrink 하는 파라미터. Visual mesh가 collision geometry보다 크거나 작은 경우, 실제 충돌이 발생하는 위치가 화면에 보이는 형상과 일치하도록 보정
+- **Contact Offset** : collision geometry로부터 어느정도 거리까지 접근했을 때 PhysX 엔진이 contact constraints를 생성할지 결정
+Contact offset을 조절할 때는 trade-off 관계가 존재하는데, 크게 설정하게 되면 더 많은 구속 조건이 생성되므로 계산 비용이 증가한다. 반대로 너무 작게 설정하면 접촉을 너무 늦게 감지해 비현실적인 충돌 시뮬레이션이 일어날 수 있다. Isaac Sim 공식 doc에서는 다음과 같은 문제가 발생할 수 있다고 한다.
+1. 물체의 떨리는 현상 (jittering)
+2. contact 누락 현상
+3. tunneling 현상
+
+## Contacts and Friction
+Collision API는 tunneling 현상 등만 방지하는 것이 아니라 restitution(반발)과 friction을 통해서 에너지를 전달하거나 소산시킬 수도 있다. 이러한 contact model 파라미터는 **Physics material**에서 설정 가능하며 **Create > Physics > Physics Material**로 이동해 **Rigid Body Material**을 선택해서 진행하면 된다 (일반적으로 Physics Material은 Collider Geometry에 할당이 된다).  
+앞서 공부한 것처럼, 만약 하나의 rigid body에 여러 개의 collision geometry가 있다면, 각각에 서로 다른 physics material을 할당 할 수 있다. 또한 Rigid Body Prim 자체에 Physics Material 을 할당한 다음, 그 Material이 자식 Collider에 개별적으로 설정된 material보다 우선시 되도록 override도 가능하다. Physics Material 할당 방법은:
+1. collider prim 선택
+2. collider 설정 영역까지 스크롤
+3. **Physics Materials on Selected Models**에서 원하는 material 선택
+또한 Render Material에 **Add > Physics > Rigid Body Material**을 사용해서 property 추가도 가능하다.
+
+### Compliant Contacts
+Rigid Material의 **Advanced** 탭에서는 contact가 **compliant contact (spring-damper와 같은 동역학이 포함된 접촉)**을 설정할 수 있다. 이는 Rigid body를 사용해 deformable body의 거동을 근사적으로 시뮬레이션 할 때 유용하다.
+
+### Combie Modes
+Contact 같은 경우 두 물체의 상호작용이기 때문에, 각 물체의 contact parameter 하나만으로 두 물체가 실제로 어떻게 상호작용할지에 대해서 정확하게 시뮬레이션 할 수 없다. 따라서 USD (정확히는 UsdPhysics와 Isaac Sim의 PhysX 엔진이겠지만) 에서는 **Combine Mode**를 설정 가능하다.
+- Friction
+- Restitution
+- Compliant-Contact Damping
+양쪽 물체의 combine mode가 다를 경우, 어떤 모드에 우선순위를 높게 줬는지에 따라서 combine mode가 결정되어 적용된다. Isaac Sim 공식 doc에서는 Drop-down 메뉴에서 아래쪽에 위치한 mode일수록 더 높은 우선순위를 가진다고 알리고 있으며, 우선순위 순서는 `average < min < multiply < max` 라고 하고 있다.  
+  
+예를 들어, Collider A의 friction combine mode가 average고 Collider B의 friction combine mode가 min이면 Collider B의 방식으로 진행된다.
+
+## Joints
+<추후 기술>
