@@ -4,6 +4,7 @@
 1. Collision Mesh 시각화
 2. 전체 Stage에 static collision API 추가
 3. 마찬가지로 all physics-related API 제거도 가능
+
 이 Extension을 사용하고 싶다면 **Tools > Physics API Editor**를 사용할 것.
 
 ## User Interface

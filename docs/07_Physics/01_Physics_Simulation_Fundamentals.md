@@ -34,6 +34,7 @@ physics_attr.Set(10.0)
 - Physics simulation : 120 step/s
 - Rendering : 60 frames/s
 - 결과 : 2 physics step / 1 rendered frame
+
 이상적인 경우라면 simulation frequency와 rendering frequency가 서로 같거나, 정수배 관계를 가지는 것이 좋다.  
   
 이렇듯 Isaac Sim의 Timeline에는 여러 종류의 event stream이 존재하며, 그 중에서 가장 중요하게 취급되는 것들을 사용자는 쉽게 subscribe해서 이벤트를 확인할 수 있다.
@@ -41,6 +42,7 @@ physics_attr.Set(10.0)
 - Frame Update Events
   - pre-render
   - post-render
+
 Omnigraph Node의 경우 일반적으로 **pre-render event**가 발생할 때 업데이트가 이루어진다. 다만 필요하다면, Omnigraph node가 다른 종류의 event에서도 업데이트 되도록 설정할 수 있ㄷ. 예를 들어서 화면이 렌더링 될때가 아니라 Physics simulation step마다 업데이트를 한다거나.
 
 ### Configuring Frame Rate
@@ -52,6 +54,7 @@ Omnigraph Node의 경우 일반적으로 **pre-render event**가 발생할 때 �
 1. Create > Physics > Simulation Scene을 클릭
 2. 생성된 Simulation Scene을 선택
 3. Properties 패널에서 Simulation Steps per Second 항목을 확인
+
 ![alt text](../00_asset/07_Physics/ConfigureSimulationTimesteop.png)
 
 ## Simulation Components
@@ -110,6 +113,7 @@ penetration depth는?
 그런데 사용자가 보는 visual mesh랑 연산이 다르면 그게 제대로 된 시뮬레이션임?? 하고 질문할 수 있다. 그렇기에 Isaac Sim에서는 이러한 문제를 해결하기 위해서 **Convex Decomposition**이라는 방법도 제공한다. 해당 방법론은 복잡한 물체에 대해서 하나의 convex hull로 퉁치는게 비현실적이라면, 작은 convex hull 여러개를 적용해서 convex hull 연산을 하자는 아이디어에서 출발한다. Isaac Sim 공식 doc은
 - 사람이 직접 이러한 작업을 수행하거나(manually created by adding multiple shapes)
 - Physics Convex Decomposition에 의해서 자동 연산될 수 있다고 안내한다.
+
 이걸 위해서는 Properties 패널에서 Collision Section을 찾고, 그 안에서 **Convex Decomposition**을 찾아 수행하면 된다고 안내하고 있다.
 > **Note**  
 > Fewer convex hulls typically results in higher performance.  
@@ -121,6 +125,7 @@ penetration depth는?
 Collider의 **Advanced** 탭에는 충돌 문제가 발생했을 때 조정에 사용 가능한 2가지 추가 파라미터가 있다. 이런 파라미터들을 Isaac Sim 공식 doc에서는 작거나 얇은 물체에 유리하다고 적고 있다.  
 - **Rest Offset** : collision geometry를 실제보다 좀 더 inflate하거나 혹은 shrink 하는 파라미터. Visual mesh가 collision geometry보다 크거나 작은 경우, 실제 충돌이 발생하는 위치가 화면에 보이는 형상과 일치하도록 보정
 - **Contact Offset** : collision geometry로부터 어느정도 거리까지 접근했을 때 PhysX 엔진이 contact constraints를 생성할지 결정
+
 Contact offset을 조절할 때는 trade-off 관계가 존재하는데, 크게 설정하게 되면 더 많은 구속 조건이 생성되므로 계산 비용이 증가한다. 반대로 너무 작게 설정하면 접촉을 너무 늦게 감지해 비현실적인 충돌 시뮬레이션이 일어날 수 있다. Isaac Sim 공식 doc에서는 다음과 같은 문제가 발생할 수 있다고 한다.
 1. 물체의 떨리는 현상 (jittering)
 2. contact 누락 현상
@@ -132,6 +137,7 @@ Collision API는 tunneling 현상 등만 방지하는 것이 아니라 restituti
 1. collider prim 선택
 2. collider 설정 영역까지 스크롤
 3. **Physics Materials on Selected Models**에서 원하는 material 선택
+
 또한 Render Material에 **Add > Physics > Rigid Body Material**을 사용해서 property 추가도 가능하다.
 
 ### Compliant Contacts
@@ -142,6 +148,7 @@ Contact 같은 경우 두 물체의 상호작용이기 때문에, 각 물체의 
 - Friction
 - Restitution
 - Compliant-Contact Damping
+
 양쪽 물체의 combine mode가 다를 경우, 어떤 모드에 우선순위를 높게 줬는지에 따라서 combine mode가 결정되어 적용된다. Isaac Sim 공식 doc에서는 Drop-down 메뉴에서 아래쪽에 위치한 mode일수록 더 높은 우선순위를 가진다고 알리고 있으며, 우선순위 순서는 `average < min < multiply < max` 라고 하고 있다.  
   
 예를 들어, Collider A의 friction combine mode가 average고 Collider B의 friction combine mode가 min이면 Collider B의 방식으로 진행된다.
