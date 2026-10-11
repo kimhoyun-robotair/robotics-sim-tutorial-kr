@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.08.30 |
-| 수정일 | 2026.09.27 |
+| 수정일 | 2026.10.11 |
 
 ## Gazebo & Isaac Sim 튜토리얼 개관
 
@@ -22,6 +22,8 @@
 **Isaac Sim (Isaac Lab) 튜토리얼**의 경우 다음 브랜치에 정리한다.
 - `IsaacSim5.1` : Ubuntu 24.04 LTS / ROS2 Jazzy / Isaac Sim 5.1.0 조합의 튜토리얼
 - `IsaacSim6.0.1` : Ubuntu 24.04 LTS / ROS2 Jazzy / Isaac Sim 6.0.1 조합의 튜토리얼
+
+추후 Isaac Lab에 대해서도 공부 이후 추가 예정
 
 ## 유용한 시뮬레이션 관련 자료 모음집
 
@@ -81,6 +83,7 @@
 | [**Matrix**](https://github.com/zsibot/matrix) | Unreal Engine과 MuJoCo, Carla를 결합한 Legged Robot 시뮬레이터. IROS Challenge용으로도 사용하는듯 |
 | [**urban-sim**](https://github.com/metadriverse/urban-sim) | Accepted to CVPR 2025/Highlight. Isaac Sim 5에다가 만든 도심 시뮬레이터 |
 | [**Vid2Sim**](https://metadriverse.github.io/vid2sim/) | Accepted to CVPR 2025. Real2Sim(Video) + GS Urban Sim |
+| [**MolmoB0T**](https://allenai.github.io/MolmoBot/) | Zero-Shot Manipulation을 위한 초대규모 시뮬레이션 + Sim2Real |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
