@@ -59,6 +59,7 @@
 | [**LiteReality-Agent**](https://github.com/LiteReality/LiteReality-Agent) | RGBD 이미지를 AI Agent를 활용해서 MuJoCo에서 사용 가능한 포맷(MJCF)로 변환해주는 Real2Sim Asset Generation 패키지 |
 | [**awesome-astra-prompts**](https://github.com/TripoGrowthLab/awesome-astra-prompts) | GPT6 아스트라를 활용한 3D 모델링 관련 프롬프트 |
 | [**RoboCousin**](https://arxiv.org/abs/2609.08339v1) | Bimanual manipulation에 필요한 데이터를 시뮬레이션 베이스로 생성하는 플랫폼. 3000개의 object들과 50개의 background env를 가지고 있다고. | 
+| [**ARTISAN**](https://physicalvision.github.io/artisan/) | Multi-Coding Agent를 결합해서, MuJoCO를 활용한 검증 프로세스까지 집어넣은, Physically Grounded Articulated 3D Asset Generation 프레임워크. 유용할거 같다. |
 
 ### 이런저런 시뮬레이터들 (추후 확장되면 분류 추가 예정)
 | 이름 | 내용 |
@@ -84,6 +85,7 @@
 | [**urban-sim**](https://github.com/metadriverse/urban-sim) | Accepted to CVPR 2025/Highlight. Isaac Sim 5에다가 만든 도심 시뮬레이터 |
 | [**Vid2Sim**](https://metadriverse.github.io/vid2sim/) | Accepted to CVPR 2025. Real2Sim(Video) + GS Urban Sim |
 | [**MolmoB0T**](https://allenai.github.io/MolmoBot/) | Zero-Shot Manipulation을 위한 초대규모 시뮬레이션 + Sim2Real |
+| [**HERCULES**](https://lunarlab-gatech.github.io/HERCULES-website/) | UE5 + AirSim 플러그인을 활용한 Multi-Robot SLAM/Collaboration/Exploration 용도의 시뮬레이션 프레임워크 |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
