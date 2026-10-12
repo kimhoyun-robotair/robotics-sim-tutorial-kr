@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.08.30 |
-| 수정일 | 2026.10.11 |
+| 수정일 | 2026.10.12 |
 
 ## Gazebo & Isaac Sim 튜토리얼 개관
 
@@ -86,6 +86,7 @@
 | [**Vid2Sim**](https://metadriverse.github.io/vid2sim/) | Accepted to CVPR 2025. Real2Sim(Video) + GS Urban Sim |
 | [**MolmoB0T**](https://allenai.github.io/MolmoBot/) | Zero-Shot Manipulation을 위한 초대규모 시뮬레이션 + Sim2Real |
 | [**HERCULES**](https://lunarlab-gatech.github.io/HERCULES-website/) | UE5 + AirSim 플러그인을 활용한 Multi-Robot SLAM/Collaboration/Exploration 용도의 시뮬레이션 프레임워크 |
+| [**ARENA**](https://github.com/Arena-Rosnav) | Gazebo, Unity, Isaac Gym을 활용한 Social Navigation Simulation. [최신 논문](https://arxiv.org/pdf/2610.11220v1)은 Published at RSS 2025이다. |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
