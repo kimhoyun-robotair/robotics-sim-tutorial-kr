@@ -5,7 +5,7 @@
 | 작성자 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 유지보수 | [kimhoyun-robotair](https://github.com/kimhoyun-robotair) |
 | 작성일 | 2026.08.30 |
-| 수정일 | 2026.10.12 |
+| 수정일 | 2026.10.15 |
 
 ## Gazebo & Isaac Sim 튜토리얼 개관
 
@@ -60,6 +60,7 @@
 | [**awesome-astra-prompts**](https://github.com/TripoGrowthLab/awesome-astra-prompts) | GPT6 아스트라를 활용한 3D 모델링 관련 프롬프트 |
 | [**RoboCousin**](https://arxiv.org/abs/2609.08339v1) | Bimanual manipulation에 필요한 데이터를 시뮬레이션 베이스로 생성하는 플랫폼. 3000개의 object들과 50개의 background env를 가지고 있다고. | 
 | [**ARTISAN**](https://physicalvision.github.io/artisan/) | Multi-Coding Agent를 결합해서, MuJoCO를 활용한 검증 프로세스까지 집어넣은, Physically Grounded Articulated 3D Asset Generation 프레임워크. 유용할거 같다. |
+| [**com.unity.usd-toolkit**](https://github.com/Unity-Technologies/com.unity.usd-toolkit) | Unity 공식에서 내놓은, Unity App을 활용해 Isaac Sim에 USD를 real-time으로 spawn 할 수 있게 해주는 프로그램 |
 
 ### 이런저런 시뮬레이터들 (추후 확장되면 분류 추가 예정)
 | 이름 | 내용 |
