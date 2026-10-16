@@ -88,6 +88,8 @@
 | [**MolmoB0T**](https://allenai.github.io/MolmoBot/) | Zero-Shot Manipulation을 위한 초대규모 시뮬레이션 + Sim2Real |
 | [**HERCULES**](https://lunarlab-gatech.github.io/HERCULES-website/) | UE5 + AirSim 플러그인을 활용한 Multi-Robot SLAM/Collaboration/Exploration 용도의 시뮬레이션 프레임워크 |
 | [**ARENA**](https://github.com/Arena-Rosnav) | Gazebo, Unity, Isaac Gym을 활용한 Social Navigation Simulation. [최신 논문](https://arxiv.org/pdf/2610.11220v1)은 Published at RSS 2025이다. |
+| [**uuv_simulator**](https://github.com/uuvsimulator/uuv_simulator) | Gazebo와 ROS를 지원하는 UUV Simulator |
+| [**FURo-Sim**](https://github.com/heekyu-kweon/FURo-Sim) | Accepted to IEEE UR 2025. UE5와 AirSim을 활용한 수중 로봇 및 소나 시뮬레이터. |
 
 ### 우주 로봇 시뮬레이터
 | 이름 | 내용 |
